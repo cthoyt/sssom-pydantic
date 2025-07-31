@@ -50,13 +50,6 @@ class Record(BaseModel):
 
     record_id: str | None = Field(None)
 
-    mapping_set_confidence: float | None = Field(None)
-    mapping_set_description: str | None = Field(None)
-    mapping_set_id: str = Field(...)
-    mapping_set_source: str | None = Field(None)
-    mapping_set_title: str | None = Field(None)
-    mapping_set_version: str | None = Field(None)
-
     subject_id: str = Field(...)
     subject_label: str | None = Field(None)
     subject_category: str | None = Field(None)
@@ -120,9 +113,40 @@ class Record(BaseModel):
     similarity_measure: str | None = Field(None)
     similarity_score: float | None = Field(None)
 
+    mapping_set_confidence: float | None = Field(None)
+    mapping_set_description: str | None = Field(None)
+    mapping_set_id: str = Field(...)
+    mapping_set_source: str | None = Field(None)
+    mapping_set_title: str | None = Field(None)
+    mapping_set_version: str | None = Field(None)
+
+
+def write(records: list[Record], path: str | Path, sep: str | None = None) -> None:
+    """Write records."""
+    columns = _get_columns(records)
+
+    with path.open("w") as file:
+        writer = csv.DictWriter(file, columns, delimiter=sep or "\t")
+        writer.writeheader()
+        for record in records:
+            writer.writerow(
+                record.model_dump(exclude_none=True, exclude_unset=True, exclude_defaults=True)
+            )
+
+
+def _get_columns(records: list[Record]) -> list[str]:
+    columns = set()
+    for record in records:
+        for key in record.model_fields_set:
+            if getattr(record, key) is not None:
+                columns.add(key)
+    return [f for f in Record.model_fields if f in columns]
+
 
 def read(
-    path: str | Path, metadata_path: str | Path, metadata: dict[str, Any] | None
+    path: str | Path,
+    metadata_path: str | Path | None = None,
+    metadata: dict[str, Any] | None = None,
 ) -> Iterable[Record]:
     """Read a raw file."""
     rv = []
@@ -144,7 +168,9 @@ def read(
 
         chained_metadata = dict(ChainMap(metadata, external_metadata, inline_metadata))
 
-        for record in csv.DictReader(file, delimiter="\t"):
+        columns = line.strip().split("\t")
+
+        for record in csv.DictReader(file, fieldnames=columns, delimiter="\t"):
             for key in PROPAGATABLE.intersection(chained_metadata):
                 if not record.get(key):
                     record[key] = chained_metadata[key]
