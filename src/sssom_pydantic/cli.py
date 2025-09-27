@@ -8,16 +8,8 @@ __all__ = [
 
 
 @click.command()
-@click.option("--name", required=True, help="The name of the person to say hello to")
-def main(name: str) -> None:
+def main() -> None:
     """CLI for sssom_pydantic."""
-    # import inside the CLI to make running the --help command faster
-    from .api import hello
-
-    hello(name)
-
-
-# If you want to have a multi-command CLI, see https://click.palletsprojects.com/en/latest/commands/
 
 
 if __name__ == "__main__":

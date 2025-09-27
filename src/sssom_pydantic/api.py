@@ -5,12 +5,11 @@ from __future__ import annotations
 import csv
 import datetime
 from collections import ChainMap
-from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Literal, TypeAlias
+from typing import Any, Literal, TextIO, TypeAlias
 
 import yaml
-from curies import Reference
+from curies import Converter, Reference
 from pydantic import BaseModel, ConfigDict, Field
 
 __all__ = [
@@ -18,12 +17,15 @@ __all__ = [
     "Cardinality",
     "Record",
     "read",
+    "write",
 ]
 
-Cardinality: TypeAlias = Literal["1:1", "1:n", "n:1", "1:0", "0:1", "n:n"]
+Metadata: TypeAlias = dict[str, Any]
+
+Cardinality: TypeAlias = Literal["1:1", "1:n", "n:1", "1:0", "0:1", "n:n", "0:0"]
 
 #: Allowed predicate types
-PREDICATE_TYPES = [
+PREDICATE_TYPES: set[Reference] = {
     Reference(prefix="owl", identifier="Class"),
     Reference(prefix="owl", identifier="ObjectProperty"),
     Reference(prefix="owl", identifier="DataProperty"),
@@ -35,9 +37,15 @@ PREDICATE_TYPES = [
     Reference(prefix="rdfs", identifier="Datatype"),
     Reference(prefix="rdf", identifier="Property"),
     Reference(prefix="sssom", identifier="ComposedEntityExpression"),
-]
+}
 
-PROPAGATABLE: set[str] = {"mappping_set_id"}
+#: The set of values that should be propagated
+#: from the frontmatter to all mappings
+PROPAGATABLE: set[str] = {
+    "mapping_set_id",
+}
+#: The default prefix map for SSSOM
+DEFAULT_PREFIX_MAP: dict[str, str] = {}
 
 
 class Record(BaseModel):
@@ -64,7 +72,7 @@ class Record(BaseModel):
     predicate_modifier: Literal["Not"] | None = Field(None)
     predicate_type: Reference | None = Field(
         None,
-        examples=PREDICATE_TYPES,
+        # TODO add examples?
         description="See https://mapping-commons.github.io/sssom/predicate_type/. "
         "Values allowed are from https://mapping-commons.github.io/sssom/EntityTypeEnum/",
     )
@@ -121,11 +129,22 @@ class Record(BaseModel):
     mapping_set_version: str | None = Field(None)
 
 
-def write(records: list[Record], path: str | Path, sep: str | None = None) -> None:
+def write(
+    records: list[Record],
+    path: str | Path,
+    *,
+    sep: str | None = None,
+    metadata: dict[str, Any] | None = None,
+) -> None:
     """Write records."""
     columns = _get_columns(records)
 
-    with path.open("w") as file:
+    # TODO condense operation
+
+    with Path(path).expanduser().resolve().open("w") as file:
+        if metadata:
+            for line in yaml.safe_dump(metadata).splitlines():
+                print(f"#{line}", file=file)
         writer = csv.DictWriter(file, columns, delimiter=sep or "\t")
         writer.writeheader()
         for record in records:
@@ -145,35 +164,60 @@ def _get_columns(records: list[Record]) -> list[str]:
 
 def read(
     path: str | Path,
+    *,
     metadata_path: str | Path | None = None,
-    metadata: dict[str, Any] | None = None,
-) -> Iterable[Record]:
+    metadata: Metadata | None = None,
+    sep: str = "\t",
+) -> tuple[list[Record], Converter]:
     """Read a raw file."""
+    external_metadata = (
+        yaml.safe_load(Path(metadata_path).expanduser().resolve().read_text())
+        if metadata_path is not None
+        else {}
+    )
+
+    if metadata is None:
+        metadata = {}
+
     rv = []
     with Path(path).expanduser().resolve().open() as file:
-        # consume from the top of the stream until there's no more preceding #
-        header_yaml = ""
-        while (line := file.readline()).startswith("#"):
-            line = line.lstrip("#").rstrip()
-            if not line:
-                continue
-            header_yaml += line + "\n"
+        columns, inline_metadata = _chomp_frontmatter(file)
 
-        inline_metadata = yaml.safe_load(header_yaml) if header_yaml else {}
-        external_metadata = (
-            yaml.safe_load(metadata_path.read_text()) if metadata_path is not None else {}
+        converter = Converter.from_prefix_map(
+            ChainMap(
+                metadata.pop("curie_map", {}),
+                external_metadata.pop("curie_map", {}),
+                inline_metadata.pop("curie_map", {}),
+                DEFAULT_PREFIX_MAP,
+            )
         )
-        if metadata is None:
-            metadata = {}
 
         chained_metadata = dict(ChainMap(metadata, external_metadata, inline_metadata))
 
-        columns = line.strip().split("\t")
-
-        for record in csv.DictReader(file, fieldnames=columns, delimiter="\t"):
+        for record in csv.DictReader(file, fieldnames=columns, delimiter=sep):
             for key in PROPAGATABLE.intersection(chained_metadata):
                 if not record.get(key):
                     record[key] = chained_metadata[key]
             model = Record.model_validate(record)
             rv.append(model)
-    return rv
+
+    return rv, converter
+
+
+def _chomp_frontmatter(file: TextIO) -> tuple[list[str], Metadata]:
+    # consume from the top of the stream until there's no more preceding #
+    header_yaml = ""
+    while (line := file.readline()).startswith("#"):
+        line = line.lstrip("#").rstrip()
+        if not line:
+            continue
+        header_yaml += line + "\n"
+
+    columns = line.strip().split("\t")
+
+    if not header_yaml:
+        rv = {}
+    else:
+        rv = yaml.safe_load(header_yaml)
+
+    return columns, rv

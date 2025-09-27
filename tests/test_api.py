@@ -37,4 +37,5 @@ class TestIO(unittest.TestCase):
         path = self.directory.joinpath("test.tsv")
         write([r], path)
 
-        self.assertEqual([r], read(path))
+        records, _converter = read(path)
+        self.assertEqual([r], records)
