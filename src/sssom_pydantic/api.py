@@ -43,6 +43,8 @@ PREDICATE_TYPES: set[Reference] = {
 #: from the frontmatter to all mappings
 PROPAGATABLE: set[str] = {
     "mapping_set_id",
+    "mapping_justification",
+    "author_id",
 }
 #: The default prefix map for SSSOM
 DEFAULT_PREFIX_MAP: dict[str, str] = {}
@@ -167,7 +169,7 @@ def read(
     *,
     metadata_path: str | Path | None = None,
     metadata: Metadata | None = None,
-    sep: str = "\t",
+    sep: str | None = None,
 ) -> tuple[list[Record], Converter]:
     """Read a raw file."""
     external_metadata = (
@@ -194,7 +196,7 @@ def read(
 
         chained_metadata = dict(ChainMap(metadata, external_metadata, inline_metadata))
 
-        for record in csv.DictReader(file, fieldnames=columns, delimiter=sep):
+        for record in csv.DictReader(file, fieldnames=columns, delimiter=sep or "\t"):
             for key in PROPAGATABLE.intersection(chained_metadata):
                 if not record.get(key):
                     record[key] = chained_metadata[key]
