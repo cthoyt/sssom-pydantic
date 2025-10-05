@@ -45,6 +45,7 @@ class TestSchema(unittest.TestCase):
     """Tests against the SSSOM schema."""
 
     view: typing.ClassVar[linkml_runtime.SchemaView]
+    mapping_slots: typing.ClassVar[set[str]]
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -62,6 +63,8 @@ class TestSchema(unittest.TestCase):
                 download(path=path, url=SSSOM_SCHEMA_URL)
                 cls.view = SchemaView(path)
 
+        cls.mapping_slots = set(cls.view.get_class("mapping").slots)
+
     def test_multivalued(self) -> None:
         """Test that the multivalued list is filled out."""
         expected_multivalued = {
@@ -78,7 +81,6 @@ class TestSchema(unittest.TestCase):
 
     def test_completeness(self) -> None:
         """Test that the Record class fully covers."""
-        mapping_slots: set[str] = set(self.view.get_class("mapping").slots)
         # TODO get from view
         mapping_set_propagatable_slots: set[str] = {
             "mapping_set_id",
@@ -90,9 +92,47 @@ class TestSchema(unittest.TestCase):
         }
 
         self.assertEqual(
-            mapping_slots | mapping_set_propagatable_slots,
+            self.mapping_slots | mapping_set_propagatable_slots,
             set(Record.model_fields),
         )
+
+    def test_value_types(self) -> None:
+        """Test that values with entity references are type annotated as references."""
+        maps = {
+            "record_id": "record",
+            "subject_id": "subject",
+            "predicate_id": "predicate",
+            "object_id": "object",
+            "mapping_justification": "justification",
+            "reviewer_id": "reviewers",
+            "author_id": "authors",
+            "creator_id": "creators",
+        }
+        skips = {
+            "mapping_tool_id",
+        }
+        for slot in self.mapping_slots:
+            if slot in skips:
+                continue
+            if self.view.get_slot(slot).range != "EntityReference":
+                continue
+            with self.subTest(slot=slot):
+                annotation = SemanticMapping.model_fields[maps.get(slot, slot)].annotation
+                if annotation is Reference:
+                    self.assertNotIn(slot, MULTIVALUED)
+                elif slot in MULTIVALUED:
+                    self.assertEqual(
+                        list[Reference] | None,
+                        annotation,
+                        msg=f"{slot} should be annotated as a list of "
+                        f"references, but got {annotation}",
+                    )
+                else:
+                    self.assertEqual(
+                        Reference | None,
+                        annotation,
+                        msg=f"{slot} should be annotated as a reference, but got {annotation}",
+                    )
 
 
 class TestIO(unittest.TestCase):

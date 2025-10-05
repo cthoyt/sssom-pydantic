@@ -12,7 +12,7 @@ import yaml
 from curies import Converter, Reference
 from tqdm import tqdm
 
-from .api import MappingSet, MappingTool, SemanticMapping
+from .api import MappingSet, MappingTool, RequiredSemanticMapping, SemanticMapping
 from .constants import DEFAULT_PREFIX_MAP, MULTIVALUED, PREFIX_MAP_KEY, PROPAGATABLE
 from .models import Record
 
@@ -78,11 +78,12 @@ def parse_record(record: Record, converter: curies.Converter) -> SemanticMapping
         authors=_parse_curies(record.author_id),
         creators=_parse_curies(record.creator_id),
         reviewers=_parse_curies(record.reviewer_id),
+        # TODO there's more to do!
     )
 
 
 def write(
-    records: list[SemanticMapping],
+    records: list[RequiredSemanticMapping],
     path: str | Path,
     *,
     metadata: dict[str, Any] | None = None,
@@ -135,7 +136,11 @@ def _unprocess_row(i: Record) -> dict[str, Any]:
 
 
 def _preprocess_row(record: dict[str, Any], metadata: dict[str, Any]) -> dict[str, Any]:
-    record = {k: v.strip() for k, v in record.items() if v and v.strip() and v.strip() != "."}
+    record = {
+        key: v_stripped
+        for key, value in record.items()
+        if key and value and (v_stripped := value.strip()) and v_stripped != "."
+    }
 
     # Step 1: propagate values from the header if it's not explicit in the record
     for key in PROPAGATABLE.intersection(metadata):
@@ -167,15 +172,15 @@ def read(
     converter: curies.Converter | None = None,
 ) -> tuple[list[SemanticMapping], Converter]:
     """Read and process SSSOM from TSV."""
-    records, converter = read_unprocessed(
+    unprocessed_records, converter = read_unprocessed(
         path=path,
         metadata_path=metadata_path,
         metadata=metadata,
         progress=progress,
         converter=converter,
     )
-    rr = [parse_record(record, converter) for record in records]
-    return rr, converter
+    processed_records = [parse_record(record, converter) for record in unprocessed_records]
+    return processed_records, converter
 
 
 def read_unprocessed(
