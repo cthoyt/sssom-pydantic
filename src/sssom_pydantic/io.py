@@ -12,7 +12,6 @@ from typing import Any, Literal, TextIO, TypeAlias
 import curies
 import yaml
 from curies import Converter, Reference
-from tqdm import tqdm
 
 from .api import MappingSet, MappingTool, RequiredSemanticMapping, SemanticMapping
 from .constants import DEFAULT_PREFIX_MAP, MULTIVALUED, PREFIX_MAP_KEY, PROPAGATABLE
@@ -231,7 +230,6 @@ def read(
     *,
     metadata_path: str | Path | None = None,
     metadata: Metadata | None = None,
-    progress: bool = False,
     converter: curies.Converter | None = None,
 ) -> tuple[list[SemanticMapping], Converter]:
     """Read and process SSSOM from TSV."""
@@ -239,7 +237,6 @@ def read(
         path=path,
         metadata_path=metadata_path,
         metadata=metadata,
-        progress=progress,
         converter=converter,
     )
     processed_records = [parse_record(record, converter) for record in unprocessed_records]
@@ -251,7 +248,6 @@ def read_unprocessed(
     *,
     metadata_path: str | Path | None = None,
     metadata: Metadata | None = None,
-    progress: bool = False,
     converter: curies.Converter | None = None,
 ) -> tuple[list[Record], Converter]:
     """Read SSSOM TSV into unprocessed records."""
@@ -279,7 +275,6 @@ def read_unprocessed(
         chained_metadata = dict(ChainMap(metadata, external_metadata, inline_metadata))
 
         reader = csv.DictReader(file, fieldnames=columns, delimiter="\t")
-        reader = tqdm(reader, disable=not progress)
         mappings = [
             parse_row(cleaned_row, metadata=chained_metadata)
             for row in reader
