@@ -37,9 +37,12 @@ Pydantic models for SSSOM.
 
 ## 💪 Getting Started
 
-> TODO show in a very small amount of space the **MOST** useful thing your
-> package can do. Make it as short as possible! You have an entire set of docs
-> for later.
+```python
+import sssom_pydantic
+
+path_or_url = ...
+mappings, converter = sssom_pydantic.read(path_or_url)
+```
 
 ### Command Line Interface
 
