@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import csv
-from collections import ChainMap
+import logging
+from collections import ChainMap, Counter, defaultdict
 from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import Any, Literal, TextIO, TypeAlias
@@ -27,6 +28,8 @@ __all__ = [
     "write",
     "write_unprocessed",
 ]
+
+logger = logging.getLogger(__name__)
 
 #: The type for metadata
 Metadata: TypeAlias = dict[str, Any]
@@ -109,31 +112,61 @@ def write_unprocessed(
     path = Path(path).expanduser().resolve()
     columns = _get_columns(records)
 
-    # TODO condense operation
+    if metadata is None:
+        metadata = {}
 
-    chained_metadata = {}
+    condensation = _get_condensation(records)
+    for key, value in condensation.items():
+        if key in metadata and metadata[key] != value:
+            logger.warning("mismatch between given metadata and observed. overwriting")
+        metadata[key] = value
 
     if converter is None:
-        if metadata is None:
-            raise ValueError("must have at least one of a converter or metadata")
-        elif not metadata.get(PREFIX_MAP_KEY):
+        if not metadata.get(PREFIX_MAP_KEY):
             raise ValueError(f"must have {PREFIX_MAP_KEY} in metadata if converter not given")
-        else:
-            chained_metadata = metadata
-    elif metadata is None:
-        chained_metadata[PREFIX_MAP_KEY] = converter.bimap
     else:
-        raise NotImplementedError("need to decide on chaining rules here")
+        if metadata.get(PREFIX_MAP_KEY):
+            raise NotImplementedError
+        else:
+            metadata[PREFIX_MAP_KEY] = converter.bimap
 
     # at minimum, this needs to have a CURIE map
 
+    condensed_keys = set(condensation)
+    columns = [c for c in columns if c not in condensed_keys]
+
     with path.open(mode="w" if mode is None else mode) as file:
-        for line in yaml.safe_dump(chained_metadata).splitlines():
+        for line in yaml.safe_dump(metadata).splitlines():
             print(f"#{line}", file=file)
             # TODO add comment about being written with this software at a given time
         writer = csv.DictWriter(file, columns, delimiter="\t")
         writer.writeheader()
-        writer.writerows(_unprocess_row(record) for record in records)
+        writer.writerows(
+            _unprocess_row(record, condensed_keys=condensed_keys) for record in records
+        )
+
+
+def _get_condensation(records: Iterable[Record]) -> dict[str, Any]:
+    values: defaultdict[str, Counter[str | None | tuple[str, ...]]] = defaultdict(Counter)
+    for record in records:
+        for key in PROPAGATABLE:
+            value = getattr(record, key)
+            if isinstance(value, list):
+                values[key][tuple(sorted(value))] += 1
+            elif value is None or isinstance(value, str):
+                values[key][value] += 1
+            else:
+                raise TypeError(f"unhandled value type: {type(value)} for {value}")
+
+    condensed = {}
+    for key, counter in values.items():
+        if len(counter) != 1:
+            continue
+        value = next(iter(counter))
+        if value is None:
+            continue  # no need to unpropagate this
+        condensed[key] = value
+    return condensed
 
 
 def _get_columns(records: Iterable[Record]) -> list[str]:
@@ -147,8 +180,10 @@ def _get_columns(records: Iterable[Record]) -> list[str]:
     return [f for f in Record.model_fields if f in columns]
 
 
-def _unprocess_row(i: Record) -> dict[str, Any]:
-    record = i.model_dump(exclude_none=True, exclude_unset=True, exclude_defaults=True)
+def _unprocess_row(i: Record, condensed_keys: set[str]) -> dict[str, Any]:
+    record = i.model_dump(
+        exclude_none=True, exclude_unset=True, exclude_defaults=True, exclude=condensed_keys
+    )
     for key in MULTIVALUED:
         if (v := record.get(key)) and isinstance(v, str):
             record[key] = "|".join(v)

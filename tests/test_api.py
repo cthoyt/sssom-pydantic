@@ -276,12 +276,20 @@ class TestIO(unittest.TestCase):
             chebi:28646	mesh:C000089	skos:exactMatch	semapv:ManualMappingCuration
         """)
         fixed = dedent("""\
-            #mapping_set_id: https://example.org/test.tsv
             #curie_map:
-            #  mesh: "http://id.nlm.nih.gov/mesh/"
-            #  chebi: "http://purl.obolibrary.org/obo/CHEBI_"
-            subject_id	predicate_id	object_id	mapping_justification
-            mesh:C000089	skos:exactMatch	chebi:28646	semapv:ManualMappingCuration
+            #  chebi: http://purl.obolibrary.org/obo/CHEBI_
+            #  mesh: http://id.nlm.nih.gov/mesh/
+            #  orcid: https://orcid.org/
+            #  owl: http://www.w3.org/2002/07/owl#
+            #  rdf: http://www.w3.org/1999/02/22-rdf-syntax-ns#
+            #  rdfs: http://www.w3.org/2000/01/rdf-schema#
+            #  semapv: https://w3id.org/semapv/vocab/
+            #  skos: http://www.w3.org/2004/02/skos/core#
+            #  sssom: https://w3id.org/sssom/
+            #mapping_justification: semapv:ManualMappingCuration
+            #mapping_set_id: https://example.org/test.tsv
+            subject_id	predicate_id	object_id
+            mesh:C000089	skos:exactMatch	chebi:28646
         """)
         with tempfile.TemporaryDirectory() as d:
             path = Path(d).joinpath("test.tsv")
