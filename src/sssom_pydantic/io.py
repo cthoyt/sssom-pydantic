@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 from collections import ChainMap
+from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import Any, Literal, TextIO, TypeAlias
 
@@ -18,6 +19,7 @@ from .models import Record
 
 __all__ = [
     "Metadata",
+    "lint",
     "parse_record",
     "parse_row",
     "read",
@@ -83,23 +85,25 @@ def parse_record(record: Record, converter: curies.Converter) -> SemanticMapping
 
 
 def write(
-    records: list[RequiredSemanticMapping],
+    records: Iterable[RequiredSemanticMapping],
     path: str | Path,
     *,
     metadata: dict[str, Any] | None = None,
     mode: Literal["w", "a"] | None = None,
+    converter: curies.Converter | None = None,
 ) -> None:
     """Write processed records."""
     x = [m.to_record() for m in records]
-    write_unprocessed(x, path=path, metadata=metadata, mode=mode)
+    write_unprocessed(x, path=path, metadata=metadata, mode=mode, converter=converter)
 
 
 def write_unprocessed(
-    records: list[Record],
+    records: Sequence[Record],
     path: str | Path,
     *,
     metadata: dict[str, Any] | None = None,
     mode: Literal["w", "a"] | None = None,
+    converter: curies.Converter | None = None,
 ) -> None:
     """Write unprocessed records."""
     path = Path(path).expanduser().resolve()
@@ -107,16 +111,32 @@ def write_unprocessed(
 
     # TODO condense operation
 
+    chained_metadata = {}
+
+    if converter is None:
+        if metadata is None:
+            raise ValueError("must have at least one of a converter or metadata")
+        elif not metadata.get(PREFIX_MAP_KEY):
+            raise ValueError(f"must have {PREFIX_MAP_KEY} in metadata if converter not given")
+        else:
+            chained_metadata = metadata
+    elif metadata is None:
+        chained_metadata[PREFIX_MAP_KEY] = converter.bimap
+    else:
+        raise NotImplementedError("need to decide on chaining rules here")
+
+    # at minimum, this needs to have a CURIE map
+
     with path.open(mode="w" if mode is None else mode) as file:
-        if metadata:
-            for line in yaml.safe_dump(metadata).splitlines():
-                print(f"#{line}", file=file)
+        for line in yaml.safe_dump(chained_metadata).splitlines():
+            print(f"#{line}", file=file)
+            # TODO add comment about being written with this software at a given time
         writer = csv.DictWriter(file, columns, delimiter="\t")
         writer.writeheader()
         writer.writerows(_unprocess_row(record) for record in records)
 
 
-def _get_columns(records: list[Record]) -> list[str]:
+def _get_columns(records: Iterable[Record]) -> list[str]:
     columns = set()
     for record in records:
         for key in record.model_fields_set:
@@ -135,20 +155,26 @@ def _unprocess_row(i: Record) -> dict[str, Any]:
     return record
 
 
-def _preprocess_row(record: dict[str, Any], metadata: dict[str, Any]) -> dict[str, Any]:
+def _clean_row(record: dict[str, Any]) -> dict[str, Any]:
     record = {
         key: v_stripped
         for key, value in record.items()
         if key and value and (v_stripped := value.strip()) and v_stripped != "."
     }
+    return record
 
+
+def _preprocess_row(
+    record: dict[str, Any], *, metadata: dict[str, Any] | None = None
+) -> dict[str, Any]:
     # Step 1: propagate values from the header if it's not explicit in the record
-    for key in PROPAGATABLE.intersection(metadata):
-        if not record.get(key):
-            value = metadata[key]
-            if key in MULTIVALUED and isinstance(value, str):
-                value = [value]
-            record[key] = value
+    if metadata:
+        for key in PROPAGATABLE.intersection(metadata):
+            if not record.get(key):
+                value = metadata[key]
+                if key in MULTIVALUED and isinstance(value, str):
+                    value = [value]
+                record[key] = value
 
     # Step 2: split all lists on the default SSSOM delimiter (pipe)
     for key in MULTIVALUED:
@@ -158,9 +184,11 @@ def _preprocess_row(record: dict[str, Any], metadata: dict[str, Any]) -> dict[st
     return record
 
 
-def parse_row(record: dict[str, str], metadata: dict[str, Any]) -> Record:
+def parse_row(record: dict[str, str], *, metadata: dict[str, Any] | None = None) -> Record:
     """Parse a row from a SSSOM TSV file, unprocessed."""
-    return Record.model_validate(_preprocess_row(record, metadata))
+    processed_record = _preprocess_row(record, metadata=metadata)
+    rv = Record.model_validate(processed_record)
+    return rv
 
 
 def read(
@@ -217,12 +245,16 @@ def read_unprocessed(
 
         reader = csv.DictReader(file, fieldnames=columns, delimiter="\t")
         reader = tqdm(reader, disable=not progress)
-        rv = [parse_row(record, chained_metadata) for record in reader]
+        mappings = [
+            parse_row(cleaned_row, metadata=chained_metadata)
+            for row in reader
+            if (cleaned_row := _clean_row(row))
+        ]
 
     if converter is not None:
         rv_converter = curies.chain([converter, rv_converter])
 
-    return rv, rv_converter
+    return mappings, rv_converter
 
 
 def _chomp_frontmatter(file: TextIO) -> tuple[list[str], Metadata]:
@@ -242,3 +274,14 @@ def _chomp_frontmatter(file: TextIO) -> tuple[list[str], Metadata]:
         rv = yaml.safe_load(header_yaml)
 
     return columns, rv
+
+
+def lint(path: str | Path) -> None:
+    """Lint a file."""
+    mappings, converter = read(path)
+    mappings = _remove_redundant(mappings)
+    write(mappings, path, converter=converter)
+
+
+def _remove_redundant(mappings: list[SemanticMapping]) -> list[SemanticMapping]:
+    return mappings

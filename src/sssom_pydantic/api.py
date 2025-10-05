@@ -18,7 +18,6 @@ __all__ = [
     "MappingTool",
     "RequiredSemanticMapping",
     "SemanticMapping",
-    "sort_mappings",
 ]
 
 
@@ -154,10 +153,10 @@ class CoreSemanticMapping(RequiredSemanticMapping):
         )
 
 
-def _join(references: list[Reference] | None) -> str | None:
+def _join(references: list[Reference] | None) -> list[str] | None:
     if not references:
         return None
-    return "|".join(r.curie for r in references)
+    return [r.curie for r in references]
 
 
 class SemanticMapping(CoreSemanticMapping):

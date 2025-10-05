@@ -21,7 +21,7 @@ import sssom_pydantic.io
 from sssom_pydantic import Record, write_unprocessed
 from sssom_pydantic.api import MappingSet, SemanticMapping
 from sssom_pydantic.constants import MULTIVALUED
-from sssom_pydantic.io import _chomp_frontmatter
+from sssom_pydantic.io import _chomp_frontmatter, lint
 
 if TYPE_CHECKING:
     import linkml_runtime
@@ -264,3 +264,29 @@ class TestIO(unittest.TestCase):
             ).model_dump(exclude_none=True),
             processed_records[0].model_dump(exclude_none=True),
         )
+
+    def test_lint(self) -> None:
+        """Test linting."""
+        original = dedent("""\
+            #mapping_set_id: https://example.org/test.tsv
+            #curie_map:
+            #  mesh: "http://id.nlm.nih.gov/mesh/"
+            #  chebi: "http://purl.obolibrary.org/obo/CHEBI_"
+            object_id	subject_id	predicate_id	mapping_justification
+            chebi:28646	mesh:C000089	skos:exactMatch	semapv:ManualMappingCuration
+        """)
+        fixed = dedent("""\
+            #mapping_set_id: https://example.org/test.tsv
+            #curie_map:
+            #  mesh: "http://id.nlm.nih.gov/mesh/"
+            #  chebi: "http://purl.obolibrary.org/obo/CHEBI_"
+            subject_id	predicate_id	object_id	mapping_justification
+            mesh:C000089	skos:exactMatch	chebi:28646	semapv:ManualMappingCuration
+        """)
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d).joinpath("test.tsv")
+            path.write_text(original)
+
+            lint(path)
+
+            self.assertEqual(fixed.splitlines(), path.read_text().splitlines())
