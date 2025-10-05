@@ -10,11 +10,10 @@ import unittest
 from pathlib import Path
 from textwrap import dedent
 from typing import TYPE_CHECKING
+from urllib.request import urlretrieve
 
-import pystow
 from curies import NamedReference, Reference
 from curies.vocabulary import charlie, exact_match, manual_mapping_curation
-from pystow.utils import download
 
 import sssom_pydantic
 import sssom_pydantic.io
@@ -52,7 +51,9 @@ class TestSchema(unittest.TestCase):
         """Set up the class with a schema view."""
         from linkml_runtime import SchemaView
 
-        if CACHE_SSSOM_SCHEMA:
+        if CACHE_SSSOM_SCHEMA and importlib.util.find_spec("pystow"):
+            import pystow
+
             # get path remotely, since :mod:`sssom_schema` is
             # not usually kept up-to-date
             path = pystow.ensure("sssom", url=SSSOM_SCHEMA_URL)
@@ -60,7 +61,7 @@ class TestSchema(unittest.TestCase):
         else:
             with tempfile.TemporaryDirectory() as d:
                 path = Path(d).joinpath("schema.yml")
-                download(path=path, url=SSSOM_SCHEMA_URL)
+                urlretrieve(SSSOM_SCHEMA_URL, path)  # noqa:S310
                 cls.view = SchemaView(path)
 
         cls.mapping_slots = set(cls.view.get_class("mapping").slots)
