@@ -87,7 +87,7 @@ def parse_record(record: Record, converter: curies.Converter) -> SemanticMapping
 
 
 def write(
-    records: Iterable[RequiredSemanticMapping],
+    mappings: Iterable[RequiredSemanticMapping],
     path: str | Path,
     *,
     metadata: dict[str, Any] | None = None,
@@ -95,8 +95,14 @@ def write(
     converter: curies.Converter | None = None,
 ) -> None:
     """Write processed records."""
-    x = [m.to_record() for m in records]
-    write_unprocessed(x, path=path, metadata=metadata, mode=mode, converter=converter)
+    records = []
+    prefixes: set[str] = set()
+    for mapping in mappings:
+        prefixes.update(mapping.get_prefixes())
+        records.append(mapping.to_record())
+    write_unprocessed(
+        records, path=path, metadata=metadata, mode=mode, converter=converter, prefixes=prefixes
+    )
 
 
 def write_unprocessed(
@@ -106,6 +112,7 @@ def write_unprocessed(
     metadata: dict[str, Any] | None = None,
     mode: Literal["w", "a"] | None = None,
     converter: curies.Converter | None = None,
+    prefixes: set[str] | None = None,
 ) -> None:
     """Write unprocessed records."""
     path = Path(path).expanduser().resolve()
@@ -120,16 +127,18 @@ def write_unprocessed(
             logger.warning("mismatch between given metadata and observed. overwriting")
         metadata[key] = value
 
-    if converter is None:
-        if not metadata.get(PREFIX_MAP_KEY):
-            raise ValueError(f"must have {PREFIX_MAP_KEY} in metadata if converter not given")
-    else:
-        if metadata.get(PREFIX_MAP_KEY):
-            raise NotImplementedError
-        else:
-            metadata[PREFIX_MAP_KEY] = converter.bimap
+    cvs = []
+    if converter is not None:
+        cvs.append(converter)
+    if pm := metadata.pop(PREFIX_MAP_KEY, {}):
+        cvs.append(curies.Converter.from_prefix_map(pm))
+    if not cvs:
+        raise ValueError(f"must have {PREFIX_MAP_KEY} in metadata if converter not given")
 
-    # at minimum, this needs to have a CURIE map
+    converter = curies.chain(cvs)
+    if prefixes is not None:
+        converter = converter.get_subconverter(prefixes)
+    metadata[PREFIX_MAP_KEY] = converter.bimap
 
     condensed_keys = set(condensation)
     columns = [c for c in columns if c not in condensed_keys]

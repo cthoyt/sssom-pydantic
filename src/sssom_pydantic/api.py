@@ -65,6 +65,15 @@ class RequiredSemanticMapping(Triple):
             mapping_set_version=self.mapping_set.version,
         )
 
+    def get_prefixes(self) -> set[str]:
+        """Get prefixes used in this mapping."""
+        return {
+            self.subject.prefix,
+            self.predicate.prefix,
+            self.object.prefix,
+            self.justification.prefix,
+        }
+
 
 def _get_name(reference: Reference) -> str | None:
     if isinstance(reference, NamableReference):
@@ -119,6 +128,17 @@ class CoreSemanticMapping(RequiredSemanticMapping):
             mapping_set_title=self.mapping_set.title,
             mapping_set_version=self.mapping_set.version,
         )
+
+    def get_prefixes(self) -> set[str]:
+        """Get prefixes used in this mapping."""
+        rv = super().get_prefixes()
+        if self.record is not None:
+            rv.add(self.record.prefix)
+        for a in self.authors or []:
+            rv.add(a.prefix)
+        if self.mapping_tool and self.mapping_tool.reference:
+            rv.add(self.mapping_tool.reference.prefix)
+        return rv
 
     @property
     def author(self) -> Reference | None:
@@ -203,6 +223,31 @@ class SemanticMapping(CoreSemanticMapping):
     see_also: str | None = Field(None)
     similarity_measure: str | None = Field(None)
     similarity_score: float | None = Field(None)
+
+    def get_prefixes(self) -> set[str]:
+        """Get prefixes used in this mapping."""
+        rv = super().get_prefixes()
+        for x in [
+            self.subject_source,
+            self.predicate_type,
+            self.object_source,
+            self.mapping_source,
+        ]:
+            if x is not None:
+                rv.add(x.prefix)
+        for y in [
+            self.subject_match_field,
+            self.subject_preprocessing,
+            self.object_match_field,
+            self.object_preprocessing,
+            self.creators,
+            self.reviewers,
+            self.curation_rule,
+        ]:
+            if y is not None:
+                for z in y:
+                    rv.add(z.prefix)
+        return rv
 
     def to_record(self) -> Record:
         """Get a record."""

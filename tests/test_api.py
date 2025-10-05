@@ -280,13 +280,8 @@ class TestIO(unittest.TestCase):
             #curie_map:
             #  chebi: http://purl.obolibrary.org/obo/CHEBI_
             #  mesh: http://id.nlm.nih.gov/mesh/
-            #  orcid: https://orcid.org/
-            #  owl: http://www.w3.org/2002/07/owl#
-            #  rdf: http://www.w3.org/1999/02/22-rdf-syntax-ns#
-            #  rdfs: http://www.w3.org/2000/01/rdf-schema#
             #  semapv: https://w3id.org/semapv/vocab/
             #  skos: http://www.w3.org/2004/02/skos/core#
-            #  sssom: https://w3id.org/sssom/
             #mapping_justification: semapv:ManualMappingCuration
             #mapping_set_id: https://example.org/test.tsv
             subject_id	predicate_id	object_id
