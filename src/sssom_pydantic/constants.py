@@ -9,7 +9,7 @@ __all__ = [
     "MULTIVALUED",
     "PREDICATE_TYPES",
     "PREFIX_MAP_KEY",
-    "PROPAGATABLE_SPEC",
+    "PROPAGATABLE",
 ]
 
 PREFIX_MAP_KEY = "curie_map"  # smh
@@ -32,7 +32,7 @@ PREDICATE_TYPES: set[Reference] = {
 
 #: The set of values that should be propagated
 #: from the frontmatter to all mappings
-PROPAGATABLE_SPEC: set[str] = {
+PROPAGATABLE: set[str] = {
     "cardinality_scope",
     "curation_rule",
     "curation_rule_text",
@@ -54,17 +54,6 @@ PROPAGATABLE_SPEC: set[str] = {
     "subject_source_version",
     "subject_type",
 }
-#: These are required to propagate, when available
-PROPAGATABLE_EXTRAS = {
-    "mapping_set_id",
-    "mapping_set_confidence",
-    "mapping_set_description",
-    "mapping_set_source",
-    "mapping_set_title",
-    "mapping_set_version",
-}
-#: Custom propagatable
-PROPAGATABLE = PROPAGATABLE_SPEC
 
 #: An enumeration of the multivalued slots that are
 #: applicable for mappings. Note, there's a unit
@@ -100,6 +89,13 @@ DEFAULT_PREFIX_MAP: dict[str, str] = {
 }
 
 MAPPING_SLOT_SPECIFIC = {
+    "mapping_set_id",
+    "mapping_set_confidence",
+    "mapping_set_description",
+    "mapping_set_source",
+    "mapping_set_title",
+    "mapping_set_version",
+    #
     "sssom_version",
     "extension_definitions",
     "issue_tracker",
@@ -114,4 +110,4 @@ MAPPING_SLOT_SPECIFIC = {
     "see_also",
 }
 MAPPING_SET_SLOTS_SKIP = {"mappings"}
-MAPPING_SET_SLOTS = PROPAGATABLE_SPEC | PROPAGATABLE_EXTRAS | MAPPING_SLOT_SPECIFIC
+MAPPING_SET_SLOTS = PROPAGATABLE | MAPPING_SLOT_SPECIFIC

@@ -216,7 +216,6 @@ class TestIO(unittest.TestCase):
             predicate_id="skos:exactMatch",
             object_id="chebi:28647",
             mapping_justification="semapv:ManualMappingCuration",
-            mapping_set_id="https://example.org/test.tsv",
         )
         append_unprocessed([record], path)
 

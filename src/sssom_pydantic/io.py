@@ -331,15 +331,14 @@ def read(
     converter: curies.Converter | None = None,
 ) -> tuple[list[SemanticMapping], Converter, MappingSet]:
     """Read and process SSSOM from TSV."""
-    # TODO add metadata that's been read here?
-    unprocessed_records, converter, mapping_set = read_unprocessed(
+    unprocessed_records, rv_converter, mapping_set = read_unprocessed(
         path_or_url=path_or_url,
         metadata_path=metadata_path,
         metadata=metadata,
         converter=converter,
     )
-    processed_records = [parse_record(record, converter) for record in unprocessed_records]
-    return processed_records, converter, mapping_set
+    processed_records = [parse_record(record, rv_converter) for record in unprocessed_records]
+    return processed_records, rv_converter, mapping_set
 
 
 def read_unprocessed(

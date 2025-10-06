@@ -330,4 +330,17 @@ class MappingSet(BaseModel):
     mapping_set_title: str | None = Field(None)
     mapping_set_version: str | None = Field(None)
 
-    # TODO what about other stuff like extensions, sssom_version
+    publication_date: datetime.date | None = Field(None)
+    see_also: str | None = Field(None)
+    other: str | None = Field(None)
+    comment: str | None = Field(None)
+    sssom_version: str | None = Field(None)
+    license: str | None = Field(None)
+    issue_tracker: str | None = Field(None)
+    extension_definitions: list[ExtensionDefinition] | None = Field(None)
+    creator_id: list[str] | None = None
+    creator_label: list[str] | None = None
+
+
+class ExtensionDefinition(BaseModel):
+    """An extension definition."""

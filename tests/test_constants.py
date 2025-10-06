@@ -13,13 +13,12 @@ import linkml_runtime
 import pystow
 from curies import Reference
 
-from sssom_pydantic import Record, SemanticMapping
+from sssom_pydantic import MappingSet, Record, SemanticMapping
 from sssom_pydantic.constants import (
     MAPPING_SET_SLOTS,
     MAPPING_SET_SLOTS_SKIP,
     MULTIVALUED,
-    PROPAGATABLE_EXTRAS,
-    PROPAGATABLE_SPEC,
+    PROPAGATABLE,
 )
 
 SSSOM_SCHEMA_URL = "https://github.com/mapping-commons/sssom/raw/refs/heads/master/src/sssom_schema/schema/sssom_schema.yaml"
@@ -80,11 +79,11 @@ class TestSchema(unittest.TestCase):
 
         self.assertEqual(
             expected_propagatable,
-            PROPAGATABLE_SPEC,
+            PROPAGATABLE,
             msg="The sssom-pydantic PROPAGATABLE list is out of sync with the SSSOM schema.",
         )
 
-        x = PROPAGATABLE_SPEC - self.mapping_slots
+        x = PROPAGATABLE - self.mapping_slots
         self.assertEqual(
             0,
             len(x),
@@ -95,7 +94,7 @@ class TestSchema(unittest.TestCase):
         """Test that the Record class fully covers."""
         self.assertEqual(
             self.mapping_slots,
-            set(Record.model_fields) - PROPAGATABLE_EXTRAS,
+            set(Record.model_fields),
         )
 
     def test_mapping_set_keys(self) -> None:
@@ -142,3 +141,14 @@ class TestSchema(unittest.TestCase):
                         annotation,
                         msg=f"{slot} should be annotated as a reference, but got {annotation}",
                     )
+
+    def test_mapping_set(self) -> None:
+        """Test the mapping set has all fields except propagated ones and explicit skips."""
+        for slot in self.mapping_set_slots:
+            if slot in {"curie_map", "mappings"}:
+                continue
+            if slot in PROPAGATABLE:
+                continue
+            with self.subTest(slot=slot):
+                self.assertIn(slot, MappingSet.model_fields)
+                # TODO test type annotations are correct vs. spec
