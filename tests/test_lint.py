@@ -165,3 +165,25 @@ class TestLinting(unittest.TestCase):
             mesh:C000089	skos:exactMatch	chebi:28646	semapv:LexicalMatching
         """)
         self.assert_linted(expected, original)
+
+    def test_confidence(self) -> None:
+        """Test round trip with mapping confidence."""
+        original = dedent("""\
+            #mapping_set_id: https://example.org/test.tsv
+            #curie_map:
+            #  mesh: "http://id.nlm.nih.gov/mesh/"
+            #  chebi: "http://purl.obolibrary.org/obo/CHEBI_"
+            object_id	subject_id	predicate_id	mapping_justification	confidence
+            chebi:28646	mesh:C000089	skos:exactMatch	semapv:LexicalMatching	0.95
+        """)
+        expected = dedent("""\
+            #curie_map:
+            #  chebi: http://purl.obolibrary.org/obo/CHEBI_
+            #  mesh: http://id.nlm.nih.gov/mesh/
+            #  semapv: https://w3id.org/semapv/vocab/
+            #  skos: http://www.w3.org/2004/02/skos/core#
+            #mapping_set_id: https://example.org/test.tsv
+            subject_id	predicate_id	object_id	mapping_justification	confidence
+            mesh:C000089	skos:exactMatch	chebi:28646	semapv:LexicalMatching	0.95
+        """)
+        self.assert_linted(expected, original)

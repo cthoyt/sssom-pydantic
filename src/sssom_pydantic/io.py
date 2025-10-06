@@ -71,24 +71,63 @@ def parse_record(record: Record, converter: curies.Converter) -> SemanticMapping
             return None
         return [converter.parse_curie(y, strict=True).to_pydantic() for y in x]
 
+    def _parse_curie(x: str | None) -> Reference | None:
+        if not x:
+            return None
+        return converter.parse_curie(x, strict=True).to_pydantic()
+
     return SemanticMapping(
         subject=subject,
         predicate=predicate,
         object=obj,
         justification=mapping_justification,
-        mapping_tool=mapping_tool,
+        predicate_modifier=record.predicate_modifier,
         mapping_set=MappingSet(
             id=record.mapping_set_id,
-            confidence=record.confidence,
+            confidence=record.mapping_set_confidence,
             description=record.mapping_set_description,
             source=record.mapping_set_source,
             title=record.mapping_set_title,
             version=record.mapping_set_version,
         ),
+        # core
+        record=_parse_curie(record.record_id),
         authors=_parse_curies(record.author_id),
+        confidence=record.confidence,
+        mapping_tool=mapping_tool,
+        license=record.license,
+        # remaining
+        subject_category=record.subject_category,
+        subject_match_field=_parse_curies(record.subject_match_field),
+        subject_preprocessing=_parse_curies(record.subject_preprocessing),
+        subject_source=_parse_curie(record.subject_source),
+        subject_source_version=record.subject_source_version,
+        subject_type=record.subject_type,
+        predicate_type=_parse_curie(record.predicate_type),
+        object_category=record.object_category,
+        object_match_field=_parse_curies(record.object_match_field),
+        object_preprocessing=_parse_curie(record.object_preprocessing),
+        object_source=_parse_curie(record.object_source),
+        object_source_version=record.object_source_version,
+        object_type=record.subject_type,
         creators=_parse_curies(record.creator_id),
         reviewers=_parse_curies(record.reviewer_id),
-        # TODO there's more to do!
+        publication_date=record.publication_date,
+        mapping_date=record.mapping_date,
+        comment=record.comment,
+        curation_rule=_parse_curies(record.curation_rule),
+        curation_rule_text=record.curation_rule_text,
+        # TODO get fancy with rewriting github issues?
+        issue_tracker_item=_parse_curie(record.issue_tracker_item),
+        mapping_cardinality=record.mapping_cardinality,
+        cardinality_scope=record.cardinality_scope,
+        mapping_provider=record.mapping_provider,
+        mapping_source=_parse_curie(record.mapping_source),
+        match_string=record.match_string,
+        other=record.other,
+        see_also=record.see_also,
+        similarity_measure=record.similarity_measure,
+        similarity_score=record.similarity_score,
     )
 
 
@@ -161,13 +200,13 @@ def write_unprocessed(
 
 
 def _get_condensation(records: Iterable[Record]) -> dict[str, Any]:
-    values: defaultdict[str, Counter[str | None | tuple[str, ...]]] = defaultdict(Counter)
+    values: defaultdict[str, Counter[str | float | None | tuple[str, ...]]] = defaultdict(Counter)
     for record in records:
         for key in PROPAGATABLE:
             value = getattr(record, key)
             if isinstance(value, list):
                 values[key][tuple(sorted(value))] += 1
-            elif value is None or isinstance(value, str):
+            elif value is None or isinstance(value, str | float):
                 values[key][value] += 1
             else:
                 raise TypeError(f"unhandled value type: {type(value)} for {value}")
