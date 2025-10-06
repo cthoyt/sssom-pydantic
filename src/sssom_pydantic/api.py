@@ -43,6 +43,12 @@ class RequiredSemanticMapping(Triple):
     predicate_modifier: Literal["Not"] | None = Field(None)
 
     @property
+    def mapping_justification(self) -> Reference:
+        """Get the mapping justification."""
+        warnings.warn("use justification directly", DeprecationWarning, stacklevel=2)
+        return self.justification
+
+    @property
     def subject_name(self) -> str | None:
         """Get the subject label, if available."""
         return _get_name(self.subject)
@@ -155,12 +161,6 @@ class CoreSemanticMapping(RequiredSemanticMapping):
         if len(self.authors) != 1:
             raise ValueError
         return self.authors[0]
-
-    @property
-    def mapping_justification(self) -> Reference | None:
-        """Get the mapping justification."""
-        warnings.warn("use justification directly", DeprecationWarning, stacklevel=2)
-        return self.justification
 
     def __lt__(self, other: Any) -> bool:
         if not isinstance(other, CoreSemanticMapping):
