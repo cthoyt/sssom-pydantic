@@ -52,7 +52,8 @@ mappings, converter = sssom_pydantic.read(url)
 `sssom-pydantic` has an opinionated formatter.
 
 ```console
-$ sssom_pydantic format https://w3id.org/biopragmatics/biomappings/sssom/biomappings.sssom.tsv
+$ wget https://w3id.org/biopragmatics/biomappings/sssom/biomappings.sssom.tsv
+$ sssom_pydantic format biomappings.sssom.tsv
 ```
 
 It does the following:
