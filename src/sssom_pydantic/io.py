@@ -215,21 +215,21 @@ def write_unprocessed(
             logger.warning("mismatch between given metadata and observed. overwriting")
         metadata[key] = value
 
-    cvs = []
+    converters = []
     if converter is not None:
-        cvs.append(converter)
-    if pm := metadata.pop(PREFIX_MAP_KEY, {}):
-        cvs.append(curies.Converter.from_prefix_map(pm))
-    if not cvs:
+        converters.append(converter)
+    if prefix_map := metadata.pop(PREFIX_MAP_KEY, {}):
+        converters.append(curies.Converter.from_prefix_map(prefix_map))
+    if not converters:
         raise ValueError(f"must have {PREFIX_MAP_KEY} in metadata if converter not given")
 
-    converter = curies.chain(cvs)
+    converter = curies.chain(converters)
     if prefixes is not None:
         converter = converter.get_subconverter(prefixes)
     metadata[PREFIX_MAP_KEY] = converter.bimap
 
     condensed_keys = set(condensation)
-    columns = [c for c in columns if c not in condensed_keys]
+    columns = [column for column in columns if column not in condensed_keys]
 
     with path.open(mode="w") as file:
         for line in yaml.safe_dump(metadata).splitlines():
@@ -260,7 +260,7 @@ def _get_condensation(records: Iterable[Record]) -> dict[str, Any]:
             continue
         value = next(iter(counter))
         if value is None:
-            continue  # no need to unpropagate this
+            continue  # no need to un-propagate this
         condensed[key] = value
     return condensed
 
@@ -272,25 +272,26 @@ def _get_columns(records: Iterable[Record]) -> list[str]:
             if getattr(record, key) is not None:
                 columns.add(key)
 
-    # get them in the canonical order
-    return [f for f in Record.model_fields if f in columns]
+    # get them in the canonical order, based on how they appear in the
+    # record, which mirrors https://w3id.org/sssom/Mapping
+    return [column for column in Record.model_fields if column in columns]
 
 
-def _unprocess_row(i: Record, *, condensed_keys: set[str] | None = None) -> dict[str, Any]:
-    record = i.model_dump(
+def _unprocess_row(record: Record, *, condensed_keys: set[str] | None = None) -> dict[str, Any]:
+    rv = record.model_dump(
         exclude_none=True, exclude_unset=True, exclude_defaults=True, exclude=condensed_keys
     )
     for key in MULTIVALUED:
-        if (v := record.get(key)) and isinstance(v, list):
-            record[key] = "|".join(v)
-    return record
+        if (value := rv.get(key)) and isinstance(value, list):
+            rv[key] = "|".join(value)
+    return rv
 
 
 def _clean_row(record: dict[str, Any]) -> dict[str, Any]:
     record = {
-        key: v_stripped
+        key: stripped_value
         for key, value in record.items()
-        if key and value and (v_stripped := value.strip()) and v_stripped != "."
+        if key and value and (stripped_value := value.strip()) and stripped_value != "."
     }
     return record
 
@@ -303,14 +304,20 @@ def _preprocess_row(
         for key in PROPAGATABLE.intersection(metadata):
             if not record.get(key):
                 value = metadata[key]
+                # the following conditional fixes common mistakes in
+                # encoding a multivalued slot with a single value
                 if key in MULTIVALUED and isinstance(value, str):
                     value = [value]
                 record[key] = value
 
     # Step 2: split all lists on the default SSSOM delimiter (pipe)
     for key in MULTIVALUED:
-        if (v := record.get(key)) and isinstance(v, str):
-            record[key] = [y for x in v.split("|") if (y := x.strip())]
+        if (value := record.get(key)) and isinstance(value, str):
+            record[key] = [
+                stripped_subvalue
+                for subvalue in value.split("|")
+                if (stripped_subvalue := subvalue.strip())
+            ]
 
     return record
 
@@ -401,11 +408,11 @@ def _chomp_frontmatter(file: TextIO) -> tuple[list[str], Metadata]:
     columns = line.strip().split("\t")
 
     if not header_yaml:
-        rv = {}
+        metadata = {}
     else:
-        rv = yaml.safe_load(header_yaml)
+        metadata = yaml.safe_load(header_yaml)
 
-    return columns, rv
+    return columns, metadata
 
 
 def lint(
