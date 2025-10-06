@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 import importlib.util
 import tempfile
 import typing
@@ -20,6 +21,7 @@ from sssom_pydantic.constants import (
     MULTIVALUED,
     PROPAGATABLE,
 )
+from sssom_pydantic.models import Cardinality
 
 if TYPE_CHECKING:
     import linkml_runtime
@@ -120,30 +122,77 @@ class TestSchema(unittest.TestCase):
             "creator_id": "creators",
         }
         skips = {
+            # skip these because they're mapped in a custom way
             "mapping_tool_id",
+            "mapping_tool_version",
+            "mapping_tool",
+            "subject_label",
+            "predicate_label",
+            "object_label",
+            # skip these because they're not included
+            "creator_label",
+            "author_label",
+            "reviewer_label",
         }
         for slot in self.mapping_slots:
             if slot in skips:
                 continue
-            if self.view.get_slot(slot).range != "EntityReference":
-                continue
             with self.subTest(slot=slot):
                 annotation = SemanticMapping.model_fields[maps.get(slot, slot)].annotation
-                if annotation is Reference:
-                    self.assertNotIn(slot, MULTIVALUED)
-                elif slot in MULTIVALUED:
-                    self.assertEqual(
-                        list[Reference] | None,
-                        annotation,
-                        msg=f"{slot} should be annotated as a list of "
-                        f"references, but got {annotation}",
-                    )
-                else:
-                    self.assertEqual(
-                        Reference | None,
-                        annotation,
-                        msg=f"{slot} should be annotated as a reference, but got {annotation}",
-                    )
+                multivalued = slot in MULTIVALUED
+                match self.view.get_slot(slot).range:
+                    case "EntityReference":
+                        if annotation is Reference:
+                            self.assertNotIn(slot, MULTIVALUED)
+                        elif multivalued:
+                            self.assertEqual(
+                                list[Reference] | None,
+                                annotation,
+                                msg=f"{slot} should be annotated as a list of "
+                                f"references, but got {annotation}",
+                            )
+                        else:
+                            self.assertEqual(
+                                Reference | None,
+                                annotation,
+                                msg=f"{slot} should be annotated as a reference",
+                            )
+                    case "string" | "NonRelativeURI":
+                        if multivalued:
+                            self.assertIn(
+                                annotation,
+                                {list[str], list[str] | None},
+                                msg=f"{slot} should be annotated as a list[str]",
+                            )
+                        else:
+                            self.assertIn(
+                                annotation,
+                                {str, str | None},
+                                msg=f"{slot} should be annotated as a string",
+                            )
+                    case "double":
+                        self.assertIn(
+                            annotation,
+                            {float, float | None},
+                            msg=f"{slot} should be annotated as a float",
+                        )
+                    case "date":
+                        self.assertIn(
+                            annotation,
+                            {datetime.date, datetime.date | None},
+                            msg=f"{slot} should be annotated as a datetime",
+                        )
+                    case "mapping_cardinality_enum":
+                        self.assertEqual(Cardinality | None, annotation)
+                    case "predicate_modifier_enum":
+                        self.assertEqual(typing.Literal["Not"] | None, annotation)
+                    case "entity_type_enum":
+                        pass
+                    case _:
+                        self.fail(
+                            f"missing handling for {slot} with "
+                            f"range {self.view.get_slot(slot).range}"
+                        )
 
     def test_mapping_set(self) -> None:
         """Test the mapping set has all fields except propagated ones and explicit skips."""
@@ -154,4 +203,51 @@ class TestSchema(unittest.TestCase):
                 continue
             with self.subTest(slot=slot):
                 self.assertIn(slot, MappingSet.model_fields)
-                # TODO test type annotations are correct vs. spec
+                annotation = MappingSet.model_fields[slot].annotation
+                multivalued = self.view.get_slot(slot).multivalued
+                match self.view.get_slot(slot).range:
+                    case "EntityReference":
+                        if annotation is Reference:
+                            self.assertNotIn(slot, MULTIVALUED)
+                        elif multivalued:
+                            self.assertEqual(
+                                list[Reference] | None,
+                                annotation,
+                                msg=f"{slot} should be annotated as a list of "
+                                f"references, but got {annotation}",
+                            )
+                        else:
+                            self.assertEqual(
+                                Reference | None,
+                                annotation,
+                                msg=f"{slot} should be annotated as a reference",
+                            )
+                    case "string" | "NonRelativeURI":
+                        if multivalued:
+                            self.assertIn(
+                                annotation,
+                                {list[str], list[str] | None},
+                                msg=f"{slot} should be annotated as a list[str]",
+                            )
+                        else:
+                            self.assertIn(
+                                annotation,
+                                {str, str | None},
+                                msg=f"{slot} should be annotated as a string",
+                            )
+                    case "double":
+                        self.assertIn(
+                            annotation,
+                            {float, float | None},
+                            msg=f"{slot} should be annotated as a float",
+                        )
+                    case "date":
+                        self.assertIn(
+                            annotation,
+                            {datetime.date, datetime.date | None},
+                            msg=f"{slot} should be annotated as a datetime",
+                        )
+                    case "sssom_version_enum" | "extension definition":
+                        pass
+                    case _:
+                        self.fail(f"missing handling for {self.view.get_slot(slot).range}")

@@ -202,10 +202,10 @@ class SemanticMapping(CoreSemanticMapping):
     mapping_provider: str | None = Field(None)
     mapping_source: Reference | None = Field(None)
 
-    match_string: str | None = Field(None)  # FIXME is this supposed to be multivalued?
+    match_string: list[str] | None = Field(None)
 
     other: str | None = Field(None)
-    see_also: str | None = Field(None)  # FIXME is this supposed to be multivalued?
+    see_also: list[str] | None = Field(None)
     similarity_measure: str | None = Field(None)
     similarity_score: float | None = Field(None)
 
@@ -326,21 +326,43 @@ class MappingSet(BaseModel):
     mapping_set_id: str = Field(...)
     mapping_set_confidence: float | None = Field(None)
     mapping_set_description: str | None = Field(None)
-    mapping_set_source: str | None = Field(None)
+    mapping_set_source: list[str] | None = Field(None)
     mapping_set_title: str | None = Field(None)
     mapping_set_version: str | None = Field(None)
 
     publication_date: datetime.date | None = Field(None)
-    see_also: str | None = Field(None)
+    see_also: list[str] | None = Field(None)
     other: str | None = Field(None)
     comment: str | None = Field(None)
     sssom_version: str | None = Field(None)
     license: str | None = Field(None)
     issue_tracker: str | None = Field(None)
     extension_definitions: list[ExtensionDefinition] | None = Field(None)
-    creator_id: list[str] | None = None
+    creator_id: list[Reference] | None = None
     creator_label: list[str] | None = None
+
+    def get_prefixes(self) -> set[str]:
+        """Get prefixes appearing in all parts of the metadata."""
+        rv: set[str] = set()
+        for extension_definition in self.extension_definitions or []:
+            rv.update(extension_definition.get_prefixes())
+        for creator in self.creator_id or []:
+            rv.add(creator.prefix)
+        return rv
 
 
 class ExtensionDefinition(BaseModel):
     """An extension definition."""
+
+    slot_name: str
+    property: Reference | None = None
+    type_hint: Reference | None = None
+
+    def get_prefixes(self) -> set[str]:
+        """Get prefixes in the extension definition."""
+        rv: set[str] = set()
+        if self.property is not None:
+            rv.add(self.property.prefix)
+        if self.type_hint is not None:
+            rv.add(self.type_hint.prefix)
+        return rv
