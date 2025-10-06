@@ -217,10 +217,10 @@ class SemanticMapping(CoreSemanticMapping):
     mapping_provider: str | None = Field(None)
     mapping_source: Reference | None = Field(None)
 
-    match_string: str | None = Field(None)
+    match_string: str | None = Field(None)  # FIXME is this supposed to be multivalued?
 
     other: str | None = Field(None)
-    see_also: str | None = Field(None)
+    see_also: str | None = Field(None)  # FIXME is this supposed to be multivalued?
     similarity_measure: str | None = Field(None)
     similarity_score: float | None = Field(None)
 
