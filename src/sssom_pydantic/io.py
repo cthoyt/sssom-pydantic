@@ -287,6 +287,7 @@ def read(
     converter: curies.Converter | None = None,
 ) -> tuple[list[SemanticMapping], Converter]:
     """Read and process SSSOM from TSV."""
+    # TODO add metadata that's been read here?
     unprocessed_records, converter = read_unprocessed(
         path=path,
         metadata_path=metadata_path,
@@ -364,11 +365,20 @@ def _chomp_frontmatter(file: TextIO) -> tuple[list[str], Metadata]:
     return columns, rv
 
 
-def lint(path: str | Path) -> None:
+def lint(
+    path: str | Path,
+    *,
+    metadata_path: str | Path | None = None,
+    metadata: Metadata | None = None,
+    converter: curies.Converter | None = None,
+) -> None:
     """Lint a file."""
-    mappings, converter = read(path)
+    mappings, converter_processed = read(
+        path, metadata_path=metadata_path, metadata=metadata, converter=converter
+    )
     mappings = _remove_redundant(mappings)
-    write(mappings, path, converter=converter)
+    # TODO how to pass metadata in there?
+    write(mappings, path, converter=converter_processed, mode="w", metadata=None)
 
 
 def _remove_redundant(mappings: list[SemanticMapping]) -> list[SemanticMapping]:

@@ -7,7 +7,7 @@ from .api import (
     RequiredSemanticMapping,
     SemanticMapping,
 )
-from .io import Metadata, read, read_unprocessed, write, write_unprocessed
+from .io import Metadata, lint, read, read_unprocessed, write, write_unprocessed
 from .models import Record
 
 __all__ = [
@@ -18,6 +18,7 @@ __all__ = [
     "Record",
     "RequiredSemanticMapping",
     "SemanticMapping",
+    "lint",
     "read",
     "read_unprocessed",
     "write",
