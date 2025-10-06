@@ -44,7 +44,7 @@ and get a list of mappings encoded by a Pydantic class.
 import sssom_pydantic
 
 url = "https://w3id.org/biopragmatics/biomappings/sssom/biomappings.sssom.tsv"
-mappings, converter = sssom_pydantic.read(url)
+mappings, converter, mapping_set = sssom_pydantic.read(url)
 ```
 
 ### Command Line Interface

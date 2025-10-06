@@ -118,10 +118,3 @@ class Record(BaseModel):
     see_also: list[str] | None = Field(None)
     similarity_measure: str | None = Field(None)
     similarity_score: float | None = Field(None)
-
-    mapping_set_confidence: float | None = Field(None)
-    mapping_set_description: str | None = Field(None)
-    mapping_set_id: str = Field(...)
-    mapping_set_source: str | None = Field(None)
-    mapping_set_title: str | None = Field(None)
-    mapping_set_version: str | None = Field(None)

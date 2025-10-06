@@ -13,6 +13,7 @@ __all__ = [
 ]
 
 PREFIX_MAP_KEY = "curie_map"  # smh
+MAPPING_SET_ID_KEY = "mapping_set_id"
 
 #: Allowed predicate types
 PREDICATE_TYPES: set[Reference] = {
@@ -63,7 +64,7 @@ PROPAGATABLE_EXTRAS = {
     "mapping_set_version",
 }
 #: Custom propagatable
-PROPAGATABLE = PROPAGATABLE_SPEC | PROPAGATABLE_EXTRAS
+PROPAGATABLE = PROPAGATABLE_SPEC
 
 #: An enumeration of the multivalued slots that are
 #: applicable for mappings. Note, there's a unit
@@ -98,22 +99,19 @@ DEFAULT_PREFIX_MAP: dict[str, str] = {
     "owl": "http://www.w3.org/2002/07/owl#",
 }
 
+MAPPING_SLOT_SPECIFIC = {
+    "sssom_version",
+    "extension_definitions",
+    "issue_tracker",
+    "curie_map",
+    # the following are not to be confused with mapping-level annotations
+    "comment",
+    "creator_id",
+    "creator_label",
+    "license",
+    "publication_date",
+    "other",
+    "see_also",
+}
 MAPPING_SET_SLOTS_SKIP = {"mappings"}
-MAPPING_SET_SLOTS = (
-    PROPAGATABLE_SPEC
-    | PROPAGATABLE_EXTRAS
-    | {
-        "sssom_version",
-        "extension_definitions",
-        "issue_tracker",
-        "curie_map",
-        # the following are not to be confused with mapping-level annotations
-        "comment",
-        "creator_id",
-        "creator_label",
-        "license",
-        "publication_date",
-        "other",
-        "see_also",
-    }
-)
+MAPPING_SET_SLOTS = PROPAGATABLE_SPEC | PROPAGATABLE_EXTRAS | MAPPING_SLOT_SPECIFIC

@@ -83,14 +83,6 @@ def parse_record(record: Record, converter: curies.Converter) -> SemanticMapping
         object=obj,
         justification=mapping_justification,
         predicate_modifier=record.predicate_modifier,
-        mapping_set=MappingSet(
-            id=record.mapping_set_id,
-            confidence=record.mapping_set_confidence,
-            description=record.mapping_set_description,
-            source=record.mapping_set_source,
-            title=record.mapping_set_title,
-            version=record.mapping_set_version,
-        ),
         # core
         record=_parse_curie(record.record_id),
         authors=_parse_curies(record.author_id),
@@ -136,7 +128,7 @@ def write(
     mappings: Iterable[RequiredSemanticMapping],
     path: str | Path,
     *,
-    metadata: dict[str, Any] | None = None,
+    metadata: dict[str, Any] | None | MappingSet = None,
     converter: curies.Converter | None = None,
 ) -> None:
     """Write processed records."""
@@ -198,7 +190,7 @@ def write_unprocessed(
     records: Sequence[Record],
     path: str | Path,
     *,
-    metadata: dict[str, Any] | None = None,
+    metadata: MappingSet | Metadata | None = None,
     converter: curies.Converter | None = None,
     prefixes: set[str] | None = None,
 ) -> None:
@@ -208,6 +200,8 @@ def write_unprocessed(
 
     if metadata is None:
         metadata = {}
+    elif isinstance(metadata, MappingSet):
+        metadata = metadata.model_dump(exclude_none=True)
 
     condensation = _get_condensation(records)
     for key, value in condensation.items():
@@ -333,28 +327,28 @@ def read(
     path_or_url: str | Path,
     *,
     metadata_path: str | Path | None = None,
-    metadata: Metadata | None = None,
+    metadata: MappingSet | Metadata | None = None,
     converter: curies.Converter | None = None,
-) -> tuple[list[SemanticMapping], Converter]:
+) -> tuple[list[SemanticMapping], Converter, MappingSet]:
     """Read and process SSSOM from TSV."""
     # TODO add metadata that's been read here?
-    unprocessed_records, converter = read_unprocessed(
+    unprocessed_records, converter, mapping_set = read_unprocessed(
         path_or_url=path_or_url,
         metadata_path=metadata_path,
         metadata=metadata,
         converter=converter,
     )
     processed_records = [parse_record(record, converter) for record in unprocessed_records]
-    return processed_records, converter
+    return processed_records, converter, mapping_set
 
 
 def read_unprocessed(
     path_or_url: str | Path,
     *,
     metadata_path: str | Path | None = None,
-    metadata: Metadata | None = None,
+    metadata: MappingSet | Metadata | None = None,
     converter: curies.Converter | None = None,
-) -> tuple[list[Record], Converter]:
+) -> tuple[list[Record], Converter, MappingSet]:
     """Read SSSOM TSV into unprocessed records."""
     if metadata_path is None:
         external_metadata = {}
@@ -364,6 +358,8 @@ def read_unprocessed(
 
     if metadata is None:
         metadata = {}
+    elif isinstance(metadata, MappingSet):
+        metadata = metadata.model_dump(exclude_none=True)
 
     with safe_open(path_or_url, operation="read", representation="text") as file:
         columns, inline_metadata = _chomp_frontmatter(file)
@@ -390,10 +386,13 @@ def read_unprocessed(
             if (cleaned_row := _clean_row(row))
         ]
 
+    # TODO need to take subset of metadata that wasn't propagated
+    mapping_set = MappingSet.model_validate(chained_metadata)
+
     if converter is not None:
         rv_converter = curies.chain([converter, rv_converter])
 
-    return mappings, rv_converter
+    return mappings, rv_converter, mapping_set
 
 
 def _chomp_frontmatter(file: TextIO) -> tuple[list[str], Metadata]:
@@ -419,16 +418,15 @@ def lint(
     path: str | Path,
     *,
     metadata_path: str | Path | None = None,
-    metadata: Metadata | None = None,
+    metadata: MappingSet | Metadata | None = None,
     converter: curies.Converter | None = None,
 ) -> None:
     """Lint a file."""
-    mappings, converter_processed = read(
+    mappings, converter_processed, mapping_set = read(
         path, metadata_path=metadata_path, metadata=metadata, converter=converter
     )
     mappings = _remove_redundant(mappings)
-    # TODO how to pass metadata in there?
-    write(mappings, path, converter=converter_processed, metadata=None)
+    write(mappings, path, converter=converter_processed, metadata=mapping_set)
 
 
 def _remove_redundant(mappings: list[SemanticMapping]) -> list[SemanticMapping]:

@@ -16,10 +16,8 @@ from pydantic import BaseModel
 
 import sssom_pydantic
 import sssom_pydantic.io
-from sssom_pydantic.api import MappingSet, SemanticMapping
-from sssom_pydantic.constants import (
-    MULTIVALUED,
-)
+from sssom_pydantic.api import SemanticMapping
+from sssom_pydantic.constants import MAPPING_SET_ID_KEY, MULTIVALUED, PREFIX_MAP_KEY
 from sssom_pydantic.io import _chomp_frontmatter, append, append_unprocessed, write_unprocessed
 from sssom_pydantic.models import Record
 
@@ -38,7 +36,6 @@ def _m(**kwargs: Any) -> SemanticMapping:
         predicate=P1,
         object=R2,
         justification=manual_mapping_curation,
-        mapping_set=MappingSet(id=TEST_MAPPING_SET_ID),
         **kwargs,
     )
 
@@ -52,7 +49,6 @@ def _r(**kwargs: Any) -> Record:
         object_id=R2.curie,
         object_label=R2.name,
         mapping_justification=manual_mapping_curation.curie,
-        mapping_set_id=TEST_MAPPING_SET_ID,
         **kwargs,
     )
 
@@ -61,6 +57,10 @@ TEST_MAPPING_SET_ID = "https://example.org/sssom.mappingset/1.sssom.tsv"
 TEST_PREFIX_MAP = {
     "mesh": "http://id.nlm.nih.gov/mesh/",
     "chebi": "http://purl.obolibrary.org/obo/CHEBI_",
+}
+TEST_METADATA = {
+    PREFIX_MAP_KEY: TEST_PREFIX_MAP,
+    MAPPING_SET_ID_KEY: TEST_MAPPING_SET_ID,
 }
 
 
@@ -109,14 +109,14 @@ class TestIO(unittest.TestCase):
         """Test simplest reading."""
         record = _r()
         path = self.directory.joinpath("test.tsv")
-        write_unprocessed([record], path, metadata={"curie_map": TEST_PREFIX_MAP})
+        write_unprocessed([record], path, metadata=TEST_METADATA)
 
-        unprocessed, _converter = sssom_pydantic.io.read_unprocessed(path)
+        unprocessed, _converter, _mapping_set = sssom_pydantic.io.read_unprocessed(path)
         self.assertEqual(1, len(unprocessed))
         self.assert_model_equal(record, unprocessed[0])
 
         semantic_mapping = _m()
-        processed, _converter = sssom_pydantic.io.read(path)
+        processed, _converter, _mapping_set = sssom_pydantic.io.read(path)
         self.assertEqual(1, len(processed))
         self.assert_model_equal(semantic_mapping, processed[0])
 
@@ -149,25 +149,19 @@ class TestIO(unittest.TestCase):
             msg="columns were parsed incorrectly",
         )
         self.assertEqual(
-            {
-                "curie_map": {
-                    "mesh": "http://id.nlm.nih.gov/mesh/",
-                    "chebi": "http://purl.obolibrary.org/obo/CHEBI_",
-                },
-                "mapping_set_id": TEST_MAPPING_SET_ID,
-            },
+            TEST_METADATA,
             metadata,
             msg="metadata was read incorrectly",
         )
 
-        unprocessed_records, _ = sssom_pydantic.io.read_unprocessed(path)
+        unprocessed_records, _, _mapping_set = sssom_pydantic.io.read_unprocessed(path)
         self.assertEqual(1, len(unprocessed_records))
         self.assert_model_equal(
             _r(author_id=[charlie.curie]),
             unprocessed_records[0],
         )
 
-        processed_records, _converter = sssom_pydantic.io.read(path)
+        processed_records, _converter, _mapping_set = sssom_pydantic.io.read(path)
 
         self.assertEqual(1, len(processed_records))
         self.assert_model_equal(
@@ -189,7 +183,7 @@ class TestIO(unittest.TestCase):
         path = self.directory.joinpath("test.tsv")
         path.write_text(text)
 
-        processed_records, _converter = sssom_pydantic.io.read(path)
+        processed_records, _converter, _mapping_set = sssom_pydantic.io.read(path)
 
         self.assertEqual(1, len(processed_records))
         self.assert_model_equal(

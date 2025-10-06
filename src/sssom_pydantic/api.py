@@ -41,7 +41,6 @@ class RequiredSemanticMapping(Triple):
         examples=list(matching_processes),
     )
     predicate_modifier: Literal["Not"] | None = Field(None)
-    mapping_set: MappingSet
 
     def to_record(self) -> Record:
         """Get a record."""
@@ -56,13 +55,6 @@ class RequiredSemanticMapping(Triple):
             object_id=self.object.curie,
             object_label=_get_name(self.object),
             mapping_justification=self.justification.curie,
-            #
-            mapping_set_id=self.mapping_set.id,
-            mapping_set_confidence=self.mapping_set.confidence,
-            mapping_set_description=self.mapping_set.description,
-            mapping_set_source=self.mapping_set.source,
-            mapping_set_title=self.mapping_set.title,
-            mapping_set_version=self.mapping_set.version,
         )
 
     def get_prefixes(self) -> set[str]:
@@ -120,13 +112,6 @@ class CoreSemanticMapping(RequiredSemanticMapping):
             if self.mapping_tool is not None and self.mapping_tool.version is not None
             else None,
             confidence=self.confidence,
-            #
-            mapping_set_id=self.mapping_set.id,
-            mapping_set_confidence=self.mapping_set.confidence,
-            mapping_set_description=self.mapping_set.description,
-            mapping_set_source=self.mapping_set.source,
-            mapping_set_title=self.mapping_set.title,
-            mapping_set_version=self.mapping_set.version,
         )
 
     def get_prefixes(self) -> set[str]:
@@ -320,13 +305,6 @@ class SemanticMapping(CoreSemanticMapping):
             see_also=self.see_also,
             similarity_measure=self.similarity_measure,
             similarity_score=self.similarity_score,
-            #
-            mapping_set_id=self.mapping_set.id,
-            mapping_set_confidence=self.mapping_set.confidence,
-            mapping_set_description=self.mapping_set.description,
-            mapping_set_source=self.mapping_set.source,
-            mapping_set_title=self.mapping_set.title,
-            mapping_set_version=self.mapping_set.version,
         )
 
 
@@ -345,10 +323,11 @@ class MappingSet(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    id: str = Field(...)
+    mapping_set_id: str = Field(...)
+    mapping_set_confidence: float | None = Field(None)
+    mapping_set_description: str | None = Field(None)
+    mapping_set_source: str | None = Field(None)
+    mapping_set_title: str | None = Field(None)
+    mapping_set_version: str | None = Field(None)
 
-    confidence: float | None = Field(None)
-    description: str | None = Field(None)
-    source: str | None = Field(None)
-    title: str | None = Field(None)
-    version: str | None = Field(None)
+    # TODO what about other stuff like extensions, sssom_version
