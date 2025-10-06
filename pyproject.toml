@@ -60,6 +60,7 @@ dependencies = [
 tests = [
     "pytest",
     "coverage[toml]",
+    "linkml_runtime",
 ]
 docs = [
     "sphinx>=8",

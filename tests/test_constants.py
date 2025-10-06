@@ -7,9 +7,9 @@ import tempfile
 import typing
 import unittest
 from pathlib import Path
+from typing import TYPE_CHECKING
 from urllib.request import urlretrieve
 
-import linkml_runtime
 import pystow
 from curies import Reference
 
@@ -20,6 +20,9 @@ from sssom_pydantic.constants import (
     MULTIVALUED,
     PROPAGATABLE,
 )
+
+if TYPE_CHECKING:
+    import linkml_runtime
 
 SSSOM_SCHEMA_URL = "https://github.com/mapping-commons/sssom/raw/refs/heads/master/src/sssom_schema/schema/sssom_schema.yaml"
 CACHE_SSSOM_SCHEMA = False
