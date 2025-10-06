@@ -171,12 +171,18 @@ def append_unprocessed(
     path = Path(path).expanduser().resolve()
     with path.open() as file:
         original_columns, _rv = _chomp_frontmatter(file)
+    if not original_columns:
+        raise ValueError(
+            f"can not append {len(records):,} mappings because no headers found in {path}"
+        )
     condensed_keys = {"mapping_set_id"}  # this is a hack...
     columns = _get_columns(records)
     new_columns = set(columns).difference(original_columns).difference(condensed_keys)
     if new_columns:
         raise NotImplementedError(
-            f"not implemented to extend columns on append. new columns: {new_columns}"
+            f"\n\nsssom-pydantic can not yet handle extending columns on append."
+            f"\nexisting columns: {original_columns}"
+            f"\nnew columns: {new_columns}"
         )
     # TODO compare existing prefixes to new ones
     with path.open(mode="a") as file:
@@ -220,15 +226,19 @@ def write_unprocessed(
     converter = curies.chain(converters)
     if prefixes is not None:
         converter = converter.get_subconverter(prefixes)
-    metadata[PREFIX_MAP_KEY] = converter.bimap
+
+    # don't add if no prefix map
+    if bimap := converter.bimap:
+        metadata[PREFIX_MAP_KEY] = bimap
 
     condensed_keys = set(condensation)
     columns = [column for column in columns if column not in condensed_keys]
 
     with path.open(mode="w") as file:
-        for line in yaml.safe_dump(metadata).splitlines():
-            print(f"#{line}", file=file)
-            # TODO add comment about being written with this software at a given time
+        if metadata:
+            for line in yaml.safe_dump(metadata).splitlines():
+                print(f"#{line}", file=file)
+                # TODO add comment about being written with this software at a given time
         writer = csv.DictWriter(file, columns, delimiter="\t")
         writer.writeheader()
         writer.writerows(
@@ -403,7 +413,11 @@ def _chomp_frontmatter(file: TextIO) -> tuple[list[str], Metadata]:
             continue
         header_yaml += line + "\n"
 
-    columns = line.strip().split("\t")
+    columns = [
+        column_stripped
+        for column in line.strip().split("\t")
+        if (column_stripped := column.strip())
+    ]
 
     if not header_yaml:
         metadata = {}
