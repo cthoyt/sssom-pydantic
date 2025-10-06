@@ -106,7 +106,7 @@ def parse_record(record: Record, converter: curies.Converter) -> SemanticMapping
         predicate_type=_parse_curie(record.predicate_type),
         object_category=record.object_category,
         object_match_field=_parse_curies(record.object_match_field),
-        object_preprocessing=_parse_curie(record.object_preprocessing),
+        object_preprocessing=_parse_curies(record.object_preprocessing),
         object_source=_parse_curie(record.object_source),
         object_source_version=record.object_source_version,
         object_type=record.subject_type,

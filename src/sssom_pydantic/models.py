@@ -5,9 +5,10 @@ from __future__ import annotations
 import datetime
 from typing import Literal, TypeAlias
 
-from curies import Reference
 from curies.vocabulary import unspecified_matching_process
 from pydantic import BaseModel, ConfigDict, Field
+
+from .constants import PREDICATE_TYPES
 
 __all__ = [
     "Cardinality",
@@ -39,9 +40,9 @@ class Record(BaseModel):
     predicate_id: str = Field(...)
     predicate_label: str | None = Field(None)
     predicate_modifier: Literal["Not"] | None = Field(None)
-    predicate_type: Reference | None = Field(
+    predicate_type: str | None = Field(
         None,
-        # TODO add examples?
+        examples=[x.curie for x in PREDICATE_TYPES],
         description="See https://mapping-commons.github.io/sssom/predicate_type/. "
         "Values allowed are from https://mapping-commons.github.io/sssom/EntityTypeEnum/",
     )
