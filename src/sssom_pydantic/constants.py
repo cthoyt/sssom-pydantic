@@ -9,7 +9,7 @@ __all__ = [
     "MULTIVALUED",
     "PREDICATE_TYPES",
     "PREFIX_MAP_KEY",
-    "PROPAGATABLE",
+    "PROPAGATABLE_SPEC",
 ]
 
 PREFIX_MAP_KEY = "curie_map"  # smh
@@ -31,11 +31,39 @@ PREDICATE_TYPES: set[Reference] = {
 
 #: The set of values that should be propagated
 #: from the frontmatter to all mappings
-PROPAGATABLE: set[str] = {
-    "mapping_set_id",
-    "mapping_justification",
-    "author_id",
+PROPAGATABLE_SPEC: set[str] = {
+    "cardinality_scope",
+    "curation_rule",
+    "curation_rule_text",
+    "mapping_date",
+    "mapping_provider",
+    "mapping_tool",
+    "mapping_tool_id",
+    "mapping_tool_version",
+    "object_match_field",
+    "object_preprocessing",
+    "object_source",
+    "object_source_version",
+    "object_type",
+    "predicate_type",
+    "similarity_measure",
+    "subject_match_field",
+    "subject_preprocessing",
+    "subject_source",
+    "subject_source_version",
+    "subject_type",
 }
+#: These are required to propagate, when available
+PROPAGATABLE_EXTRAS = {
+    "mapping_set_id",
+    "mapping_set_confidence",
+    "mapping_set_description",
+    "mapping_set_source",
+    "mapping_set_title",
+    "mapping_set_version",
+}
+#: Custom propagatable
+PROPAGATABLE = PROPAGATABLE_SPEC | PROPAGATABLE_EXTRAS
 
 #: An enumeration of the multivalued slots that are
 #: applicable for mappings. Note, there's a unit
@@ -69,3 +97,23 @@ DEFAULT_PREFIX_MAP: dict[str, str] = {
     "semapv": "https://w3id.org/semapv/vocab/",
     "owl": "http://www.w3.org/2002/07/owl#",
 }
+
+MAPPING_SET_SLOTS_SKIP = {"mappings"}
+MAPPING_SET_SLOTS = (
+    PROPAGATABLE_SPEC
+    | PROPAGATABLE_EXTRAS
+    | {
+        "sssom_version",
+        "extension_definitions",
+        "issue_tracker",
+        "curie_map",
+        # the following are not to be confused with mapping-level annotations
+        "comment",
+        "creator_id",
+        "creator_label",
+        "license",
+        "publication_date",
+        "other",
+        "see_also",
+    }
+)

@@ -212,6 +212,8 @@ ignore = [
 "docs/source/conf.py" = ["ERA001"]
 # Prints are okay in notebooks
 "notebooks/**/*.ipynb" = ["T201"]
+# Some examples are long
+"tests/test_lint.py" = ["E501"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "pep257"

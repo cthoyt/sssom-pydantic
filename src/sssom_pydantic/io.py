@@ -14,7 +14,13 @@ import yaml
 from curies import Converter, Reference
 
 from .api import MappingSet, MappingTool, RequiredSemanticMapping, SemanticMapping
-from .constants import DEFAULT_PREFIX_MAP, MULTIVALUED, PREFIX_MAP_KEY, PROPAGATABLE
+from .constants import (
+    DEFAULT_PREFIX_MAP,
+    MAPPING_SET_SLOTS,
+    MULTIVALUED,
+    PREFIX_MAP_KEY,
+    PROPAGATABLE,
+)
 from .models import Record
 
 __all__ = [
@@ -193,7 +199,7 @@ def _unprocess_row(i: Record, condensed_keys: set[str]) -> dict[str, Any]:
         exclude_none=True, exclude_unset=True, exclude_defaults=True, exclude=condensed_keys
     )
     for key in MULTIVALUED:
-        if (v := record.get(key)) and isinstance(v, str):
+        if (v := record.get(key)) and isinstance(v, list):
             record[key] = "|".join(v)
     return record
 
@@ -282,6 +288,10 @@ def read_unprocessed(
         )
 
         chained_metadata = dict(ChainMap(metadata, external_metadata, inline_metadata))
+
+        unknown = set(chained_metadata).difference(MAPPING_SET_SLOTS)
+        if unknown:
+            raise ValueError(f"Found unknown mapping set-level metadata: {sorted(unknown)}")
 
         reader = csv.DictReader(file, fieldnames=columns, delimiter="\t")
         mappings = [

@@ -14,13 +14,20 @@ from urllib.request import urlretrieve
 
 from curies import NamedReference, Reference
 from curies.vocabulary import charlie, exact_match, manual_mapping_curation
+from pydantic import BaseModel
 
 import sssom_pydantic
 import sssom_pydantic.io
 from sssom_pydantic import Record, write_unprocessed
 from sssom_pydantic.api import MappingSet, SemanticMapping
-from sssom_pydantic.constants import MULTIVALUED
-from sssom_pydantic.io import _chomp_frontmatter, lint
+from sssom_pydantic.constants import (
+    MAPPING_SET_SLOTS,
+    MAPPING_SET_SLOTS_SKIP,
+    MULTIVALUED,
+    PROPAGATABLE_EXTRAS,
+    PROPAGATABLE_SPEC,
+)
+from sssom_pydantic.io import _chomp_frontmatter
 
 if TYPE_CHECKING:
     import linkml_runtime
@@ -45,6 +52,7 @@ class TestSchema(unittest.TestCase):
 
     view: typing.ClassVar[linkml_runtime.SchemaView]
     mapping_slots: typing.ClassVar[set[str]]
+    mapping_set_slots: typing.ClassVar[set[str]]
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -65,6 +73,7 @@ class TestSchema(unittest.TestCase):
                 cls.view = SchemaView(path)
 
         cls.mapping_slots = set(cls.view.get_class("mapping").slots)
+        cls.mapping_set_slots = set(cls.view.get_class("mapping set").slots)
 
     def test_multivalued(self) -> None:
         """Test that the multivalued list is filled out."""
@@ -80,21 +89,39 @@ class TestSchema(unittest.TestCase):
             msg="The sssom-pydantic MULTIVALUED list is out of sync with the SSSOM schema.",
         )
 
-    def test_completeness(self) -> None:
-        """Test that the Record class fully covers."""
-        # TODO get from view
-        mapping_set_propagatable_slots: set[str] = {
-            "mapping_set_id",
-            "mapping_set_confidence",
-            "mapping_set_description",
-            "mapping_set_source",
-            "mapping_set_title",
-            "mapping_set_version",
-        }
+    def test_propagatable(self) -> None:
+        """Test that the propagatable list is fileld out."""
+        expected_propagatable = set()
+        for slot in self.mapping_set_slots:
+            slot_annotations = self.view.annotation_dict(slot)
+            if slot_annotations is not None and "propagated" in slot_annotations:
+                expected_propagatable.add(slot)
 
         self.assertEqual(
-            self.mapping_slots | mapping_set_propagatable_slots,
-            set(Record.model_fields),
+            expected_propagatable,
+            PROPAGATABLE_SPEC,
+            msg="The sssom-pydantic PROPAGATABLE list is out of sync with the SSSOM schema.",
+        )
+
+        x = PROPAGATABLE_SPEC - self.mapping_slots
+        self.assertEqual(
+            0,
+            len(x),
+            msg=f"\n\nthere are elements in propagatable that aren't in the mapping slots: {x}",
+        )
+
+    def test_completeness(self) -> None:
+        """Test that the Record class fully covers."""
+        self.assertEqual(
+            self.mapping_slots,
+            set(Record.model_fields) - PROPAGATABLE_EXTRAS,
+        )
+
+    def test_mapping_set_keys(self) -> None:
+        """Test mapping set slots are properly coded."""
+        self.assertEqual(
+            self.mapping_set_slots - MAPPING_SET_SLOTS_SKIP,
+            MAPPING_SET_SLOTS,
         )
 
     def test_value_types(self) -> None:
@@ -173,28 +200,31 @@ class TestIO(unittest.TestCase):
 
     def test_read_1(self) -> None:
         """Test simplest reading."""
+        mapping_set_id = "https://example.org/test.tsv"
         r = Record(
             subject_id=S1.curie,
             predicate_id=exact_match.curie,
             object_id=O1.curie,
             mapping_justification=manual_mapping_curation.curie,
-            mapping_set_id="test",
+            mapping_set_id=mapping_set_id,
         )
         path = self.directory.joinpath("test.tsv")
         write_unprocessed([r], path, metadata={"curie_map": PM})
 
         unprocessed, _converter = sssom_pydantic.io.read_unprocessed(path)
-        self.assertEqual([r], unprocessed)
+        self.assertEqual(1, len(unprocessed))
+        self.assert_model_equal(r, unprocessed[0])
 
         rp = SemanticMapping(
             subject=S1,
             predicate=exact_match,
             object=O1,
             justification=manual_mapping_curation,
-            mapping_set=MappingSet(id="test"),
+            mapping_set=MappingSet(id=mapping_set_id),
         )
         processed, _converter = sssom_pydantic.io.read(path)
-        self.assertEqual([rp], processed)
+        self.assertEqual(1, len(processed))
+        self.assert_model_equal(rp, processed[0])
 
     def test_read_2(self) -> None:
         """Test reading from a file."""
@@ -204,19 +234,25 @@ class TestIO(unittest.TestCase):
             #curie_map:
             #  mesh: "http://id.nlm.nih.gov/mesh/"
             #  chebi: "http://purl.obolibrary.org/obo/CHEBI_"
-            #mapping_justification: {manual_mapping_curation.curie}
-            #author_id: {charlie.curie}
             #mapping_set_id: {mapping_set_id}
-            subject_id	subject_label	predicate_id	object_id	object_label
-            mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline
-        """)
+            subject_id	subject_label	predicate_id	object_id	object_label	mapping_justification	author_id
+            mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	{manual_mapping_curation.curie}	{charlie.curie}
+        """)  # noqa:E501
         path = self.directory.joinpath("test.tsv")
         path.write_text(text)
 
         with path.open() as file:
             columns, metadata = _chomp_frontmatter(file)
         self.assertEqual(
-            ["subject_id", "subject_label", "predicate_id", "object_id", "object_label"],
+            [
+                "subject_id",
+                "subject_label",
+                "predicate_id",
+                "object_id",
+                "object_label",
+                "mapping_justification",
+                "author_id",
+            ],
             columns,
             msg="columns were parsed incorrectly",
         )
@@ -226,8 +262,6 @@ class TestIO(unittest.TestCase):
                     "mesh": "http://id.nlm.nih.gov/mesh/",
                     "chebi": "http://purl.obolibrary.org/obo/CHEBI_",
                 },
-                "mapping_justification": manual_mapping_curation.curie,
-                "author_id": charlie.curie,
                 "mapping_set_id": mapping_set_id,
             },
             metadata,
@@ -235,26 +269,25 @@ class TestIO(unittest.TestCase):
         )
 
         unprocessed_records, _ = sssom_pydantic.io.read_unprocessed(path)
-        self.assertEqual(
-            [
-                Record(
-                    subject_id="mesh:C000089",
-                    subject_label="ammeline",
-                    predicate_id=exact_match.curie,
-                    object_id="chebi:28646",
-                    object_label="ammeline",
-                    mapping_justification=manual_mapping_curation.curie,
-                    author_id=[charlie.curie],
-                    mapping_set_id=mapping_set_id,
-                )
-            ],
-            unprocessed_records,
+        self.assertEqual(1, len(unprocessed_records))
+        self.assert_model_equal(
+            Record(
+                subject_id="mesh:C000089",
+                subject_label="ammeline",
+                predicate_id=exact_match.curie,
+                object_id="chebi:28646",
+                object_label="ammeline",
+                mapping_justification=manual_mapping_curation.curie,
+                author_id=[charlie.curie],
+                mapping_set_id=mapping_set_id,
+            ),
+            unprocessed_records[0],
         )
 
         processed_records, _converter = sssom_pydantic.io.read(path)
 
         self.assertEqual(1, len(processed_records))
-        self.assertEqual(
+        self.assert_model_equal(
             SemanticMapping(
                 subject=NamedReference(prefix="mesh", identifier="C000089", name="ammeline"),
                 predicate=Reference(prefix="skos", identifier="exactMatch"),
@@ -262,35 +295,12 @@ class TestIO(unittest.TestCase):
                 justification=manual_mapping_curation,
                 authors=[charlie],
                 mapping_set=MappingSet(id=mapping_set_id),
-            ).model_dump(exclude_none=True),
-            processed_records[0].model_dump(exclude_none=True),
+            ),
+            processed_records[0],
         )
 
-    def test_lint(self) -> None:
-        """Test linting."""
-        original = dedent("""\
-            #mapping_set_id: https://example.org/test.tsv
-            #curie_map:
-            #  mesh: "http://id.nlm.nih.gov/mesh/"
-            #  chebi: "http://purl.obolibrary.org/obo/CHEBI_"
-            object_id	subject_id	predicate_id	mapping_justification
-            chebi:28646	mesh:C000089	skos:exactMatch	semapv:ManualMappingCuration
-        """)
-        fixed = dedent("""\
-            #curie_map:
-            #  chebi: http://purl.obolibrary.org/obo/CHEBI_
-            #  mesh: http://id.nlm.nih.gov/mesh/
-            #  semapv: https://w3id.org/semapv/vocab/
-            #  skos: http://www.w3.org/2004/02/skos/core#
-            #mapping_justification: semapv:ManualMappingCuration
-            #mapping_set_id: https://example.org/test.tsv
-            subject_id	predicate_id	object_id
-            mesh:C000089	skos:exactMatch	chebi:28646
-        """)
-        with tempfile.TemporaryDirectory() as d:
-            path = Path(d).joinpath("test.tsv")
-            path.write_text(original)
-
-            lint(path)
-
-            self.assertEqual(fixed.splitlines(), path.read_text().splitlines())
+    def assert_model_equal(self, expected: BaseModel, actual: BaseModel) -> None:
+        """Check two models are equal by serializing to dict."""
+        self.assertEqual(
+            expected.model_dump(exclude_none=True), actual.model_dump(exclude_none=True)
+        )
