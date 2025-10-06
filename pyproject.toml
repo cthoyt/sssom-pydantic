@@ -52,6 +52,7 @@ dependencies = [
     "pydantic",
     "curies>=0.11.0",
     "pyyaml",
+    "pystow",
 ]
 
 # see https://peps.python.org/pep-0735/ and https://docs.astral.sh/uv/concepts/dependencies/#dependency-groups

@@ -12,6 +12,7 @@ from textwrap import dedent
 from typing import TYPE_CHECKING
 from urllib.request import urlretrieve
 
+import pystow
 from curies import NamedReference, Reference
 from curies.vocabulary import charlie, exact_match, manual_mapping_curation
 from pydantic import BaseModel
@@ -59,9 +60,7 @@ class TestSchema(unittest.TestCase):
         """Set up the class with a schema view."""
         from linkml_runtime import SchemaView
 
-        if CACHE_SSSOM_SCHEMA and importlib.util.find_spec("pystow"):
-            import pystow
-
+        if CACHE_SSSOM_SCHEMA:
             # get path remotely, since :mod:`sssom_schema` is
             # not usually kept up-to-date
             path = pystow.ensure("sssom", url=SSSOM_SCHEMA_URL)

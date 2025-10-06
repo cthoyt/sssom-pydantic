@@ -12,6 +12,7 @@ from typing import Any, Literal, TextIO, TypeAlias
 import curies
 import yaml
 from curies import Converter, Reference
+from pystow.utils import safe_open
 
 from .api import MappingSet, MappingTool, RequiredSemanticMapping, SemanticMapping
 from .constants import (
@@ -280,7 +281,7 @@ def parse_row(record: dict[str, str], *, metadata: dict[str, Any] | None = None)
 
 
 def read(
-    path: str | Path,
+    path_or_url: str | Path,
     *,
     metadata_path: str | Path | None = None,
     metadata: Metadata | None = None,
@@ -289,7 +290,7 @@ def read(
     """Read and process SSSOM from TSV."""
     # TODO add metadata that's been read here?
     unprocessed_records, converter = read_unprocessed(
-        path=path,
+        path_or_url=path_or_url,
         metadata_path=metadata_path,
         metadata=metadata,
         converter=converter,
@@ -299,23 +300,23 @@ def read(
 
 
 def read_unprocessed(
-    path: str | Path,
+    path_or_url: str | Path,
     *,
     metadata_path: str | Path | None = None,
     metadata: Metadata | None = None,
     converter: curies.Converter | None = None,
 ) -> tuple[list[Record], Converter]:
     """Read SSSOM TSV into unprocessed records."""
-    external_metadata = (
-        yaml.safe_load(Path(metadata_path).expanduser().resolve().read_text())
-        if metadata_path is not None
-        else {}
-    )
+    if metadata_path is None:
+        external_metadata = {}
+    else:
+        with safe_open(metadata_path, operation="read", representation="text") as file:
+            external_metadata = yaml.safe_load(file)
 
     if metadata is None:
         metadata = {}
 
-    with Path(path).expanduser().resolve().open() as file:
+    with safe_open(path_or_url, operation="read", representation="text") as file:
         columns, inline_metadata = _chomp_frontmatter(file)
 
         rv_converter = Converter.from_prefix_map(

@@ -37,11 +37,14 @@ Pydantic models for SSSOM.
 
 ## 💪 Getting Started
 
+Read a local file path or URL to an SSSOM TSV file with `sssom_pydantic.read`
+and get a list of mappings encoded by a Pydantic class.
+
 ```python
 import sssom_pydantic
 
-path_or_url = ...
-mappings, converter = sssom_pydantic.read(path_or_url)
+url = "https://w3id.org/biopragmatics/biomappings/sssom/biomappings.sssom.tsv"
+mappings, converter = sssom_pydantic.read(url)
 ```
 
 ### Command Line Interface
@@ -57,7 +60,8 @@ It does the following:
 1. Automatically propagates then condenses metadata
 2. Fixes column ordering
 3. Removes unused prefixes in the prefix map
-4. Adds explicit usages of default/built-in prefixes, like `semapv`, to the prefix map
+4. Adds explicit usages of default/built-in prefixes, like `semapv`, to the
+   prefix map
 5. Deletes unused columns
 
 Planned formatting modules:
