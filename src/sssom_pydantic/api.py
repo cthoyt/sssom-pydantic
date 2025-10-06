@@ -42,18 +42,33 @@ class RequiredSemanticMapping(Triple):
     )
     predicate_modifier: Literal["Not"] | None = Field(None)
 
+    @property
+    def subject_name(self) -> str | None:
+        """Get the subject label, if available."""
+        return _get_name(self.subject)
+
+    @property
+    def predicate_name(self) -> str | None:
+        """Get the predicate label, if available."""
+        return _get_name(self.predicate)
+
+    @property
+    def object_name(self) -> str | None:
+        """Get the object label, if available."""
+        return _get_name(self.object)
+
     def to_record(self) -> Record:
         """Get a record."""
         return Record(
             subject_id=self.subject.curie,
-            subject_label=_get_name(self.subject),
+            subject_label=self.subject_name,
             #
             predicate_id=self.predicate.curie,
-            predicate_label=_get_name(self.predicate),
+            predicate_label=self.predicate_name,
             predicate_modifier=self.predicate_modifier,
             #
             object_id=self.object.curie,
-            object_label=_get_name(self.object),
+            object_label=self.object_name,
             mapping_justification=self.justification.curie,
         )
 
@@ -84,20 +99,27 @@ class CoreSemanticMapping(RequiredSemanticMapping):
     mapping_tool: MappingTool | None = Field(None)
     license: str | None = Field(None)
 
+    @property
+    def mapping_tool_name(self) -> str | None:
+        """Get the mapping tool label, if available."""
+        if self.mapping_tool is None:
+            return None
+        return self.mapping_tool.name
+
     def to_record(self) -> Record:
         """Get a record."""
         return Record(
             record_id=self.record.curie if self.record is not None else None,
             #
             subject_id=self.subject.curie,
-            subject_label=_get_name(self.subject),
+            subject_label=self.subject_name,
             #
             predicate_id=self.predicate.curie,
-            predicate_label=_get_name(self.predicate),
+            predicate_label=self.predicate_name,
             predicate_modifier=self.predicate_modifier,
             #
             object_id=self.object.curie,
-            object_label=_get_name(self.object),
+            object_label=self.object_name,
             mapping_justification=self.justification.curie,
             #
             license=self.license,
@@ -152,9 +174,7 @@ class CoreSemanticMapping(RequiredSemanticMapping):
             self.predicate.curie,
             self.object.curie,
             self.justification.curie,
-            self.mapping_tool.name
-            if self.mapping_tool is not None and self.mapping_tool.name is not None
-            else "",
+            self.mapping_tool_name or "",
         )
 
 
@@ -186,7 +206,9 @@ class SemanticMapping(CoreSemanticMapping):
     object_type: str | None = Field(None)
 
     creators: list[Reference] | None = Field(None)
+    # TODO maybe creator_labels
     reviewers: list[Reference] | None = Field(None)
+    # TODO maybe reviewer_labels
 
     publication_date: datetime.date | None = Field(None)
     mapping_date: datetime.date | None = Field(None)
@@ -245,7 +267,7 @@ class SemanticMapping(CoreSemanticMapping):
             record_id=self.record.curie if self.record is not None else None,
             #
             subject_id=self.subject.curie,
-            subject_label=_get_name(self.subject),
+            subject_label=self.subject_name,
             subject_category=self.subject_category,
             subject_match_field=self.subject_match_field,
             subject_preprocessing=self.subject_preprocessing,
@@ -254,12 +276,12 @@ class SemanticMapping(CoreSemanticMapping):
             subject_type=self.subject_type,
             #
             predicate_id=self.predicate.curie,
-            predicate_label=_get_name(self.predicate),
+            predicate_label=self.predicate_name,
             predicate_modifier=self.predicate_modifier,
             predicate_type=self.predicate_type,
             #
             object_id=self.object.curie,
-            object_label=_get_name(self.object),
+            object_label=self.object_name,
             object_category=self.object_category,
             object_match_field=self.object_match_field,
             object_preprocessing=self.object_preprocessing,
