@@ -7,7 +7,7 @@ import logging
 from collections import ChainMap, Counter, defaultdict
 from collections.abc import Iterable, Sequence
 from pathlib import Path
-from typing import Any, Literal, TextIO, TypeAlias
+from typing import Any, TextIO, TypeAlias
 
 import curies
 import yaml
@@ -137,18 +137,61 @@ def write(
     path: str | Path,
     *,
     metadata: dict[str, Any] | None = None,
-    mode: Literal["w", "a"] | None = None,
     converter: curies.Converter | None = None,
 ) -> None:
     """Write processed records."""
+    records, prefixes = _prepare_records(mappings)
+    write_unprocessed(records, path=path, metadata=metadata, converter=converter, prefixes=prefixes)
+
+
+def append(
+    mappings: Iterable[RequiredSemanticMapping],
+    path: str | Path,
+    *,
+    metadata: dict[str, Any] | None = None,
+    converter: curies.Converter | None = None,
+) -> None:
+    """Append processed records."""
+    records, prefixes = _prepare_records(mappings)
+    append_unprocessed(
+        records, path=path, metadata=metadata, converter=converter, prefixes=prefixes
+    )
+
+
+def _prepare_records(mappings: Iterable[RequiredSemanticMapping]) -> tuple[list[Record], set[str]]:
     records = []
     prefixes: set[str] = set()
     for mapping in mappings:
         prefixes.update(mapping.get_prefixes())
         records.append(mapping.to_record())
-    write_unprocessed(
-        records, path=path, metadata=metadata, mode=mode, converter=converter, prefixes=prefixes
-    )
+    return records, prefixes
+
+
+def append_unprocessed(
+    records: Sequence[Record],
+    path: str | Path,
+    *,
+    metadata: dict[str, Any] | None = None,
+    converter: curies.Converter | None = None,
+    prefixes: set[str] | None = None,
+) -> None:
+    """Append records to the end of an existing file."""
+    path = Path(path).expanduser().resolve()
+    with path.open() as file:
+        original_columns, _rv = _chomp_frontmatter(file)
+    condensed_keys = {"mapping_set_id"}  # this is a hack...
+    columns = _get_columns(records)
+    new_columns = set(columns).difference(original_columns).difference(condensed_keys)
+    if new_columns:
+        raise NotImplementedError(
+            f"not implemented to extend columns on append. new columns: {new_columns}"
+        )
+    # TODO compare existing prefixes to new ones
+    with path.open(mode="a") as file:
+        writer = csv.DictWriter(file, original_columns, delimiter="\t")
+        writer.writerows(
+            _unprocess_row(record, condensed_keys=condensed_keys) for record in records
+        )
 
 
 def write_unprocessed(
@@ -156,7 +199,6 @@ def write_unprocessed(
     path: str | Path,
     *,
     metadata: dict[str, Any] | None = None,
-    mode: Literal["w", "a"] | None = None,
     converter: curies.Converter | None = None,
     prefixes: set[str] | None = None,
 ) -> None:
@@ -189,7 +231,7 @@ def write_unprocessed(
     condensed_keys = set(condensation)
     columns = [c for c in columns if c not in condensed_keys]
 
-    with path.open(mode="w" if mode is None else mode) as file:
+    with path.open(mode="w") as file:
         for line in yaml.safe_dump(metadata).splitlines():
             print(f"#{line}", file=file)
             # TODO add comment about being written with this software at a given time
@@ -234,7 +276,7 @@ def _get_columns(records: Iterable[Record]) -> list[str]:
     return [f for f in Record.model_fields if f in columns]
 
 
-def _unprocess_row(i: Record, condensed_keys: set[str]) -> dict[str, Any]:
+def _unprocess_row(i: Record, *, condensed_keys: set[str] | None = None) -> dict[str, Any]:
     record = i.model_dump(
         exclude_none=True, exclude_unset=True, exclude_defaults=True, exclude=condensed_keys
     )
@@ -379,7 +421,7 @@ def lint(
     )
     mappings = _remove_redundant(mappings)
     # TODO how to pass metadata in there?
-    write(mappings, path, converter=converter_processed, mode="w", metadata=None)
+    write(mappings, path, converter=converter_processed, metadata=None)
 
 
 def _remove_redundant(mappings: list[SemanticMapping]) -> list[SemanticMapping]:
