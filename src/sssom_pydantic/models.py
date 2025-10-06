@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime
 from typing import Literal, TypeAlias
 
-from curies.vocabulary import unspecified_matching_process
+from curies.vocabulary import matching_processes
 from pydantic import BaseModel, ConfigDict, Field
 
 from .constants import PREDICATE_TYPES
@@ -60,7 +60,7 @@ class Record(BaseModel):
         "Values allowed are from https://mapping-commons.github.io/sssom/EntityTypeEnum/",
     )
 
-    mapping_justification: str = Field(unspecified_matching_process.curie)
+    mapping_justification: str = Field(..., examples=[p.curie for p in matching_processes])
 
     author_id: list[str] | None = Field(None)
     author_label: list[str] | None = Field(None)
