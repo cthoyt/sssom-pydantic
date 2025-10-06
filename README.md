@@ -33,7 +33,7 @@
     -->
 </p>
 
-Pydantic models for SSSOM.
+An opinionated implementation of a simple subset of SSSOM, based on Pydantic.
 
 ## 💪 Getting Started
 
