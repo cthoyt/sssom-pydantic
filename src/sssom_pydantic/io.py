@@ -438,6 +438,7 @@ def lint(
     mappings, converter_processed, mapping_set = read(
         path, metadata_path=metadata_path, metadata=metadata, converter=converter
     )
+    mappings = sorted(mappings)
     mappings = _remove_redundant(mappings)
     write(mappings, path, converter=converter_processed, metadata=mapping_set)
 
