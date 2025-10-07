@@ -3,6 +3,6 @@ message: "If you use this software, please cite it as below."
 title: "SSSOM Pydantic"
 authors:
   - name: "Charles Tapley Hoyt"
-version: 0.0.5
+version: 0.0.6-dev
 doi:
 url: "https://github.com/cthoyt/sssom-pydantic"
