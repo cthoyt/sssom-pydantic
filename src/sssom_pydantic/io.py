@@ -409,7 +409,7 @@ def read_unprocessed(
 
 
 def _safe_chain(x: list[Converter]) -> Converter:
-    # TODO needs to be upstreamed.
+    # TODO use upstreamed in https://github.com/biopragmatics/curies/pull/190
     if len(x) == 1:
         return x[0]
     return curies.chain(x)
