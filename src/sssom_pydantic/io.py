@@ -222,10 +222,8 @@ def write_unprocessed(
         converters.append(curies.Converter.from_prefix_map(prefix_map))
     if not converters:
         raise ValueError(f"must have {PREFIX_MAP_KEY} in metadata if converter not given")
-    elif len(converters) == 1:
-        converter = converters[0]
-    else:
-        converter = curies.chain(converters)
+    converter = _safe_chain(converters)
+
     if prefixes is not None:
         converter = converter.get_subconverter(prefixes)
 
