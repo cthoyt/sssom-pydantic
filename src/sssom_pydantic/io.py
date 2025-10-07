@@ -399,25 +399,22 @@ def read_unprocessed(
     # TODO need to take subset of metadata that wasn't propagated
     mapping_set = MappingSet.model_validate(chained_metadata)
 
+    converters = []
     if converter is not None:
-        rv_converter = curies.chain(
-            [
-                converter,
-                Converter.from_prefix_map(chained_prefix_map),
-                BUILTIN_CONVERTER,
-            ]
-        )
-    elif chained_prefix_map:
-        rv_converter = curies.chain(
-            [
-                Converter.from_prefix_map(chained_prefix_map),
-                BUILTIN_CONVERTER,
-            ]
-        )
-    else:
-        rv_converter = BUILTIN_CONVERTER
+        converters.append(converter)
+    if chained_prefix_map:
+        converters.append(Converter.from_prefix_map(chained_prefix_map))
+    converters.append(BUILTIN_CONVERTER)
+    rv_converter = _safe_chain(converters)
 
     return mappings, rv_converter, mapping_set
+
+
+def _safe_chain(x: list[Converter]) -> Converter:
+    # TODO needs to be upstreamed.
+    if len(x) == 1:
+        return x[0]
+    return curies.chain(x)
 
 
 def _chomp_frontmatter(file: TextIO) -> tuple[list[str], Metadata]:
