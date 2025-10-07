@@ -16,7 +16,7 @@ from pystow.utils import safe_open
 
 from .api import MappingSet, MappingTool, RequiredSemanticMapping, SemanticMapping
 from .constants import (
-    DEFAULT_PREFIX_MAP,
+    BUILTIN_CONVERTER,
     MAPPING_SET_SLOTS,
     MULTIVALUED,
     PREFIX_MAP_KEY,
@@ -222,8 +222,8 @@ def write_unprocessed(
         converters.append(curies.Converter.from_prefix_map(prefix_map))
     if not converters:
         raise ValueError(f"must have {PREFIX_MAP_KEY} in metadata if converter not given")
+    converter = _safe_chain(converters)
 
-    converter = curies.chain(converters)
     if prefixes is not None:
         converter = converter.get_subconverter(prefixes)
 
@@ -373,12 +373,11 @@ def read_unprocessed(
     with safe_open(path_or_url, operation="read", representation="text") as file:
         columns, inline_metadata = _chomp_frontmatter(file)
 
-        rv_converter = Converter.from_prefix_map(
+        chained_prefix_map = dict(
             ChainMap(
                 metadata.pop(PREFIX_MAP_KEY, {}),
                 external_metadata.pop(PREFIX_MAP_KEY, {}),
                 inline_metadata.pop(PREFIX_MAP_KEY, {}),
-                DEFAULT_PREFIX_MAP,
             )
         )
 
@@ -398,10 +397,22 @@ def read_unprocessed(
     # TODO need to take subset of metadata that wasn't propagated
     mapping_set = MappingSet.model_validate(chained_metadata)
 
+    converters = []
     if converter is not None:
-        rv_converter = curies.chain([converter, rv_converter])
+        converters.append(converter)
+    if chained_prefix_map:
+        converters.append(Converter.from_prefix_map(chained_prefix_map))
+    converters.append(BUILTIN_CONVERTER)
+    rv_converter = _safe_chain(converters)
 
     return mappings, rv_converter, mapping_set
+
+
+def _safe_chain(x: list[Converter]) -> Converter:
+    # TODO use upstreamed in https://github.com/biopragmatics/curies/pull/190
+    if len(x) == 1:
+        return x[0]
+    return curies.chain(x)
 
 
 def _chomp_frontmatter(file: TextIO) -> tuple[list[str], Metadata]:
