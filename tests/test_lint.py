@@ -89,8 +89,8 @@ class TestLinting(unittest.TestCase):
             #  skos: http://www.w3.org/2004/02/skos/core#
             #mapping_set_id: https://example.org/test.tsv
             subject_id	predicate_id	object_id	mapping_justification
-            mesh:C000089	skos:exactMatch	chebi:28646	semapv:ManualMappingCuration
             mesh:C000089	skos:exactMatch	chebi:28646	semapv:LexicalMatching
+            mesh:C000089	skos:exactMatch	chebi:28646	semapv:ManualMappingCuration
         """)
         self.assert_linted(expected, original)
 
