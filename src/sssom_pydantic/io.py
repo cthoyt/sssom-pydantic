@@ -16,7 +16,7 @@ from pystow.utils import safe_open
 
 from .api import MappingSet, MappingTool, RequiredSemanticMapping, SemanticMapping
 from .constants import (
-    DEFAULT_PREFIX_MAP,
+    BUILTIN_CONVERTER,
     MAPPING_SET_SLOTS,
     MULTIVALUED,
     PREFIX_MAP_KEY,
@@ -222,8 +222,10 @@ def write_unprocessed(
         converters.append(curies.Converter.from_prefix_map(prefix_map))
     if not converters:
         raise ValueError(f"must have {PREFIX_MAP_KEY} in metadata if converter not given")
-
-    converter = curies.chain(converters)
+    elif len(converters) == 1:
+        converter = converters[0]
+    else:
+        converter = curies.chain(converters)
     if prefixes is not None:
         converter = converter.get_subconverter(prefixes)
 
@@ -373,12 +375,11 @@ def read_unprocessed(
     with safe_open(path_or_url, operation="read", representation="text") as file:
         columns, inline_metadata = _chomp_frontmatter(file)
 
-        rv_converter = Converter.from_prefix_map(
+        chained_prefix_map = dict(
             ChainMap(
                 metadata.pop(PREFIX_MAP_KEY, {}),
                 external_metadata.pop(PREFIX_MAP_KEY, {}),
                 inline_metadata.pop(PREFIX_MAP_KEY, {}),
-                DEFAULT_PREFIX_MAP,
             )
         )
 
@@ -399,7 +400,22 @@ def read_unprocessed(
     mapping_set = MappingSet.model_validate(chained_metadata)
 
     if converter is not None:
-        rv_converter = curies.chain([converter, rv_converter])
+        rv_converter = curies.chain(
+            [
+                converter,
+                Converter.from_prefix_map(chained_prefix_map),
+                BUILTIN_CONVERTER,
+            ]
+        )
+    elif chained_prefix_map:
+        rv_converter = curies.chain(
+            [
+                Converter.from_prefix_map(chained_prefix_map),
+                BUILTIN_CONVERTER,
+            ]
+        )
+    else:
+        rv_converter = BUILTIN_CONVERTER
 
     return mappings, rv_converter, mapping_set
 

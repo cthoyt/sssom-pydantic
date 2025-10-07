@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import curies
 from curies import Reference
 
 __all__ = [
+    "BUILTIN_CONVERTER",
     "DEFAULT_PREFIX_MAP",
     "MULTIVALUED",
     "PREDICATE_TYPES",
@@ -87,6 +89,8 @@ DEFAULT_PREFIX_MAP: dict[str, str] = {
     "semapv": "https://w3id.org/semapv/vocab/",
     "owl": "http://www.w3.org/2002/07/owl#",
 }
+BUILTIN_CONVERTER = curies.Converter.from_prefix_map(DEFAULT_PREFIX_MAP)
+
 
 MAPPING_SLOT_SPECIFIC = {
     "mapping_set_id",
