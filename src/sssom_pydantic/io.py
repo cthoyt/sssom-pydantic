@@ -222,7 +222,7 @@ def write_unprocessed(
         converters.append(curies.Converter.from_prefix_map(prefix_map))
     if not converters:
         raise ValueError(f"must have {PREFIX_MAP_KEY} in metadata if converter not given")
-    converter = _safe_chain(converters)
+    converter = curies.chain(converters)
 
     if prefixes is not None:
         converter = converter.get_subconverter(prefixes)
@@ -403,16 +403,9 @@ def read_unprocessed(
     if chained_prefix_map:
         converters.append(Converter.from_prefix_map(chained_prefix_map))
     converters.append(BUILTIN_CONVERTER)
-    rv_converter = _safe_chain(converters)
+    rv_converter = curies.chain(converters)
 
     return mappings, rv_converter, mapping_set
-
-
-def _safe_chain(x: list[Converter]) -> Converter:
-    # TODO use upstreamed in https://github.com/biopragmatics/curies/pull/190
-    if len(x) == 1:
-        return x[0]
-    return curies.chain(x)
 
 
 def _chomp_frontmatter(file: TextIO) -> tuple[list[str], Metadata]:
