@@ -6,9 +6,10 @@ import datetime
 import warnings
 from typing import Any, Literal
 
-from curies import NamableReference, Reference, Triple
-from curies.vocabulary import matching_processes
-from pydantic import BaseModel, ConfigDict, Field
+from curies import NamableReference, Reference
+from curies.database import get_reference_sa_column
+from pydantic import BaseModel, ConfigDict
+from sqlmodel import Field, SQLModel
 
 from .models import Cardinality, Record
 
@@ -21,11 +22,15 @@ __all__ = [
 ]
 
 
-class RequiredSemanticMapping(Triple):
+class RequiredSemanticMapping(SQLModel):
     """Represents the required fields for SSSOM."""
 
     model_config = ConfigDict(frozen=True)
 
+    id: int | None = Field(default=None, primary_key=True)
+    subject: Reference = Field(sa_column=get_reference_sa_column())
+    predicate: Reference = Field(sa_column=get_reference_sa_column())
+    object: Reference = Field(sa_column=get_reference_sa_column())
     justification: Reference = Field(
         ...,
         description="""\
@@ -38,7 +43,6 @@ class RequiredSemanticMapping(Triple):
         1. ``semapv:LexicalMatching``
         2. ``semapv:LogicalReasoning``
         """,
-        examples=list(matching_processes),
     )
     predicate_modifier: Literal["Not"] | None = Field(None)
 
