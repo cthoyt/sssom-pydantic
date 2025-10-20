@@ -111,7 +111,14 @@ def _get_prefix_map(
     if converter is not None:
         return dict(converter.bimap)
 
-    import bioregistry
+    try:
+        import bioregistry
+    except ImportError as e:
+        raise ImportError(
+            "no converter was given. tried falling back to look up URI prefixes "
+            "with the Bioregistry, but it's not installed. Install using "
+            "`pip install bioregistry`"
+        ) from e
 
     prefixes: set[str] = {prefix for mapping in mappings for prefix in mapping.get_prefixes()}
     # TODO is there a better version of this?
