@@ -158,6 +158,7 @@ omit = [
     "src/sssom_pydantic/version.py",
     "src/sssom_pydantic/__main__.py",
     "src/sssom_pydantic/cli.py",
+    "src/sssom_pydantic/contrib/*",
 ]
 
 [tool.coverage.paths]
