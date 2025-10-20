@@ -59,7 +59,7 @@ def get_cx_builder(
         # TODO is there a better version of this?
         prefix_map = {prefix: bioregistry.get_uri_prefix(prefix) for prefix in prefixes}
     else:
-        prefix_map = converter.bimap
+        prefix_map = dict(converter.bimap)
 
     builder.set_context(prefix_map)
 
