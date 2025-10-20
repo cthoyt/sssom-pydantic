@@ -109,8 +109,10 @@ release = [
 ]
 
 # see https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#dependencies-optional-dependencies
-# [project.optional-dependencies]
-
+[project.optional-dependencies]
+ndex = [
+    "ndex2",
+]
 
 # See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#urls
 # and also https://packaging.python.org/en/latest/specifications/well-known-project-urls/
@@ -158,6 +160,7 @@ omit = [
     "src/sssom_pydantic/version.py",
     "src/sssom_pydantic/__main__.py",
     "src/sssom_pydantic/cli.py",
+    "src/sssom_pydantic/contrib/*",
 ]
 
 [tool.coverage.paths]

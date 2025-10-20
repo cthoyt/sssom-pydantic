@@ -8,50 +8,16 @@ import typing
 import unittest
 from pathlib import Path
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any
 
-from curies import NamedReference, Reference
-from curies.vocabulary import charlie, exact_match, manual_mapping_curation
+from curies.vocabulary import charlie, manual_mapping_curation
 from pydantic import BaseModel
 
 import sssom_pydantic
 import sssom_pydantic.io
-from sssom_pydantic.api import SemanticMapping
 from sssom_pydantic.constants import MAPPING_SET_ID_KEY, MULTIVALUED, PREFIX_MAP_KEY
 from sssom_pydantic.io import _chomp_frontmatter, append, append_unprocessed, write_unprocessed
 from sssom_pydantic.models import Record
-
-if TYPE_CHECKING:
-    pass
-
-R1 = NamedReference(prefix="mesh", identifier="C000089", name="ammeline")
-R2 = NamedReference(prefix="chebi", identifier="28646", name="ammeline")
-P1 = Reference(prefix="skos", identifier="exactMatch")
-
-
-def _m(**kwargs: Any) -> SemanticMapping:
-    """Construct a base semantic mapping."""
-    return SemanticMapping(
-        subject=R1,
-        predicate=P1,
-        object=R2,
-        justification=manual_mapping_curation,
-        **kwargs,
-    )
-
-
-def _r(**kwargs: Any) -> Record:
-    """Construct a base record."""
-    return Record(
-        subject_id=R1.curie,
-        subject_label=R1.name,
-        predicate_id=exact_match.curie,
-        object_id=R2.curie,
-        object_label=R2.name,
-        mapping_justification=manual_mapping_curation.curie,
-        **kwargs,
-    )
-
+from tests.cases import _m, _r
 
 TEST_MAPPING_SET_ID = "https://example.org/sssom.mappingset/1.sssom.tsv"
 TEST_PREFIX_MAP = {
