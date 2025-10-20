@@ -175,7 +175,7 @@ def append_unprocessed(
         raise ValueError(
             f"can not append {len(records):,} mappings because no headers found in {path}"
         )
-    condensed_keys = {"mapping_set_id"}  # this is a hack...
+    condensed_keys = {"mapping_set_id", "predicate_label"}  # this is a hack...
     columns = _get_columns(records)
     new_columns = set(columns).difference(original_columns).difference(condensed_keys)
     if new_columns:
