@@ -30,10 +30,11 @@ class TestLinting(unittest.TestCase):
         expected: str,
         original: str,
         exclude_mappings: Iterable[SemanticMapping] | None = None,
+        drop_duplicates: bool = False,
     ) -> None:
         """Test linting."""
         self.path.write_text(original)
-        lint(self.path, exclude_mappings=exclude_mappings)
+        lint(self.path, exclude_mappings=exclude_mappings, drop_duplicates=drop_duplicates)
         self.assertEqual(expected.splitlines(), self.path.read_text().splitlines())
 
     def test_minimal(self) -> None:
@@ -264,3 +265,41 @@ class TestLinting(unittest.TestCase):
             ),
         ]
         self.assert_linted(expected, original, exclude_mappings=exclude_mappings)
+
+    def test_drop_duplicates(self) -> None:
+        """Test round trip with mapping confidence."""
+        original = dedent("""\
+            #mapping_set_id: https://example.org/test.tsv
+            #curie_map:
+            #  mesh: "http://id.nlm.nih.gov/mesh/"
+            #  chebi: "http://purl.obolibrary.org/obo/CHEBI_"
+            #  oboInOwl: "http://www.geneontology.org/formats/oboInOwl#"
+            object_id	subject_id	predicate_id	mapping_justification	confidence
+            chebi:28646	mesh:C000089	skos:exactMatch	semapv:LexicalMatching	0.95
+            chebi:28646	mesh:C000089	oboInOwl:hasDbXref	semapv:LexicalMatching	0.95
+        """)
+        expected_deduplicated = dedent("""\
+            #curie_map:
+            #  chebi: http://purl.obolibrary.org/obo/CHEBI_
+            #  mesh: http://id.nlm.nih.gov/mesh/
+            #  semapv: https://w3id.org/semapv/vocab/
+            #  skos: http://www.w3.org/2004/02/skos/core#
+            #mapping_set_id: https://example.org/test.tsv
+            subject_id	predicate_id	object_id	mapping_justification	confidence
+            mesh:C000089	skos:exactMatch	chebi:28646	semapv:LexicalMatching	0.95
+        """)
+        self.assert_linted(expected_deduplicated, original, drop_duplicates=True)
+
+        expected_vanilla = dedent("""\
+            #curie_map:
+            #  chebi: http://purl.obolibrary.org/obo/CHEBI_
+            #  mesh: http://id.nlm.nih.gov/mesh/
+            #  oboInOwl: http://www.geneontology.org/formats/oboInOwl#
+            #  semapv: https://w3id.org/semapv/vocab/
+            #  skos: http://www.w3.org/2004/02/skos/core#
+            #mapping_set_id: https://example.org/test.tsv
+            subject_id	predicate_id	object_id	mapping_justification	confidence
+            mesh:C000089	oboInOwl:hasDbXref	chebi:28646	semapv:LexicalMatching	0.95
+            mesh:C000089	skos:exactMatch	chebi:28646	semapv:LexicalMatching	0.95
+        """)
+        self.assert_linted(expected_vanilla, original, drop_duplicates=False)

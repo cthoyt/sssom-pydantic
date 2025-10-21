@@ -7,7 +7,7 @@ import logging
 from collections import ChainMap, Counter, defaultdict
 from collections.abc import Iterable, Sequence
 from pathlib import Path
-from typing import Any, TextIO, TypeAlias
+from typing import Any, TextIO, TypeAlias, TypeVar
 
 import curies
 import yaml
@@ -47,6 +47,9 @@ logger = logging.getLogger(__name__)
 
 #: The type for metadata
 Metadata: TypeAlias = dict[str, Any]
+
+X = TypeVar("X")
+Y = TypeVar("Y")
 
 
 def _safe_dump_mapping_set(m: Metadata | MappingSet) -> Metadata:
@@ -452,9 +455,9 @@ def lint(
     metadata: MappingSet | Metadata | None = None,
     converter: curies.Converter | None = None,
     exclude_mappings: Iterable[SemanticMapping] | None = None,
-    exclude_mappings_key: SemanticMappingHasher | None = None,
+    exclude_mappings_key: SemanticMappingHasher[X] | None = None,
     drop_duplicates: bool = False,
-    drop_duplicates_key: SemanticMappingHasher | None = None,
+    drop_duplicates_key: SemanticMappingHasher[Y] | None = None,
 ) -> None:
     """Lint a file."""
     mappings, converter_processed, mapping_set = read(
