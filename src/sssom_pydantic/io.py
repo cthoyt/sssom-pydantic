@@ -20,7 +20,6 @@ from .api import (
     RequiredSemanticMapping,
     SemanticMapping,
 )
-from .process import remove_redundant_external
 from .constants import (
     BUILTIN_CONVERTER,
     MAPPING_SET_SLOTS,
@@ -29,6 +28,7 @@ from .constants import (
     PROPAGATABLE,
 )
 from .models import Record
+from .process import remove_redundant_external
 
 __all__ = [
     "Metadata",

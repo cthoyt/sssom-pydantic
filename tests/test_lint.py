@@ -2,9 +2,14 @@
 
 import tempfile
 import unittest
+from collections.abc import Iterable
 from pathlib import Path
 from textwrap import dedent
 
+from curies import Reference
+from curies.vocabulary import exact_match, manual_mapping_curation
+
+from sssom_pydantic import SemanticMapping
 from sssom_pydantic.io import lint
 
 
@@ -20,10 +25,15 @@ class TestLinting(unittest.TestCase):
         """Tear down the test case."""
         self.directory.cleanup()
 
-    def assert_linted(self, expected: str, original: str) -> None:
+    def assert_linted(
+        self,
+        expected: str,
+        original: str,
+        exclude_mappings: Iterable[SemanticMapping] | None = None,
+    ) -> None:
         """Test linting."""
         self.path.write_text(original)
-        lint(self.path)
+        lint(self.path, exclude_mappings=exclude_mappings)
         self.assertEqual(expected.splitlines(), self.path.read_text().splitlines())
 
     def test_minimal(self) -> None:
@@ -209,3 +219,48 @@ class TestLinting(unittest.TestCase):
             mesh:C000089	skos:exactMatch	chebi:28646	semapv:LexicalMatching	0.95
         """)
         self.assert_linted(expected, original)
+
+    def test_remove_specified(self) -> None:
+        """Test round trip with mapping confidence."""
+        original = dedent("""\
+            #mapping_set_id: https://example.org/test.tsv
+            #curie_map:
+            #  mesh: "http://id.nlm.nih.gov/mesh/"
+            #  chebi: "http://purl.obolibrary.org/obo/CHEBI_"
+            object_id	subject_id	predicate_id	mapping_justification	confidence
+            chebi:28646	mesh:C000089	skos:exactMatch	semapv:LexicalMatching	0.95
+            chebi:1	mesh:C000001	skos:exactMatch	semapv:LexicalMatching	0.95
+            chebi:2	mesh:C000002	skos:exactMatch	semapv:LexicalMatching	0.95
+        """)
+        expected = dedent("""\
+            #curie_map:
+            #  chebi: http://purl.obolibrary.org/obo/CHEBI_
+            #  mesh: http://id.nlm.nih.gov/mesh/
+            #  semapv: https://w3id.org/semapv/vocab/
+            #  skos: http://www.w3.org/2004/02/skos/core#
+            #mapping_set_id: https://example.org/test.tsv
+            subject_id	predicate_id	object_id	mapping_justification	confidence
+            mesh:C000089	skos:exactMatch	chebi:28646	semapv:LexicalMatching	0.95
+        """)
+        exclude_mappings = [
+            SemanticMapping(
+                subject=Reference(prefix="mesh", identifier="C000001"),
+                predicate=exact_match,
+                object=Reference(prefix="chebi", identifier="1"),
+                justification=manual_mapping_curation,
+            ),
+            SemanticMapping(
+                subject=Reference(prefix="mesh", identifier="C000002"),
+                predicate=exact_match,
+                object=Reference(prefix="chebi", identifier="2"),
+                justification=manual_mapping_curation,
+            ),
+            # last one is a no-op
+            SemanticMapping(
+                subject=Reference(prefix="mesh", identifier="C000003"),
+                predicate=exact_match,
+                object=Reference(prefix="chebi", identifier="3"),
+                justification=manual_mapping_curation,
+            ),
+        ]
+        self.assert_linted(expected, original, exclude_mappings=exclude_mappings)
