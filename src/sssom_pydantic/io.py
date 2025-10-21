@@ -41,6 +41,12 @@ logger = logging.getLogger(__name__)
 Metadata: TypeAlias = dict[str, Any]
 
 
+def _safe_dump_mapping_set(m: Metadata | MappingSet) -> Metadata:
+    if isinstance(m, MappingSet):
+        return m.model_dump(exclude_none=True, exclude_unset=True)
+    return m
+
+
 def parse_record(record: Record, converter: curies.Converter) -> SemanticMapping:
     """Parse a record into a mapping."""
     subject = converter.parse_curie(record.subject_id, strict=True).to_pydantic(
@@ -367,8 +373,10 @@ def read_unprocessed(
 
     if metadata is None:
         metadata = {}
-    elif isinstance(metadata, MappingSet):
-        metadata = metadata.model_dump(exclude_none=True)
+    else:
+        metadata = _safe_dump_mapping_set(metadata)
+
+    # TODO implement chain operation on MappingSet
 
     with safe_open(path_or_url, operation="read", representation="text") as file:
         columns, inline_metadata = _chomp_frontmatter(file)
