@@ -7,14 +7,20 @@ import logging
 from collections import ChainMap, Counter, defaultdict
 from collections.abc import Iterable, Sequence
 from pathlib import Path
-from typing import Any, TextIO, TypeAlias
+from typing import Any, Literal, TextIO, TypeAlias
 
 import curies
 import yaml
 from curies import Converter, Reference
 from pystow.utils import safe_open
 
-from .api import MappingSet, MappingTool, RequiredSemanticMapping, SemanticMapping
+from .api import (
+    MappingSet,
+    MappingTool,
+    RequiredSemanticMapping,
+    SemanticMapping,
+    SemanticMappingPredicate,
+)
 from .constants import (
     BUILTIN_CONVERTER,
     MAPPING_SET_SLOTS,
@@ -26,6 +32,8 @@ from .models import Record
 
 __all__ = [
     "Metadata",
+    "append",
+    "append_unprocessed",
     "lint",
     "parse_record",
     "parse_row",
@@ -134,7 +142,7 @@ def write(
     mappings: Iterable[RequiredSemanticMapping],
     path: str | Path,
     *,
-    metadata: dict[str, Any] | None | MappingSet = None,
+    metadata: Metadata | None | MappingSet = None,
     converter: curies.Converter | None = None,
 ) -> None:
     """Write processed records."""
@@ -146,7 +154,7 @@ def append(
     mappings: Iterable[RequiredSemanticMapping],
     path: str | Path,
     *,
-    metadata: dict[str, Any] | None = None,
+    metadata: Metadata | MappingSet | None = None,
     converter: curies.Converter | None = None,
 ) -> None:
     """Append processed records."""
@@ -169,7 +177,7 @@ def append_unprocessed(
     records: Sequence[Record],
     path: str | Path,
     *,
-    metadata: dict[str, Any] | None = None,
+    metadata: Metadata | MappingSet | None = None,
     converter: curies.Converter | None = None,
     prefixes: set[str] | None = None,
 ) -> None:
@@ -212,8 +220,8 @@ def write_unprocessed(
 
     if metadata is None:
         metadata = {}
-    elif isinstance(metadata, MappingSet):
-        metadata = metadata.model_dump(exclude_none=True)
+    else:
+        metadata = _safe_dump_mapping_set(metadata)
 
     condensation = _get_condensation(records)
     for key, value in condensation.items():
@@ -306,9 +314,7 @@ def _clean_row(record: dict[str, Any]) -> dict[str, Any]:
     return record
 
 
-def _preprocess_row(
-    record: dict[str, Any], *, metadata: dict[str, Any] | None = None
-) -> dict[str, Any]:
+def _preprocess_row(record: dict[str, Any], *, metadata: Metadata | None = None) -> dict[str, Any]:
     # Step 1: propagate values from the header if it's not explicit in the record
     if metadata:
         for key in PROPAGATABLE.intersection(metadata):
@@ -332,7 +338,7 @@ def _preprocess_row(
     return record
 
 
-def parse_row(record: dict[str, str], *, metadata: dict[str, Any] | None = None) -> Record:
+def parse_row(record: dict[str, str], *, metadata: Metadata | None = None) -> Record:
     """Parse a row from a SSSOM TSV file, unprocessed."""
     processed_record = _preprocess_row(record, metadata=metadata)
     rv = Record.model_validate(processed_record)

@@ -6,6 +6,7 @@ from .api import (
     MappingTool,
     RequiredSemanticMapping,
     SemanticMapping,
+    SemanticMappingPredicate,
 )
 from .io import (
     Metadata,
@@ -27,6 +28,7 @@ __all__ = [
     "Record",
     "RequiredSemanticMapping",
     "SemanticMapping",
+    "SemanticMappingPredicate",
     "append",
     "append_unprocessed",
     "lint",
