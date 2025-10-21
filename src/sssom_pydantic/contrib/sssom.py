@@ -14,13 +14,13 @@ if TYPE_CHECKING:
     import sssom
 
 __all__ = [
-    "to_sssompy",
+    "mappings_to_msdf",
 ]
 
 SSSOM_PY_DEFAULT_LICENSE = "https://w3id.org/sssom/license/unspecified"
 
 
-def to_df(mappings: list[SemanticMapping]) -> pandas.DataFrame:
+def _mappings_to_df(mappings: list[SemanticMapping]) -> pandas.DataFrame:
     """Construct a pandas dataframe that represents the SSSOM TSV format."""
     import pandas
 
@@ -29,7 +29,7 @@ def to_df(mappings: list[SemanticMapping]) -> pandas.DataFrame:
     return rv
 
 
-def to_sssompy(
+def mappings_to_msdf(
     mappings: list[SemanticMapping],
     converter: curies.Converter,
     metadata: MappingSet | Metadata,
@@ -40,7 +40,7 @@ def to_sssompy(
     from sssom import MappingSetDataFrame
     from sssom.parsers import from_sssom_dataframe
 
-    df = to_df(mappings)
+    df = _mappings_to_df(mappings)
     meta = _safe_dump_mapping_set(metadata)
 
     # SSSOM-Py insists that license is a required field,

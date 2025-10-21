@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from curies.vocabulary import charlie, manual_mapping_curation
 
-from sssom_pydantic.contrib.sssom import to_df, to_sssompy
+from sssom_pydantic.contrib.sssom import _mappings_to_df, mappings_to_msdf
 from tests.cases import P1, R1, R2, TEST_CONVERTER, TEST_METADATA, _m
 
 if TYPE_CHECKING:
@@ -43,20 +43,20 @@ class TestSSSOMPy(unittest.TestCase):
 
     def test_to_pandas_1(self) -> None:
         """Test simplest reading."""
-        df = to_df(self.mappings)
+        df = _mappings_to_df(self.mappings)
         self.assertEqual(self.expected_columns, df.columns.tolist())
         self.assertEqual(self.expected_rows, df.to_numpy().tolist())
 
     def test_to_msdf_no_validate(self) -> None:
         """Test converting to a mapping set dataframe without¬ LinkML validation."""
-        msdf = to_sssompy(
+        msdf = mappings_to_msdf(
             self.mappings, converter=TEST_CONVERTER, metadata=TEST_METADATA, linkml_validate=False
         )
         self.assert_msdf(msdf)
 
     def test_to_msdf_validate(self) -> None:
         """Test converting to a mapping set dataframe with LinkML validation."""
-        msdf = to_sssompy(
+        msdf = mappings_to_msdf(
             self.mappings, converter=TEST_CONVERTER, metadata=TEST_METADATA, linkml_validate=True
         )
         self.assert_msdf(msdf)
@@ -64,7 +64,7 @@ class TestSSSOMPy(unittest.TestCase):
     def test_to_pandas_2(self) -> None:
         """Test simplest reading."""
         mappings = [_m(authors=[charlie, charlie])]
-        df = to_df(mappings)
+        df = _mappings_to_df(mappings)
 
         expected_columns = [
             "subject_id",
