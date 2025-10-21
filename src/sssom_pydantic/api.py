@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import datetime
 import warnings
-from typing import Any, Literal
+from collections.abc import Callable
+from typing import Any, Literal, TypeAlias
 
 from curies import NamableReference, Reference, Triple
 from curies.vocabulary import matching_processes
@@ -18,6 +19,7 @@ __all__ = [
     "MappingTool",
     "RequiredSemanticMapping",
     "SemanticMapping",
+    "SemanticMappingPredicate",
 ]
 
 
@@ -328,6 +330,10 @@ class SemanticMapping(CoreSemanticMapping):
             similarity_measure=self.similarity_measure,
             similarity_score=self.similarity_score,
         )
+
+
+#: A predicate for a semantic mapping
+SemanticMappingPredicate: TypeAlias = Callable[[SemanticMapping], bool]
 
 
 class MappingTool(BaseModel):
