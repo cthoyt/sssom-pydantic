@@ -7,7 +7,7 @@ import logging
 from collections import ChainMap, Counter, defaultdict
 from collections.abc import Iterable, Sequence
 from pathlib import Path
-from typing import Any, TextIO, TypeAlias
+from typing import Any, TextIO, TypeAlias, TypeVar
 
 import curies
 import yaml
@@ -28,6 +28,7 @@ from .constants import (
     PROPAGATABLE,
 )
 from .models import Record
+from .process import SemanticMappingHasher, remove_redundant_external, remove_redundant_internal
 
 __all__ = [
     "Metadata",
@@ -46,6 +47,9 @@ logger = logging.getLogger(__name__)
 
 #: The type for metadata
 Metadata: TypeAlias = dict[str, Any]
+
+X = TypeVar("X")
+Y = TypeVar("Y")
 
 
 def _safe_dump_mapping_set(m: Metadata | MappingSet) -> Metadata:
@@ -450,15 +454,18 @@ def lint(
     metadata_path: str | Path | None = None,
     metadata: MappingSet | Metadata | None = None,
     converter: curies.Converter | None = None,
+    exclude_mappings: Iterable[SemanticMapping] | None = None,
+    exclude_mappings_key: SemanticMappingHasher[X] | None = None,
+    drop_duplicates: bool = False,
+    drop_duplicates_key: SemanticMappingHasher[Y] | None = None,
 ) -> None:
     """Lint a file."""
     mappings, converter_processed, mapping_set = read(
         path, metadata_path=metadata_path, metadata=metadata, converter=converter
     )
+    if exclude_mappings is not None:
+        mappings = remove_redundant_external(mappings, exclude_mappings, key=exclude_mappings_key)
+    if drop_duplicates:
+        mappings = remove_redundant_internal(mappings, key=drop_duplicates_key)
     mappings = sorted(mappings)
-    mappings = _remove_redundant(mappings)
     write(mappings, path, converter=converter_processed, metadata=mapping_set)
-
-
-def _remove_redundant(mappings: list[SemanticMapping]) -> list[SemanticMapping]:
-    return mappings
