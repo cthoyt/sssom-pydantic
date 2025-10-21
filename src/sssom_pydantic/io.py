@@ -7,7 +7,7 @@ import logging
 from collections import ChainMap, Counter, defaultdict
 from collections.abc import Iterable, Sequence
 from pathlib import Path
-from typing import Any, Literal, TextIO, TypeAlias
+from typing import Any, TextIO, TypeAlias
 
 import curies
 import yaml
@@ -19,7 +19,6 @@ from .api import (
     MappingTool,
     RequiredSemanticMapping,
     SemanticMapping,
-    SemanticMappingPredicate,
 )
 from .constants import (
     BUILTIN_CONVERTER,
