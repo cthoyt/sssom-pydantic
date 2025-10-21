@@ -17,6 +17,8 @@ __all__ = [
     "to_sssompy",
 ]
 
+SSSOM_PY_DEFAULT_LICENSE = "https://w3id.org/sssom/license/unspecified"
+
 
 def to_df(mappings: list[SemanticMapping]) -> pandas.DataFrame:
     """Construct a pandas dataframe that represents the SSSOM TSV format."""
@@ -40,7 +42,12 @@ def to_sssompy(
 
     df = to_df(mappings)
     meta = _safe_dump_mapping_set(metadata)
-    meta["curie_map"] = converter.bimap
+
+    # SSSOM-Py insists that license is a required field,
+    # but also automatically adds the following stub in
+    # case you didn't put one
+    meta.setdefault("license", SSSOM_PY_DEFAULT_LICENSE)
+
     if not linkml_validate:
         # we can trust that SSSOM-Pydantic makes a correct
         # dataframe, so we normally don't have to go through

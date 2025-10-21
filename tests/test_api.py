@@ -17,7 +17,7 @@ import sssom_pydantic.io
 from sssom_pydantic.constants import MULTIVALUED
 from sssom_pydantic.io import _chomp_frontmatter, append, append_unprocessed, write_unprocessed
 from sssom_pydantic.models import Record
-from tests.cases import TEST_MAPPING_SET_ID, TEST_METADATA, _m, _r
+from tests.cases import TEST_MAPPING_SET_ID, TEST_METADATA_W_PREFIX_MAP, _m, _r
 
 
 class TestIO(unittest.TestCase):
@@ -65,7 +65,7 @@ class TestIO(unittest.TestCase):
         """Test simplest reading."""
         record = _r()
         path = self.directory.joinpath("test.tsv")
-        write_unprocessed([record], path, metadata=TEST_METADATA)
+        write_unprocessed([record], path, metadata=TEST_METADATA_W_PREFIX_MAP)
 
         unprocessed, _converter, _mapping_set = sssom_pydantic.io.read_unprocessed(path)
         self.assertEqual(1, len(unprocessed))
@@ -105,7 +105,7 @@ class TestIO(unittest.TestCase):
             msg="columns were parsed incorrectly",
         )
         self.assertEqual(
-            TEST_METADATA,
+            TEST_METADATA_W_PREFIX_MAP,
             metadata,
             msg="metadata was read incorrectly",
         )
