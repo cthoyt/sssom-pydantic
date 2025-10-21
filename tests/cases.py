@@ -4,16 +4,22 @@ from __future__ import annotations
 
 from typing import Any
 
+import curies
 from curies import NamedReference, Reference
 from curies.vocabulary import exact_match, manual_mapping_curation
 
 from sssom_pydantic.api import SemanticMapping
+from sssom_pydantic.constants import MAPPING_SET_ID_KEY, PREFIX_MAP_KEY
 from sssom_pydantic.models import Record
 
 __all__ = [
     "P1",
     "R1",
     "R2",
+    "TEST_CONVERTER",
+    "TEST_MAPPING_SET_ID",
+    "TEST_METADATA",
+    "TEST_PREFIX_MAP",
     "_m",
     "_r",
 ]
@@ -45,3 +51,22 @@ def _r(**kwargs: Any) -> Record:
         mapping_justification=manual_mapping_curation.curie,
         **kwargs,
     )
+
+
+TEST_MAPPING_SET_ID = "https://example.org/sssom.mappingset/1.sssom.tsv"
+TEST_PREFIX_MAP = {
+    "mesh": "http://id.nlm.nih.gov/mesh/",
+    "chebi": "http://purl.obolibrary.org/obo/CHEBI_",
+    # the following are the default ones
+    "owl": "http://www.w3.org/2002/07/owl#",
+    "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+    "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+    "semapv": "https://w3id.org/semapv/vocab/",
+    "skos": "http://www.w3.org/2004/02/skos/core#",
+    "sssom": "https://w3id.org/sssom/",
+}
+TEST_CONVERTER = curies.Converter.from_prefix_map(TEST_PREFIX_MAP)
+TEST_METADATA = {
+    PREFIX_MAP_KEY: TEST_PREFIX_MAP,
+    MAPPING_SET_ID_KEY: TEST_MAPPING_SET_ID,
+}

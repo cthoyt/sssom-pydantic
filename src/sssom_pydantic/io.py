@@ -7,7 +7,7 @@ import logging
 from collections import ChainMap, Counter, defaultdict
 from collections.abc import Iterable, Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, TextIO, TypeAlias
+from typing import Any, TextIO, TypeAlias
 
 import curies
 import yaml
@@ -24,10 +24,6 @@ from .constants import (
 )
 from .models import Record
 
-if TYPE_CHECKING:
-    import pandas
-    import sssom
-
 __all__ = [
     "Metadata",
     "lint",
@@ -43,6 +39,12 @@ logger = logging.getLogger(__name__)
 
 #: The type for metadata
 Metadata: TypeAlias = dict[str, Any]
+
+
+def _safe_dump_mapping_set(m: Metadata | MappingSet) -> Metadata:
+    if isinstance(m, MappingSet):
+        return m.model_dump(exclude_none=True, exclude_unset=True)
+    return m
 
 
 def parse_record(record: Record, converter: curies.Converter) -> SemanticMapping:
@@ -371,8 +373,10 @@ def read_unprocessed(
 
     if metadata is None:
         metadata = {}
-    elif isinstance(metadata, MappingSet):
-        metadata = metadata.model_dump(exclude_none=True)
+    else:
+        metadata = _safe_dump_mapping_set(metadata)
+
+    # TODO implement chain operation on MappingSet
 
     with safe_open(path_or_url, operation="read", representation="text") as file:
         columns, inline_metadata = _chomp_frontmatter(file)
@@ -453,26 +457,3 @@ def lint(
 
 def _remove_redundant(mappings: list[SemanticMapping]) -> list[SemanticMapping]:
     return mappings
-
-
-def _to_df(mappings: list[SemanticMapping]) -> pandas.DataFrame:
-    """Construct a pandas dataframe that represents the SSSOM TSV format."""
-    import pandas
-
-    rows = [_unprocess_row(mapping.to_record()) for mapping in mappings]
-    rv = pandas.DataFrame(rows)
-    return rv
-
-
-def to_sssompy(
-    mappings: list[SemanticMapping], converter: curies.Converter, metadata: MappingSet
-) -> sssom.MappingSetDataFrame:
-    """Construct a SSSOM-py mapping set dataframe object."""
-    from sssom.parsers import from_sssom_dataframe
-
-    df = _to_df(mappings)
-    return from_sssom_dataframe(
-        df,
-        prefix_map=converter.bimap,
-        meta=metadata.model_dump(exclude_none=True, exclude_unset=True),
-    )

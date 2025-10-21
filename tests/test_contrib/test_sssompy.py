@@ -2,21 +2,25 @@
 
 from __future__ import annotations
 
+import importlib.util
 import unittest
 
 from curies.vocabulary import charlie, manual_mapping_curation
 
-import sssom_pydantic.io
-from tests.cases import P1, R1, R2, _m
+from sssom_pydantic.contrib.sssom import to_df, to_sssompy
+from tests.cases import P1, R1, R2, TEST_CONVERTER, TEST_METADATA, _m
 
 
+@unittest.skipUnless(importlib.util.find_spec("sssom"), reason="SSSOM-Py must be installed")
 class TestSSSOMPy(unittest.TestCase):
     """Test pandas contribution."""
 
     def test_to_pandas_1(self) -> None:
         """Test simplest reading."""
+        from sssom import MappingSetDataFrame
+
         mappings = [_m()]
-        df = sssom_pydantic.io._to_df(mappings)
+        df = to_df(mappings)
 
         expected_columns = [
             "subject_id",
@@ -33,10 +37,25 @@ class TestSSSOMPy(unittest.TestCase):
         ]
         self.assertEqual(expected_rows, df.to_numpy().tolist())
 
+        def assert_msdf(msdf: MappingSetDataFrame) -> None:
+            self.assertEqual(expected_rows, msdf.df.to_numpy().tolist())
+            self.assertEqual(TEST_CONVERTER.bimap, msdf.converter.bimap)
+            self.assertEqual(TEST_METADATA, msdf.metadata)
+
+        msdf_no_validate = to_sssompy(
+            mappings, converter=TEST_CONVERTER, metadata=TEST_METADATA, linkml_validate=False
+        )
+        assert_msdf(msdf_no_validate)
+
+        msdf_validate = to_sssompy(
+            mappings, converter=TEST_CONVERTER, metadata=TEST_METADATA, linkml_validate=True
+        )
+        assert_msdf(msdf_validate)
+
     def test_to_pandas_2(self) -> None:
         """Test simplest reading."""
         mappings = [_m(authors=[charlie, charlie])]
-        df = sssom_pydantic._to_df(mappings)
+        df = to_df(mappings)
 
         expected_columns = [
             "subject_id",
