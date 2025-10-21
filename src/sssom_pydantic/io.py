@@ -28,7 +28,7 @@ from .constants import (
     PROPAGATABLE,
 )
 from .models import Record
-from .process import SemanticMappingHasher, remove_redundant_external, remove_redundant_internal
+from .process import Hasher, MappingTypeVar, remove_redundant_external, remove_redundant_internal
 
 __all__ = [
     "Metadata",
@@ -142,15 +142,15 @@ def parse_record(record: Record, converter: curies.Converter) -> SemanticMapping
 
 
 def write(
-    mappings: Iterable[RequiredSemanticMapping],
+    mappings: Iterable[MappingTypeVar],
     path: str | Path,
     *,
     metadata: Metadata | None | MappingSet = None,
     converter: curies.Converter | None = None,
-    exclude_mappings: Iterable[SemanticMapping] | None = None,
-    exclude_mappings_key: SemanticMappingHasher[X] | None = None,
+    exclude_mappings: Iterable[MappingTypeVar] | None = None,
+    exclude_mappings_key: Hasher[MappingTypeVar, X] | None = None,
     drop_duplicates: bool = False,
-    drop_duplicates_key: SemanticMappingHasher[Y] | None = None,
+    drop_duplicates_key: Hasher[MappingTypeVar, Y] | None = None,
     sort: bool = False,
 ) -> None:
     """Write processed records."""
@@ -466,9 +466,9 @@ def lint(
     metadata: MappingSet | Metadata | None = None,
     converter: curies.Converter | None = None,
     exclude_mappings: Iterable[SemanticMapping] | None = None,
-    exclude_mappings_key: SemanticMappingHasher[X] | None = None,
+    exclude_mappings_key: Hasher[SemanticMapping, X] | None = None,
     drop_duplicates: bool = False,
-    drop_duplicates_key: SemanticMappingHasher[Y] | None = None,
+    drop_duplicates_key: Hasher[SemanticMapping, Y] | None = None,
 ) -> None:
     """Lint a file."""
     mappings, converter_processed, mapping_set = read(

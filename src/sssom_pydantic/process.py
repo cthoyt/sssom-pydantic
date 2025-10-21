@@ -7,14 +7,16 @@ from collections import defaultdict
 from collections.abc import Callable, Iterable
 from typing import TYPE_CHECKING, TypeAlias, TypeVar, cast
 
-from .api import SemanticMapping
+from curies import Reference
+
+from . import RequiredSemanticMapping
 
 if TYPE_CHECKING:
     from _typeshed import SupportsRichComparison
 
 __all__ = [
     "CanonicalMappingTuple",
-    "SemanticMappingHasher",
+    "Hasher",
     "get_canonical_tuple",
     "remove_redundant_external",
     "remove_redundant_internal",
@@ -23,21 +25,27 @@ __all__ = [
 #: A canonical mapping tuple
 CanonicalMappingTuple: TypeAlias = tuple[str, str, str, str]
 
-X = TypeVar("X")
+#: A type variable bound to a semantic mapping type, to
+#: make it possible to annotate functions that spit out the
+#: same type that goes in
+MappingTypeVar = TypeVar("MappingTypeVar", bound=RequiredSemanticMapping)
+
+#: The type used in hashing functions.
+HashTarget = TypeVar("HashTarget")
 
 #: A function that constructs a hashable object from a semantic mapping
-SemanticMappingHasher: TypeAlias = Callable[[SemanticMapping], X]
+Hasher: TypeAlias = Callable[[MappingTypeVar], HashTarget]
 
 #: A function that makes a comparable score for a semantic mapping
-SemanticMappingScorer: TypeAlias = Callable[[SemanticMapping], "SupportsRichComparison"]
+Scorer: TypeAlias = Callable[[MappingTypeVar], "SupportsRichComparison"]
 
 
 def remove_redundant_internal(
-    mappings: Iterable[SemanticMapping],
+    mappings: Iterable[MappingTypeVar],
     *,
-    key: SemanticMappingHasher[X] | None = None,
-    scorer: SemanticMappingScorer | None = None,
-) -> list[SemanticMapping]:
+    key: Hasher[MappingTypeVar, HashTarget] | None = None,
+    scorer: Scorer[MappingTypeVar] | None = None,
+) -> list[MappingTypeVar]:
     """Remove redundant mappings.
 
     :param mappings: An iterable of mappings
@@ -53,18 +61,18 @@ def remove_redundant_internal(
         aggregation happens in the implementation.
     """
     if key is None:
-        key = cast(SemanticMappingHasher[X], get_canonical_tuple)
+        key = cast(Hasher[MappingTypeVar, HashTarget], get_canonical_tuple)
 
     if scorer is None:
         scorer = _score_mapping
 
-    key_to_mappings: defaultdict[X, list[SemanticMapping]] = defaultdict(list)
+    key_to_mappings: defaultdict[HashTarget, list[MappingTypeVar]] = defaultdict(list)
     for mapping in mappings:
         key_to_mappings[key(mapping)].append(mapping)
     return [max(mappings, key=scorer) for mappings in key_to_mappings.values()]
 
 
-def _score_mapping(mapping: SemanticMapping) -> int:
+def _score_mapping(mapping: RequiredSemanticMapping) -> int:
     """Assign a value for this mapping, where higher is better.
 
     :param mapping: A mapping dictionary
@@ -78,31 +86,34 @@ def _score_mapping(mapping: SemanticMapping) -> int:
     - prediction methodology
     - date of prediction/curation (to keep the earliest)
     """
-    if mapping.author and mapping.author.prefix == "orcid":
+    author: Reference | None = getattr(mapping, "author", None)
+    if author and author.prefix == "orcid":
         return 1
     return 0
 
 
-def get_canonical_tuple(mapping: SemanticMapping) -> CanonicalMappingTuple:
+def get_canonical_tuple(mapping: RequiredSemanticMapping) -> CanonicalMappingTuple:
     """Get the canonical tuple from a mapping entry."""
     source, target = sorted([mapping.subject, mapping.object])
     return source.prefix, source.identifier, target.prefix, target.identifier
 
 
 def remove_redundant_external(
-    mappings: Iterable[SemanticMapping],
-    *others: Iterable[SemanticMapping],
-    key: SemanticMappingHasher[X] | None = None,
-) -> list[SemanticMapping]:
+    mappings: Iterable[MappingTypeVar],
+    *others: Iterable[MappingTypeVar],
+    key: Hasher[MappingTypeVar, HashTarget] | None = None,
+) -> list[MappingTypeVar]:
     """Remove mappings with same S/O pairs in other given mappings."""
-    keep_mapping_predicate = _get_predicate_helper(*others, key=key)
+    keep_mapping_predicate: Callable[[MappingTypeVar], bool] = _get_predicate_helper(
+        *others, key=key
+    )
     return [m for m in mappings if keep_mapping_predicate(m)]
 
 
 def _get_predicate_helper(
-    *mappings: Iterable[SemanticMapping],
-    key: SemanticMappingHasher[X] | None = None,
-) -> Callable[[SemanticMapping], bool]:
+    *mappings: Iterable[MappingTypeVar],
+    key: Hasher[MappingTypeVar, HashTarget] | None = None,
+) -> Callable[[MappingTypeVar], bool]:
     """Construct a predicate for mapping membership.
 
     :param mappings: A variadic number of mapping lists, which are all indexed
@@ -112,11 +123,11 @@ def _get_predicate_helper(
         in the given mapping list(s)
     """
     if key is None:
-        key = cast(SemanticMappingHasher[X], get_canonical_tuple)
+        key = cast(Hasher[MappingTypeVar, HashTarget], get_canonical_tuple)
 
-    skip_tuples: set[X] = {key(mapping) for mapping in itt.chain.from_iterable(mappings)}
+    skip_tuples: set[HashTarget] = {key(mapping) for mapping in itt.chain.from_iterable(mappings)}
 
-    def _keep_mapping(mapping: SemanticMapping) -> bool:
+    def _keep_mapping(mapping: MappingTypeVar) -> bool:
         return key(mapping) not in skip_tuples
 
     return _keep_mapping
