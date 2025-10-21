@@ -20,6 +20,7 @@ from .api import (
     RequiredSemanticMapping,
     SemanticMapping,
 )
+from .process import remove_redundant_external
 from .constants import (
     BUILTIN_CONVERTER,
     MAPPING_SET_SLOTS,
@@ -450,13 +451,16 @@ def lint(
     metadata_path: str | Path | None = None,
     metadata: MappingSet | Metadata | None = None,
     converter: curies.Converter | None = None,
+    exclude_mappings: Iterable[SemanticMapping] | None = None,
 ) -> None:
     """Lint a file."""
     mappings, converter_processed, mapping_set = read(
         path, metadata_path=metadata_path, metadata=metadata, converter=converter
     )
-    mappings = sorted(mappings)
+    if exclude_mappings is not None:
+        mappings = remove_redundant_external(mappings, exclude_mappings)
     mappings = _remove_redundant(mappings)
+    mappings = sorted(mappings)
     write(mappings, path, converter=converter_processed, metadata=mapping_set)
 
 
