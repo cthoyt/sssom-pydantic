@@ -105,7 +105,13 @@ class TestIO(unittest.TestCase):
             msg="columns were parsed incorrectly",
         )
         self.assertEqual(
-            TEST_METADATA_W_PREFIX_MAP,
+            {
+                "mapping_set_id": TEST_MAPPING_SET_ID,
+                "curie_map": {
+                    "mesh": "http://id.nlm.nih.gov/mesh/",
+                    "chebi": "http://purl.obolibrary.org/obo/CHEBI_",
+                },
+            },
             metadata,
             msg="metadata was read incorrectly",
         )
