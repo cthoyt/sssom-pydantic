@@ -28,7 +28,7 @@ from .constants import (
     PROPAGATABLE,
 )
 from .models import Record
-from .process import remove_redundant_external
+from .process import SemanticMappingHasher, remove_redundant_external, remove_redundant_internal
 
 __all__ = [
     "Metadata",
@@ -452,17 +452,17 @@ def lint(
     metadata: MappingSet | Metadata | None = None,
     converter: curies.Converter | None = None,
     exclude_mappings: Iterable[SemanticMapping] | None = None,
+    exclude_mappings_key: SemanticMappingHasher | None = None,
+    drop_duplicates: bool = False,
+    drop_duplicates_key: SemanticMappingHasher | None = None,
 ) -> None:
     """Lint a file."""
     mappings, converter_processed, mapping_set = read(
         path, metadata_path=metadata_path, metadata=metadata, converter=converter
     )
     if exclude_mappings is not None:
-        mappings = remove_redundant_external(mappings, exclude_mappings)
-    mappings = _remove_redundant(mappings)
+        mappings = remove_redundant_external(mappings, exclude_mappings, key=exclude_mappings_key)
+    if drop_duplicates:
+        mappings = remove_redundant_internal(mappings, key=drop_duplicates_key)
     mappings = sorted(mappings)
     write(mappings, path, converter=converter_processed, metadata=mapping_set)
-
-
-def _remove_redundant(mappings: list[SemanticMapping]) -> list[SemanticMapping]:
-    return mappings

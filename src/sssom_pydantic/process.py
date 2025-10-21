@@ -15,9 +15,9 @@ if TYPE_CHECKING:
 __all__ = [
     "CanonicalMappingTuple",
     "SemanticMappingHasher",
-    "drop_duplicates",
     "get_canonical_tuple",
     "remove_redundant_external",
+    "remove_redundant_internal",
 ]
 
 #: A canonical mapping tuple
@@ -32,7 +32,7 @@ SemanticMappingHasher: TypeAlias = Callable[[SemanticMapping], X]
 SemanticMappingScorer: TypeAlias = Callable[[SemanticMapping], "SupportsRichComparison"]
 
 
-def drop_duplicates(
+def remove_redundant_internal(
     mappings: Iterable[SemanticMapping],
     *,
     key: SemanticMappingHasher[X] | None = None,
