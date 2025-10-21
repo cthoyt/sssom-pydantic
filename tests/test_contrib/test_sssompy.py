@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from curies.vocabulary import charlie, manual_mapping_curation
 
-from sssom_pydantic.contrib.sssom import _mappings_to_df, mappings_to_msdf
+from sssom_pydantic.contrib.sssompy import _mappings_to_df, mappings_to_msdf
 from tests.cases import P1, R1, R2, TEST_CONVERTER, TEST_METADATA, _m
 
 if TYPE_CHECKING:
