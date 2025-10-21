@@ -147,8 +147,19 @@ def write(
     *,
     metadata: Metadata | None | MappingSet = None,
     converter: curies.Converter | None = None,
+    exclude_mappings: Iterable[SemanticMapping] | None = None,
+    exclude_mappings_key: SemanticMappingHasher[X] | None = None,
+    drop_duplicates: bool = False,
+    drop_duplicates_key: SemanticMappingHasher[Y] | None = None,
+    sort: bool = False,
 ) -> None:
     """Write processed records."""
+    if exclude_mappings is not None:
+        mappings = remove_redundant_external(mappings, exclude_mappings, key=exclude_mappings_key)
+    if drop_duplicates:
+        mappings = remove_redundant_internal(mappings, key=drop_duplicates_key)
+    if sort:
+        mappings = sorted(mappings)
     records, prefixes = _prepare_records(mappings)
     write_unprocessed(records, path=path, metadata=metadata, converter=converter, prefixes=prefixes)
 
@@ -463,9 +474,14 @@ def lint(
     mappings, converter_processed, mapping_set = read(
         path, metadata_path=metadata_path, metadata=metadata, converter=converter
     )
-    if exclude_mappings is not None:
-        mappings = remove_redundant_external(mappings, exclude_mappings, key=exclude_mappings_key)
-    if drop_duplicates:
-        mappings = remove_redundant_internal(mappings, key=drop_duplicates_key)
-    mappings = sorted(mappings)
-    write(mappings, path, converter=converter_processed, metadata=mapping_set)
+    write(
+        mappings,
+        path,
+        converter=converter_processed,
+        metadata=mapping_set,
+        exclude_mappings=exclude_mappings,
+        exclude_mappings_key=exclude_mappings_key,
+        drop_duplicates=drop_duplicates,
+        drop_duplicates_key=drop_duplicates_key,
+        sort=True,
+    )
