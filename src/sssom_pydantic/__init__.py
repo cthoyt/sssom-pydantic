@@ -14,6 +14,7 @@ from .io import (
     lint,
     read,
     read_unprocessed,
+    to_sssompy,
     write,
     write_unprocessed,
 )
@@ -32,6 +33,7 @@ __all__ = [
     "lint",
     "read",
     "read_unprocessed",
+    "to_sssompy",
     "write",
     "write_unprocessed",
 ]
