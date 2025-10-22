@@ -24,15 +24,15 @@ DEFAULT_SERVER = "http://public.ndexbio.org"
 def update_ndex(
     uuid: str,
     mappings: list[SemanticMapping],
-    metadata: MappingSet,
     *,
+    metadata: MappingSet | None = None,
     converter: curies.Converter | None = None,
     server: str | None = None,
     username: str | None = None,
     password: str | None = None,
 ) -> None:
     """Update an existing graph on NDEx."""
-    nice_cx = get_nice_cx(mappings, metadata, converter=converter)
+    nice_cx = get_nice_cx(mappings, metadata=metadata, converter=converter)
     # TODO could return what this returns, but not sure what type it is
     nice_cx.update_to(
         uuid=uuid,
@@ -44,20 +44,20 @@ def update_ndex(
 
 def get_nice_cx(
     mappings: list[SemanticMapping],
-    metadata: MappingSet,
     *,
+    metadata: MappingSet | None = None,
     converter: curies.Converter | None = None,
 ) -> ndex2.NiceCXNetwork:
     """Get a nice CX network."""
-    cx = get_nice_cx_builder(mappings, metadata, converter=converter)
+    cx = get_nice_cx_builder(mappings, metadata=metadata, converter=converter)
     nice_cx = cx.get_nice_cx()
     return nice_cx
 
 
 def get_nice_cx_builder(
     mappings: list[SemanticMapping],
-    metadata: MappingSet,
     *,
+    metadata: MappingSet | None = None,
     converter: curies.Converter | None = None,
 ) -> ndex2.NiceCXBuilder:
     """Get a nice CX builder."""
@@ -68,19 +68,21 @@ def get_nice_cx_builder(
 
     builder = NiceCXBuilder()
     builder.set_context(_get_prefix_map(mappings, converter=converter))
-    builder.add_network_attribute("reference", metadata.mapping_set_id)
-    if metadata.mapping_set_title:
-        builder.set_name(metadata.mapping_set_title)
-    if metadata.mapping_set_description:
-        builder.add_network_attribute("description", metadata.mapping_set_description)
-    if metadata.license:
-        builder.add_network_attribute("rights", metadata.license)
-    if metadata.mapping_set_version:
-        builder.add_network_attribute("version", metadata.mapping_set_version)
-    if metadata.creator_id:
-        builder.add_network_attribute(
-            "author", [a.curie for a in metadata.creator_id], type="list_of_string"
-        )
+
+    if metadata is not None:
+        builder.add_network_attribute("reference", metadata.mapping_set_id)
+        if metadata.mapping_set_title:
+            builder.set_name(metadata.mapping_set_title)
+        if metadata.mapping_set_description:
+            builder.add_network_attribute("description", metadata.mapping_set_description)
+        if metadata.license:
+            builder.add_network_attribute("rights", metadata.license)
+        if metadata.mapping_set_version:
+            builder.add_network_attribute("version", metadata.mapping_set_version)
+        if metadata.creator_id:
+            builder.add_network_attribute(
+                "author", [a.curie for a in metadata.creator_id], type="list_of_string"
+            )
 
     for mapping in mappings:
         source = builder.add_node(

@@ -30,7 +30,7 @@ class TestNDEx(unittest.TestCase):
         mappings: list[SemanticMapping] = [_m()]
         metadata = MappingSet(mapping_set_id="https://example.org")
         converter = curies.Converter.from_prefix_map(pm)
-        cx = get_nice_cx(mappings, metadata, converter=converter)
+        cx = get_nice_cx(mappings, metadata=metadata, converter=converter)
         self.assertIsInstance(cx, ndex2.NiceCXNetwork)
         self.assertEqual(pm, cx.get_context())
         self.assertEqual(1, len(cx.edges))
