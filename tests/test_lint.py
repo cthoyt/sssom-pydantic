@@ -9,7 +9,8 @@ from textwrap import dedent
 from curies import Reference
 from curies.vocabulary import exact_match, manual_mapping_curation
 
-from sssom_pydantic import SemanticMapping
+import sssom_pydantic
+from sssom_pydantic import MappingTool, Record, SemanticMapping
 from sssom_pydantic.io import lint
 
 
@@ -185,6 +186,43 @@ class TestLinting(unittest.TestCase):
             object_id	subject_id	predicate_id	mapping_justification	mapping_tool_id
             chebi:28646	mesh:C000089	skos:exactMatch	semapv:LexicalMatching	biotools:ssslm
         """)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory).joinpath("test.tsv")
+            path.write_text(original)
+            (
+                records,
+                _,
+                _,
+            ) = sssom_pydantic.read_unprocessed(path)
+            self.assertEqual(1, len(records))
+            self.assertEqual(
+                Record(
+                    subject_id="mesh:C000089",
+                    predicate_id="skos:exactMatch",
+                    object_id="chebi:28646",
+                    mapping_justification="semapv:LexicalMatching",
+                    mapping_tool_id="biotools:ssslm",
+                ).model_dump(exclude_none=True),
+                records[0].model_dump(exclude_none=True),
+            )
+
+            (
+                mappings,
+                _,
+                _,
+            ) = sssom_pydantic.read(path)
+            self.assertEqual(1, len(mappings))
+            self.assertEqual(
+                SemanticMapping(
+                    subject=Reference.from_curie("mesh:C000089"),
+                    predicate=Reference.from_curie("skos:exactMatch"),
+                    object=Reference.from_curie("chebi:28646"),
+                    justification=Reference.from_curie("semapv:LexicalMatching"),
+                    mapping_tool=MappingTool(reference=Reference.from_curie("biotools:ssslm")),
+                ).model_dump(exclude_none=True),
+                mappings[0].model_dump(exclude_none=True),
+            )
+
         expected = dedent("""\
             #curie_map:
             #  biotools: https://bio.tools/

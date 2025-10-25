@@ -14,6 +14,7 @@ from pydantic import BaseModel
 
 import sssom_pydantic
 import sssom_pydantic.io
+from sssom_pydantic import MappingSetRecord
 from sssom_pydantic.constants import MULTIVALUED
 from sssom_pydantic.io import _chomp_frontmatter, append, append_unprocessed, write_unprocessed
 from sssom_pydantic.models import Record
@@ -90,7 +91,7 @@ class TestIO(unittest.TestCase):
         path.write_text(text)
 
         with path.open() as file:
-            columns, metadata = _chomp_frontmatter(file)
+            columns, mapping_set_record = _chomp_frontmatter(file)
         self.assertEqual(
             [
                 "subject_id",
@@ -105,14 +106,16 @@ class TestIO(unittest.TestCase):
             msg="columns were parsed incorrectly",
         )
         self.assertEqual(
-            {
-                "mapping_set_id": TEST_MAPPING_SET_ID,
-                "curie_map": {
-                    "mesh": "http://id.nlm.nih.gov/mesh/",
-                    "chebi": "http://purl.obolibrary.org/obo/CHEBI_",
-                },
-            },
-            metadata,
+            MappingSetRecord.model_validate(
+                {
+                    "mapping_set_id": TEST_MAPPING_SET_ID,
+                    "curie_map": {
+                        "mesh": "http://id.nlm.nih.gov/mesh/",
+                        "chebi": "http://purl.obolibrary.org/obo/CHEBI_",
+                    },
+                }
+            ),
+            mapping_set_record,
             msg="metadata was read incorrectly",
         )
 
