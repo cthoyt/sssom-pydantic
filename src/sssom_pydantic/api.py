@@ -356,7 +356,7 @@ class MappingSetRecord(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    curie_map: dict[str, str]
+    curie_map: dict[str, str] | None = None
 
     mapping_set_id: str = Field(...)
     mapping_set_confidence: float | None = Field(None)
@@ -489,8 +489,6 @@ class MappingSet(BaseModel):
     def to_record(self) -> MappingSetRecord:
         """Create a record, for dumping to SSSOM directly."""
         return MappingSetRecord(
-            curie_map={},
-            #
             mapping_set_id=self.id,
             mapping_set_confidence=self.confidence,
             mapping_set_description=self.description,

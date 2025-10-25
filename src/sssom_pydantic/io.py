@@ -410,7 +410,7 @@ def _chain_mapping_set_record(*mapping_set_records: MappingSetRecord | None) -> 
     chained_prefix_map = _cm(
         mapping_set_record.curie_map
         for mapping_set_record in mapping_set_records
-        if mapping_set_record is not None
+        if mapping_set_record is not None and mapping_set_record.curie_map
     )
     # todo more detailed chain for other list members?
     #  creator_id, creator_label, see_also, mapping_set_source, extension_definitions
