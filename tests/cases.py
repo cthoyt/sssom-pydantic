@@ -8,8 +8,8 @@ import curies
 from curies import NamedReference, Reference
 from curies.vocabulary import exact_match, manual_mapping_curation
 
+from sssom_pydantic import MappingSetRecord
 from sssom_pydantic.api import SemanticMapping
-from sssom_pydantic.constants import MAPPING_SET_ID_KEY, PREFIX_MAP_KEY
 from sssom_pydantic.models import Record
 
 __all__ = [
@@ -66,10 +66,12 @@ TEST_PREFIX_MAP = {
     "sssom": "https://w3id.org/sssom/",
 }
 TEST_CONVERTER = curies.Converter.from_prefix_map(TEST_PREFIX_MAP)
-TEST_METADATA = {
-    MAPPING_SET_ID_KEY: TEST_MAPPING_SET_ID,
-}
-TEST_METADATA_W_PREFIX_MAP = {
-    PREFIX_MAP_KEY: TEST_PREFIX_MAP,
-    MAPPING_SET_ID_KEY: TEST_MAPPING_SET_ID,
-}
+TEST_METADATA = MappingSetRecord(
+    mapping_set_id=TEST_MAPPING_SET_ID,
+    license="spdx:cc0-1.0",
+)
+TEST_METADATA_W_PREFIX_MAP = MappingSetRecord(
+    curie_map=TEST_PREFIX_MAP,
+    mapping_set_id=TEST_MAPPING_SET_ID,
+    license="spdx:cc0-1.0",
+)
