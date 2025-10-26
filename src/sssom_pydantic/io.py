@@ -149,7 +149,7 @@ def write(
     mappings: Iterable[MappingTypeVar],
     path: str | Path,
     *,
-    metadata: Metadata | None | MappingSet = None,
+    metadata: MappingSet | Metadata | MappingSetRecord | None = None,
     converter: curies.Converter | None = None,
     exclude_mappings: Iterable[MappingTypeVar] | None = None,
     exclude_mappings_key: Hasher[MappingTypeVar, X] | None = None,
