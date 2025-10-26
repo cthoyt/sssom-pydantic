@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import curies
 
-from ..api import MappingSet, SemanticMapping
+from ..api import MappingSet, MappingSetRecord, SemanticMapping
 from ..io import Metadata, _safe_dump_mapping_set, _unprocess_row
 
 if TYPE_CHECKING:
@@ -32,7 +32,7 @@ def _mappings_to_df(mappings: list[SemanticMapping]) -> pandas.DataFrame:
 def mappings_to_msdf(
     mappings: list[SemanticMapping],
     converter: curies.Converter,
-    metadata: MappingSet | Metadata,
+    metadata: MappingSet | Metadata | MappingSetRecord,
     *,
     linkml_validate: bool = False,
 ) -> sssom.MappingSetDataFrame:
@@ -55,8 +55,4 @@ def mappings_to_msdf(
         # through LinkML object I/O
         return MappingSetDataFrame(df=df, converter=converter, metadata=meta)
 
-    return from_sssom_dataframe(
-        df,
-        prefix_map=converter.bimap,
-        meta=meta,
-    )
+    return from_sssom_dataframe(df, prefix_map=converter, meta=meta)
