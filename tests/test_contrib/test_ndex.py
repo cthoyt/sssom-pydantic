@@ -28,7 +28,7 @@ class TestNDEx(unittest.TestCase):
             "chebi": "https://example.org/chebi:",
         }
         mappings: list[SemanticMapping] = [_m()]
-        metadata = MappingSet(mapping_set_id="https://example.org")
+        metadata = MappingSet(id="https://example.org")
         converter = curies.Converter.from_prefix_map(pm)
         cx = get_nice_cx(mappings, metadata=metadata, converter=converter)
         self.assertIsInstance(cx, ndex2.NiceCXNetwork)

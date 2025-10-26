@@ -15,7 +15,6 @@ __all__ = [
 ]
 
 PREFIX_MAP_KEY = "curie_map"  # smh
-MAPPING_SET_ID_KEY = "mapping_set_id"
 
 #: Allowed predicate types
 PREDICATE_TYPES: set[Reference] = {

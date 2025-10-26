@@ -39,7 +39,9 @@ class TestSSSOMPy(unittest.TestCase):
         self.assertEqual(self.expected_rows, msdf.df.to_numpy().tolist())
         self.assertEqual(TEST_CONVERTER.bimap, msdf.converter.bimap)
         self.assertNotIn("curie_map", msdf.metadata)
-        self.assertEqual(TEST_METADATA, msdf.metadata)
+        # note that msdf.metadata will always have a license injected here,
+        # regardless of what is put in
+        self.assertEqual(TEST_METADATA.model_dump(exclude_none=True), msdf.metadata)
 
     def test_to_pandas_1(self) -> None:
         """Test simplest reading."""

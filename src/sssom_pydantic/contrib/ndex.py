@@ -70,18 +70,18 @@ def get_nice_cx_builder(
     builder.set_context(_get_prefix_map(mappings, converter=converter))
 
     if metadata is not None:
-        builder.add_network_attribute("reference", metadata.mapping_set_id)
-        if metadata.mapping_set_title:
-            builder.set_name(metadata.mapping_set_title)
-        if metadata.mapping_set_description:
-            builder.add_network_attribute("description", metadata.mapping_set_description)
+        builder.add_network_attribute("reference", metadata.id)
+        if metadata.title:
+            builder.set_name(metadata.title)
+        if metadata.description:
+            builder.add_network_attribute("description", metadata.description)
         if metadata.license:
             builder.add_network_attribute("rights", metadata.license)
-        if metadata.mapping_set_version:
-            builder.add_network_attribute("version", metadata.mapping_set_version)
-        if metadata.creator_id:
+        if metadata.version:
+            builder.add_network_attribute("version", metadata.version)
+        if metadata.creators:
             builder.add_network_attribute(
-                "author", [a.curie for a in metadata.creator_id], type="list_of_string"
+                "author", [a.curie for a in metadata.creators], type="list_of_string"
             )
 
     for mapping in mappings:

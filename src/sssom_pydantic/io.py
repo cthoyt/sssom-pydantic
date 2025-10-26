@@ -16,13 +16,13 @@ from pystow.utils import safe_open
 
 from .api import (
     MappingSet,
+    MappingSetRecord,
     MappingTool,
     RequiredSemanticMapping,
     SemanticMapping,
 )
 from .constants import (
     BUILTIN_CONVERTER,
-    MAPPING_SET_SLOTS,
     MULTIVALUED,
     PREFIX_MAP_KEY,
     PROPAGATABLE,
@@ -52,10 +52,14 @@ X = TypeVar("X")
 Y = TypeVar("Y")
 
 
-def _safe_dump_mapping_set(m: Metadata | MappingSet) -> Metadata:
-    if isinstance(m, MappingSet):
-        return m.model_dump(exclude_none=True, exclude_unset=True)
-    return m
+def _safe_dump_mapping_set(m: Metadata | MappingSet | MappingSetRecord) -> Metadata:
+    match m:
+        case MappingSet():
+            return m.to_record().model_dump(exclude_none=True, exclude_unset=True)
+        case MappingSetRecord():
+            return m.model_dump(exclude_none=True, exclude_unset=True)
+        case _:
+            return m
 
 
 def parse_record(record: Record, converter: curies.Converter) -> SemanticMapping:
@@ -145,7 +149,7 @@ def write(
     mappings: Iterable[MappingTypeVar],
     path: str | Path,
     *,
-    metadata: Metadata | None | MappingSet = None,
+    metadata: MappingSet | Metadata | MappingSetRecord | None = None,
     converter: curies.Converter | None = None,
     exclude_mappings: Iterable[MappingTypeVar] | None = None,
     exclude_mappings_key: Hasher[MappingTypeVar, X] | None = None,
@@ -224,7 +228,7 @@ def write_unprocessed(
     records: Sequence[Record],
     path: str | Path,
     *,
-    metadata: MappingSet | Metadata | None = None,
+    metadata: MappingSet | Metadata | MappingSetRecord | None = None,
     converter: curies.Converter | None = None,
     prefixes: set[str] | None = None,
 ) -> None:
@@ -232,10 +236,7 @@ def write_unprocessed(
     path = Path(path).expanduser().resolve()
     columns = _get_columns(records)
 
-    if metadata is None:
-        metadata = {}
-    else:
-        metadata = _safe_dump_mapping_set(metadata)
+    metadata = _get_metadata(metadata)
 
     condensation = _get_condensation(records)
     for key, value in condensation.items():
@@ -328,42 +329,16 @@ def _clean_row(record: dict[str, Any]) -> dict[str, Any]:
     return record
 
 
-def _preprocess_row(record: dict[str, Any], *, metadata: Metadata | None = None) -> dict[str, Any]:
-    # Step 1: propagate values from the header if it's not explicit in the record
-    if metadata:
-        for key in PROPAGATABLE.intersection(metadata):
-            if not record.get(key):
-                value = metadata[key]
-                # the following conditional fixes common mistakes in
-                # encoding a multivalued slot with a single value
-                if key in MULTIVALUED and isinstance(value, str):
-                    value = [value]
-                record[key] = value
-
-    # Step 2: split all lists on the default SSSOM delimiter (pipe)
-    for key in MULTIVALUED:
-        if (value := record.get(key)) and isinstance(value, str):
-            record[key] = [
-                stripped_subvalue
-                for subvalue in value.split("|")
-                if (stripped_subvalue := subvalue.strip())
-            ]
-
-    return record
-
-
 def parse_row(record: dict[str, str], *, metadata: Metadata | None = None) -> Record:
     """Parse a row from a SSSOM TSV file, unprocessed."""
-    processed_record = _preprocess_row(record, metadata=metadata)
-    rv = Record.model_validate(processed_record)
-    return rv
+    raise NotImplementedError
 
 
 def read(
     path_or_url: str | Path,
     *,
     metadata_path: str | Path | None = None,
-    metadata: MappingSet | Metadata | None = None,
+    metadata: MappingSet | MappingSetRecord | Metadata | None = None,
     converter: curies.Converter | None = None,
 ) -> tuple[list[SemanticMapping], Converter, MappingSet]:
     """Read and process SSSOM from TSV."""
@@ -377,66 +352,88 @@ def read(
     return processed_records, rv_converter, mapping_set
 
 
+def _get_metadata(metadata: MappingSet | MappingSetRecord | Metadata | None) -> Metadata:
+    mapping_set_record = _get_mapping_set_record(metadata)
+    if mapping_set_record is None:
+        return {}
+    return mapping_set_record.model_dump(exclude_none=True, exclude_unset=True)
+
+
+def _get_mapping_set_record(
+    metadata: MappingSet | MappingSetRecord | Metadata | None,
+) -> MappingSetRecord | None:
+    if isinstance(metadata, dict):
+        return MappingSetRecord.model_validate(metadata)
+    elif isinstance(metadata, MappingSet):
+        return metadata.to_record()
+    elif metadata is None:
+        return None
+    elif isinstance(metadata, MappingSetRecord):
+        return metadata
+    else:
+        raise TypeError
+
+
 def read_unprocessed(
     path_or_url: str | Path,
     *,
     metadata_path: str | Path | None = None,
-    metadata: MappingSet | Metadata | None = None,
+    metadata: MappingSet | MappingSetRecord | Metadata | None = None,
     converter: curies.Converter | None = None,
 ) -> tuple[list[Record], Converter, MappingSet]:
     """Read SSSOM TSV into unprocessed records."""
     if metadata_path is None:
-        external_metadata = {}
+        second_metadata = None
     else:
         with safe_open(metadata_path, operation="read", representation="text") as file:
-            external_metadata = yaml.safe_load(file)
+            second_metadata = MappingSetRecord.model_validate(yaml.safe_load(file))
 
-    if metadata is None:
-        metadata = {}
-    else:
-        metadata = _safe_dump_mapping_set(metadata)
-
-    # TODO implement chain operation on MappingSet
+    first_metadata = _get_mapping_set_record(metadata)
 
     with safe_open(path_or_url, operation="read", representation="text") as file:
         columns, inline_metadata = _chomp_frontmatter(file)
-
-        chained_prefix_map = dict(
-            ChainMap(
-                metadata.pop(PREFIX_MAP_KEY, {}),
-                external_metadata.pop(PREFIX_MAP_KEY, {}),
-                inline_metadata.pop(PREFIX_MAP_KEY, {}),
-            )
+        mapping_set_record = _chain_mapping_set_record(
+            first_metadata, second_metadata, inline_metadata
         )
-
-        chained_metadata = dict(ChainMap(metadata, external_metadata, inline_metadata))
-
-        unknown = set(chained_metadata).difference(MAPPING_SET_SLOTS)
-        if unknown:
-            raise ValueError(f"Found unknown mapping set-level metadata: {sorted(unknown)}")
-
+        _parse_row = mapping_set_record.get_parser()
         reader = csv.DictReader(file, fieldnames=columns, delimiter="\t")
-        mappings = [
-            parse_row(cleaned_row, metadata=chained_metadata)
-            for row in reader
-            if (cleaned_row := _clean_row(row))
-        ]
-
-    # TODO need to take subset of metadata that wasn't propagated
-    mapping_set = MappingSet.model_validate(chained_metadata)
+        mappings = [_parse_row(cleaned_row) for row in reader if (cleaned_row := _clean_row(row))]
 
     converters = []
     if converter is not None:
         converters.append(converter)
-    if chained_prefix_map:
-        converters.append(Converter.from_prefix_map(chained_prefix_map))
+    if mapping_set_record.curie_map:
+        converters.append(Converter.from_prefix_map(mapping_set_record.curie_map))
     converters.append(BUILTIN_CONVERTER)
     rv_converter = curies.chain(converters)
 
-    return mappings, rv_converter, mapping_set
+    return mappings, rv_converter, mapping_set_record.process(rv_converter)
 
 
-def _chomp_frontmatter(file: TextIO) -> tuple[list[str], Metadata]:
+def _chain_mapping_set_record(*mapping_set_records: MappingSetRecord | None) -> MappingSetRecord:
+    chained_prefix_map = _cm(
+        mapping_set_record.curie_map
+        for mapping_set_record in mapping_set_records
+        if mapping_set_record is not None and mapping_set_record.curie_map
+    )
+    # todo more detailed chain for other list members?
+    #  creator_id, creator_label, see_also, mapping_set_source, extension_definitions
+
+    chained_metadata = _cm(
+        mapping_set_record.model_dump(exclude_none=True, exclude_unset=True, exclude={"curie_map"})
+        for mapping_set_record in mapping_set_records
+        if mapping_set_record is not None
+    )
+    chained_metadata["curie_map"] = chained_prefix_map
+    mapping_set = MappingSetRecord.model_validate(chained_metadata)
+    return mapping_set
+
+
+def _cm(m: Iterable[dict[str, Any]]) -> dict[str, Any]:
+    return dict(ChainMap(*m))
+
+
+def _chomp_frontmatter(file: TextIO) -> tuple[list[str], MappingSetRecord | None]:
     # consume from the top of the stream until there's no more preceding #
     header_yaml = ""
     while (line := file.readline()).startswith("#"):
@@ -452,11 +449,11 @@ def _chomp_frontmatter(file: TextIO) -> tuple[list[str], Metadata]:
     ]
 
     if not header_yaml:
-        metadata = {}
+        rv = None
     else:
-        metadata = yaml.safe_load(header_yaml)
+        rv = MappingSetRecord.model_validate(yaml.safe_load(header_yaml))
 
-    return columns, metadata
+    return columns, rv
 
 
 def lint(

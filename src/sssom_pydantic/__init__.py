@@ -2,7 +2,10 @@
 
 from .api import (
     CoreSemanticMapping,
+    ExtensionDefinition,
+    ExtensionDefinitionRecord,
     MappingSet,
+    MappingSetRecord,
     MappingTool,
     RequiredSemanticMapping,
     SemanticMapping,
@@ -22,7 +25,10 @@ from .models import Record
 
 __all__ = [
     "CoreSemanticMapping",
+    "ExtensionDefinition",
+    "ExtensionDefinitionRecord",
     "MappingSet",
+    "MappingSetRecord",
     "MappingTool",
     "Metadata",
     "Record",
