@@ -236,23 +236,18 @@ def write_unprocessed(
     path = Path(path).expanduser().resolve()
     columns = _get_columns(records)
 
-    mapping_set_record = _yyy(metadata)
-    metadata_yy = (
-        mapping_set_record.model_dump(exclude_none=True, exclude_unset=True)
-        if mapping_set_record
-        else {}
-    )
+    metadata = _get_metadata(metadata)
 
     condensation = _get_condensation(records)
     for key, value in condensation.items():
-        if key in metadata_yy and metadata_yy[key] != value:
+        if key in metadata and metadata[key] != value:
             logger.warning("mismatch between given metadata and observed. overwriting")
-        metadata_yy[key] = value
+        metadata[key] = value
 
     converters = []
     if converter is not None:
         converters.append(converter)
-    if prefix_map := metadata_yy.pop(PREFIX_MAP_KEY, {}):
+    if prefix_map := metadata.pop(PREFIX_MAP_KEY, {}):
         converters.append(curies.Converter.from_prefix_map(prefix_map))
     if not converters:
         raise ValueError(f"must have {PREFIX_MAP_KEY} in metadata if converter not given")
@@ -263,14 +258,14 @@ def write_unprocessed(
 
     # don't add if no prefix map
     if bimap := converter.bimap:
-        metadata_yy[PREFIX_MAP_KEY] = bimap
+        metadata[PREFIX_MAP_KEY] = bimap
 
     condensed_keys = set(condensation)
     columns = [column for column in columns if column not in condensed_keys]
 
     with path.open(mode="w") as file:
-        if metadata_yy:
-            for line in yaml.safe_dump(metadata_yy).splitlines():
+        if metadata:
+            for line in yaml.safe_dump(metadata).splitlines():
                 print(f"#{line}", file=file)
                 # TODO add comment about being written with this software at a given time
         writer = csv.DictWriter(file, columns, delimiter="\t")
@@ -357,7 +352,16 @@ def read(
     return processed_records, rv_converter, mapping_set
 
 
-def _yyy(metadata: MappingSet | MappingSetRecord | Metadata | None) -> MappingSetRecord | None:
+def _get_metadata(metadata: MappingSet | MappingSetRecord | Metadata | None) -> Metadata:
+    mapping_set_record = _get_mapping_set_record(metadata)
+    if mapping_set_record is None:
+        return {}
+    return mapping_set_record.model_dump(exclude_none=True, exclude_unset=True)
+
+
+def _get_mapping_set_record(
+    metadata: MappingSet | MappingSetRecord | Metadata | None,
+) -> MappingSetRecord | None:
     if isinstance(metadata, dict):
         return MappingSetRecord.model_validate(metadata)
     elif isinstance(metadata, MappingSet):
@@ -384,7 +388,7 @@ def read_unprocessed(
         with safe_open(metadata_path, operation="read", representation="text") as file:
             second_metadata = MappingSetRecord.model_validate(yaml.safe_load(file))
 
-    first_metadata = _yyy(metadata)
+    first_metadata = _get_mapping_set_record(metadata)
 
     with safe_open(path_or_url, operation="read", representation="text") as file:
         columns, inline_metadata = _chomp_frontmatter(file)
