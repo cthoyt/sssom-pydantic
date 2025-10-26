@@ -370,6 +370,8 @@ class MappingSetRecord(BaseModel):
     other: str | None = Field(None)
     comment: str | None = Field(None)
     sssom_version: str | None = Field(None)
+    # note that this diverges from the SSSOM spec, which says license is required
+    # and injects a placeholder license... I don't think this is actually valuable
     license: str | None = Field(None)
     issue_tracker: str | None = Field(None)
     extension_definitions: list[ExtensionDefinitionRecord] | None = Field(None)
