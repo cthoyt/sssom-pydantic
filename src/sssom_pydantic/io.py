@@ -403,7 +403,7 @@ def read_unprocessed(
     converters.append(BUILTIN_CONVERTER)
     rv_converter = curies.chain(converters)
 
-    return mappings, rv_converter, mapping_set_record.get_mapping_set(rv_converter)
+    return mappings, rv_converter, mapping_set_record.process(rv_converter)
 
 
 def _chain_mapping_set_record(*mapping_set_records: MappingSetRecord | None) -> MappingSetRecord:

@@ -352,7 +352,7 @@ class MappingTool(BaseModel):
 
 
 class MappingSetRecord(BaseModel):
-    """Represents metadata about a mapping set."""
+    """Represents a mapping set, readily serializable for usage in SSSOM TSV."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -400,7 +400,7 @@ class MappingSetRecord(BaseModel):
     subject_source_version: str | None = None
     subject_type: str | None = None
 
-    def get_mapping_set(self, converter: curies.Converter) -> MappingSet:
+    def process(self, converter: curies.Converter) -> MappingSet:
         """Get a mapping set."""
         return MappingSet(
             id=self.mapping_set_id,
@@ -417,9 +417,11 @@ class MappingSetRecord(BaseModel):
             sssom_version=self.sssom_version,
             license=self.license,
             issue_tracker=self.issue_tracker,
-            extension_definitions=self.extension_definitions,  # FIXME parse
+            extension_definitions=list(self.extension_definitions)
+            if self.extension_definitions
+            else None,
             creators=[converter.parse_curie(c, strict=True) for c in self.creator_id]
-            if self.creator_id is not None
+            if self.creator_id
             else None,
             creator_label=self.creator_label,
         )
@@ -457,16 +459,8 @@ class MappingSetRecord(BaseModel):
         return parse_row
 
 
-class ExtensionDefinitionRecord(BaseModel):
-    """An extension definition."""
-
-    slot_name: str
-    property: str | None = None
-    type_hint: str | None = None
-
-
 class MappingSet(BaseModel):
-    """Represents metadata about a mapping set."""
+    """A processed representation of a mapping set."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -521,8 +515,28 @@ class MappingSet(BaseModel):
         return rv
 
 
+class ExtensionDefinitionRecord(BaseModel):
+    """An extension definition that can be readily dumped to SSSOM."""
+
+    slot_name: str
+    property: str | None = None
+    type_hint: str | None = None
+
+    def process(self, converter: curies.Converter) -> ExtensionDefinition:
+        """Process the SSSOM data structure into a more idiomatic one."""
+        return ExtensionDefinition(
+            slot_name=self.slot_name,
+            property=converter.parse(self.property, strict=True).to_pydantic()
+            if self.property
+            else None,
+            type_hint=converter.parse(self.type_hint, strict=True).to_pydantic()
+            if self.type_hint
+            else None,
+        )
+
+
 class ExtensionDefinition(BaseModel):
-    """An extension definition."""
+    """A processed extension definition."""
 
     slot_name: str
     property: Reference | None = None
@@ -538,7 +552,7 @@ class ExtensionDefinition(BaseModel):
         return rv
 
     def to_record(self) -> ExtensionDefinitionRecord:
-        """Create a record."""
+        """Create a record object that can be readily dumped to SSSOM."""
         return ExtensionDefinitionRecord(
             slot_name=self.slot_name,
             property=self.property.curie if self.property else None,
