@@ -20,6 +20,7 @@ from .api import (
     MappingTool,
     RequiredSemanticMapping,
     SemanticMapping,
+    parse_row,
 )
 from .constants import (
     BUILTIN_CONVERTER,
@@ -327,11 +328,6 @@ def _clean_row(record: dict[str, Any]) -> dict[str, Any]:
         if key and value and (stripped_value := value.strip()) and stripped_value != "."
     }
     return record
-
-
-def parse_row(record: dict[str, str], *, metadata: Metadata | None = None) -> Record:
-    """Parse a row from a SSSOM TSV file, unprocessed."""
-    raise NotImplementedError
 
 
 def read(
