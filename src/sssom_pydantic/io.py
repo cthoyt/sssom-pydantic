@@ -335,9 +335,10 @@ def _unprocess_row(record: Record, *, condensed_keys: set[str] | None = None) ->
     return rv
 
 
-def _clean_row(record: Mapping[str, str | list[str]]) -> Row:
+def _clean_row(row: Mapping[str, str | list[str]]) -> Row:
+    """Clean a raw row from a SSSOM TSV file."""
     rv = {}
-    for key, value in record.items():
+    for key, value in row.items():
         if not key or not value:
             continue
         if isinstance(value, str):
