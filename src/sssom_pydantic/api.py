@@ -13,7 +13,7 @@ from curies import NamableReference, Reference, Triple
 from curies.vocabulary import matching_processes
 from pydantic import BaseModel, ConfigDict, Field
 
-from .constants import MULTIVALUED, PROPAGATABLE
+from .constants import MULTIVALUED, PROPAGATABLE, Row
 from .models import Cardinality, Record
 
 __all__ = [
@@ -440,27 +440,25 @@ class MappingSetRecord(BaseModel):
                 prop_value = [prop_value]
             propagatable[key] = prop_value
 
-        return functools.partial(parse_row, propagatable=propagatable)
+        return functools.partial(dict_to_record, propagatable=propagatable)
 
 
-def parse_row(
-    record: dict[str, str | list[str]], *, propagatable: dict[str, str | list[str]] | None = None
-) -> Record:
+def dict_to_record(row: Row, *, propagatable: dict[str, str | list[str]] | None = None) -> Record:
     """Parse a row from a SSSOM TSV file, unprocessed."""
     # Step 1: propagate values from the header if it's not explicit in the record
     if propagatable:
-        record.update(propagatable)
+        row.update(propagatable)
 
     # Step 2: split all lists on the default SSSOM delimiter (pipe)
     for key in MULTIVALUED:
-        if (value := record.get(key)) and isinstance(value, str):
-            record[key] = [
+        if (value := row.get(key)) and isinstance(value, str):
+            row[key] = [
                 stripped_subvalue
                 for subvalue in value.split("|")
                 if (stripped_subvalue := subvalue.strip())
             ]
 
-    rv = Record.model_validate(record)
+    rv = Record.model_validate(row)
     return rv
 
 
