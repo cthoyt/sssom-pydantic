@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import functools
 import warnings
 from collections.abc import Callable
 from typing import Any, Literal, TypeAlias
@@ -12,7 +13,7 @@ from curies import NamableReference, Reference, Triple
 from curies.vocabulary import matching_processes
 from pydantic import BaseModel, ConfigDict, Field
 
-from .constants import MULTIVALUED, PROPAGATABLE
+from .constants import MULTIVALUED, PROPAGATABLE, Row
 from .models import Cardinality, Record
 
 __all__ = [
@@ -428,35 +429,37 @@ class MappingSetRecord(BaseModel):
 
     def get_parser(self) -> Callable[[dict[str, str | list[str]]], Record]:
         """Get a row parser function."""
-        mm = {}
-        for propagatable_key in PROPAGATABLE:
-            prop_value = getattr(self, propagatable_key)
+        propagatable = {}
+        for key in PROPAGATABLE:
+            prop_value = getattr(self, key)
             if not prop_value:
                 continue
             # the following conditional fixes common mistakes in
             # encoding a multivalued slot with a single value
-            if propagatable_key in MULTIVALUED and isinstance(prop_value, str):
+            if key in MULTIVALUED and isinstance(prop_value, str):
                 prop_value = [prop_value]
-            mm[propagatable_key] = prop_value
+            propagatable[key] = prop_value
 
-        def parse_row(record: dict[str, str | list[str]]) -> Record:
-            """Parse a row from a SSSOM TSV file, unprocessed."""
-            # Step 1: propagate values from the header if it's not explicit in the record
-            record.update(mm)
+        return functools.partial(row_to_record, propagatable=propagatable)
 
-            # Step 2: split all lists on the default SSSOM delimiter (pipe)
-            for key in MULTIVALUED:
-                if (value := record.get(key)) and isinstance(value, str):
-                    record[key] = [
-                        stripped_subvalue
-                        for subvalue in value.split("|")
-                        if (stripped_subvalue := subvalue.strip())
-                    ]
 
-            rv = Record.model_validate(record)
-            return rv
+def row_to_record(row: Row, *, propagatable: dict[str, str | list[str]] | None = None) -> Record:
+    """Parse a row from a SSSOM TSV file, unprocessed."""
+    # Step 1: propagate values from the header if it's not explicit in the record
+    if propagatable:
+        row.update(propagatable)
 
-        return parse_row
+    # Step 2: split all lists on the default SSSOM delimiter (pipe)
+    for key in MULTIVALUED:
+        if (value := row.get(key)) and isinstance(value, str):
+            row[key] = [
+                stripped_subvalue
+                for subvalue in value.split("|")
+                if (stripped_subvalue := subvalue.strip())
+            ]
+
+    rv = Record.model_validate(row)
+    return rv
 
 
 class MappingSet(BaseModel):

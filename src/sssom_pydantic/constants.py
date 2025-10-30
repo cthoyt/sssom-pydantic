@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import TypeAlias
+
 import curies
 from curies import Reference
 
@@ -12,6 +14,7 @@ __all__ = [
     "PREDICATE_TYPES",
     "PREFIX_MAP_KEY",
     "PROPAGATABLE",
+    "Row",
 ]
 
 PREFIX_MAP_KEY = "curie_map"  # smh
@@ -114,3 +117,5 @@ MAPPING_SLOT_SPECIFIC = {
 }
 MAPPING_SET_SLOTS_SKIP = {"mappings"}
 MAPPING_SET_SLOTS = PROPAGATABLE | MAPPING_SLOT_SPECIFIC
+
+Row: TypeAlias = dict[str, str | list[str]]

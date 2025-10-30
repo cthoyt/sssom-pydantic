@@ -5,7 +5,7 @@ from __future__ import annotations
 import csv
 import logging
 from collections import ChainMap, Counter, defaultdict
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
 from typing import Any, TextIO, TypeAlias, TypeVar
 
@@ -20,12 +20,14 @@ from .api import (
     MappingTool,
     RequiredSemanticMapping,
     SemanticMapping,
+    row_to_record,
 )
 from .constants import (
     BUILTIN_CONVERTER,
     MULTIVALUED,
     PREFIX_MAP_KEY,
     PROPAGATABLE,
+    Row,
 )
 from .models import Record
 from .process import Hasher, MappingTypeVar, remove_redundant_external, remove_redundant_internal
@@ -35,10 +37,11 @@ __all__ = [
     "append",
     "append_unprocessed",
     "lint",
-    "parse_record",
-    "parse_row",
     "read",
     "read_unprocessed",
+    "record_to_semantic_mapping",
+    "row_to_record",
+    "row_to_semantic_mapping",
     "write",
     "write_unprocessed",
 ]
@@ -62,7 +65,27 @@ def _safe_dump_mapping_set(m: Metadata | MappingSet | MappingSetRecord) -> Metad
             return m
 
 
-def parse_record(record: Record, converter: curies.Converter) -> SemanticMapping:
+def row_to_semantic_mapping(
+    row: Mapping[str, str | list[str]],
+    converter: curies.Converter,
+    *,
+    propagatable: dict[str, str | list[str]] | None = None,
+) -> SemanticMapping:
+    """Get a semantic mapping from a row.
+
+    :param row: The row from a SSSOM TSV file
+    :param converter: A converter for parsing CURIEs
+    :param propagatable: Extra data coming from SSSOM TSV frontmatter to get propagated
+        into each record
+
+    :returns: A semantic mapping
+    """
+    cleaned_row = _clean_row(row)
+    record = row_to_record(cleaned_row, propagatable=propagatable)
+    return record_to_semantic_mapping(record, converter)
+
+
+def record_to_semantic_mapping(record: Record, converter: curies.Converter) -> SemanticMapping:
     """Parse a record into a mapping."""
     subject = converter.parse_curie(record.subject_id, strict=True).to_pydantic(
         name=record.subject_label
@@ -320,18 +343,20 @@ def _unprocess_row(record: Record, *, condensed_keys: set[str] | None = None) ->
     return rv
 
 
-def _clean_row(record: dict[str, Any]) -> dict[str, Any]:
-    record = {
-        key: stripped_value
-        for key, value in record.items()
-        if key and value and (stripped_value := value.strip()) and stripped_value != "."
-    }
-    return record
-
-
-def parse_row(record: dict[str, str], *, metadata: Metadata | None = None) -> Record:
-    """Parse a row from a SSSOM TSV file, unprocessed."""
-    raise NotImplementedError
+def _clean_row(row: Mapping[str, str | list[str]]) -> Row:
+    """Clean a raw row from a SSSOM TSV file."""
+    rv = {}
+    for key, value in row.items():
+        if not key or not value:
+            continue
+        if isinstance(value, str):
+            value = value.strip()
+        else:
+            value = [vs for v in value if (vs := v.strip())]
+        if not value:
+            continue
+        rv[key] = value
+    return rv
 
 
 def read(
@@ -342,14 +367,14 @@ def read(
     converter: curies.Converter | None = None,
 ) -> tuple[list[SemanticMapping], Converter, MappingSet]:
     """Read and process SSSOM from TSV."""
-    unprocessed_records, rv_converter, mapping_set = read_unprocessed(
+    records, rv_converter, mapping_set = read_unprocessed(
         path_or_url=path_or_url,
         metadata_path=metadata_path,
         metadata=metadata,
         converter=converter,
     )
-    processed_records = [parse_record(record, rv_converter) for record in unprocessed_records]
-    return processed_records, rv_converter, mapping_set
+    semantic_mappings = [record_to_semantic_mapping(record, rv_converter) for record in records]
+    return semantic_mappings, rv_converter, mapping_set
 
 
 def _get_metadata(metadata: MappingSet | MappingSetRecord | Metadata | None) -> Metadata:
