@@ -69,9 +69,17 @@ def row_to_semantic_mapping(
     row: Mapping[str, str | list[str]],
     converter: curies.Converter,
     *,
-    propagatable: dict[str, str | list[str]],
+    propagatable: dict[str, str | list[str]] | None = None,
 ) -> SemanticMapping:
-    """Get a semantic mapping from a row."""
+    """Get a semantic mapping from a row.
+
+    :param row: The row from a SSSOM TSV file
+    :param converter: A converter for parsing CURIEs
+    :param propagatable: Extra data coming from SSSOM TSV frontmatter to get propagated
+        into each record
+
+    :returns: A semantic mapping
+    """
     cleaned_row = _clean_row(row)
     record = row_to_record(cleaned_row, propagatable=propagatable)
     return record_to_semantic_mapping(record, converter)
