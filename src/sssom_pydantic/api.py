@@ -440,10 +440,10 @@ class MappingSetRecord(BaseModel):
                 prop_value = [prop_value]
             propagatable[key] = prop_value
 
-        return functools.partial(dict_to_record, propagatable=propagatable)
+        return functools.partial(row_to_record, propagatable=propagatable)
 
 
-def dict_to_record(row: Row, *, propagatable: dict[str, str | list[str]] | None = None) -> Record:
+def row_to_record(row: Row, *, propagatable: dict[str, str | list[str]] | None = None) -> Record:
     """Parse a row from a SSSOM TSV file, unprocessed."""
     # Step 1: propagate values from the header if it's not explicit in the record
     if propagatable:

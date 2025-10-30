@@ -20,7 +20,7 @@ from .api import (
     MappingTool,
     RequiredSemanticMapping,
     SemanticMapping,
-    dict_to_record,
+    row_to_record,
 )
 from .constants import (
     BUILTIN_CONVERTER,
@@ -36,12 +36,12 @@ __all__ = [
     "Metadata",
     "append",
     "append_unprocessed",
-    "dict_to_record",
-    "dict_to_semantic_mapping",
     "lint",
     "read",
     "read_unprocessed",
     "record_to_semantic_mapping",
+    "row_to_record",
+    "row_to_semantic_mapping",
     "write",
     "write_unprocessed",
 ]
@@ -65,7 +65,7 @@ def _safe_dump_mapping_set(m: Metadata | MappingSet | MappingSetRecord) -> Metad
             return m
 
 
-def dict_to_semantic_mapping(
+def row_to_semantic_mapping(
     row: Mapping[str, str | list[str]],
     converter: curies.Converter,
     *,
@@ -73,7 +73,7 @@ def dict_to_semantic_mapping(
 ) -> SemanticMapping:
     """Get a semantic mapping from a row."""
     cleaned_row = _clean_row(row)
-    record = dict_to_record(cleaned_row, propagatable=propagatable)
+    record = row_to_record(cleaned_row, propagatable=propagatable)
     return record_to_semantic_mapping(record, converter)
 
 
