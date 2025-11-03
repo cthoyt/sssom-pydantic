@@ -2,10 +2,14 @@
 
 from .api import (
     CoreSemanticMapping,
+    ExtensionDefinition,
+    ExtensionDefinitionRecord,
     MappingSet,
+    MappingSetRecord,
     MappingTool,
     RequiredSemanticMapping,
     SemanticMapping,
+    SemanticMappingPredicate,
 )
 from .io import (
     Metadata,
@@ -21,12 +25,16 @@ from .models import Record
 
 __all__ = [
     "CoreSemanticMapping",
+    "ExtensionDefinition",
+    "ExtensionDefinitionRecord",
     "MappingSet",
+    "MappingSetRecord",
     "MappingTool",
     "Metadata",
     "Record",
     "RequiredSemanticMapping",
     "SemanticMapping",
+    "SemanticMappingPredicate",
     "append",
     "append_unprocessed",
     "lint",

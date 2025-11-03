@@ -14,20 +14,11 @@ from pydantic import BaseModel
 
 import sssom_pydantic
 import sssom_pydantic.io
-from sssom_pydantic.constants import MAPPING_SET_ID_KEY, MULTIVALUED, PREFIX_MAP_KEY
+from sssom_pydantic import MappingSetRecord
+from sssom_pydantic.constants import MULTIVALUED
 from sssom_pydantic.io import _chomp_frontmatter, append, append_unprocessed, write_unprocessed
 from sssom_pydantic.models import Record
-from tests.cases import _m, _r
-
-TEST_MAPPING_SET_ID = "https://example.org/sssom.mappingset/1.sssom.tsv"
-TEST_PREFIX_MAP = {
-    "mesh": "http://id.nlm.nih.gov/mesh/",
-    "chebi": "http://purl.obolibrary.org/obo/CHEBI_",
-}
-TEST_METADATA = {
-    PREFIX_MAP_KEY: TEST_PREFIX_MAP,
-    MAPPING_SET_ID_KEY: TEST_MAPPING_SET_ID,
-}
+from tests.cases import TEST_MAPPING_SET_ID, TEST_METADATA_W_PREFIX_MAP, _m, _r
 
 
 class TestIO(unittest.TestCase):
@@ -75,7 +66,7 @@ class TestIO(unittest.TestCase):
         """Test simplest reading."""
         record = _r()
         path = self.directory.joinpath("test.tsv")
-        write_unprocessed([record], path, metadata=TEST_METADATA)
+        write_unprocessed([record], path, metadata=TEST_METADATA_W_PREFIX_MAP)
 
         unprocessed, _converter, _mapping_set = sssom_pydantic.io.read_unprocessed(path)
         self.assertEqual(1, len(unprocessed))
@@ -100,7 +91,7 @@ class TestIO(unittest.TestCase):
         path.write_text(text)
 
         with path.open() as file:
-            columns, metadata = _chomp_frontmatter(file)
+            columns, mapping_set_record = _chomp_frontmatter(file)
         self.assertEqual(
             [
                 "subject_id",
@@ -115,8 +106,16 @@ class TestIO(unittest.TestCase):
             msg="columns were parsed incorrectly",
         )
         self.assertEqual(
-            TEST_METADATA,
-            metadata,
+            MappingSetRecord.model_validate(
+                {
+                    "mapping_set_id": TEST_MAPPING_SET_ID,
+                    "curie_map": {
+                        "mesh": "http://id.nlm.nih.gov/mesh/",
+                        "chebi": "http://purl.obolibrary.org/obo/CHEBI_",
+                    },
+                }
+            ),
+            mapping_set_record,
             msg="metadata was read incorrectly",
         )
 

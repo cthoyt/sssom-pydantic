@@ -1,10 +1,10 @@
 [build-system]
-requires = ["uv_build>=0.6.6,<1.0"]
+requires = ["uv_build>=0.9.6,<1.0"]
 build-backend = "uv_build"
 
 [project]
 name = "sssom_pydantic"
-version = "0.0.7-dev"
+version = "0.1.2-dev"
 description = "Pydantic models for SSSOM"
 readme = "README.md"
 authors = [
@@ -101,8 +101,8 @@ bump = [
     "bump-my-version",
 ]
 build = [
-    "uv",
-    "uv-build",
+    "uv>=0.9.6",
+    "uv-build>=0.9.6",
 ]
 release = [
     { include-group = "build" },
@@ -111,8 +111,14 @@ release = [
 ]
 
 # see https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#dependencies-optional-dependencies
-# [project.optional-dependencies]
-
+[project.optional-dependencies]
+ndex = [
+    "ndex2",
+]
+sssompy = [
+    "sssom",
+    "pandas",
+]
 
 # See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#urls
 # and also https://packaging.python.org/en/latest/specifications/well-known-project-urls/
@@ -160,6 +166,7 @@ omit = [
     "src/sssom_pydantic/version.py",
     "src/sssom_pydantic/__main__.py",
     "src/sssom_pydantic/cli.py",
+    "src/sssom_pydantic/contrib/*",
 ]
 
 [tool.coverage.paths]
@@ -238,7 +245,7 @@ known-first-party = [
 docstring-code-format = true
 
 [tool.bumpversion]
-current_version = "0.0.7-dev"
+current_version = "0.1.2-dev"
 parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)(?:-(?P<release>[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?(?:\\+(?P<build>[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?"
 serialize = [
     "{major}.{minor}.{patch}-{release}+{build}",

@@ -5,32 +5,43 @@ from __future__ import annotations
 import csv
 import logging
 from collections import ChainMap, Counter, defaultdict
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
-from typing import Any, TextIO, TypeAlias
+from typing import Any, TextIO, TypeAlias, TypeVar
 
 import curies
 import yaml
 from curies import Converter, Reference
 from pystow.utils import safe_open
 
-from .api import MappingSet, MappingTool, RequiredSemanticMapping, SemanticMapping
+from .api import (
+    MappingSet,
+    MappingSetRecord,
+    MappingTool,
+    RequiredSemanticMapping,
+    SemanticMapping,
+    row_to_record,
+)
 from .constants import (
     BUILTIN_CONVERTER,
-    MAPPING_SET_SLOTS,
     MULTIVALUED,
     PREFIX_MAP_KEY,
     PROPAGATABLE,
+    Row,
 )
 from .models import Record
+from .process import Hasher, MappingTypeVar, remove_redundant_external, remove_redundant_internal
 
 __all__ = [
     "Metadata",
+    "append",
+    "append_unprocessed",
     "lint",
-    "parse_record",
-    "parse_row",
     "read",
     "read_unprocessed",
+    "record_to_semantic_mapping",
+    "row_to_record",
+    "row_to_semantic_mapping",
     "write",
     "write_unprocessed",
 ]
@@ -40,8 +51,41 @@ logger = logging.getLogger(__name__)
 #: The type for metadata
 Metadata: TypeAlias = dict[str, Any]
 
+X = TypeVar("X")
+Y = TypeVar("Y")
 
-def parse_record(record: Record, converter: curies.Converter) -> SemanticMapping:
+
+def _safe_dump_mapping_set(m: Metadata | MappingSet | MappingSetRecord) -> Metadata:
+    match m:
+        case MappingSet():
+            return m.to_record().model_dump(exclude_none=True, exclude_unset=True)
+        case MappingSetRecord():
+            return m.model_dump(exclude_none=True, exclude_unset=True)
+        case _:
+            return m
+
+
+def row_to_semantic_mapping(
+    row: Mapping[str, str | list[str]],
+    converter: curies.Converter,
+    *,
+    propagatable: dict[str, str | list[str]] | None = None,
+) -> SemanticMapping:
+    """Get a semantic mapping from a row.
+
+    :param row: The row from a SSSOM TSV file
+    :param converter: A converter for parsing CURIEs
+    :param propagatable: Extra data coming from SSSOM TSV frontmatter to get propagated
+        into each record
+
+    :returns: A semantic mapping
+    """
+    cleaned_row = _clean_row(row)
+    record = row_to_record(cleaned_row, propagatable=propagatable)
+    return record_to_semantic_mapping(record, converter)
+
+
+def record_to_semantic_mapping(record: Record, converter: curies.Converter) -> SemanticMapping:
     """Parse a record into a mapping."""
     subject = converter.parse_curie(record.subject_id, strict=True).to_pydantic(
         name=record.subject_label
@@ -125,13 +169,24 @@ def parse_record(record: Record, converter: curies.Converter) -> SemanticMapping
 
 
 def write(
-    mappings: Iterable[RequiredSemanticMapping],
+    mappings: Iterable[MappingTypeVar],
     path: str | Path,
     *,
-    metadata: dict[str, Any] | None | MappingSet = None,
+    metadata: MappingSet | Metadata | MappingSetRecord | None = None,
     converter: curies.Converter | None = None,
+    exclude_mappings: Iterable[MappingTypeVar] | None = None,
+    exclude_mappings_key: Hasher[MappingTypeVar, X] | None = None,
+    drop_duplicates: bool = False,
+    drop_duplicates_key: Hasher[MappingTypeVar, Y] | None = None,
+    sort: bool = False,
 ) -> None:
     """Write processed records."""
+    if exclude_mappings is not None:
+        mappings = remove_redundant_external(mappings, exclude_mappings, key=exclude_mappings_key)
+    if drop_duplicates:
+        mappings = remove_redundant_internal(mappings, key=drop_duplicates_key)
+    if sort:
+        mappings = sorted(mappings)
     records, prefixes = _prepare_records(mappings)
     write_unprocessed(records, path=path, metadata=metadata, converter=converter, prefixes=prefixes)
 
@@ -140,7 +195,7 @@ def append(
     mappings: Iterable[RequiredSemanticMapping],
     path: str | Path,
     *,
-    metadata: dict[str, Any] | None = None,
+    metadata: Metadata | MappingSet | None = None,
     converter: curies.Converter | None = None,
 ) -> None:
     """Append processed records."""
@@ -163,7 +218,7 @@ def append_unprocessed(
     records: Sequence[Record],
     path: str | Path,
     *,
-    metadata: dict[str, Any] | None = None,
+    metadata: Metadata | MappingSet | None = None,
     converter: curies.Converter | None = None,
     prefixes: set[str] | None = None,
 ) -> None:
@@ -196,7 +251,7 @@ def write_unprocessed(
     records: Sequence[Record],
     path: str | Path,
     *,
-    metadata: MappingSet | Metadata | None = None,
+    metadata: MappingSet | Metadata | MappingSetRecord | None = None,
     converter: curies.Converter | None = None,
     prefixes: set[str] | None = None,
 ) -> None:
@@ -204,10 +259,7 @@ def write_unprocessed(
     path = Path(path).expanduser().resolve()
     columns = _get_columns(records)
 
-    if metadata is None:
-        metadata = {}
-    elif isinstance(metadata, MappingSet):
-        metadata = metadata.model_dump(exclude_none=True)
+    metadata = _get_metadata(metadata)
 
     condensation = _get_condensation(records)
     for key, value in condensation.items():
@@ -291,45 +343,19 @@ def _unprocess_row(record: Record, *, condensed_keys: set[str] | None = None) ->
     return rv
 
 
-def _clean_row(record: dict[str, Any]) -> dict[str, Any]:
-    record = {
-        key: stripped_value
-        for key, value in record.items()
-        if key and value and (stripped_value := value.strip()) and stripped_value != "."
-    }
-    return record
-
-
-def _preprocess_row(
-    record: dict[str, Any], *, metadata: dict[str, Any] | None = None
-) -> dict[str, Any]:
-    # Step 1: propagate values from the header if it's not explicit in the record
-    if metadata:
-        for key in PROPAGATABLE.intersection(metadata):
-            if not record.get(key):
-                value = metadata[key]
-                # the following conditional fixes common mistakes in
-                # encoding a multivalued slot with a single value
-                if key in MULTIVALUED and isinstance(value, str):
-                    value = [value]
-                record[key] = value
-
-    # Step 2: split all lists on the default SSSOM delimiter (pipe)
-    for key in MULTIVALUED:
-        if (value := record.get(key)) and isinstance(value, str):
-            record[key] = [
-                stripped_subvalue
-                for subvalue in value.split("|")
-                if (stripped_subvalue := subvalue.strip())
-            ]
-
-    return record
-
-
-def parse_row(record: dict[str, str], *, metadata: dict[str, Any] | None = None) -> Record:
-    """Parse a row from a SSSOM TSV file, unprocessed."""
-    processed_record = _preprocess_row(record, metadata=metadata)
-    rv = Record.model_validate(processed_record)
+def _clean_row(row: Mapping[str, str | list[str]]) -> Row:
+    """Clean a raw row from a SSSOM TSV file."""
+    rv = {}
+    for key, value in row.items():
+        if not key or not value:
+            continue
+        if isinstance(value, str):
+            value = value.strip()
+        else:
+            value = [vs for v in value if (vs := v.strip())]
+        if not value:
+            continue
+        rv[key] = value
     return rv
 
 
@@ -337,78 +363,102 @@ def read(
     path_or_url: str | Path,
     *,
     metadata_path: str | Path | None = None,
-    metadata: MappingSet | Metadata | None = None,
+    metadata: MappingSet | MappingSetRecord | Metadata | None = None,
     converter: curies.Converter | None = None,
 ) -> tuple[list[SemanticMapping], Converter, MappingSet]:
     """Read and process SSSOM from TSV."""
-    unprocessed_records, rv_converter, mapping_set = read_unprocessed(
+    records, rv_converter, mapping_set = read_unprocessed(
         path_or_url=path_or_url,
         metadata_path=metadata_path,
         metadata=metadata,
         converter=converter,
     )
-    processed_records = [parse_record(record, rv_converter) for record in unprocessed_records]
-    return processed_records, rv_converter, mapping_set
+    semantic_mappings = [record_to_semantic_mapping(record, rv_converter) for record in records]
+    return semantic_mappings, rv_converter, mapping_set
+
+
+def _get_metadata(metadata: MappingSet | MappingSetRecord | Metadata | None) -> Metadata:
+    mapping_set_record = _get_mapping_set_record(metadata)
+    if mapping_set_record is None:
+        return {}
+    return mapping_set_record.model_dump(exclude_none=True, exclude_unset=True)
+
+
+def _get_mapping_set_record(
+    metadata: MappingSet | MappingSetRecord | Metadata | None,
+) -> MappingSetRecord | None:
+    if isinstance(metadata, dict):
+        return MappingSetRecord.model_validate(metadata)
+    elif isinstance(metadata, MappingSet):
+        return metadata.to_record()
+    elif metadata is None:
+        return None
+    elif isinstance(metadata, MappingSetRecord):
+        return metadata
+    else:
+        raise TypeError
 
 
 def read_unprocessed(
     path_or_url: str | Path,
     *,
     metadata_path: str | Path | None = None,
-    metadata: MappingSet | Metadata | None = None,
+    metadata: MappingSet | MappingSetRecord | Metadata | None = None,
     converter: curies.Converter | None = None,
 ) -> tuple[list[Record], Converter, MappingSet]:
     """Read SSSOM TSV into unprocessed records."""
     if metadata_path is None:
-        external_metadata = {}
+        second_metadata = None
     else:
         with safe_open(metadata_path, operation="read", representation="text") as file:
-            external_metadata = yaml.safe_load(file)
+            second_metadata = MappingSetRecord.model_validate(yaml.safe_load(file))
 
-    if metadata is None:
-        metadata = {}
-    elif isinstance(metadata, MappingSet):
-        metadata = metadata.model_dump(exclude_none=True)
+    first_metadata = _get_mapping_set_record(metadata)
 
     with safe_open(path_or_url, operation="read", representation="text") as file:
         columns, inline_metadata = _chomp_frontmatter(file)
-
-        chained_prefix_map = dict(
-            ChainMap(
-                metadata.pop(PREFIX_MAP_KEY, {}),
-                external_metadata.pop(PREFIX_MAP_KEY, {}),
-                inline_metadata.pop(PREFIX_MAP_KEY, {}),
-            )
+        mapping_set_record = _chain_mapping_set_record(
+            first_metadata, second_metadata, inline_metadata
         )
-
-        chained_metadata = dict(ChainMap(metadata, external_metadata, inline_metadata))
-
-        unknown = set(chained_metadata).difference(MAPPING_SET_SLOTS)
-        if unknown:
-            raise ValueError(f"Found unknown mapping set-level metadata: {sorted(unknown)}")
-
+        _parse_row = mapping_set_record.get_parser()
         reader = csv.DictReader(file, fieldnames=columns, delimiter="\t")
-        mappings = [
-            parse_row(cleaned_row, metadata=chained_metadata)
-            for row in reader
-            if (cleaned_row := _clean_row(row))
-        ]
-
-    # TODO need to take subset of metadata that wasn't propagated
-    mapping_set = MappingSet.model_validate(chained_metadata)
+        mappings = [_parse_row(cleaned_row) for row in reader if (cleaned_row := _clean_row(row))]
 
     converters = []
     if converter is not None:
         converters.append(converter)
-    if chained_prefix_map:
-        converters.append(Converter.from_prefix_map(chained_prefix_map))
+    if mapping_set_record.curie_map:
+        converters.append(Converter.from_prefix_map(mapping_set_record.curie_map))
     converters.append(BUILTIN_CONVERTER)
     rv_converter = curies.chain(converters)
 
-    return mappings, rv_converter, mapping_set
+    return mappings, rv_converter, mapping_set_record.process(rv_converter)
 
 
-def _chomp_frontmatter(file: TextIO) -> tuple[list[str], Metadata]:
+def _chain_mapping_set_record(*mapping_set_records: MappingSetRecord | None) -> MappingSetRecord:
+    chained_prefix_map = _cm(
+        mapping_set_record.curie_map
+        for mapping_set_record in mapping_set_records
+        if mapping_set_record is not None and mapping_set_record.curie_map
+    )
+    # todo more detailed chain for other list members?
+    #  creator_id, creator_label, see_also, mapping_set_source, extension_definitions
+
+    chained_metadata = _cm(
+        mapping_set_record.model_dump(exclude_none=True, exclude_unset=True, exclude={"curie_map"})
+        for mapping_set_record in mapping_set_records
+        if mapping_set_record is not None
+    )
+    chained_metadata["curie_map"] = chained_prefix_map
+    mapping_set = MappingSetRecord.model_validate(chained_metadata)
+    return mapping_set
+
+
+def _cm(m: Iterable[dict[str, Any]]) -> dict[str, Any]:
+    return dict(ChainMap(*m))
+
+
+def _chomp_frontmatter(file: TextIO) -> tuple[list[str], MappingSetRecord | None]:
     # consume from the top of the stream until there's no more preceding #
     header_yaml = ""
     while (line := file.readline()).startswith("#"):
@@ -424,11 +474,11 @@ def _chomp_frontmatter(file: TextIO) -> tuple[list[str], Metadata]:
     ]
 
     if not header_yaml:
-        metadata = {}
+        rv = None
     else:
-        metadata = yaml.safe_load(header_yaml)
+        rv = MappingSetRecord.model_validate(yaml.safe_load(header_yaml))
 
-    return columns, metadata
+    return columns, rv
 
 
 def lint(
@@ -437,15 +487,23 @@ def lint(
     metadata_path: str | Path | None = None,
     metadata: MappingSet | Metadata | None = None,
     converter: curies.Converter | None = None,
+    exclude_mappings: Iterable[SemanticMapping] | None = None,
+    exclude_mappings_key: Hasher[SemanticMapping, X] | None = None,
+    drop_duplicates: bool = False,
+    drop_duplicates_key: Hasher[SemanticMapping, Y] | None = None,
 ) -> None:
     """Lint a file."""
     mappings, converter_processed, mapping_set = read(
         path, metadata_path=metadata_path, metadata=metadata, converter=converter
     )
-    mappings = sorted(mappings)
-    mappings = _remove_redundant(mappings)
-    write(mappings, path, converter=converter_processed, metadata=mapping_set)
-
-
-def _remove_redundant(mappings: list[SemanticMapping]) -> list[SemanticMapping]:
-    return mappings
+    write(
+        mappings,
+        path,
+        converter=converter_processed,
+        metadata=mapping_set,
+        exclude_mappings=exclude_mappings,
+        exclude_mappings_key=exclude_mappings_key,
+        drop_duplicates=drop_duplicates,
+        drop_duplicates_key=drop_duplicates_key,
+        sort=True,
+    )

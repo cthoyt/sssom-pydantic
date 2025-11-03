@@ -14,7 +14,7 @@ from urllib.request import urlretrieve
 import pystow
 from curies import Reference
 
-from sssom_pydantic import MappingSet, Record, SemanticMapping
+from sssom_pydantic import MappingSetRecord, Record, SemanticMapping
 from sssom_pydantic.constants import (
     MAPPING_SET_SLOTS,
     MAPPING_SET_SLOTS_SKIP,
@@ -199,11 +199,9 @@ class TestSchema(unittest.TestCase):
         for slot in self.mapping_set_slots:
             if slot in {"curie_map", "mappings"}:
                 continue
-            if slot in PROPAGATABLE:
-                continue
             with self.subTest(slot=slot):
-                self.assertIn(slot, MappingSet.model_fields)
-                annotation = MappingSet.model_fields[slot].annotation
+                self.assertIn(slot, MappingSetRecord.model_fields)
+                annotation = MappingSetRecord.model_fields[slot].annotation
                 multivalued = self.view.get_slot(slot).multivalued
                 match self.view.get_slot(slot).range:
                     case "EntityReference":
@@ -211,14 +209,14 @@ class TestSchema(unittest.TestCase):
                             self.assertNotIn(slot, MULTIVALUED)
                         elif multivalued:
                             self.assertEqual(
-                                list[Reference] | None,
+                                list[str] | None,
                                 annotation,
                                 msg=f"{slot} should be annotated as a list of "
                                 f"references, but got {annotation}",
                             )
                         else:
                             self.assertEqual(
-                                Reference | None,
+                                str | None,
                                 annotation,
                                 msg=f"{slot} should be annotated as a reference",
                             )
@@ -247,7 +245,12 @@ class TestSchema(unittest.TestCase):
                             {datetime.date, datetime.date | None},
                             msg=f"{slot} should be annotated as a datetime",
                         )
-                    case "sssom_version_enum" | "extension definition":
+                    case "extension definition":
                         pass
+                    case "sssom_version_enum" | "entity_type_enum":
+                        self.assertIn(annotation, {str, str | None})
                     case _:
-                        self.fail(f"missing handling for {self.view.get_slot(slot).range}")
+                        self.fail(
+                            f"missing handling for slot {slot} with range "
+                            f"{self.view.get_slot(slot).range}"
+                        )

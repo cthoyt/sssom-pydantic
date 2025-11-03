@@ -3,22 +3,30 @@
 from __future__ import annotations
 
 import datetime
+import functools
 import warnings
-from typing import Any, Literal
+from collections.abc import Callable
+from typing import Any, Literal, TypeAlias
 
+import curies
 from curies import NamableReference, Reference
 from curies.database import get_reference_list_sa_column, get_reference_sa_column
 from pydantic import BaseModel, ConfigDict
 from sqlmodel import JSON, Field, SQLModel, String
 
+from .constants import MULTIVALUED, PROPAGATABLE, Row
 from .models import Cardinality, Record
 
 __all__ = [
     "CoreSemanticMapping",
+    "ExtensionDefinition",
+    "ExtensionDefinitionRecord",
     "MappingSet",
+    "MappingSetRecord",
     "MappingTool",
     "RequiredSemanticMapping",
     "SemanticMapping",
+    "SemanticMappingPredicate",
 ]
 
 
@@ -369,6 +377,10 @@ class SemanticMapping(CoreSemanticMapping, SQLModel, table=True):
         )
 
 
+#: A predicate for a semantic mapping
+SemanticMappingPredicate: TypeAlias = Callable[[SemanticMapping], bool]
+
+
 class MappingTool(SQLModel, table=True):
     """Represents metadata about a mapping tool."""
 
@@ -380,12 +392,14 @@ class MappingTool(SQLModel, table=True):
     version: str | None = Field(None)
 
 
-class MappingSet(SQLModel):
-    """Represents metadata about a mapping set."""
+class MappingSetRecord(BaseModel):
+    """Represents a mapping set, readily serializable for usage in SSSOM TSV."""
 
     model_config = ConfigDict(frozen=True)
 
-    mapping_set_id: str = Field(..., primary_key=True)
+    curie_map: dict[str, str] | None = None
+
+    mapping_set_id: str = Field(...)
     mapping_set_confidence: float | None = Field(None)
     mapping_set_description: str | None = Field(None)
     mapping_set_source: list[str] | None = Field(None, sa_type=JSON)
@@ -397,24 +411,175 @@ class MappingSet(SQLModel):
     other: str | None = Field(None)
     comment: str | None = Field(None)
     sssom_version: str | None = Field(None)
+    # note that this diverges from the SSSOM spec, which says license is required
+    # and injects a placeholder license... I don't think this is actually valuable
+    license: str | None = Field(None)
+    issue_tracker: str | None = Field(None)
+    extension_definitions: list[ExtensionDefinitionRecord] | None = Field(None)
+    creator_id: list[str] | None = None
+    creator_label: list[str] | None = None
+
+    # propagatable slots
+    cardinality_scope: list[str] | None = None
+    curation_rule: list[str] | None = None
+    curation_rule_text: list[str] | None = None
+    mapping_date: datetime.date | None = None
+    mapping_provider: str | None = None
+    mapping_tool: str | None = None
+    mapping_tool_id: str | None = None
+    mapping_tool_version: str | None = None
+    object_match_field: list[str] | None = None
+    object_preprocessing: list[str] | None = None
+    object_source: str | None = None
+    object_source_version: str | None = None
+    object_type: str | None = None
+    predicate_type: str | None = None
+    similarity_measure: str | None = None
+    subject_match_field: list[str] | None = None
+    subject_preprocessing: list[str] | None = None
+    subject_source: str | None = None
+    subject_source_version: str | None = None
+    subject_type: str | None = None
+
+    def process(self, converter: curies.Converter) -> MappingSet:
+        """Get a mapping set."""
+        return MappingSet(
+            id=self.mapping_set_id,
+            confidence=self.mapping_set_confidence,
+            description=self.mapping_set_description,
+            source=self.mapping_set_source,
+            title=self.mapping_set_title,
+            version=self.mapping_set_version,
+            #
+            publication_date=self.publication_date,
+            see_also=self.see_also,
+            other=self.other,
+            comment=self.comment,
+            sssom_version=self.sssom_version,
+            license=self.license,
+            issue_tracker=self.issue_tracker,
+            extension_definitions=list(self.extension_definitions)
+            if self.extension_definitions
+            else None,
+            creators=[converter.parse_curie(c, strict=True) for c in self.creator_id]
+            if self.creator_id
+            else None,
+            creator_label=self.creator_label,
+        )
+
+    def get_parser(self) -> Callable[[dict[str, str | list[str]]], Record]:
+        """Get a row parser function."""
+        propagatable = {}
+        for key in PROPAGATABLE:
+            prop_value = getattr(self, key)
+            if not prop_value:
+                continue
+            # the following conditional fixes common mistakes in
+            # encoding a multivalued slot with a single value
+            if key in MULTIVALUED and isinstance(prop_value, str):
+                prop_value = [prop_value]
+            propagatable[key] = prop_value
+
+        return functools.partial(row_to_record, propagatable=propagatable)
+
+
+def row_to_record(row: Row, *, propagatable: dict[str, str | list[str]] | None = None) -> Record:
+    """Parse a row from a SSSOM TSV file, unprocessed."""
+    # Step 1: propagate values from the header if it's not explicit in the record
+    if propagatable:
+        row.update(propagatable)
+
+    # Step 2: split all lists on the default SSSOM delimiter (pipe)
+    for key in MULTIVALUED:
+        if (value := row.get(key)) and isinstance(value, str):
+            row[key] = [
+                stripped_subvalue
+                for subvalue in value.split("|")
+                if (stripped_subvalue := subvalue.strip())
+            ]
+
+    rv = Record.model_validate(row)
+    return rv
+
+
+class MappingSet(BaseModel):
+    """A processed representation of a mapping set."""
+
+    model_config = ConfigDict(frozen=True)
+
+    id: str = Field(...)
+    confidence: float | None = Field(None)
+    description: str | None = Field(None)
+    source: list[str] | None = Field(None)
+    title: str | None = Field(None)
+    version: str | None = Field(None)
+
+    publication_date: datetime.date | None = Field(None)
+    see_also: list[str] | None = Field(None)
+    other: str | None = Field(None)
+    comment: str | None = Field(None)
+    sssom_version: str | None = Field(None)
     license: str | None = Field(None)
     issue_tracker: str | None = Field(None)
     extension_definitions: list[ExtensionDefinition] | None = Field(None)
-    creator_id: list[Reference] | None = Field(None, sa_column=get_reference_list_sa_column())
+    creators: list[Reference] | None = Field(None, sa_column=get_reference_list_sa_column())
     creator_label: list[str] | None = Field(None, sa_type=JSON)
+
+    def to_record(self) -> MappingSetRecord:
+        """Create a record, for dumping to SSSOM directly."""
+        return MappingSetRecord(
+            mapping_set_id=self.id,
+            mapping_set_confidence=self.confidence,
+            mapping_set_description=self.description,
+            mapping_set_source=self.source,
+            mapping_set_title=self.title,
+            mapping_set_version=self.version,
+            publication_date=self.publication_date,
+            see_also=self.see_also,
+            other=self.other,
+            comment=self.comment,
+            sssom_version=self.sssom_version,
+            license=self.license,
+            issue_tracker=self.issue_tracker,
+            extension_definitions=[e.to_record() for e in self.extension_definitions]
+            if self.extension_definitions
+            else None,
+            creator_id=[r.curie for r in self.creators] if self.creators else None,
+            creator_label=self.creator_label,
+        )
 
     def get_prefixes(self) -> set[str]:
         """Get prefixes appearing in all parts of the metadata."""
         rv: set[str] = set()
         for extension_definition in self.extension_definitions or []:
             rv.update(extension_definition.get_prefixes())
-        for creator in self.creator_id or []:
+        for creator in self.creators or []:
             rv.add(creator.prefix)
         return rv
 
 
+class ExtensionDefinitionRecord(BaseModel):
+    """An extension definition that can be readily dumped to SSSOM."""
+
+    slot_name: str
+    property: str | None = None
+    type_hint: str | None = None
+
+    def process(self, converter: curies.Converter) -> ExtensionDefinition:
+        """Process the SSSOM data structure into a more idiomatic one."""
+        return ExtensionDefinition(
+            slot_name=self.slot_name,
+            property=converter.parse(self.property, strict=True).to_pydantic()
+            if self.property
+            else None,
+            type_hint=converter.parse(self.type_hint, strict=True).to_pydantic()
+            if self.type_hint
+            else None,
+        )
+
+
 class ExtensionDefinition(BaseModel):
-    """An extension definition."""
+    """A processed extension definition."""
 
     slot_name: str
     property: Reference | None = Field(None, sa_column=get_reference_sa_column())
@@ -428,3 +593,11 @@ class ExtensionDefinition(BaseModel):
         if self.type_hint is not None:
             rv.add(self.type_hint.prefix)
         return rv
+
+    def to_record(self) -> ExtensionDefinitionRecord:
+        """Create a record object that can be readily dumped to SSSOM."""
+        return ExtensionDefinitionRecord(
+            slot_name=self.slot_name,
+            property=self.property.curie if self.property else None,
+            type_hint=self.type_hint.curie if self.type_hint else None,
+        )
