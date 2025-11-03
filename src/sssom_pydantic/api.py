@@ -7,9 +7,9 @@ import warnings
 from typing import Any, Literal
 
 from curies import NamableReference, Reference
-from curies.database import get_reference_sa_column
+from curies.database import get_reference_list_sa_column, get_reference_sa_column
 from pydantic import BaseModel, ConfigDict
-from sqlmodel import Field, SQLModel
+from sqlmodel import JSON, Field, SQLModel, String
 
 from .models import Cardinality, Record
 
@@ -43,8 +43,9 @@ class RequiredSemanticMapping(SQLModel):
         1. ``semapv:LexicalMatching``
         2. ``semapv:LogicalReasoning``
         """,
+        sa_column=get_reference_sa_column(),
     )
-    predicate_modifier: Literal["Not"] | None = Field(None)
+    predicate_modifier: Literal["Not"] | None = Field(None, sa_type=String)
 
     @property
     def mapping_justification(self) -> Reference:
@@ -103,10 +104,10 @@ class CoreSemanticMapping(RequiredSemanticMapping):
 
     model_config = ConfigDict(frozen=True)
 
-    record: Reference | None = Field(None)
-    authors: list[Reference] | None = Field(None)
+    record: Reference | None = Field(None, sa_column=get_reference_sa_column())
+    authors: list[Reference] | None = Field(None, sa_column=get_reference_list_sa_column())
     confidence: float | None = Field(None)
-    mapping_tool: MappingTool | None = Field(None)
+    mapping_tool: MappingTool | None = Field(None, sa_type=JSON)
     license: str | None = Field(None)
 
     @property
@@ -188,50 +189,84 @@ def _join(references: list[Reference] | None) -> list[str] | None:
     return [r.curie for r in references]
 
 
-class SemanticMapping(CoreSemanticMapping):
+class SemanticMapping(CoreSemanticMapping, SQLModel, table=True):
     """Represents all fields for SSSOM.."""
 
     model_config = ConfigDict(frozen=True)
 
+    id: int | None = Field(default=None, primary_key=True)
+    subject: Reference = Field(sa_column=get_reference_sa_column())
+    predicate: Reference = Field(sa_column=get_reference_sa_column())
+    object: Reference = Field(sa_column=get_reference_sa_column())
+    justification: Reference = Field(
+        ...,
+        description="""\
+            A `semapv <https://bioregistry.io/registry/semapv>`_ term describing
+            the mapping type.
+
+            These are relatively high level, and can be any child of ``semapv:Matching``,
+            including:
+
+            1. ``semapv:LexicalMatching``
+            2. ``semapv:LogicalReasoning``
+            """,
+        sa_column=get_reference_sa_column(),
+    )
+    predicate_modifier: Literal["Not"] | None = Field(None, sa_type=String)
+
+    record: Reference | None = Field(None, sa_column=get_reference_sa_column())
+    authors: list[Reference] | None = Field(None, sa_column=get_reference_list_sa_column())
+    confidence: float | None = Field(None)
+    mapping_tool: MappingTool | None = Field(None, sa_type=JSON)
+    license: str | None = Field(None)
+
     subject_category: str | None = Field(None)
-    subject_match_field: list[Reference] | None = Field(None)
-    subject_preprocessing: list[Reference] | None = Field(None)
-    subject_source: Reference | None = Field(None)
+    subject_match_field: list[Reference] | None = Field(
+        None, sa_column=get_reference_list_sa_column()
+    )
+    subject_preprocessing: list[Reference] | None = Field(
+        None, sa_column=get_reference_list_sa_column()
+    )
+    subject_source: Reference | None = Field(None, sa_column=get_reference_sa_column())
     subject_source_version: str | None = Field(None)
     subject_type: str | None = Field(None)
 
-    predicate_type: Reference | None = Field(None)
+    predicate_type: Reference | None = Field(None, sa_column=get_reference_sa_column())
 
     object_category: str | None = Field(None)
-    object_match_field: list[Reference] | None = Field(None)
-    object_preprocessing: list[Reference] | None = Field(None)
-    object_source: Reference | None = Field(None)
+    object_match_field: list[Reference] | None = Field(
+        None, sa_column=get_reference_list_sa_column()
+    )
+    object_preprocessing: list[Reference] | None = Field(
+        None, sa_column=get_reference_list_sa_column()
+    )
+    object_source: Reference | None = Field(None, sa_column=get_reference_sa_column())
     object_source_version: str | None = Field(None)
     object_type: str | None = Field(None)
 
-    creators: list[Reference] | None = Field(None)
+    creators: list[Reference] | None = Field(None, sa_column=get_reference_list_sa_column())
     # TODO maybe creator_labels
-    reviewers: list[Reference] | None = Field(None)
+    reviewers: list[Reference] | None = Field(None, sa_column=get_reference_list_sa_column())
     # TODO maybe reviewer_labels
 
     publication_date: datetime.date | None = Field(None)
     mapping_date: datetime.date | None = Field(None)
 
     comment: str | None = Field(None)
-    curation_rule: list[Reference] | None = Field(None)
-    curation_rule_text: list[str] | None = Field(None)
-    issue_tracker_item: Reference | None = Field(None)
+    curation_rule: list[Reference] | None = Field(None, sa_column=get_reference_list_sa_column())
+    curation_rule_text: list[str] | None = Field(None, sa_type=JSON)
+    issue_tracker_item: Reference | None = Field(None, sa_column=get_reference_sa_column())
 
     #: see https://mapping-commons.github.io/sssom/MappingCardinalityEnum/
-    mapping_cardinality: Cardinality | None = Field(None)
-    cardinality_scope: list[str] | None = Field(None)
+    mapping_cardinality: Cardinality | None = Field(None, sa_type=String)
+    cardinality_scope: list[str] | None = Field(None, sa_type=JSON)
     mapping_provider: str | None = Field(None)
-    mapping_source: Reference | None = Field(None)
+    mapping_source: Reference | None = Field(None, sa_column=get_reference_sa_column())
 
-    match_string: list[str] | None = Field(None)
+    match_string: list[str] | None = Field(None, sa_type=JSON)
 
     other: str | None = Field(None)
-    see_also: list[str] | None = Field(None)
+    see_also: list[str] | None = Field(None, sa_type=JSON)
     similarity_measure: str | None = Field(None)
     similarity_score: float | None = Field(None)
 
@@ -334,38 +369,39 @@ class SemanticMapping(CoreSemanticMapping):
         )
 
 
-class MappingTool(BaseModel):
+class MappingTool(SQLModel, table=True):
     """Represents metadata about a mapping tool."""
 
     model_config = ConfigDict(frozen=True)
 
-    reference: Reference | None = None
+    id: int | None = Field(default=None, primary_key=True)
+    reference: Reference | None = Field(None, sa_column=get_reference_sa_column())
     name: str | None = None
     version: str | None = Field(None)
 
 
-class MappingSet(BaseModel):
+class MappingSet(SQLModel):
     """Represents metadata about a mapping set."""
 
     model_config = ConfigDict(frozen=True)
 
-    mapping_set_id: str = Field(...)
+    mapping_set_id: str = Field(..., primary_key=True)
     mapping_set_confidence: float | None = Field(None)
     mapping_set_description: str | None = Field(None)
-    mapping_set_source: list[str] | None = Field(None)
+    mapping_set_source: list[str] | None = Field(None, sa_type=JSON)
     mapping_set_title: str | None = Field(None)
     mapping_set_version: str | None = Field(None)
 
     publication_date: datetime.date | None = Field(None)
-    see_also: list[str] | None = Field(None)
+    see_also: list[str] | None = Field(None, sa_type=JSON)
     other: str | None = Field(None)
     comment: str | None = Field(None)
     sssom_version: str | None = Field(None)
     license: str | None = Field(None)
     issue_tracker: str | None = Field(None)
     extension_definitions: list[ExtensionDefinition] | None = Field(None)
-    creator_id: list[Reference] | None = None
-    creator_label: list[str] | None = None
+    creator_id: list[Reference] | None = Field(None, sa_column=get_reference_list_sa_column())
+    creator_label: list[str] | None = Field(None, sa_type=JSON)
 
     def get_prefixes(self) -> set[str]:
         """Get prefixes appearing in all parts of the metadata."""
@@ -381,8 +417,8 @@ class ExtensionDefinition(BaseModel):
     """An extension definition."""
 
     slot_name: str
-    property: Reference | None = None
-    type_hint: Reference | None = None
+    property: Reference | None = Field(None, sa_column=get_reference_sa_column())
+    type_hint: Reference | None = Field(None, sa_column=get_reference_sa_column())
 
     def get_prefixes(self) -> set[str]:
         """Get prefixes in the extension definition."""

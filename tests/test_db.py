@@ -2,8 +2,10 @@
 
 import unittest
 
-from sqlmodel import Session, SQLModel, create_engine, select
 from curies import Triple
+from sqlmodel import Session, SQLModel, create_engine, select
+
+from sssom_pydantic.api import SemanticMapping
 
 
 class TestDatabase(unittest.TestCase):
@@ -11,11 +13,18 @@ class TestDatabase(unittest.TestCase):
 
     def test_database(self) -> None:
         """Test the database."""
-        # m1 = _m()
-        # m2 = _m(authors=[charlie])
-
-        m1 = Triple(subject="CHEBI:135122", predicate="skos:exactMatch", object="mesh:C073738")
-        m2 = Triple(subject="CHEBI:135125", predicate="skos:exactMatch", object="mesh:C073260")
+        m1 = SemanticMapping(
+            subject="CHEBI:135122",
+            predicate="skos:exactMatch",
+            object="mesh:C073738",
+            justification="semapv:ManualMappingCuration",
+        )
+        m2 = SemanticMapping(
+            subject="CHEBI:135125",
+            predicate="skos:exactMatch",
+            object="mesh:C073260",
+            justification="semapv:ManualMappingCuration",
+        )
 
         engine = create_engine("sqlite://")
         SQLModel.metadata.create_all(engine)

@@ -53,6 +53,8 @@ dependencies = [
     "curies>=0.12.1",
     "pyyaml",
     "pystow",
+    "sqlmodel",
+    "fastapi",
 ]
 
 # see https://peps.python.org/pep-0735/ and https://docs.astral.sh/uv/concepts/dependencies/#dependency-groups

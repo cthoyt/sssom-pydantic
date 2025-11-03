@@ -1,3 +1,5 @@
+"""Mock an API."""
+
 from typing import Annotated
 
 from curies import Reference
@@ -9,20 +11,26 @@ router = APIRouter()
 
 
 class Controller:
+    """A controller."""
+
     def get_by_record_id(self, record: Reference) -> SemanticMapping:
-        pass
+        """Get a semantic mapping by reference."""
+        raise NotImplementedError
 
 
 def get_controller(request: Request) -> Controller:
+    """Get the controller from the web app."""
     return request.app.state.controller
 
 
 @router.get("/mapping/{curie}")
-def get(controller: Annotated[Controller, Depends], curie: str) -> SemanticMapping:
+def get(controller: Annotated[Controller, Depends(get_controller)], curie: str) -> SemanticMapping:
+    """Get a mapping by CURIE."""
     return controller.get_by_record_id(Reference.from_curie(curie))
 
 
 def get_app() -> FastAPI:
+    """Get a FastAPI app."""
     app = FastAPI()
     app.include_router(router)
     app.state.controller = Controller()
