@@ -17,16 +17,21 @@ from .constants import MULTIVALUED, PROPAGATABLE, Row
 from .models import Cardinality, Record
 
 __all__ = [
+    "NOT",
     "CoreSemanticMapping",
     "ExtensionDefinition",
     "ExtensionDefinitionRecord",
     "MappingSet",
     "MappingSetRecord",
     "MappingTool",
+    "PredicateModifier",
     "RequiredSemanticMapping",
     "SemanticMapping",
     "SemanticMappingPredicate",
 ]
+
+PredicateModifier: TypeAlias = Literal["Not"]
+NOT: PredicateModifier = "Not"
 
 
 class RequiredSemanticMapping(Triple):
@@ -48,7 +53,7 @@ class RequiredSemanticMapping(Triple):
         """,
         examples=list(matching_processes),
     )
-    predicate_modifier: Literal["Not"] | None = Field(None)
+    predicate_modifier: PredicateModifier | None = Field(None)
 
     @property
     def mapping_justification(self) -> Reference:
@@ -213,9 +218,23 @@ class SemanticMapping(CoreSemanticMapping):
     object_source_version: str | None = Field(None)
     object_type: str | None = Field(None)
 
-    creators: list[Reference] | None = Field(None)
+    creators: list[Reference] | None = Field(
+        None,
+        description="The creator is the person responsible for the creation of the mapping. For"
+        "example, if the mapping was produced by a lexical matching workflow, then the creator "
+        "is the person who decided to run the workflow. This is _not_ the same as the person who "
+        "developed the workflow. The creator is the one who takes responsibility for the creation "
+        "of the mapping (but necessarily was the one who made it). If a person curates a de novo "
+        "mapping directly, then they are both the creator and the author."
+    )
     # TODO maybe creator_labels
-    reviewers: list[Reference] | None = Field(None)
+    reviewers: list[Reference] | None = Field(
+        None,
+        description="The reviewer is the person who looks at a mapping that has already been "
+        "manually curated (i.e., has an author) and gives a second look. If the mapping was "
+        "machine generated, then the person who takes a first look is not the reviewer, but "
+        "actually the author."
+    )
     # TODO maybe reviewer_labels
 
     publication_date: datetime.date | None = Field(None)
@@ -227,14 +246,14 @@ class SemanticMapping(CoreSemanticMapping):
     issue_tracker_item: Reference | None = Field(None)
 
     #: see https://mapping-commons.github.io/sssom/MappingCardinalityEnum/
-    mapping_cardinality: Cardinality | None = Field(None)
+    mapping_cardinality: Cardinality | None = Field(None)  # TODO rename
     cardinality_scope: list[str] | None = Field(None)
-    mapping_provider: str | None = Field(None)
-    mapping_source: Reference | None = Field(None)
+    mapping_provider: str | None = Field(None)  # TODO rename
+    mapping_source: Reference | None = Field(None)  # TODO rename
 
     match_string: list[str] | None = Field(None)
 
-    other: str | None = Field(None)
+    other: str | None = Field(None)  # TODO this is a dictionary
     see_also: list[str] | None = Field(None)
     similarity_measure: str | None = Field(None)
     similarity_score: float | None = Field(None)
