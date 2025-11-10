@@ -535,22 +535,29 @@ def read_unprocessed_iterable(
         )
         _row_to_record = mapping_set_record.get_parser()
         reader = csv.DictReader(file, fieldnames=columns, delimiter="\t")
-        reader_it = tqdm(reader, **_tqdm_kwargs)
+        reader = tqdm(reader, **_tqdm_kwargs)
         records = (
-            _row_to_record(cleaned_row) for row in reader_it if (cleaned_row := _clean_row(row))
+            _row_to_record(cleaned_row) for row in reader if (cleaned_row := _clean_row(row))
         )
         if record_predicate is not None:
             records = (m for m in records if record_predicate(m))
-        converters = []
-        if converter is not None:
-            converters.append(converter)
-        if mapping_set_record.curie_map:
-            converters.append(Converter.from_prefix_map(mapping_set_record.curie_map))
-        converters.append(BUILTIN_CONVERTER)
-        rv_converter = curies.chain(converters)
 
-        md = mapping_set_record.process(rv_converter)
-        yield ReadUnprocessedStreamTuple(records, rv_converter, md)
+        converter = _chain_converters(converter, mapping_set_record)
+        mapping_set = mapping_set_record.process(converter)
+        yield ReadUnprocessedStreamTuple(records, converter, mapping_set)
+
+
+def _chain_converters(
+    converter: Converter | None, mapping_set_record: MappingSetRecord
+) -> Converter:
+    converters = []
+    if converter is not None:
+        converters.append(converter)
+    if mapping_set_record.curie_map:
+        converters.append(Converter.from_prefix_map(mapping_set_record.curie_map))
+    converters.append(BUILTIN_CONVERTER)
+    rv = curies.chain(converters)
+    return rv
 
 
 def _chain_mapping_set_record(*mapping_set_records: MappingSetRecord | None) -> MappingSetRecord:
