@@ -404,7 +404,7 @@ def read_iterable(
     metadata: MappingSet | MappingSetRecord | Metadata | None = None,
     converter: curies.Converter | None = None,
     progress: bool = False,
-    progress_kwargs: dict[str,Any] | None =None,
+    progress_kwargs: dict[str, Any] | None = None,
     record_predicate: RecordPredicate | None = None,
     semantic_mapping_predicate: SemanticMappingPredicate | None = None,
 ) -> Generator[ReadTuple, None, None]:
@@ -423,9 +423,8 @@ def read_iterable(
             for record in t.records:
                 try:
                     mapping = record_to_semantic_mapping(record, t.converter)
-                except Exception:
-                    logger.warning("")
-                    # TODO make exception action configurable
+                except ValueError:
+                    logger.warning("failed to process record: %s", record)
                     continue
                 else:
                     yield mapping
@@ -521,11 +520,11 @@ def read_unprocessed_iterable(
 
     first_metadata = _get_mapping_set_record(metadata)
 
-    _tqdm_kwargs = dict(
-        disable=not progress,
-        desc="Reading SSSOM records",
-        unit_scale=True,
-    )
+    _tqdm_kwargs = {
+        "disable": not progress,
+        "desc": "Reading SSSOM records",
+        "unit_scale": True,
+    }
     if progress_kwargs:
         _tqdm_kwargs.update(progress_kwargs)
 

@@ -225,7 +225,7 @@ class SemanticMapping(CoreSemanticMapping):
         "is the person who decided to run the workflow. This is _not_ the same as the person who "
         "developed the workflow. The creator is the one who takes responsibility for the creation "
         "of the mapping (but necessarily was the one who made it). If a person curates a de novo "
-        "mapping directly, then they are both the creator and the author."
+        "mapping directly, then they are both the creator and the author.",
     )
     # TODO maybe creator_labels
     reviewers: list[Reference] | None = Field(
@@ -233,7 +233,7 @@ class SemanticMapping(CoreSemanticMapping):
         description="The reviewer is the person who looks at a mapping that has already been "
         "manually curated (i.e., has an author) and gives a second look. If the mapping was "
         "machine generated, then the person who takes a first look is not the reviewer, but "
-        "actually the author."
+        "actually the author.",
     )
     # TODO maybe reviewer_labels
 
