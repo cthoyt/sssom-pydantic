@@ -2,9 +2,11 @@
 
 .. code-block:: python
 
+    import bioregistry
     from sssom_pydantic.contrib.ontoportal import from_bioportal
 
-    mappings = from_bioportal("SNOMEDCT", "AERO")
+    converter = bioregistry.get_converter()
+    mappings = from_bioportal("SNOMEDCT", "AERO", converter=converter)
 """
 
 from __future__ import annotations
@@ -25,69 +27,70 @@ logger = logging.getLogger(__name__)
 
 
 def from_bioportal(
-    o1: str,
-    o2: str,
+    ontology_1: str,
+    ontology_2: str,
     *,
-    converter: curies.Converter | None = None,
+    converter: curies.Converter,
     client: ontoportal_client.BioPortalClient | None = None,
 ) -> list[SemanticMapping]:
     """Get mappings from BioPortal.
 
-    :param o1: The first ontology
-    :param o2: The second ontology
+    :param ontology_1: The OntoPortal instance's key for the first ontology. Note that
+        this might not be the standard key/prefix, e.g., that's in the Bioregistry.
+    :param ontology_2: The OntoPortal instance's key for the second ontology. Note that
+        this might not be the standard key/prefix, e.g., that's in the Bioregistry.
+    :param converter: A converter for parsing URIs
     :param client: A pre-instantiated BioPortal client. If not given, will try to
         automatically construct one. Note that this requires having an API key
         configured.
-    :param converter: A converter for parsing URIs
 
     :returns: A list of semantic mappings.
-
-    .. warning::
-
-        BioPortal contains irrelevant mappings, i.e., ones that are made between
-        imported terms. Therefore, you should check that the ontologies match the parsed
-        results
     """
     if client is None:
         from ontoportal_client import BioPortalClient
 
         client = BioPortalClient()
-    return from_ontoportal(o1, o2, client=client, converter=converter)
+    return from_ontoportal(ontology_1, ontology_2, client=client, converter=converter)
 
 
 def from_ontoportal(
-    o1: str,
-    o2: str,
+    ontology_1: str,
+    ontology_2: str,
     *,
-    converter: curies.Converter | None = None,
+    converter: curies.Converter,
     client: ontoportal_client.Client,
 ) -> list[SemanticMapping]:
     """Get mappings from an OntoPortal instance.
 
-    :param o1: The first ontology
-    :param o2: The second ontology
+    :param ontology_1: The OntoPortal instance's key for the first ontology. Note that
+        this might not be the standard key/prefix, e.g., that's in the Bioregistry.
+    :param ontology_2: The OntoPortal instance's key for the second ontology. Note that
+        this might not be the standard key/prefix, e.g., that's in the Bioregistry.
+    :param converter: A converter for parsing URIs.
+
+        Because OntoPortal's mapping data model does not incorporate a prefix map, an
+        explicit converter must be passed to this function. The Bioregistry's default
+        converter is sometimes a good option to put here if you're not sure (returned by
+        :func:`bioregistry.get_converter`), but OntoPortal instances tend to make their
+        own PURLs that might not be known to the Bioregistry.
     :param client: A pre-instantiated OntoPortal client, e.g., to BioPortal, AgroPortal,
         EcoPortal, etc.
-    :param converter: A converter for parsing URIs
 
     :returns: A list of semantic mappings.
 
-    .. warning::
+        .. warning::
 
-        OntoPortal's mapping data model includes any mappings between terms that have
-        been imported into the ontologies, meaning that you should filter post-facto to
-        only keep mappings whose subject/object match the query ontologies.
+            OntoPortal doesn't provide an option to only return mappings between
+            entities defined in the two given ontologies. For example, if you ask for
+            mappings between ``SNOMEDCT`` and ``AERO`` in BioPortal, you will also get
+            mappings between OGMS and SNOMEDCT (because OGMS terms are imported in
+            AERO).
 
-        This isn't possible to do directly because OntoPortal's data model does not
-        contain a prefix map nor information about the defining ontology for a term
+            This means that you should probably apply post-hoc filtering to only retain
+            relevant mappings.
     """
-    if converter is None:
-        import bioregistry
-
-        converter = bioregistry.get_converter()
-
     rv = []
-    for data in client.get_mappings(o1, o2):
+    for data in client.get_mappings(ontology_1, ontology_2):
         if semantic_mapping := _process(data, converter=converter):
             rv.append(semantic_mapping)
     return rv
