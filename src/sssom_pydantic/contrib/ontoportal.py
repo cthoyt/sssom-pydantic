@@ -45,6 +45,43 @@ def from_bioportal(
         configured.
 
     :returns: A list of semantic mappings.
+
+        .. warning::
+
+            BioPortal doesn't provide an option to only return mappings between entities
+            defined in the two given ontologies. For example, if you ask for mappings
+            between ``SNOMEDCT`` and ``AERO``, you will also get mappings between OGMS
+            and SNOMEDCT (because OGMS terms are imported in AERO).
+
+            This means that you should probably apply post-hoc filtering to only retain
+            relevant mappings.
+
+
+    Simple usage:
+
+    .. code-block:: python
+
+        import bioregistry
+        from sssom_pydantic.contrib.ontoportal import from_bioportal
+
+        converter = bioregistry.get_converter()
+        mappings = from_bioportal("SNOMEDCT", "AERO", converter=converter)
+
+    Usage with explicitly defined converter, which implicitly filters only to relevant
+    mappings:
+
+    .. code-block:: python
+
+        import curies
+        from sssom_pydantic.contrib.ontoportal import from_bioportal
+
+        converter = curies.Converter.from_prefix_map(
+            {
+                "AERO": "http://purl.obolibrary.org/obo/AERO_",
+                "SNOMEDCT": "http://purl.bioontology.org/ontology/SNOMEDCT/",
+            }
+        )
+        mappings = from_bioportal("SNOMEDCT", "AERO", converter=converter)
     """
     if client is None:
         from ontoportal_client import BioPortalClient
@@ -88,6 +125,37 @@ def from_ontoportal(
 
             This means that you should probably apply post-hoc filtering to only retain
             relevant mappings.
+
+
+    Simple usage:
+
+    .. code-block:: python
+
+        import bioregistry
+        from ontoportal_client import BioPortalClient
+        from sssom_pydantic.contrib.ontoportal import from_ontoportal
+
+        converter = bioregistry.get_converter()
+        client = BioPortalClient()
+        mappings = from_ontoportal("SNOMEDCT", "AERO", converter=converter, client=client)
+
+    Usage with explicitly defined converter, which implicitly filters only to relevant
+    mappings:
+
+    .. code-block:: python
+
+        import curies
+        from ontoportal_client import BioPortalClient
+        from sssom_pydantic.contrib.ontoportal import from_ontoportal
+
+        converter = curies.Converter.from_prefix_map(
+            {
+                "AERO": "http://purl.obolibrary.org/obo/AERO_",
+                "SNOMEDCT": "http://purl.bioontology.org/ontology/SNOMEDCT/",
+            }
+        )
+        client = BioPortalClient()
+        mappings = from_bioportal("SNOMEDCT", "AERO", converter=converter, client=client)
     """
     rv = []
     for data in client.get_mappings(ontology_1, ontology_2):
