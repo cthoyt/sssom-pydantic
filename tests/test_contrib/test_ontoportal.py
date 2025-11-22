@@ -6,7 +6,7 @@ from pathlib import Path
 
 import curies
 from curies import Reference
-from curies.vocabulary import has_dbxref, lexical_matching_process
+from curies.vocabulary import exact_match, lexical_matching_process
 
 from sssom_pydantic import MappingTool, SemanticMapping
 from sssom_pydantic.contrib.ontoportal import _process
@@ -31,7 +31,7 @@ class TestBioportal(unittest.TestCase):
         self.assertIsNotNone(mapping)
         expected = SemanticMapping(
             subject=Reference(prefix="OMRE", identifier="0000023"),
-            predicate=has_dbxref,
+            predicate=exact_match,
             object=Reference(prefix="SNOMEDCT", identifier="3415004"),
             justification=lexical_matching_process,
             mapping_tool=MappingTool(name="LOOM"),
