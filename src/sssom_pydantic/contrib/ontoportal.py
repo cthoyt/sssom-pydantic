@@ -1,4 +1,11 @@
-"""Get mappings from OntoPortal."""
+"""Get mappings from an OntoPortal instance.
+
+.. code-block:: python
+
+    from sssom_pydantic.contrib.ontoportal import from_bioportal
+
+    mappings = from_bioportal("SNOMEDCT", "AERO")
+"""
 
 from __future__ import annotations
 
@@ -115,7 +122,7 @@ def _process(data: dict[str, Any], converter: curies.Converter) -> SemanticMappi
 
 def _process_class(data: dict[str, Any], converter: curies.Converter) -> Reference | None:
     uri = data["@id"]
-    reference_tuple = converter.parse_uri(uri)
+    reference_tuple: curies.ReferenceTuple | None = converter.parse_uri(uri)
     if reference_tuple is None:
         logger.warning("could not parse: %s", uri)
         return None
