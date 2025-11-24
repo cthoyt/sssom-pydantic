@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Any
 
 import curies
 from curies import Reference
-from curies.vocabulary import exact_match, lexical_matching_process
+from curies.vocabulary import exact_match, lexical_matching_process, mapping_chaining
 
 from sssom_pydantic import MappingTool, SemanticMapping
 
@@ -25,6 +25,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+LOGGED: set[str] = set()
+
 
 def from_bioportal(
     ontology_1: str,
@@ -32,6 +34,7 @@ def from_bioportal(
     *,
     converter: curies.Converter,
     client: ontoportal_client.BioPortalClient | None = None,
+    progress: bool = False,
 ) -> list[SemanticMapping]:
     """Get mappings from BioPortal.
 
@@ -87,7 +90,9 @@ def from_bioportal(
         from ontoportal_client import BioPortalClient
 
         client = BioPortalClient()
-    return from_ontoportal(ontology_1, ontology_2, client=client, converter=converter)
+    return from_ontoportal(
+        ontology_1, ontology_2, client=client, converter=converter, progress=progress
+    )
 
 
 def from_ontoportal(
@@ -95,7 +100,8 @@ def from_ontoportal(
     ontology_2: str,
     *,
     converter: curies.Converter,
-    client: ontoportal_client.Client,
+    client: ontoportal_client.OntoPortalClient,
+    progress: bool = False,
 ) -> list[SemanticMapping]:
     """Get mappings from an OntoPortal instance.
 
@@ -158,7 +164,7 @@ def from_ontoportal(
         mappings = from_bioportal("SNOMEDCT", "AERO", converter=converter, client=client)
     """
     rv = []
-    for data in client.get_mappings(ontology_1, ontology_2):
+    for data in client.get_mappings(ontology_1, ontology_2, progress=progress):
         if semantic_mapping := _process(data, converter=converter):
             rv.append(semantic_mapping)
     return rv
@@ -174,13 +180,26 @@ def _process(data: dict[str, Any], converter: curies.Converter) -> SemanticMappi
         return None
 
     tool = data["source"]
-    if tool == "LOOM":
+    if tool == "SAME_URI":
+        # this isn't actually a semantic mapping, but just OntoPortal
+        # acknowledging that two different ontologies refer to the same
+        # term
+        return None
+    elif tool == "CUI":
+        # assuming this means using UMLS as a mapping chaining
+        # resource
+        mapping_tool = None  # unknown how this is done
+        justification = mapping_chaining
+        predicate = exact_match
+    elif tool == "LOOM":
         # see https://www.bioontology.org/wiki/LOOM
         mapping_tool = MappingTool(name="LOOM")
         justification = lexical_matching_process
         predicate = exact_match
     else:
-        logger.warning("unhandled mapping tool: %s", tool)
+        if tool not in LOGGED:
+            logger.warning("unhandled mapping tool: %s", tool)
+            LOGGED.add(tool)
         return None
     return SemanticMapping(
         subject=subject,
