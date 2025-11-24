@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
 import curies
@@ -22,6 +23,12 @@ from sssom_pydantic import MappingTool, SemanticMapping
 
 if TYPE_CHECKING:
     import ontoportal_client
+
+__all__ = [
+    "from_bioportal",
+    "from_ontoportal",
+    "iter_ontoportal",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -163,11 +170,31 @@ def from_ontoportal(
         client = BioPortalClient()
         mappings = from_bioportal("SNOMEDCT", "AERO", converter=converter, client=client)
     """
-    rv = []
+    return list(
+        iter_ontoportal(
+            ontology_1, ontology_2, converter=converter, client=client, progress=progress
+        )
+    )
+
+
+def iter_ontoportal(
+    ontology_1: str,
+    ontology_2: str,
+    *,
+    converter: curies.Converter,
+    client: ontoportal_client.OntoPortalClient,
+    progress: bool = False,
+) -> Iterable[SemanticMapping]:
+    """Iterate over mappings from OntoPortal."""
     for data in client.get_mappings(ontology_1, ontology_2, progress=progress):
         if semantic_mapping := _process(data, converter=converter):
-            rv.append(semantic_mapping)
-    return rv
+            yield semantic_mapping
+
+
+# doing this to throw out the nam
+_CHAIN = curies.Reference.from_reference(mapping_chaining)
+_EXACT = curies.Reference.from_reference(exact_match)
+_LEX = curies.Reference.from_reference(lexical_matching_process)
 
 
 def _process(data: dict[str, Any], converter: curies.Converter) -> SemanticMapping | None:
@@ -189,13 +216,13 @@ def _process(data: dict[str, Any], converter: curies.Converter) -> SemanticMappi
         # assuming this means using UMLS as a mapping chaining
         # resource
         mapping_tool = None  # unknown how this is done
-        justification = mapping_chaining
-        predicate = exact_match
+        justification = _CHAIN
+        predicate = _EXACT
     elif tool == "LOOM":
         # see https://www.bioontology.org/wiki/LOOM
         mapping_tool = MappingTool(name="LOOM")
-        justification = lexical_matching_process
-        predicate = exact_match
+        justification = _LEX
+        predicate = _EXACT
     else:
         if tool not in LOGGED:
             logger.warning("unhandled mapping tool: %s", tool)
