@@ -77,6 +77,7 @@ typing = [
     "mypy",
     "types-PyYAML",
     "click-types",
+    "types-requests",
 ]
 docs-lint = [
     { include-group = "docs" },
@@ -116,6 +117,9 @@ ndex = [
 sssompy = [
     "sssom",
     "pandas",
+]
+ontoportal = [
+    "ontoportal-client>0.0.6",
 ]
 
 # See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#urls
