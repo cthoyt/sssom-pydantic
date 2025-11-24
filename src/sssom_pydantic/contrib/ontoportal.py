@@ -225,7 +225,14 @@ def _process(data: dict[str, Any], converter: curies.Converter) -> SemanticMappi
         predicate = _EXACT
     else:
         if tool not in LOGGED:
-            logger.warning("unhandled mapping tool: %s", tool)
+            import json
+
+            import pystow
+
+            path = pystow.join("sssom", "ontoportal", name=f"{tool}.json")
+            path.write_text(json.dumps(data, indent=2))
+
+            logger.warning("unhandled mapping tool: %s. Wrote example to %s", tool, path)
             LOGGED.add(tool)
         return None
     return SemanticMapping(
