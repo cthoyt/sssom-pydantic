@@ -359,24 +359,16 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
 
     def standardize(self, converter: curies.Converter) -> Self:
         """Standardize."""
-        update = {}
-        for _field in self.__class__.model_fields:
-            pass
+        update: dict[str, Reference | list[Reference]] = {}
+        for name, field_info in self.__class__.model_fields.items():
+            value = getattr(self, name)
+            if value is None:
+                continue
+            if field_info.annotation in {Reference, Reference | None}:
+                update[name] = converter.standardize_reference(value, strict=True)
+            elif field_info.annotation in {list[Reference], list[Reference] | None}:
+                update[name] = [converter.standardize_reference(r, strict=True) for r in value]
         return self.model_copy(update=update)
-
-
-def _safe_standarize(reference: Reference | None, converter: curies.Converter) -> Reference | None:
-    if reference is None:
-        return None
-    return converter.standardize_reference(reference, strict=True)
-
-
-def _st_list(
-    references: list[Reference] | None, converter: curies.Converter
-) -> list[Reference] | None:
-    if references is None:
-        return None
-    return [converter.standardize_reference(r, strict=True) for r in references]
 
 
 #: A predicate for a semantic mapping

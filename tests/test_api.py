@@ -10,6 +10,7 @@ from pathlib import Path
 from textwrap import dedent
 
 import curies
+from curies import Reference
 from curies.vocabulary import charlie, exact_match, manual_mapping_curation
 from pydantic import BaseModel
 
@@ -205,12 +206,14 @@ class TestIO(unittest.TestCase):
             predicate=exact_match,
             object="mesh:C067604",
             justification=manual_mapping_curation,
+            authors=[Reference.from_curie("ORCiD:0000-0003-4423-4370")],
         )
         expected = SemanticMapping(
             subject="CHEBI:10001",
             predicate=exact_match,
             object="mesh:C067604",
             justification=manual_mapping_curation,
+            authors=[Reference.from_curie("orcid:0000-0003-4423-4370")],
         )
         converter = curies.Converter(
             [
@@ -224,6 +227,13 @@ class TestIO(unittest.TestCase):
                     prefix_synonyms=["MeSH"],
                     uri_prefix="http://id.nlm.nih.gov/mesh/",
                 ),
+                curies.Record(
+                    prefix="orcid",
+                    prefix_synonyms=["ORCiD"],
+                    uri_prefix="https://orcid.org/",
+                ),
+                curies.Record(prefix="skos", uri_prefix="http://www.w3.org/2004/02/skos/core#"),
+                curies.Record(prefix="semapv", uri_prefix="https://w3id.org/semapv/vocab/"),
             ]
         )
         self.assert_model_equal(expected, original.standardize(converter))
