@@ -6,13 +6,14 @@ import datetime
 import functools
 import warnings
 from collections.abc import Callable
-from typing import Any, Literal, Self, TypeAlias
+from typing import Any, Literal, TypeAlias
 
 import curies
 from curies import NamableReference, Reference, Triple
 from curies.mixins import SemanticallyStandardizable
 from curies.vocabulary import matching_processes
 from pydantic import BaseModel, ConfigDict, Field
+from typing_extensions import Self
 
 from .constants import MULTIVALUED, PROPAGATABLE, Row
 from .models import Cardinality, Record
