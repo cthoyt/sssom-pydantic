@@ -6,10 +6,11 @@ import datetime
 import functools
 import warnings
 from collections.abc import Callable
-from typing import Any, Literal, TypeAlias
+from typing import Any, Literal, TypeAlias, Self
 
 import curies
 from curies import NamableReference, Reference, Triple
+from curies.mixins import SemanticallyStandardizable
 from curies.vocabulary import matching_processes
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -197,7 +198,7 @@ def _join(references: list[Reference] | None) -> list[str] | None:
     return [r.curie for r in references]
 
 
-class SemanticMapping(CoreSemanticMapping):
+class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
     """Represents all fields for SSSOM.."""
 
     model_config = ConfigDict(frozen=True)
@@ -356,6 +357,9 @@ class SemanticMapping(CoreSemanticMapping):
             similarity_score=self.similarity_score,
         )
 
+    def standardize(self, converter: curies.Converter) -> Self:
+        """Standardize."""
+        pass
 
 #: A predicate for a semantic mapping
 SemanticMappingPredicate: TypeAlias = Callable[[SemanticMapping], bool]
