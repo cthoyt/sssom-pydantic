@@ -6,7 +6,7 @@ import datetime
 import functools
 import warnings
 from collections.abc import Callable
-from typing import Any, Literal, TypeAlias, Self
+from typing import Any, Literal, Self, TypeAlias
 
 import curies
 from curies import NamableReference, Reference, Triple
@@ -359,7 +359,25 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
 
     def standardize(self, converter: curies.Converter) -> Self:
         """Standardize."""
-        pass
+        update = {}
+        for _field in self.__class__.model_fields:
+            pass
+        return self.model_copy(update=update)
+
+
+def _safe_standarize(reference: Reference | None, converter: curies.Converter) -> Reference | None:
+    if reference is None:
+        return None
+    return converter.standardize_reference(reference, strict=True)
+
+
+def _st_list(
+    references: list[Reference] | None, converter: curies.Converter
+) -> list[Reference] | None:
+    if references is None:
+        return None
+    return [converter.standardize_reference(r, strict=True) for r in references]
+
 
 #: A predicate for a semantic mapping
 SemanticMappingPredicate: TypeAlias = Callable[[SemanticMapping], bool]

@@ -9,12 +9,13 @@ import unittest
 from pathlib import Path
 from textwrap import dedent
 
-from curies.vocabulary import charlie, manual_mapping_curation
+import curies
+from curies.vocabulary import charlie, exact_match, manual_mapping_curation
 from pydantic import BaseModel
 
 import sssom_pydantic
 import sssom_pydantic.io
-from sssom_pydantic import MappingSetRecord
+from sssom_pydantic import MappingSetRecord, SemanticMapping
 from sssom_pydantic.constants import MULTIVALUED
 from sssom_pydantic.io import _chomp_frontmatter, append, append_unprocessed, write_unprocessed
 from sssom_pydantic.models import Record
@@ -196,3 +197,33 @@ class TestIO(unittest.TestCase):
             mesh:C000090	skos:exactMatch	chebi:28647	semapv:ManualMappingCuration
         """)
         self.assertEqual(expected.splitlines(), path.read_text().splitlines())
+
+    def test_standardize_semantic_mapping(self) -> None:
+        """Test standardizing a semantic mapping."""
+        original = SemanticMapping(
+            subject="chebi:10001",
+            predicate=exact_match,
+            object="mesh:C067604",
+            justification=manual_mapping_curation,
+        )
+        expected = SemanticMapping(
+            subject="CHEBI:10001",
+            predicate=exact_match,
+            object="mesh:C067604",
+            justification=manual_mapping_curation,
+        )
+        converter = curies.Converter(
+            [
+                curies.Record(
+                    prefix="CHEBI",
+                    prefix_synonyms=["chebi"],
+                    uri_prefix="http://purl.obolibrary.org/obo/CHEBI_",
+                ),
+                curies.Record(
+                    prefix="mesh",
+                    prefix_synonyms=["MeSH"],
+                    uri_prefix="http://id.nlm.nih.gov/mesh/",
+                ),
+            ]
+        )
+        self.assert_model_equal(expected, original.standardize(converter))
