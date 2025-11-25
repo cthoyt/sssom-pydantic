@@ -10,8 +10,10 @@ from typing import Any, Literal, TypeAlias
 
 import curies
 from curies import NamableReference, Reference, Triple
+from curies.mixins import SemanticallyStandardizable
 from curies.vocabulary import matching_processes
 from pydantic import BaseModel, ConfigDict, Field
+from typing_extensions import Self
 
 from .constants import MULTIVALUED, PROPAGATABLE, Row
 from .models import Cardinality, Record
@@ -197,7 +199,7 @@ def _join(references: list[Reference] | None) -> list[str] | None:
     return [r.curie for r in references]
 
 
-class SemanticMapping(CoreSemanticMapping):
+class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
     """Represents all fields for SSSOM.."""
 
     model_config = ConfigDict(frozen=True)
@@ -355,6 +357,19 @@ class SemanticMapping(CoreSemanticMapping):
             similarity_measure=self.similarity_measure,
             similarity_score=self.similarity_score,
         )
+
+    def standardize(self, converter: curies.Converter) -> Self:
+        """Standardize."""
+        update: dict[str, Reference | list[Reference]] = {}
+        for name, field_info in self.__class__.model_fields.items():
+            value = getattr(self, name)
+            if value is None:
+                continue
+            if field_info.annotation in {Reference, Reference | None}:
+                update[name] = converter.standardize_reference(value, strict=True)
+            elif field_info.annotation in {list[Reference], list[Reference] | None}:
+                update[name] = [converter.standardize_reference(r, strict=True) for r in value]
+        return self.model_copy(update=update)
 
 
 #: A predicate for a semantic mapping
