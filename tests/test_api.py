@@ -39,12 +39,26 @@ ROUND_TRIP_TESTS = [
         source=Reference.from_curie("w3id:biopragmatics/biomappings/sssom/biomappings.sssom.tsv"),
         justification=manual_mapping_curation,
     ),
-    SemanticMapping(
+    SemanticMapping(  # test multiple random keys in `other`
+        subject=R1,
+        predicate=P1,
+        object=R2,
+        justification=manual_mapping_curation,
+        other={"key1": "value1", "key2": "value2"},
+    ),
+    SemanticMapping(  # test a single key in `other`
         subject=R1,
         predicate=P1,
         object=R2,
         justification=manual_mapping_curation,
         other={"key": "value"},
+    ),
+    SemanticMapping(  # test an empty (but explicit) `other` dict
+        subject=R1,
+        predicate=P1,
+        object=R2,
+        justification=manual_mapping_curation,
+        other={},
     ),
     SemanticMapping(
         subject=R1,
