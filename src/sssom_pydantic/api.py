@@ -343,7 +343,7 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
             mapping_cardinality=self.cardinality,
             cardinality_scope=self.cardinality_scope,
             mapping_provider=self.provider,
-            mapping_source=self.source,
+            mapping_source=self.source.curie if self.source else None,
             mapping_tool=self.mapping_tool.name
             if self.mapping_tool is not None and self.mapping_tool.name is not None
             else None,
