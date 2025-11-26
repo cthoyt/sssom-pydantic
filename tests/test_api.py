@@ -38,7 +38,28 @@ ROUND_TRIP_TESTS = [
         object=R2,
         source=Reference.from_curie("w3id:biopragmatics/biomappings/sssom/biomappings.sssom.tsv"),
         justification=manual_mapping_curation,
-    )
+    ),
+    SemanticMapping(
+        subject=R1,
+        predicate=P1,
+        object=R2,
+        justification=manual_mapping_curation,
+        other={"key": "value"},
+    ),
+    SemanticMapping(
+        subject=R1,
+        predicate=P1,
+        object=R2,
+        justification=manual_mapping_curation,
+        cardinality="1:1",
+    ),
+    SemanticMapping(
+        subject=R1,
+        predicate=P1,
+        object=R2,
+        justification=manual_mapping_curation,
+        provider="https://github.com/biopragmatics/biomappings",
+    ),
 ]
 
 
@@ -162,13 +183,16 @@ class TestIO(unittest.TestCase):
             {**TEST_PREFIX_MAP, "w3id": "https://w3id.org/"}
         )
         for expected_mapping in ROUND_TRIP_TESTS:
-            path = self.directory.joinpath("test.sssom.tsv")
-            sssom_pydantic.write(
-                [expected_mapping], path, converter=converter, metadata=mapping_set
-            )
-            mappings, _, _ = sssom_pydantic.read(path)
-            self.assertEqual(1, len(mappings))
-            self.assertEqual(expected_mapping, mappings[0])
+            with self.subTest():
+                path = self.directory.joinpath("test.sssom.tsv")
+                sssom_pydantic.write(
+                    [expected_mapping], path, converter=converter, metadata=mapping_set
+                )
+                mappings, _, _ = sssom_pydantic.read(path)
+                self.assertEqual(
+                    1, len(mappings), msg=f"Failed, file contents:\n\n{path.read_text()}"
+                )
+                self.assertEqual(expected_mapping, mappings[0])
 
     def test_read_metadata_empty_line(self) -> None:
         """Test reading from a file whose metadata has a blank line in it."""
