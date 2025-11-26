@@ -16,11 +16,60 @@ from pydantic import BaseModel
 
 import sssom_pydantic
 import sssom_pydantic.io
-from sssom_pydantic import MappingSetRecord, SemanticMapping
+from sssom_pydantic import MappingSet, MappingSetRecord, SemanticMapping
 from sssom_pydantic.constants import MULTIVALUED
 from sssom_pydantic.io import _chomp_frontmatter, append, append_unprocessed, write_unprocessed
 from sssom_pydantic.models import Record
-from tests.cases import TEST_MAPPING_SET_ID, TEST_METADATA_W_PREFIX_MAP, _m, _r
+from tests.cases import (
+    P1,
+    R1,
+    R2,
+    TEST_MAPPING_SET_ID,
+    TEST_METADATA_W_PREFIX_MAP,
+    TEST_PREFIX_MAP,
+    _m,
+    _r,
+)
+
+# TODO grow this list to cover the whole spec, and also have
+#  a meta-test that this is complete wrt the spec
+ROUND_TRIP_TESTS = [
+    SemanticMapping(
+        subject=R1,
+        predicate=P1,
+        object=R2,
+        source=Reference.from_curie("w3id:biopragmatics/biomappings/sssom/biomappings.sssom.tsv"),
+        justification=manual_mapping_curation.curie,
+    ),
+    SemanticMapping(  # test multiple random keys in `other`
+        subject=R1,
+        predicate=P1,
+        object=R2,
+        justification=manual_mapping_curation.curie,
+        other={"key1": "value1", "key2": "value2"},
+    ),
+    SemanticMapping(  # test a single key in `other`
+        subject=R1,
+        predicate=P1,
+        object=R2,
+        justification=manual_mapping_curation.curie,
+        other={"key": "value"},
+    ),
+    SemanticMapping(
+        subject=R1,
+        predicate=P1,
+        object=R2,
+        justification=manual_mapping_curation.curie,
+        cardinality="1:1",
+    ),
+    SemanticMapping(
+        subject=R1,
+        predicate=P1,
+        object=R2,
+        justification=manual_mapping_curation.curie,
+        provider="https://github.com/biopragmatics/biomappings",
+    ),
+]
 
 
 class TestIO(unittest.TestCase):
@@ -135,6 +184,28 @@ class TestIO(unittest.TestCase):
             _m(authors=[charlie]),
             processed_records[0],
         )
+
+    def test_round_trip(self) -> None:
+        """Test that mappings can be written and read."""
+        self.maxDiff = None
+        mapping_set = MappingSet(id="https://example.org/test.sssom.tsv")
+        converter = curies.Converter.from_prefix_map(
+            {**TEST_PREFIX_MAP, "w3id": "https://w3id.org/"}
+        )
+        for expected_mapping in ROUND_TRIP_TESTS:
+            with self.subTest():
+                path = self.directory.joinpath("test.sssom.tsv")
+                sssom_pydantic.write(
+                    [expected_mapping], path, converter=converter, metadata=mapping_set
+                )
+                mappings, _, _ = sssom_pydantic.read(path)
+                self.assertEqual(
+                    1, len(mappings), msg=f"Failed, file contents:\n\n{path.read_text()}"
+                )
+                self.assertEqual(
+                    expected_mapping.model_dump(exclude_none=True, exclude_unset=True),
+                    mappings[0].model_dump(exclude_none=True, exclude_unset=True),
+                )
 
     def test_read_metadata_empty_line(self) -> None:
         """Test reading from a file whose metadata has a blank line in it."""

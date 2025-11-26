@@ -23,6 +23,7 @@ from .api import (
     RequiredSemanticMapping,
     SemanticMapping,
     SemanticMappingPredicate,
+    _other_to_dict,
     row_to_record,
 )
 from .constants import (
@@ -160,12 +161,12 @@ def record_to_semantic_mapping(record: Record, converter: curies.Converter) -> S
         curation_rule_text=record.curation_rule_text,
         # TODO get fancy with rewriting github issues?
         issue_tracker_item=_parse_curie(record.issue_tracker_item),
-        mapping_cardinality=record.mapping_cardinality,
+        cardinality=record.mapping_cardinality,
         cardinality_scope=record.cardinality_scope,
-        mapping_provider=record.mapping_provider,
-        mapping_source=_parse_curie(record.mapping_source),
+        provider=record.mapping_provider,
+        source=_parse_curie(record.mapping_source),
         match_string=record.match_string,
-        other=record.other,
+        other=_other_to_dict(record.other) if record.other else None,
         see_also=record.see_also,
         similarity_measure=record.similarity_measure,
         similarity_score=record.similarity_score,
