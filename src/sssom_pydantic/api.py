@@ -12,7 +12,7 @@ import curies
 from curies import NamableReference, Reference, Triple
 from curies.mixins import SemanticallyStandardizable
 from curies.vocabulary import matching_processes
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, AnyUrl
 from typing_extensions import Self
 
 from .constants import MULTIVALUED, PROPAGATABLE, Row
@@ -252,7 +252,7 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
     cardinality: Cardinality | None = Field(None)
     cardinality_scope: list[str] | None = Field(None)
     # https://w3id.org/sssom/mapping_provider
-    provider: str | None = Field(None)
+    provider: AnyUrl | None = Field(None)
     # https://w3id.org/sssom/mapping_source
     source: Reference | None = Field(None)
 
