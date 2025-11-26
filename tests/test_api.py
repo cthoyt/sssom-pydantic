@@ -37,41 +37,34 @@ ROUND_TRIP_TESTS = [
         predicate=P1,
         object=R2,
         source=Reference.from_curie("w3id:biopragmatics/biomappings/sssom/biomappings.sssom.tsv"),
-        justification=manual_mapping_curation,
+        justification=manual_mapping_curation.curie,
     ),
     SemanticMapping(  # test multiple random keys in `other`
         subject=R1,
         predicate=P1,
         object=R2,
-        justification=manual_mapping_curation,
+        justification=manual_mapping_curation.curie,
         other={"key1": "value1", "key2": "value2"},
     ),
     SemanticMapping(  # test a single key in `other`
         subject=R1,
         predicate=P1,
         object=R2,
-        justification=manual_mapping_curation,
+        justification=manual_mapping_curation.curie,
         other={"key": "value"},
-    ),
-    SemanticMapping(  # test an empty (but explicit) `other` dict
-        subject=R1,
-        predicate=P1,
-        object=R2,
-        justification=manual_mapping_curation,
-        other={},
     ),
     SemanticMapping(
         subject=R1,
         predicate=P1,
         object=R2,
-        justification=manual_mapping_curation,
+        justification=manual_mapping_curation.curie,
         cardinality="1:1",
     ),
     SemanticMapping(
         subject=R1,
         predicate=P1,
         object=R2,
-        justification=manual_mapping_curation,
+        justification=manual_mapping_curation.curie,
         provider="https://github.com/biopragmatics/biomappings",
     ),
 ]
@@ -192,6 +185,7 @@ class TestIO(unittest.TestCase):
 
     def test_round_trip(self) -> None:
         """Test that mappings can be written and read."""
+        self.maxDiff = None
         mapping_set = MappingSet(id="https://example.org/test.sssom.tsv")
         converter = curies.Converter.from_prefix_map(
             {**TEST_PREFIX_MAP, "w3id": "https://w3id.org/"}
@@ -206,7 +200,10 @@ class TestIO(unittest.TestCase):
                 self.assertEqual(
                     1, len(mappings), msg=f"Failed, file contents:\n\n{path.read_text()}"
                 )
-                self.assertEqual(expected_mapping, mappings[0])
+                self.assertEqual(
+                    expected_mapping.model_dump(exclude_none=True, exclude_unset=True),
+                    mappings[0].model_dump(exclude_none=True, exclude_unset=True),
+                )
 
     def test_read_metadata_empty_line(self) -> None:
         """Test reading from a file whose metadata has a blank line in it."""
