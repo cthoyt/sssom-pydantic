@@ -31,6 +31,8 @@ from tests.cases import (
     _r,
 )
 
+# TODO grow this list to cover the whole spec, and also have
+#  a meta-test that this is complete wrt the spec
 ROUND_TRIP_TESTS = [
     SemanticMapping(
         subject=R1,
