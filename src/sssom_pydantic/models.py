@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+from collections.abc import Callable
 from typing import Literal, TypeAlias
 
 from curies.vocabulary import matching_processes
@@ -13,6 +14,7 @@ from .constants import PREDICATE_TYPES
 __all__ = [
     "Cardinality",
     "Record",
+    "RecordPredicate",
 ]
 
 Cardinality: TypeAlias = Literal["1:1", "1:n", "n:1", "1:0", "0:1", "n:n", "0:0"]
@@ -118,3 +120,7 @@ class Record(BaseModel):
     see_also: list[str] | None = Field(None)
     similarity_measure: str | None = Field(None)
     similarity_score: float | None = Field(None)
+
+
+#: A predicate for a record
+RecordPredicate: TypeAlias = Callable[[Record], bool]
