@@ -269,8 +269,10 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
         rv = super().get_prefixes()
         for x in [
             self.subject_source,
+            self.subject_type,
             self.predicate_type,
             self.object_source,
+            self.object_type,
             self.source,
         ]:
             if x is not None:
