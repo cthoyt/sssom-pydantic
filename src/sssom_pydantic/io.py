@@ -302,8 +302,8 @@ def write_unprocessed(
     if bimap := converter.bimap:
         metadata[PREFIX_MAP_KEY] = bimap
 
-    _exclude_columns = set(condensation).union(exclude_columns or [])
-    columns = [column for column in columns if column not in _exclude_columns]
+    exclude = set(condensation).union(exclude_columns or [])
+    columns = [column for column in columns if column not in exclude]
 
     with path.open(mode="w") as file:
         if metadata:
@@ -312,7 +312,7 @@ def write_unprocessed(
                 # TODO add comment about being written with this software at a given time
         writer = csv.DictWriter(file, columns, delimiter="\t")
         writer.writeheader()
-        writer.writerows(_unprocess_row(record, exclude=_exclude_columns) for record in records)
+        writer.writerows(_unprocess_row(record, exclude=exclude) for record in records)
 
 
 def _get_condensation(records: Iterable[Record]) -> dict[str, Any]:
