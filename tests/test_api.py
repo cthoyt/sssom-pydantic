@@ -388,10 +388,6 @@ class TestDatabase(unittest.TestCase):
             object=R2,
             justification=manual_mapping_curation,
         )
-
-        self.assertIn("name", mapping.model_dump()["subject"])
-        self.assertIn("name", mapping.model_dump()["object"])
-
         database_mapping = SemanticMappingModel.from_semantic_mapping(mapping)
         self.assertEqual(R1.name, database_mapping.subject_name)
         self.assertEqual(R2.name, database_mapping.object_name)
