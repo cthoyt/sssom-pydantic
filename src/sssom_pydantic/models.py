@@ -5,7 +5,6 @@ from __future__ import annotations
 import datetime
 from collections.abc import Callable
 from typing import Literal, TypeAlias
-
 from curies.vocabulary import matching_processes
 from pydantic import BaseModel, ConfigDict, Field
 

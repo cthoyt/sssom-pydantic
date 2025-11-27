@@ -8,7 +8,7 @@ import logging
 from collections import ChainMap, Counter, defaultdict
 from collections.abc import Generator, Iterable, Mapping, Sequence
 from pathlib import Path
-from typing import Any, NamedTuple, TextIO, TypeAlias, TypeVar
+from typing import Any, NamedTuple, TextIO, TypeAlias, TypeVar, Collection
 
 import curies
 import yaml
@@ -184,6 +184,7 @@ def write(
     drop_duplicates: bool = False,
     drop_duplicates_key: Hasher[MappingTypeVar, Y] | None = None,
     sort: bool = False,
+    exclude_columns: Collection[str] | None = None,
 ) -> None:
     """Write processed records."""
     if exclude_mappings is not None:
@@ -193,7 +194,7 @@ def write(
     if sort:
         mappings = sorted(mappings)
     records, prefixes = _prepare_records(mappings)
-    write_unprocessed(records, path=path, metadata=metadata, converter=converter, prefixes=prefixes)
+    write_unprocessed(records, path=path, metadata=metadata, converter=converter, prefixes=prefixes, exclude_columns=exclude_columns)
 
 
 def append(
@@ -248,7 +249,7 @@ def append_unprocessed(
     with path.open(mode="a") as file:
         writer = csv.DictWriter(file, original_columns, delimiter="\t")
         writer.writerows(
-            _unprocess_row(record, condensed_keys=condensed_keys) for record in records
+            _unprocess_row(record, exclude=condensed_keys) for record in records
         )
 
 
@@ -259,6 +260,7 @@ def write_unprocessed(
     metadata: MappingSet | Metadata | MappingSetRecord | None = None,
     converter: curies.Converter | None = None,
     prefixes: set[str] | None = None,
+    exclude_columns: Collection[str] | None = None,
 ) -> None:
     """Write unprocessed records."""
     path = Path(path).expanduser().resolve()
@@ -288,8 +290,8 @@ def write_unprocessed(
     if bimap := converter.bimap:
         metadata[PREFIX_MAP_KEY] = bimap
 
-    condensed_keys = set(condensation)
-    columns = [column for column in columns if column not in condensed_keys]
+    _exclude_columns = set(condensation).union(exclude_columns or [])
+    columns = [column for column in columns if column not in _exclude_columns]
 
     with path.open(mode="w") as file:
         if metadata:
@@ -299,7 +301,7 @@ def write_unprocessed(
         writer = csv.DictWriter(file, columns, delimiter="\t")
         writer.writeheader()
         writer.writerows(
-            _unprocess_row(record, condensed_keys=condensed_keys) for record in records
+            _unprocess_row(record, exclude=exclude_columns) for record in records
         )
 
 
@@ -338,9 +340,9 @@ def _get_columns(records: Iterable[Record]) -> list[str]:
     return [column for column in Record.model_fields if column in columns]
 
 
-def _unprocess_row(record: Record, *, condensed_keys: set[str] | None = None) -> dict[str, Any]:
+def _unprocess_row(record: Record, *, exclude: set[str] | None = None) -> dict[str, Any]:
     rv = record.model_dump(
-        exclude_none=True, exclude_unset=True, exclude_defaults=True, exclude=condensed_keys
+        exclude_none=True, exclude_unset=True, exclude_defaults=True, exclude=exclude
     )
     for key in MULTIVALUED:
         if (value := rv.get(key)) and isinstance(value, list):
