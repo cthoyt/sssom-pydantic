@@ -8,6 +8,8 @@ import warnings
 from collections.abc import Callable
 from typing import Any, Literal, TypeAlias
 
+from sqlalchemy import TypeDecorator, Dialect, Column
+
 import curies
 from curies import NamableReference, Reference
 from curies.database import get_reference_list_sa_column, get_reference_sa_column
@@ -30,10 +32,37 @@ __all__ = [
 ]
 
 
+class MappingToolTypeDecorator(TypeDecorator["MappingTool"]):
+    """A SQLAlchemy type decorator for a mapping tool."""
+
+    impl: ClassVar[type[TypeEngine[str]]] = JSON  # type:ignore[misc]
+    #: Set SQLAlchemy caching to true
+    cache_ok: ClassVar[bool] = True  # type:ignore[misc]
+
+    def process_bind_param(self, value: MappingTool | None, dialect: Dialect) -> dict[str, Any] | None:
+        """Convert the Python object into a database value."""
+        if value is None:
+            return None
+        return value.model_dump()
+
+    def process_result_value(self, value: dict[str, Any] | None, dialect: Dialect) -> MappingTool | None:
+        """Convert the database value into a Python object."""
+        if value is None:
+            return None
+        return MappingTool.model_validate(value)
+
+
+def get_mapping_tool_column(*args: Any, **kwargs: Any) -> Column[MappingTool]:
+    return Column(MappingToolTypeDecorator(), *args, **kwargs)
+
+
 class RequiredSemanticMapping(SQLModel):
     """Represents the required fields for SSSOM."""
 
-    model_config = ConfigDict(frozen=True)
+    class Config:
+        """Configuration for semantic mapping."""
+
+        frozen = True  # Makes the model immutable
 
     id: int | None = Field(default=None, primary_key=True)
     subject: Reference = Field(sa_column=get_reference_sa_column())
@@ -110,12 +139,15 @@ def _get_name(reference: Reference) -> str | None:
 class CoreSemanticMapping(RequiredSemanticMapping):
     """Represents the most useful fields for SSSOM."""
 
-    model_config = ConfigDict(frozen=True)
+    class Config:
+        """Configuration for semantic mapping."""
+
+        frozen = True  # Makes the model immutable
 
     record: Reference | None = Field(None, sa_column=get_reference_sa_column())
     authors: list[Reference] | None = Field(None, sa_column=get_reference_list_sa_column())
     confidence: float | None = Field(None)
-    mapping_tool: MappingTool | None = Field(None, sa_type=JSON)
+    mapping_tool: MappingTool | None = Field(None, sa_column=get_mapping_tool_column())
     license: str | None = Field(None)
 
     @property
@@ -200,7 +232,10 @@ def _join(references: list[Reference] | None) -> list[str] | None:
 class SemanticMapping(CoreSemanticMapping, SQLModel, table=True):
     """Represents all fields for SSSOM.."""
 
-    model_config = ConfigDict(frozen=True)
+    class Config:
+        """Configuration for semantic mapping."""
+
+        frozen = True  # Makes the model immutable
 
     id: int | None = Field(default=None, primary_key=True)
     subject: Reference = Field(sa_column=get_reference_sa_column())
@@ -384,7 +419,10 @@ SemanticMappingPredicate: TypeAlias = Callable[[SemanticMapping], bool]
 class MappingTool(SQLModel, table=True):
     """Represents metadata about a mapping tool."""
 
-    model_config = ConfigDict(frozen=True)
+    class Config:
+        """Configuration for mapping tool."""
+
+        frozen = True  # Makes the model immutable
 
     id: int | None = Field(default=None, primary_key=True)
     reference: Reference | None = Field(None, sa_column=get_reference_sa_column())
@@ -415,7 +453,7 @@ class MappingSetRecord(BaseModel):
     # and injects a placeholder license... I don't think this is actually valuable
     license: str | None = Field(None)
     issue_tracker: str | None = Field(None)
-    extension_definitions: list[ExtensionDefinitionRecord] | None = Field(None)
+    extension_definitions: list[ExtensionDefinitionRecord] | None = Field(None, sa_type=JSON)
     creator_id: list[str] | None = None
     creator_label: list[str] | None = None
 

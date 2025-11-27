@@ -1,6 +1,6 @@
 """Mock an API."""
 
-from typing import Annotated
+from typing import Annotated, cast
 
 from curies import Reference
 from fastapi import APIRouter, Depends, FastAPI, Request
@@ -20,7 +20,7 @@ class Controller:
 
 def get_controller(request: Request) -> Controller:
     """Get the controller from the web app."""
-    return request.app.state.controller
+    return cast(Controller, request.app.state.controller)
 
 
 @router.get("/mapping/{curie}")
