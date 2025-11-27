@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime
 from typing import Any, ClassVar, Literal
 
-from curies import Reference, NamableReference
+from curies import NamableReference, Reference
 from curies.database import (
     get_reference_list_sa_column,
     get_reference_sa_column,
