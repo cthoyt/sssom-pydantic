@@ -6,9 +6,9 @@ import contextlib
 import csv
 import logging
 from collections import ChainMap, Counter, defaultdict
-from collections.abc import Generator, Iterable, Mapping, Sequence
+from collections.abc import Collection, Generator, Iterable, Mapping, Sequence
 from pathlib import Path
-from typing import Any, NamedTuple, TextIO, TypeAlias, TypeVar, Collection
+from typing import Any, NamedTuple, TextIO, TypeAlias, TypeVar
 
 import curies
 import yaml
@@ -194,7 +194,14 @@ def write(
     if sort:
         mappings = sorted(mappings)
     records, prefixes = _prepare_records(mappings)
-    write_unprocessed(records, path=path, metadata=metadata, converter=converter, prefixes=prefixes, exclude_columns=exclude_columns)
+    write_unprocessed(
+        records,
+        path=path,
+        metadata=metadata,
+        converter=converter,
+        prefixes=prefixes,
+        exclude_columns=exclude_columns,
+    )
 
 
 def append(
@@ -249,9 +256,7 @@ def append_unprocessed(
     # TODO compare existing prefixes to new ones
     with path.open(mode="a") as file:
         writer = csv.DictWriter(file, original_columns, delimiter="\t")
-        writer.writerows(
-            _unprocess_row(record, exclude=exclude) for record in records
-        )
+        writer.writerows(_unprocess_row(record, exclude=exclude) for record in records)
 
 
 def write_unprocessed(
@@ -301,9 +306,7 @@ def write_unprocessed(
                 # TODO add comment about being written with this software at a given time
         writer = csv.DictWriter(file, columns, delimiter="\t")
         writer.writeheader()
-        writer.writerows(
-            _unprocess_row(record, exclude=exclude_columns) for record in records
-        )
+        writer.writerows(_unprocess_row(record, exclude=exclude_columns) for record in records)
 
 
 def _get_condensation(records: Iterable[Record]) -> dict[str, Any]:
