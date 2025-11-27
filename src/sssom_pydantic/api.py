@@ -6,19 +6,16 @@ import datetime
 import functools
 import warnings
 from collections.abc import Callable
-from typing import Any, Literal, TypeAlias
-
-from sqlalchemy import TypeDecorator, Dialect, Column
+from typing import Any, ClassVar, Literal, TypeAlias
 
 import curies
 from curies import NamableReference, Reference
 from curies.database import get_reference_list_sa_column, get_reference_sa_column
-from pydantic import BaseModel, ConfigDict
-from sqlmodel import JSON, Field, SQLModel, String
-from curies import NamableReference, Reference, Triple
 from curies.mixins import SemanticallyStandardizable
-from curies.vocabulary import matching_processes
-from pydantic import AnyUrl, BaseModel, ConfigDict, Field
+from pydantic import AnyUrl, BaseModel, ConfigDict
+from sqlalchemy import Column, Dialect, TypeDecorator
+from sqlalchemy.sql.type_api import TypeEngine
+from sqlmodel import JSON, Field, SQLModel, String
 from typing_extensions import Self
 
 from .constants import MULTIVALUED, PROPAGATABLE, Row
@@ -49,13 +46,17 @@ class MappingToolTypeDecorator(TypeDecorator["MappingTool"]):
     #: Set SQLAlchemy caching to true
     cache_ok: ClassVar[bool] = True  # type:ignore[misc]
 
-    def process_bind_param(self, value: MappingTool | None, dialect: Dialect) -> dict[str, Any] | None:
+    def process_bind_param(
+        self, value: MappingTool | None, dialect: Dialect
+    ) -> dict[str, Any] | None:
         """Convert the Python object into a database value."""
         if value is None:
             return None
         return value.model_dump()
 
-    def process_result_value(self, value: dict[str, Any] | None, dialect: Dialect) -> MappingTool | None:
+    def process_result_value(
+        self, value: dict[str, Any] | None, dialect: Dialect
+    ) -> MappingTool | None:
         """Convert the database value into a Python object."""
         if value is None:
             return None
@@ -305,7 +306,7 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable, SQLModel,
         "developed the workflow. The creator is the one who takes responsibility for the creation "
         "of the mapping (but necessarily was the one who made it). If a person curates a de novo "
         "mapping directly, then they are both the creator and the author.",
-        sa_column=get_reference_list_sa_column()
+        sa_column=get_reference_list_sa_column(),
     )
     # TODO maybe creator_labels
     reviewers: list[Reference] | None = Field(
@@ -314,7 +315,7 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable, SQLModel,
         "manually curated (i.e., has an author) and gives a second look. If the mapping was "
         "machine generated, then the person who takes a first look is not the reviewer, but "
         "actually the author.",
-        sa_column=get_reference_list_sa_column()
+        sa_column=get_reference_list_sa_column(),
     )
     # TODO maybe reviewer_labels
 
@@ -333,7 +334,7 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable, SQLModel,
     # https://w3id.org/sssom/mapping_provider
     provider: AnyUrl | None = Field(None, sa_type=String)
     # https://w3id.org/sssom/mapping_source
-    source: Reference | None = Field(None , sa_column=get_reference_sa_column())
+    source: Reference | None = Field(None, sa_column=get_reference_sa_column())
 
     match_string: list[str] | None = Field(None, sa_type=JSON)
 
