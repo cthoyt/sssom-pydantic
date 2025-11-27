@@ -227,6 +227,7 @@ def append_unprocessed(
     metadata: Metadata | MappingSet | None = None,
     converter: curies.Converter | None = None,
     prefixes: set[str] | None = None,
+    exclude_columns: Collection[str] | None = None,
 ) -> None:
     """Append records to the end of an existing file."""
     path = Path(path).expanduser().resolve()
@@ -236,9 +237,9 @@ def append_unprocessed(
         raise ValueError(
             f"can not append {len(records):,} mappings because no headers found in {path}"
         )
-    condensed_keys = {"mapping_set_id"}  # this is a hack...
+    exclude = {"mapping_set_id"}.union(exclude_columns or [])  # this is a hack...
     columns = _get_columns(records)
-    new_columns = set(columns).difference(original_columns).difference(condensed_keys)
+    new_columns = set(columns).difference(original_columns).difference(exclude)
     if new_columns:
         raise NotImplementedError(
             f"\n\nsssom-pydantic can not yet handle extending columns on append."
@@ -249,7 +250,7 @@ def append_unprocessed(
     with path.open(mode="a") as file:
         writer = csv.DictWriter(file, original_columns, delimiter="\t")
         writer.writerows(
-            _unprocess_row(record, exclude=condensed_keys) for record in records
+            _unprocess_row(record, exclude=exclude) for record in records
         )
 
 
