@@ -210,11 +210,17 @@ def append(
     *,
     metadata: Metadata | MappingSet | None = None,
     converter: curies.Converter | None = None,
+    exclude_columns: Collection[str] | None = None,
 ) -> None:
     """Append processed records."""
     records, prefixes = _prepare_records(mappings)
     append_unprocessed(
-        records, path=path, metadata=metadata, converter=converter, prefixes=prefixes
+        records,
+        path=path,
+        metadata=metadata,
+        converter=converter,
+        prefixes=prefixes,
+        exclude_columns=exclude_columns,
     )
 
 
@@ -306,7 +312,7 @@ def write_unprocessed(
                 # TODO add comment about being written with this software at a given time
         writer = csv.DictWriter(file, columns, delimiter="\t")
         writer.writeheader()
-        writer.writerows(_unprocess_row(record, exclude=exclude_columns) for record in records)
+        writer.writerows(_unprocess_row(record, exclude=_exclude_columns) for record in records)
 
 
 def _get_condensation(records: Iterable[Record]) -> dict[str, Any]:
