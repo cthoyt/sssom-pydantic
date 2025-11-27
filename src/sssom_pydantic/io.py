@@ -2,17 +2,19 @@
 
 from __future__ import annotations
 
+import contextlib
 import csv
 import logging
 from collections import ChainMap, Counter, defaultdict
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Collection, Generator, Iterable, Mapping, Sequence
 from pathlib import Path
-from typing import Any, TextIO, TypeAlias, TypeVar
+from typing import Any, NamedTuple, TextIO, TypeAlias, TypeVar
 
 import curies
 import yaml
 from curies import Converter, Reference
 from pystow.utils import safe_open
+from tqdm import tqdm
 
 from .api import (
     MappingSet,
@@ -20,6 +22,8 @@ from .api import (
     MappingTool,
     RequiredSemanticMapping,
     SemanticMapping,
+    SemanticMappingPredicate,
+    _other_to_dict,
     row_to_record,
 )
 from .constants import (
@@ -29,7 +33,7 @@ from .constants import (
     PROPAGATABLE,
     Row,
 )
-from .models import Record
+from .models import Record, RecordPredicate
 from .process import Hasher, MappingTypeVar, remove_redundant_external, remove_redundant_internal
 
 __all__ = [
@@ -38,6 +42,7 @@ __all__ = [
     "append_unprocessed",
     "lint",
     "read",
+    "read_iterable",
     "read_unprocessed",
     "record_to_semantic_mapping",
     "row_to_record",
@@ -156,12 +161,12 @@ def record_to_semantic_mapping(record: Record, converter: curies.Converter) -> S
         curation_rule_text=record.curation_rule_text,
         # TODO get fancy with rewriting github issues?
         issue_tracker_item=_parse_curie(record.issue_tracker_item),
-        mapping_cardinality=record.mapping_cardinality,
+        cardinality=record.mapping_cardinality,
         cardinality_scope=record.cardinality_scope,
-        mapping_provider=record.mapping_provider,
-        mapping_source=_parse_curie(record.mapping_source),
+        provider=record.mapping_provider,
+        source=_parse_curie(record.mapping_source),
         match_string=record.match_string,
-        other=record.other,
+        other=_other_to_dict(record.other) if record.other else None,
         see_also=record.see_also,
         similarity_measure=record.similarity_measure,
         similarity_score=record.similarity_score,
@@ -179,6 +184,7 @@ def write(
     drop_duplicates: bool = False,
     drop_duplicates_key: Hasher[MappingTypeVar, Y] | None = None,
     sort: bool = False,
+    exclude_columns: Collection[str] | None = None,
 ) -> None:
     """Write processed records."""
     if exclude_mappings is not None:
@@ -188,7 +194,14 @@ def write(
     if sort:
         mappings = sorted(mappings)
     records, prefixes = _prepare_records(mappings)
-    write_unprocessed(records, path=path, metadata=metadata, converter=converter, prefixes=prefixes)
+    write_unprocessed(
+        records,
+        path=path,
+        metadata=metadata,
+        converter=converter,
+        prefixes=prefixes,
+        exclude_columns=exclude_columns,
+    )
 
 
 def append(
@@ -197,11 +210,17 @@ def append(
     *,
     metadata: Metadata | MappingSet | None = None,
     converter: curies.Converter | None = None,
+    exclude_columns: Collection[str] | None = None,
 ) -> None:
     """Append processed records."""
     records, prefixes = _prepare_records(mappings)
     append_unprocessed(
-        records, path=path, metadata=metadata, converter=converter, prefixes=prefixes
+        records,
+        path=path,
+        metadata=metadata,
+        converter=converter,
+        prefixes=prefixes,
+        exclude_columns=exclude_columns,
     )
 
 
@@ -221,6 +240,7 @@ def append_unprocessed(
     metadata: Metadata | MappingSet | None = None,
     converter: curies.Converter | None = None,
     prefixes: set[str] | None = None,
+    exclude_columns: Collection[str] | None = None,
 ) -> None:
     """Append records to the end of an existing file."""
     path = Path(path).expanduser().resolve()
@@ -230,9 +250,9 @@ def append_unprocessed(
         raise ValueError(
             f"can not append {len(records):,} mappings because no headers found in {path}"
         )
-    condensed_keys = {"mapping_set_id", "predicate_label"}  # this is a hack...
+    exclude = {"mapping_set_id"}.union(exclude_columns or [])  # this is a hack...
     columns = _get_columns(records)
-    new_columns = set(columns).difference(original_columns).difference(condensed_keys)
+    new_columns = set(columns).difference(original_columns).difference(exclude)
     if new_columns:
         raise NotImplementedError(
             f"\n\nsssom-pydantic can not yet handle extending columns on append."
@@ -242,9 +262,7 @@ def append_unprocessed(
     # TODO compare existing prefixes to new ones
     with path.open(mode="a") as file:
         writer = csv.DictWriter(file, original_columns, delimiter="\t")
-        writer.writerows(
-            _unprocess_row(record, condensed_keys=condensed_keys) for record in records
-        )
+        writer.writerows(_unprocess_row(record, exclude=exclude) for record in records)
 
 
 def write_unprocessed(
@@ -254,6 +272,7 @@ def write_unprocessed(
     metadata: MappingSet | Metadata | MappingSetRecord | None = None,
     converter: curies.Converter | None = None,
     prefixes: set[str] | None = None,
+    exclude_columns: Collection[str] | None = None,
 ) -> None:
     """Write unprocessed records."""
     path = Path(path).expanduser().resolve()
@@ -283,8 +302,8 @@ def write_unprocessed(
     if bimap := converter.bimap:
         metadata[PREFIX_MAP_KEY] = bimap
 
-    condensed_keys = set(condensation)
-    columns = [column for column in columns if column not in condensed_keys]
+    exclude = set(condensation).union(exclude_columns or [])
+    columns = [column for column in columns if column not in exclude]
 
     with path.open(mode="w") as file:
         if metadata:
@@ -293,9 +312,7 @@ def write_unprocessed(
                 # TODO add comment about being written with this software at a given time
         writer = csv.DictWriter(file, columns, delimiter="\t")
         writer.writeheader()
-        writer.writerows(
-            _unprocess_row(record, condensed_keys=condensed_keys) for record in records
-        )
+        writer.writerows(_unprocess_row(record, exclude=exclude) for record in records)
 
 
 def _get_condensation(records: Iterable[Record]) -> dict[str, Any]:
@@ -333,9 +350,9 @@ def _get_columns(records: Iterable[Record]) -> list[str]:
     return [column for column in Record.model_fields if column in columns]
 
 
-def _unprocess_row(record: Record, *, condensed_keys: set[str] | None = None) -> dict[str, Any]:
+def _unprocess_row(record: Record, *, exclude: set[str] | None = None) -> dict[str, Any]:
     rv = record.model_dump(
-        exclude_none=True, exclude_unset=True, exclude_defaults=True, exclude=condensed_keys
+        exclude_none=True, exclude_unset=True, exclude_defaults=True, exclude=exclude
     )
     for key in MULTIVALUED:
         if (value := rv.get(key)) and isinstance(value, list):
@@ -365,16 +382,70 @@ def read(
     metadata_path: str | Path | None = None,
     metadata: MappingSet | MappingSetRecord | Metadata | None = None,
     converter: curies.Converter | None = None,
+    progress: bool = False,
+    progress_kwargs: dict[str, Any] | None = None,
+    record_predicate: RecordPredicate | None = None,
+    semantic_mapping_predicate: SemanticMappingPredicate | None = None,
 ) -> tuple[list[SemanticMapping], Converter, MappingSet]:
     """Read and process SSSOM from TSV."""
-    records, rv_converter, mapping_set = read_unprocessed(
+    with read_iterable(
         path_or_url=path_or_url,
         metadata_path=metadata_path,
         metadata=metadata,
         converter=converter,
-    )
-    semantic_mappings = [record_to_semantic_mapping(record, rv_converter) for record in records]
-    return semantic_mappings, rv_converter, mapping_set
+        progress=progress,
+        progress_kwargs=progress_kwargs,
+        record_predicate=record_predicate,
+        semantic_mapping_predicate=semantic_mapping_predicate,
+    ) as t:
+        return list(t.mappings), t.converter, t.mapping_set
+
+
+class ReadTuple(NamedTuple):
+    """A tuple returned from streaming reading of a SSSOM file."""
+
+    mappings: Iterable[SemanticMapping]
+    converter: Converter
+    mapping_set: MappingSet
+
+
+@contextlib.contextmanager
+def read_iterable(
+    path_or_url: str | Path,
+    *,
+    metadata_path: str | Path | None = None,
+    metadata: MappingSet | MappingSetRecord | Metadata | None = None,
+    converter: curies.Converter | None = None,
+    progress: bool = False,
+    progress_kwargs: dict[str, Any] | None = None,
+    record_predicate: RecordPredicate | None = None,
+    semantic_mapping_predicate: SemanticMappingPredicate | None = None,
+) -> Generator[ReadTuple, None, None]:
+    """Read and process SSSOM from TSV in an iterable way."""
+    with read_unprocessed_iterable(
+        path=path_or_url,
+        metadata_path=metadata_path,
+        metadata=metadata,
+        converter=converter,
+        progress=progress,
+        progress_kwargs=progress_kwargs,
+        record_predicate=record_predicate,
+    ) as t:
+
+        def _process() -> Iterable[SemanticMapping]:
+            for record in t.records:
+                try:
+                    mapping = record_to_semantic_mapping(record, t.converter)
+                except ValueError:
+                    logger.warning("failed to process record: %s", record)
+                    continue
+                else:
+                    yield mapping
+
+        mappings = _process()
+        if semantic_mapping_predicate is not None:
+            mappings = (m for m in mappings if semantic_mapping_predicate(m))
+        yield ReadTuple(mappings, t.converter, t.mapping_set)
 
 
 def _get_metadata(metadata: MappingSet | MappingSetRecord | Metadata | None) -> Metadata:
@@ -399,13 +470,60 @@ def _get_mapping_set_record(
         raise TypeError
 
 
+class ReadUnprocessedTuple(NamedTuple):
+    """The results returned from reading a SSSOM file without processing."""
+
+    records: list[Record]
+    converter: Converter
+    mapping_set: MappingSet
+
+
+class ReadUnprocessedStreamTuple(NamedTuple):
+    """The results returned from reading a SSSOM file without processing with streaming."""
+
+    records: Iterable[Record]
+    converter: Converter
+    mapping_set: MappingSet
+
+
 def read_unprocessed(
-    path_or_url: str | Path,
+    path: str | Path,
     *,
     metadata_path: str | Path | None = None,
     metadata: MappingSet | MappingSetRecord | Metadata | None = None,
     converter: curies.Converter | None = None,
-) -> tuple[list[Record], Converter, MappingSet]:
+    progress: bool = False,
+    progress_kwargs: dict[str, Any] | None = None,
+    record_predicate: RecordPredicate | None = None,
+) -> ReadUnprocessedTuple:
+    """Read SSSOM TSV into unprocessed records."""
+    with read_unprocessed_iterable(
+        path=path,
+        metadata_path=metadata_path,
+        metadata=metadata,
+        converter=converter,
+        progress=progress,
+        progress_kwargs=progress_kwargs,
+        record_predicate=record_predicate,
+    ) as t:
+        return ReadUnprocessedTuple(
+            list(t.records),
+            t.converter,
+            t.mapping_set,
+        )
+
+
+@contextlib.contextmanager
+def read_unprocessed_iterable(
+    path: str | Path,
+    *,
+    metadata_path: str | Path | None = None,
+    metadata: MappingSet | MappingSetRecord | Metadata | None = None,
+    converter: curies.Converter | None = None,
+    progress: bool = False,
+    progress_kwargs: dict[str, Any] | None = None,
+    record_predicate: RecordPredicate | None = None,
+) -> Generator[ReadUnprocessedStreamTuple, None, None]:
     """Read SSSOM TSV into unprocessed records."""
     if metadata_path is None:
         second_metadata = None
@@ -415,24 +533,44 @@ def read_unprocessed(
 
     first_metadata = _get_mapping_set_record(metadata)
 
-    with safe_open(path_or_url, operation="read", representation="text") as file:
+    _tqdm_kwargs = {
+        "disable": not progress,
+        "desc": "Reading SSSOM records",
+        "unit_scale": True,
+    }
+    if progress_kwargs:
+        _tqdm_kwargs.update(progress_kwargs)
+
+    with safe_open(path, operation="read", representation="text") as file:
         columns, inline_metadata = _chomp_frontmatter(file)
         mapping_set_record = _chain_mapping_set_record(
             first_metadata, second_metadata, inline_metadata
         )
-        _parse_row = mapping_set_record.get_parser()
+        _row_to_record = mapping_set_record.get_parser()
         reader = csv.DictReader(file, fieldnames=columns, delimiter="\t")
-        mappings = [_parse_row(cleaned_row) for row in reader if (cleaned_row := _clean_row(row))]
+        reader = tqdm(reader, **_tqdm_kwargs)
+        records = (
+            _row_to_record(cleaned_row) for row in reader if (cleaned_row := _clean_row(row))
+        )
+        if record_predicate is not None:
+            records = (m for m in records if record_predicate(m))
 
+        converter = _chain_converters(converter, mapping_set_record)
+        mapping_set = mapping_set_record.process(converter)
+        yield ReadUnprocessedStreamTuple(records, converter, mapping_set)
+
+
+def _chain_converters(
+    converter: Converter | None, mapping_set_record: MappingSetRecord
+) -> Converter:
     converters = []
     if converter is not None:
         converters.append(converter)
     if mapping_set_record.curie_map:
         converters.append(Converter.from_prefix_map(mapping_set_record.curie_map))
     converters.append(BUILTIN_CONVERTER)
-    rv_converter = curies.chain(converters)
-
-    return mappings, rv_converter, mapping_set_record.process(rv_converter)
+    rv = curies.chain(converters)
+    return rv
 
 
 def _chain_mapping_set_record(*mapping_set_records: MappingSetRecord | None) -> MappingSetRecord:
