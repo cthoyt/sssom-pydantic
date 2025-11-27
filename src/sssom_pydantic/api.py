@@ -209,7 +209,8 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
     subject_preprocessing: list[Reference] | None = Field(None)
     subject_source: Reference | None = Field(None)
     subject_source_version: str | None = Field(None)
-    subject_type: str | None = Field(None)
+    # https://w3id.org/sssom/subject_type
+    subject_type: Reference | None = Field(None)
 
     predicate_type: Reference | None = Field(None)
 
@@ -218,7 +219,7 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
     object_preprocessing: list[Reference] | None = Field(None)
     object_source: Reference | None = Field(None)
     object_source_version: str | None = Field(None)
-    object_type: str | None = Field(None)
+    object_type: Reference | None = Field(None)
 
     creators: list[Reference] | None = Field(
         None,
@@ -268,8 +269,10 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
         rv = super().get_prefixes()
         for x in [
             self.subject_source,
+            self.subject_type,
             self.predicate_type,
             self.object_source,
+            self.object_type,
             self.source,
         ]:
             if x is not None:
@@ -305,7 +308,7 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
             subject_preprocessing=self.subject_preprocessing,
             subject_source=self.subject_source,
             subject_source_version=self.subject_source_version,
-            subject_type=self.subject_type,
+            subject_type=self.subject_type.curie if self.subject_type is not None else None,
             #
             predicate_id=self.predicate.curie,
             predicate_label=self.predicate_name,
@@ -319,7 +322,7 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
             object_preprocessing=self.object_preprocessing,
             object_source=self.object_source,
             object_source_version=self.object_source_version,
-            object_type=self.object_type,
+            object_type=self.object_type.curie if self.object_type is not None else None,
             #
             mapping_justification=self.justification.curie,
             #

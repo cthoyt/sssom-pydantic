@@ -99,7 +99,7 @@ class SemanticMappingModel(SQLModel, table=True):
     )
     subject_source: Reference | None = Field(None, sa_column=get_reference_sa_column())
     subject_source_version: str | None = Field(None)
-    subject_type: str | None = Field(None)
+    subject_type: Reference | None = Field(None, sa_column=get_reference_sa_column())
 
     predicate_type: Reference | None = Field(None, sa_column=get_reference_sa_column())
 
@@ -112,7 +112,7 @@ class SemanticMappingModel(SQLModel, table=True):
     )
     object_source: Reference | None = Field(None, sa_column=get_reference_sa_column())
     object_source_version: str | None = Field(None)
-    object_type: str | None = Field(None)
+    object_type: Reference | None = Field(None, sa_column=get_reference_sa_column())
 
     creators: list[Reference] | None = Field(None, sa_column=get_reference_list_sa_column())
     reviewers: list[Reference] | None = Field(None, sa_column=get_reference_list_sa_column())

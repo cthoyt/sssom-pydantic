@@ -149,9 +149,7 @@ class TestSchema(unittest.TestCase):
                 multivalued = slot in MULTIVALUED
                 match self.view.get_slot(slot).range:
                     case "EntityReference":
-                        if annotation is Reference:
-                            self.assertNotIn(slot, MULTIVALUED)
-                        elif multivalued:
+                        if multivalued:
                             self.assertEqual(
                                 list[Reference] | None,
                                 annotation,
@@ -159,9 +157,9 @@ class TestSchema(unittest.TestCase):
                                 f"references, but got {annotation}",
                             )
                         else:
-                            self.assertEqual(
-                                Reference | None,
+                            self.assertIn(
                                 annotation,
+                                {Reference, Reference | None},
                                 msg=f"{slot} should be annotated as a reference",
                             )
                     case "string" | "NonRelativeURI":
@@ -194,7 +192,12 @@ class TestSchema(unittest.TestCase):
                     case "predicate_modifier_enum":
                         self.assertEqual(typing.Literal["Not"] | None, annotation)
                     case "entity_type_enum":
-                        pass
+                        self.assertEqual(
+                            Reference | None,
+                            annotation,
+                            msg=f"{slot} with LinkML type 'entity_type_enum' should "
+                            f"be annotated as a reference",
+                        )
                     case _:
                         self.fail(
                             f"missing handling for {slot} with "
