@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime
 from typing import Any, ClassVar, Literal
 
-from curies import Reference
+from curies import NamableReference, Reference
 from curies.database import (
     get_reference_list_sa_column,
     get_reference_sa_column,
@@ -75,8 +75,10 @@ class SemanticMappingModel(SQLModel, table=True):
 
     # required
     subject: Reference = Field(sa_column=get_reference_sa_column())
+    subject_name: str | None = Field(None)
     predicate: Reference = Field(sa_column=get_reference_sa_column())
     object: Reference = Field(sa_column=get_reference_sa_column())
+    object_name: str | None = Field(None)
     justification: Reference = Field(..., sa_column=get_reference_sa_column())
     predicate_modifier: Literal["Not"] | None = Field(None, sa_type=String)
 
@@ -142,8 +144,23 @@ class SemanticMappingModel(SQLModel, table=True):
     @classmethod
     def from_semantic_mapping(cls, mapping: SemanticMapping) -> Self:
         """Get from a non-ORM mapping."""
-        return cls.model_validate(mapping.model_dump())
+        d = mapping.model_dump()
+        # do this explicitly since the model might not be smart enough
+        # to fully dump a NamableReference, since it's only annotated
+        # as a regular Reference
+        if subject_name := mapping.subject_name:
+            d["subject_name"] = subject_name
+        if object_name := mapping.object_name:
+            d["object_name"] = object_name
+        return cls.model_validate(d)
 
     def to_semantic_mapping(self) -> SemanticMapping:
         """Get a non-ORM mapping."""
-        return SemanticMapping.model_validate(self.model_dump())
+        d = self.model_dump()
+        if subject_name := d.pop("subject_name", None):
+            d["subject"]["name"] = subject_name
+            d["subject"] = NamableReference.model_validate(d["subject"])
+        if object_name := d.pop("object_name", None):
+            d["object"]["name"] = object_name
+            d["object"] = NamableReference.model_validate(d["object"])
+        return SemanticMapping.model_validate(d)

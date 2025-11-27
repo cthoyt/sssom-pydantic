@@ -12,7 +12,7 @@ from textwrap import dedent
 
 import curies
 from curies import Reference
-from curies.vocabulary import charlie, exact_match, manual_mapping_curation
+from curies.vocabulary import exact_match, manual_mapping_curation
 from pydantic import BaseModel
 
 import sssom_pydantic
@@ -23,6 +23,7 @@ from sssom_pydantic.database import SemanticMappingModel
 from sssom_pydantic.io import _chomp_frontmatter, append, append_unprocessed, write_unprocessed
 from sssom_pydantic.models import Record
 from tests.cases import (
+    AUTHOR,
     P1,
     R1,
     R2,
@@ -140,7 +141,7 @@ class TestIO(unittest.TestCase):
             #  chebi: "http://purl.obolibrary.org/obo/CHEBI_"
             #mapping_set_id: {TEST_MAPPING_SET_ID}
             subject_id	subject_label	predicate_id	object_id	object_label	mapping_justification	author_id
-            mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	{manual_mapping_curation.curie}	{charlie.curie}
+            mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	{manual_mapping_curation.curie}	{AUTHOR.curie}
         """)  # noqa:E501
         path = self.directory.joinpath("test.tsv")
         path.write_text(text)
@@ -177,7 +178,7 @@ class TestIO(unittest.TestCase):
         unprocessed_records, _, _mapping_set = sssom_pydantic.io.read_unprocessed(path)
         self.assertEqual(1, len(unprocessed_records))
         self.assert_model_equal(
-            _r(author_id=[charlie.curie]),
+            _r(author_id=[AUTHOR.curie]),
             unprocessed_records[0],
         )
 
@@ -185,7 +186,7 @@ class TestIO(unittest.TestCase):
 
         self.assertEqual(1, len(processed_records))
         self.assert_model_equal(
-            _m(authors=[charlie]),
+            _m(authors=[AUTHOR]),
             processed_records[0],
         )
 
@@ -210,29 +211,6 @@ class TestIO(unittest.TestCase):
                     mappings[0].model_dump(exclude_none=True, exclude_unset=True),
                 )
 
-    @unittest.skipUnless(
-        importlib.util.find_spec("sqlmodel"), "SQLModel is required for database test"
-    )
-    def test_round_trip_database(self) -> None:
-        """Test database roundtrip."""
-        from sqlmodel import Session, SQLModel, create_engine, select
-
-        for expected_mapping in ROUND_TRIP_TESTS:
-            with self.subTest():
-                orm_model = SemanticMappingModel.from_semantic_mapping(expected_mapping)
-                engine = create_engine("sqlite:///:memory:")
-                SQLModel.metadata.create_all(engine)
-
-                with Session(engine) as session:
-                    session.add(orm_model)
-                    session.commit()
-
-                with Session(engine) as session:
-                    statement = select(SemanticMappingModel)
-                    orm_models = session.exec(statement).all()
-                    self.assertEqual(1, len(orm_models))
-                    self.assertEqual(expected_mapping, orm_models[0].to_semantic_mapping())
-
     def test_read_metadata_empty_line(self) -> None:
         """Test reading from a file whose metadata has a blank line in it."""
         text = dedent(f"""\
@@ -242,7 +220,7 @@ class TestIO(unittest.TestCase):
             #
             #mapping_set_id: {TEST_MAPPING_SET_ID}
             subject_id	subject_label	predicate_id	object_id	object_label	mapping_justification	author_id
-            mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	{manual_mapping_curation.curie}	{charlie.curie}
+            mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	{manual_mapping_curation.curie}	{AUTHOR.curie}
         """)  # noqa:E501
         path = self.directory.joinpath("test.tsv")
         path.write_text(text)
@@ -251,7 +229,7 @@ class TestIO(unittest.TestCase):
 
         self.assertEqual(1, len(processed_records))
         self.assert_model_equal(
-            _m(authors=[charlie]),
+            _m(authors=[AUTHOR]),
             processed_records[0],
         )
 
@@ -341,7 +319,7 @@ class TestIO(unittest.TestCase):
 
         prefix = "ex"
         uri_prefix = "https://example.org/"
-        m = _m(record=Reference(prefix=prefix, identifier="1"), authors=[charlie])
+        m = _m(record=Reference(prefix=prefix, identifier="1"), authors=[AUTHOR])
         c2 = curies.Converter.from_prefix_map({**TEST_PREFIX_MAP, prefix: uri_prefix})
         path_no_record_id = self.directory.joinpath("test.tsv")
         sssom_pydantic.write([m], path_no_record_id, converter=c2, metadata=metadata)
@@ -355,7 +333,7 @@ class TestIO(unittest.TestCase):
                 #  skos: http://www.w3.org/2004/02/skos/core#
                 #mapping_set_id: {TEST_MAPPING_SET_ID}
                 record_id	subject_id	subject_label	predicate_id	object_id	object_label	mapping_justification	author_id
-                ex:1	mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	semapv:ManualMappingCuration	{charlie.curie}
+                ex:1	mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	semapv:ManualMappingCuration	{AUTHOR.curie}
             """),  # noqa:E501
             path_no_record_id.read_text(),
         )
@@ -373,7 +351,7 @@ class TestIO(unittest.TestCase):
                 #  skos: http://www.w3.org/2004/02/skos/core#
                 #mapping_set_id: {TEST_MAPPING_SET_ID}
                 subject_id	subject_label	predicate_id	object_id	object_label	mapping_justification	author_id
-                mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	semapv:ManualMappingCuration	{charlie.curie}
+                mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	semapv:ManualMappingCuration	{AUTHOR.curie}
             """),  # noqa:E501
             path.read_text(),
         )
@@ -391,8 +369,45 @@ class TestIO(unittest.TestCase):
                 #  skos: http://www.w3.org/2004/02/skos/core#
                 #mapping_set_id: {TEST_MAPPING_SET_ID}
                 subject_id	subject_label	predicate_id	object_id	object_label	mapping_justification	author_id
-                mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	semapv:ManualMappingCuration	{charlie.curie}
+                mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	semapv:ManualMappingCuration	{AUTHOR.curie}
                 mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	semapv:ManualMappingCuration	{a2.curie}
             """),  # noqa:E501
             path.read_text(),
         )
+
+
+@unittest.skipUnless(importlib.util.find_spec("sqlmodel"), "SQLModel is required for database test")
+class TestDatabase(unittest.TestCase):
+    """Tests for the database."""
+
+    def test_name_io(self) -> None:
+        """Test that names make it to and from database models."""
+        mapping = SemanticMapping(
+            subject=R1,
+            predicate=P1,
+            object=R2,
+            justification=manual_mapping_curation,
+        )
+        database_mapping = SemanticMappingModel.from_semantic_mapping(mapping)
+        self.assertEqual(R1.name, database_mapping.subject_name)
+        self.assertEqual(R2.name, database_mapping.object_name)
+
+    def test_round_trip_database(self) -> None:
+        """Test database roundtrip."""
+        from sqlmodel import Session, SQLModel, create_engine, select
+
+        for expected_mapping in ROUND_TRIP_TESTS:
+            with self.subTest():
+                orm_model = SemanticMappingModel.from_semantic_mapping(expected_mapping)
+                engine = create_engine("sqlite:///:memory:")
+                SQLModel.metadata.create_all(engine)
+
+                with Session(engine) as session:
+                    session.add(orm_model)
+                    session.commit()
+
+                with Session(engine) as session:
+                    statement = select(SemanticMappingModel)
+                    orm_models = session.exec(statement).all()
+                    self.assertEqual(1, len(orm_models))
+                    self.assertEqual(expected_mapping, orm_models[0].to_semantic_mapping())

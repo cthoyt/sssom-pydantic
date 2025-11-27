@@ -5,8 +5,8 @@ from __future__ import annotations
 from typing import Any
 
 import curies
-from curies import NamedReference, Reference
-from curies.vocabulary import exact_match, manual_mapping_curation
+from curies import NamableReference, NamedReference
+from curies.vocabulary import charlie, exact_match, manual_mapping_curation
 
 from sssom_pydantic import MappingSetRecord
 from sssom_pydantic.api import SemanticMapping
@@ -26,7 +26,8 @@ __all__ = [
 
 R1 = NamedReference(prefix="mesh", identifier="C000089", name="ammeline")
 R2 = NamedReference(prefix="chebi", identifier="28646", name="ammeline")
-P1 = Reference(prefix="skos", identifier="exactMatch")
+P1 = NamableReference(prefix="skos", identifier="exactMatch")
+AUTHOR = charlie.pair.to_pydantic()
 
 
 def _m(**kwargs: Any) -> SemanticMapping:
@@ -35,7 +36,7 @@ def _m(**kwargs: Any) -> SemanticMapping:
         subject=R1,
         predicate=P1,
         object=R2,
-        justification=manual_mapping_curation,
+        justification=manual_mapping_curation.curie,
         **kwargs,
     )
 
