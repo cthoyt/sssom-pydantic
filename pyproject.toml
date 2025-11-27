@@ -78,6 +78,7 @@ typing = [
     "types-PyYAML",
     "click-types",
     "types-requests",
+    "sqlmodel",
 ]
 docs-lint = [
     { include-group = "docs" },
@@ -120,6 +121,9 @@ sssompy = [
 ]
 ontoportal = [
     "ontoportal-client>0.0.6",
+]
+database = [
+    "sqlmodel",
 ]
 
 # See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#urls
