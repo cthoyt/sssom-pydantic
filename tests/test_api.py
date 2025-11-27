@@ -74,6 +74,15 @@ ROUND_TRIP_TESTS = [
         justification=manual_mapping_curation.curie,
         provider="https://github.com/biopragmatics/biomappings",
     ),
+    SemanticMapping(
+        subject=R1,
+        subject_type=Reference.from_curie("owl:Class"),
+        predicate=P1,
+        object=R2,
+        object_type=Reference.from_curie("owl:Class"),
+        justification=manual_mapping_curation.curie,
+        provider="https://github.com/biopragmatics/biomappings",
+    ),
 ]
 
 
