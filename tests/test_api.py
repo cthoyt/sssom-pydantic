@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import tempfile
 import types
 import typing
@@ -18,6 +19,7 @@ import sssom_pydantic
 import sssom_pydantic.io
 from sssom_pydantic import MappingSet, MappingSetRecord, SemanticMapping
 from sssom_pydantic.constants import MULTIVALUED
+from sssom_pydantic.database import SemanticMappingModel
 from sssom_pydantic.io import _chomp_frontmatter, append, append_unprocessed, write_unprocessed
 from sssom_pydantic.models import Record
 from tests.cases import (
@@ -26,6 +28,7 @@ from tests.cases import (
     R2,
     TEST_CONVERTER,
     TEST_MAPPING_SET_ID,
+    TEST_METADATA,
     TEST_METADATA_W_PREFIX_MAP,
     TEST_PREFIX_MAP,
     _m,
@@ -189,7 +192,6 @@ class TestIO(unittest.TestCase):
     def test_round_trip(self) -> None:
         """Test that mappings can be written and read."""
         self.maxDiff = None
-        mapping_set = MappingSet(id="https://example.org/test.sssom.tsv")
         converter = curies.Converter.from_prefix_map(
             {**TEST_PREFIX_MAP, "w3id": "https://w3id.org/"}
         )
@@ -197,7 +199,7 @@ class TestIO(unittest.TestCase):
             with self.subTest():
                 path = self.directory.joinpath("test.sssom.tsv")
                 sssom_pydantic.write(
-                    [expected_mapping], path, converter=converter, metadata=mapping_set
+                    [expected_mapping], path, converter=converter, metadata=TEST_METADATA
                 )
                 mappings, _, _ = sssom_pydantic.read(path)
                 self.assertEqual(
@@ -207,6 +209,28 @@ class TestIO(unittest.TestCase):
                     expected_mapping.model_dump(exclude_none=True, exclude_unset=True),
                     mappings[0].model_dump(exclude_none=True, exclude_unset=True),
                 )
+
+    @unittest.skipUnless(
+        importlib.util.find_spec("sqlmodel"), "SQLModel is required for database test"
+    )
+    def test_round_trip_database(self) -> None:
+        """Test database roundtrip."""
+        from sqlmodel import Session, SQLModel, create_engine, select
+
+        for expected_mapping in ROUND_TRIP_TESTS:
+            with self.subTest():
+                m = SemanticMappingModel.from_semantic_mapping(expected_mapping)
+                engine = create_engine("sqlite:///:memory:")
+                SQLModel.metadata.create_all(engine)
+
+                with Session(engine) as session:
+                    session.add(m)
+                    session.commit()
+
+                with Session(engine) as session:
+                    statement = select(SemanticMappingModel)
+                    mappings = session.exec(statement).all()
+                    self.assertEqual(1, len(mappings))
 
     def test_read_metadata_empty_line(self) -> None:
         """Test reading from a file whose metadata has a blank line in it."""

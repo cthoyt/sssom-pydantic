@@ -13,7 +13,7 @@ from curies.database import (
 from pydantic import AnyUrl
 from sqlalchemy import Dialect, TypeDecorator
 from sqlalchemy.sql.type_api import TypeEngine
-from sqlmodel import JSON, Column, Field, Session, SQLModel, String, create_engine, select
+from sqlmodel import JSON, Column, Field, SQLModel, String
 from typing_extensions import Self
 
 from sssom_pydantic import MappingTool, SemanticMapping
@@ -46,6 +46,26 @@ class MappingToolTypeDecorator(TypeDecorator[MappingTool]):
         if value is None:
             return None
         return MappingTool.model_validate(value)
+
+
+class AnyURLTypeDecorator(TypeDecorator[AnyUrl]):
+    """A SQLAlchemy type decorator for a URL."""
+
+    impl: ClassVar[type[TypeEngine[str]]] = String  # type:ignore[misc]
+    #: Set SQLAlchemy caching to true
+    cache_ok: ClassVar[bool] = True  # type:ignore[misc]
+
+    def process_bind_param(self, value: AnyUrl | None, dialect: Dialect) -> str | None:
+        """Convert the Python object into a database value."""
+        if value is None:
+            return None
+        return str(value)
+
+    def process_result_value(self, value: str | None, dialect: Dialect) -> AnyUrl | None:
+        """Convert the database value into a Python object."""
+        if value is None:
+            return None
+        return AnyUrl(value)
 
 
 class SemanticMappingModel(SQLModel, table=True):
@@ -108,7 +128,7 @@ class SemanticMappingModel(SQLModel, table=True):
     cardinality: Cardinality | None = Field(None, sa_type=String)
     cardinality_scope: list[str] | None = Field(None, sa_type=JSON)
     # https://w3id.org/sssom/mapping_provider
-    provider: AnyUrl | None = Field(None, sa_type=String)
+    provider: AnyUrl | None = Field(None, sa_column=Column(AnyURLTypeDecorator()))
     # https://w3id.org/sssom/mapping_source
     source: Reference | None = Field(None, sa_column=get_reference_sa_column())
 
@@ -123,30 +143,3 @@ class SemanticMappingModel(SQLModel, table=True):
     def from_semantic_mapping(cls, mapping: SemanticMapping) -> Self:
         """Get from a non-ORM mapping."""
         return cls.model_validate(mapping.model_dump())
-
-
-
-def main():
-    from biomappings import DEFAULT_REPO
-
-    mappings = DEFAULT_REPO.read_predicted_mappings()
-
-    engine = create_engine("sqlite:///:memory:")
-    SQLModel.metadata.create_all(engine)
-
-    with Session(engine) as session:
-        session.add_all(
-            [SemanticMappingModel.from_semantic_mapping(mapping) for mapping in mappings]
-        )
-        session.commit()
-
-    with Session(engine) as session:
-        statement = select(SemanticMappingModel).where(
-            SemanticMappingModel.mapping_tool is not None
-        )
-        for _xxx in session.exec(statement).all():
-            pass
-
-
-if __name__ == "__main__":
-    main()
