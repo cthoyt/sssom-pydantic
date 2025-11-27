@@ -219,18 +219,19 @@ class TestIO(unittest.TestCase):
 
         for expected_mapping in ROUND_TRIP_TESTS:
             with self.subTest():
-                m = SemanticMappingModel.from_semantic_mapping(expected_mapping)
+                orm_model = SemanticMappingModel.from_semantic_mapping(expected_mapping)
                 engine = create_engine("sqlite:///:memory:")
                 SQLModel.metadata.create_all(engine)
 
                 with Session(engine) as session:
-                    session.add(m)
+                    session.add(orm_model)
                     session.commit()
 
                 with Session(engine) as session:
                     statement = select(SemanticMappingModel)
-                    mappings = session.exec(statement).all()
-                    self.assertEqual(1, len(mappings))
+                    orm_models = session.exec(statement).all()
+                    self.assertEqual(1, len(orm_models))
+                    self.assertEqual(expected_mapping, orm_models[0].to_semantic_mapping())
 
     def test_read_metadata_empty_line(self) -> None:
         """Test reading from a file whose metadata has a blank line in it."""

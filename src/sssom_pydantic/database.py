@@ -143,3 +143,7 @@ class SemanticMappingModel(SQLModel, table=True):
     def from_semantic_mapping(cls, mapping: SemanticMapping) -> Self:
         """Get from a non-ORM mapping."""
         return cls.model_validate(mapping.model_dump())
+
+    def to_semantic_mapping(self) -> SemanticMapping:
+        """Get a non-ORM mapping."""
+        return SemanticMapping.model_validate(self.model_dump())
