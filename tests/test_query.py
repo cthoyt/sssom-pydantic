@@ -2,6 +2,7 @@
 
 import unittest
 
+from curies import NamedReference
 from curies.vocabulary import exact_match, unspecified_matching_process
 
 from sssom_pydantic import SemanticMapping
@@ -19,33 +20,30 @@ class TestQuery(unittest.TestCase):
 
     def test_query(self) -> None:
         """Test querying."""
-        mappings = [
-            SemanticMapping(
-                subject="mesh:1234",
-                predicate=exact_match,
-                object="chebi:1234",
-                justification=unspecified_matching_process,
-            ),
-            SemanticMapping(
-                subject="chebi:1234",
-                predicate=exact_match,
-                object="mesh:1234",
-                justification=unspecified_matching_process,
-            ),
-        ]
+        m1 = SemanticMapping(
+            subject="mesh:1234",
+            predicate=exact_match,
+            object="chebi:1234",
+            justification=unspecified_matching_process,
+        )
+        m2 = SemanticMapping(
+            subject="chebi:1234",
+            predicate=exact_match,
+            object="mesh:1234",
+            justification=unspecified_matching_process,
+        )
+        m3 = SemanticMapping(
+            subject=NamedReference.from_curie("chebi:1234", name="test"),
+            predicate=exact_match,
+            object=NamedReference.from_curie("mesh:1234", name="test"),
+            justification=unspecified_matching_process,
+        )
+
+        mappings = [m1, m2, m3]
         cases: list[tuple[Query, list[SemanticMapping]]] = [
             (Query(), mappings),
-            (
-                Query(subject_prefix="chebi"),
-                [
-                    SemanticMapping(
-                        subject="chebi:1234",
-                        predicate=exact_match,
-                        object="mesh:1234",
-                        justification=unspecified_matching_process,
-                    )
-                ],
-            ),
+            (Query(subject_prefix="chebi"), [m2, m3]),
+            (Query(same_text=True), [m3]),
         ]
         for i, (query, expected) in enumerate(cases):
             with self.subTest(i=i):
