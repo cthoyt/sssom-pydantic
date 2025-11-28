@@ -13,11 +13,12 @@ from curies.database import (
     get_reference_list_sa_column,
     get_reference_sa_column,
 )
+from curies.vocabulary import manual_mapping_curation
 from pydantic import AnyUrl
 from sqlalchemy import Dialect, TypeDecorator
 from sqlalchemy.engine.base import Engine
 from sqlalchemy.sql.type_api import TypeEngine
-from sqlmodel import JSON, Column, Field, Session, SQLModel, String, func, select
+from sqlmodel import JSON, Column, Field, Session, SQLModel, String, and_, func, select
 from sqlmodel.sql._expression_select_cls import SelectOfScalar
 from typing_extensions import Self
 
@@ -29,6 +30,9 @@ if TYPE_CHECKING:
     from sqlalchemy.sql.selectable import ColumnExpressionArgument  # type:ignore[attr-defined]
 
 __all__ = [
+    "NEGATIVE_MAPPING_CLAUSE",
+    "POSITIVE_MAPPING_CLAUSE",
+    "UNCURATED_CLAUSE",
     "SemanticMappingDatabase",
     "SemanticMappingModel",
 ]
@@ -290,3 +294,14 @@ class SemanticMappingDatabase:
             if offset is not None:
                 statement = statement.offset(offset)
             return session.exec(statement).all()
+
+
+POSITIVE_MAPPING_CLAUSE = and_(
+    SemanticMappingModel.justification == manual_mapping_curation,
+    SemanticMappingModel.predicate_modifier.is_(None),  # type:ignore[union-attr]
+)
+NEGATIVE_MAPPING_CLAUSE = and_(
+    SemanticMappingModel.justification == manual_mapping_curation,
+    SemanticMappingModel.predicate_modifier == "Not",
+)
+UNCURATED_CLAUSE = SemanticMappingModel.justification != manual_mapping_curation
