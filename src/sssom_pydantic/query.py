@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterable
 
 from pydantic import BaseModel, Field
 
@@ -55,7 +55,7 @@ class Query(BaseModel):
     )
 
 
-def filter_mappings(mappings: Iterator[SemanticMapping], state: Query) -> Iterator[SemanticMapping]:
+def filter_mappings(mappings: Iterable[SemanticMapping], state: Query) -> Iterable[SemanticMapping]:
     """Filter mappings based on a query."""
     for name, model_field in Query.model_fields.items():
         value = getattr(state, name)
