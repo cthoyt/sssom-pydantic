@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import contextlib
 import datetime
+from collections.abc import Generator, Iterable
 from typing import Any, ClassVar, Literal
 
+import sqlmodel
 from curies import NamableReference, Reference
 from curies.database import (
     get_reference_list_sa_column,
@@ -12,14 +15,18 @@ from curies.database import (
 )
 from pydantic import AnyUrl
 from sqlalchemy import Dialect, TypeDecorator
+from sqlalchemy.engine.base import Engine
 from sqlalchemy.sql.type_api import TypeEngine
-from sqlmodel import JSON, Column, Field, SQLModel, String
+from sqlmodel import JSON, Column, Field, Session, SQLModel, String, func, select
+from sqlmodel.sql._expression_select_cls import SelectOfScalar
 from typing_extensions import Self
 
 from sssom_pydantic import MappingTool, SemanticMapping
+from sssom_pydantic.api import SemanticMappingHash
 from sssom_pydantic.models import Cardinality
 
 __all__ = [
+    "SemanticMappingDatabase",
     "SemanticMappingModel",
 ]
 
@@ -164,3 +171,96 @@ class SemanticMappingModel(SQLModel, table=True):
             d["object"]["name"] = object_name
             d["object"] = NamableReference.model_validate(d["object"])
         return SemanticMapping.model_validate(d)
+
+
+class SemanticMappingDatabase:
+    """Interact with a database."""
+
+    def __init__(
+        self,
+        *,
+        engine: Engine,
+        semantic_mapping_hash: SemanticMappingHash,
+        session_cls: type[Session] | None = None,
+    ) -> None:
+        """Construct a database."""
+        self.engine = engine
+        self.session_cls = session_cls if session_cls is not None else Session
+        self._hsh = semantic_mapping_hash
+        SQLModel.metadata.create_all(self.engine)
+
+    @classmethod
+    def from_connection(
+        cls,
+        *,
+        connection: str,
+        semantic_mapping_hash: SemanticMappingHash,
+        session_cls: type[Session] | None = None,
+    ) -> Self:
+        """Construct a database by a connection string."""
+        return cls(
+            engine=sqlmodel.create_engine(connection),
+            semantic_mapping_hash=semantic_mapping_hash,
+            session_cls=session_cls,
+        )
+
+    @classmethod
+    def memory(
+        cls,
+        *,
+        semantic_mapping_hash: SemanticMappingHash,
+        session_cls: type[Session] | None = None,
+    ) -> Self:
+        """Construct an in-memory database."""
+        return cls.from_connection(
+            connection="sqlite:///:memory:",
+            semantic_mapping_hash=semantic_mapping_hash,
+            session_cls=session_cls,
+        )
+
+    @contextlib.contextmanager
+    def get_session(self) -> Generator[Session, None, None]:
+        """Open a context manager for a session."""
+        with self.session_cls(self.engine) as session:
+            yield session
+
+    def count_mappings(self) -> int:
+        """Count the mappings in the database."""
+        with self.get_session() as session:
+            statement = select(func.count()).select_from(SemanticMappingModel)
+            return session.exec(statement).one()
+
+    def add_mapping(self, mapping: SemanticMapping) -> None:
+        """Add a mapping to the database."""
+        with self.get_session() as session:
+            session.add(
+                SemanticMappingModel.from_semantic_mapping(
+                    mapping.model_copy(update={"record": self._hsh(mapping)})
+                )
+            )
+            session.commit()
+
+    def add_mappings(self, mappings: Iterable[SemanticMapping]) -> None:
+        """Add mappings to the database."""
+        with self.get_session() as session:
+            session.add_all(
+                SemanticMappingModel.from_semantic_mapping(
+                    mapping.model_copy(update={"record": self._hsh(mapping)})
+                )
+                for mapping in mappings
+            )
+            session.commit()
+
+    @staticmethod
+    def _get_mapping_by_reference(reference: Reference) -> SelectOfScalar[SemanticMappingModel]:
+        return select(SemanticMappingModel).where(SemanticMappingModel.record == reference)
+
+    def delete_mapping(self, reference: Reference | SemanticMapping) -> None:
+        """Delete a mapping from the database."""
+        if isinstance(reference, SemanticMapping):
+            reference = self._hsh(reference)
+
+        with self.get_session() as session:
+            if obj := session.exec(self._get_mapping_by_reference(reference)).first():
+                session.delete(obj)
+                session.commit()

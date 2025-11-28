@@ -29,6 +29,7 @@ __all__ = [
     "PredicateModifier",
     "RequiredSemanticMapping",
     "SemanticMapping",
+    "SemanticMappingHash",
     "SemanticMappingPredicate",
 ]
 
@@ -397,6 +398,9 @@ def _xx(s: str) -> tuple[str, str]:
 
 #: A predicate for a semantic mapping
 SemanticMappingPredicate: TypeAlias = Callable[[SemanticMapping], bool]
+
+#: A function that hashes a semantic mapping into a reference
+SemanticMappingHash: TypeAlias = Callable[[SemanticMapping], Reference]
 
 
 class MappingTool(BaseModel):
