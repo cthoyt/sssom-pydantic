@@ -25,6 +25,7 @@ from typing_extensions import Self
 from sssom_pydantic import MappingTool, SemanticMapping
 from sssom_pydantic.api import SemanticMappingHash
 from sssom_pydantic.models import Cardinality
+from sssom_pydantic.process import Mark, curate
 
 if TYPE_CHECKING:
     from sqlalchemy.sql.selectable import ColumnExpressionArgument  # type:ignore[attr-defined]
@@ -294,6 +295,31 @@ class SemanticMappingDatabase:
             if offset is not None:
                 statement = statement.offset(offset)
             return session.exec(statement).all()
+
+    def curate(
+        self,
+        reference: Reference,
+        authors: Reference | list[Reference],
+        mark: Mark,
+        confidence: float | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """Curate a mapping."""
+        if isinstance(authors, Reference):
+            authors = [authors]
+        mapping = self.get_mapping(reference)
+        if mapping is None:
+            raise ValueError
+        new_mapping = curate(
+            mapping.to_semantic_mapping(),
+            authors=authors,
+            mark=mark,
+            confidence=confidence,
+            **kwargs,
+        )
+        new_mapping = new_mapping.model_copy(update={"record": self._hsh(new_mapping)})
+        self.add_mapping(new_mapping)
+        self.delete_mapping(reference)
 
 
 POSITIVE_MAPPING_CLAUSE = and_(
