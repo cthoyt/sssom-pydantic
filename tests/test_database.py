@@ -13,6 +13,7 @@ from sssom_pydantic.database import (
     QUERY_TO_CLAUSE,
     SemanticMappingDatabase,
     SemanticMappingModel,
+    clauses_from_query,
 )
 from sssom_pydantic.query import Query
 from tests import cases
@@ -71,6 +72,27 @@ class TestDatabase(unittest.TestCase):
         self.assertEqual(manual_mapping_curation, mappings[0].justification)
         self.assertIsNotNone(mappings[0].predicate_modifier)
         self.assertIsNone(mappings[0].curation_rule_text)
+
+        # test no-op query
+        query = Query()
+        mappings = db.get_mappings(where_clauses=clauses_from_query(query))
+        self.assertEqual(4, len(mappings))
+
+        query = Query(subject_prefix="mesh")
+        mappings = db.get_mappings(where_clauses=clauses_from_query(query))
+        self.assertEqual(4, len(mappings))
+
+        query = Query(object_prefix="chebi")
+        mappings = db.get_mappings(where_clauses=clauses_from_query(query))
+        self.assertEqual(4, len(mappings))
+
+        query = Query(subject_prefix="chebi")
+        mappings = db.get_mappings(where_clauses=clauses_from_query(query))
+        self.assertEqual(0, len(mappings))
+
+        query = Query(object_prefix="mesh")
+        mappings = db.get_mappings(where_clauses=clauses_from_query(query))
+        self.assertEqual(0, len(mappings))
 
         db.delete_mapping(mapping_1)
 
