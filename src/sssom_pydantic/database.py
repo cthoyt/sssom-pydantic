@@ -341,7 +341,7 @@ QUERY_TO_CLAUSE: dict[str, Callable[[str], ColumnExpressionArgument[bool]]] = {
         col(SemanticMappingModel.subject_name).icontains(value.lower()),
         col(SemanticMappingModel.object).icontains(value.lower()),
         col(SemanticMappingModel.object_name).icontains(value.lower()),
-        col(SemanticMappingModel.mapping_tool).icontains(value.lower()),
+        func.json_extract(SemanticMappingModel.mapping_tool, "$.name").icontains(value.lower()),
     ),
     "subject_prefix": lambda value: col(SemanticMappingModel.subject).icontains(value.lower()),
     "subject_query": lambda value: or_(
@@ -358,7 +358,7 @@ QUERY_TO_CLAUSE: dict[str, Callable[[str], ColumnExpressionArgument[bool]]] = {
         col(SemanticMappingModel.object).icontains(value.lower()),
     ),
     "mapping_tool": lambda value: or_(
-        col(SemanticMappingModel.mapping_tool).icontains(value.lower()),
+        func.json_extract(SemanticMappingModel.mapping_tool, "$.name").icontains(value.lower()),
     ),
 }
 

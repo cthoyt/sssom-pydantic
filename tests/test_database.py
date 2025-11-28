@@ -95,6 +95,10 @@ class TestDatabase(unittest.TestCase):
         mappings = db.get_mappings(where_clauses=clauses_from_query(query))
         self.assertEqual(0, len(mappings))
 
+        query = Query(query="mesh")
+        mappings = db.get_mappings(where_clauses=clauses_from_query(query))
+        self.assertEqual(4, len(mappings))
+
         db.delete_mapping(mapping_1)
 
         self.assertEqual(3, db.count_mappings())
@@ -108,6 +112,12 @@ class TestDatabase(unittest.TestCase):
         for name, model_field in Query.model_fields.items():
             if model_field.annotation == str | None:
                 self.assertIn(name, QUERY_TO_CLAUSE)
+
+    def test_clause_generation(self) -> None:
+        """Test clause generation."""
+        query = Query(query="hello")
+        clauses = clauses_from_query(query)
+        self.assertEqual(1, len(clauses))
 
     def test_queries(self) -> None:
         """Generate and execute variety of queries."""
