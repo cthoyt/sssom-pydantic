@@ -4,6 +4,7 @@ import hashlib
 import unittest
 
 from curies import Reference
+from curies.vocabulary import lexical_matching_process
 
 from sssom_pydantic import SemanticMapping
 from sssom_pydantic.database import SemanticMappingDatabase
@@ -27,15 +28,20 @@ class TestDatabase(unittest.TestCase):
 
     def test_db(self) -> None:
         """Test the database."""
-        mapping = cases._m()
+        mapping_1 = cases._m()
+        mapping_2 = cases._m(justification=lexical_matching_process)
+
         db = SemanticMappingDatabase.memory(semantic_mapping_hash=_default_hash)
 
         self.assertEqual(0, db.count_mappings())
 
-        db.add_mapping(mapping)
+        db.add_mapping(mapping_1)
+        db.add_mapping(mapping_2)
+
+        self.assertEqual(2, db.count_mappings())
+
+        db.delete_mapping(mapping_1)
 
         self.assertEqual(1, db.count_mappings())
-
-        db.delete_mapping(mapping)
-
-        self.assertEqual(0, db.count_mappings())
+        self.assertIsNone(db.get_mapping(_default_hash(mapping_1)))
+        self.assertIsNotNone(db.get_mapping(_default_hash(mapping_2)))

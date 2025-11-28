@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 import curies
-from curies import NamableReference, NamedReference
+from curies import NamableReference, NamedReference, Reference
 from curies.vocabulary import charlie, exact_match, manual_mapping_curation
 
 from sssom_pydantic import MappingSetRecord
@@ -30,13 +30,17 @@ P1 = NamableReference(prefix="skos", identifier="exactMatch")
 AUTHOR = charlie.pair.to_pydantic()
 
 
-def _m(**kwargs: Any) -> SemanticMapping:
+def _m(
+    predicate: Reference | None = None, justification: Reference | None = None, **kwargs: Any
+) -> SemanticMapping:
     """Construct a base semantic mapping."""
     return SemanticMapping(
         subject=R1,
-        predicate=P1,
+        predicate=P1 if predicate is None else predicate,
         object=R2,
-        justification=manual_mapping_curation.curie,
+        justification=manual_mapping_curation.curie
+        if justification is None
+        else justification.curie,
         **kwargs,
     )
 

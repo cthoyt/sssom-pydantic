@@ -5,7 +5,7 @@ from __future__ import annotations
 import contextlib
 import datetime
 from collections.abc import Generator, Iterable
-from typing import Any, ClassVar, Literal
+from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 import sqlmodel
 from curies import NamableReference, Reference
@@ -24,6 +24,9 @@ from typing_extensions import Self
 from sssom_pydantic import MappingTool, SemanticMapping
 from sssom_pydantic.api import SemanticMappingHash
 from sssom_pydantic.models import Cardinality
+
+if TYPE_CHECKING:
+    from sqlalchemy.sql.selectable import ColumnExpressionArgument  # type:ignore[attr-defined]
 
 __all__ = [
     "SemanticMappingDatabase",
@@ -224,10 +227,14 @@ class SemanticMappingDatabase:
         with self.session_cls(self.engine) as session:
             yield session
 
-    def count_mappings(self) -> int:
+    def count_mappings(
+        self, where_clauses: list[ColumnExpressionArgument[bool]] | None = None
+    ) -> int:
         """Count the mappings in the database."""
         with self.get_session() as session:
             statement = select(func.count()).select_from(SemanticMappingModel)
+            if where_clauses:
+                statement = statement.where(*where_clauses)
             return session.exec(statement).one()
 
     def add_mapping(self, mapping: SemanticMapping) -> None:
@@ -261,3 +268,8 @@ class SemanticMappingDatabase:
         if isinstance(reference, SemanticMapping):
             return self._hsh(reference)
         return reference
+
+    def get_mapping(self, reference: Reference) -> SemanticMappingModel | None:
+        """Get a mapping."""
+        with self.get_session() as session:
+            return session.exec(self._get_mapping_by_reference(reference)).first()
