@@ -15,6 +15,7 @@ from sssom_pydantic.database import (
     SemanticMappingModel,
     clauses_from_query,
 )
+from sssom_pydantic.examples import EXAMPLE_MAPPINGS
 from sssom_pydantic.query import Query
 from tests import cases
 
@@ -107,3 +108,13 @@ class TestDatabase(unittest.TestCase):
         for name, model_field in Query.model_fields.items():
             if model_field.annotation == str | None:
                 self.assertIn(name, QUERY_TO_CLAUSE)
+
+    def test_queries(self) -> None:
+        """Generate and execute variety of queries."""
+        db = SemanticMappingDatabase.memory(semantic_mapping_hash=_default_hash)
+        db.add_mappings(EXAMPLE_MAPPINGS)
+        for mapping in EXAMPLE_MAPPINGS:
+            queries = [Query(query=mapping.subject.prefix)]
+            for query in queries:
+                results = db.get_mappings(clauses_from_query(query))
+                self.assertNotEqual(0, len(results))
