@@ -1,7 +1,8 @@
 """Test queries."""
 
 import unittest
-from sssom_pydantic.query import Query, QUERY_TO_FUNC
+
+from sssom_pydantic.query import QUERY_TO_FUNC, Query
 
 
 class TestQuery(unittest.TestCase):

@@ -3,14 +3,10 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterator
-from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, Field
 
 from .api import SemanticMapping
-
-if TYPE_CHECKING:
-    pass  # type:ignore[attr-defined]
 
 __all__ = [
     "Query",
@@ -87,7 +83,8 @@ def filter_mappings(mappings: Iterator[SemanticMapping], state: Query) -> Iterat
     yield from mappings
 
 
-QUERY_TO_FUNC: dict[str, Callable[[SemanticMapping], list[str]]] = {
+#: A mapping from :class:`Query` fields to functions producing strings for checking
+QUERY_TO_FUNC: dict[str, Callable[[SemanticMapping], list[str | None]]] = {
     "query": lambda mapping: [
         mapping.subject.curie,
         mapping.subject_name,

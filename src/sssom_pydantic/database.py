@@ -333,7 +333,8 @@ NEGATIVE_MAPPING_CLAUSE = and_(
 )
 UNCURATED_CLAUSE = SemanticMappingModel.justification != manual_mapping_curation
 
-
+#: A mapping from :class:`Query` fields to functions that produce appropriate
+#: clauses for database querying
 QUERY_TO_CLAUSE: dict[str, Callable[[str], ColumnExpressionArgument[bool]]] = {
     "query": lambda value: or_(
         col(SemanticMappingModel.subject).icontains(value.lower()),
@@ -362,10 +363,10 @@ QUERY_TO_CLAUSE: dict[str, Callable[[str], ColumnExpressionArgument[bool]]] = {
 }
 
 
-def clauses_from_query(state: Query) -> list[ColumnExpressionArgument[bool]]:
+def clauses_from_query(query: Query) -> list[ColumnExpressionArgument[bool]]:
     """Get clauses from the query."""
     return [
         QUERY_TO_CLAUSE[name](value)
         for name in Query.model_fields
-        if (value := getattr(state, name))
+        if (value := getattr(query, name))
     ]
