@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import datetime
-from collections.abc import Generator, Iterable, Sequence
+from collections.abc import Callable, Generator, Iterable, Sequence
 from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 import sqlmodel
@@ -18,7 +18,7 @@ from pydantic import AnyUrl
 from sqlalchemy import Dialect, TypeDecorator
 from sqlalchemy.engine.base import Engine
 from sqlalchemy.sql.type_api import TypeEngine
-from sqlmodel import JSON, Column, Field, Session, SQLModel, String, and_, func, select
+from sqlmodel import JSON, Column, Field, Session, SQLModel, String, and_, col, func, or_, select
 from sqlmodel.sql._expression_select_cls import SelectOfScalar
 from typing_extensions import Self
 
@@ -26,6 +26,7 @@ from sssom_pydantic import MappingTool, SemanticMapping
 from sssom_pydantic.api import SemanticMappingHash
 from sssom_pydantic.models import Cardinality
 from sssom_pydantic.process import Mark, curate
+from sssom_pydantic.query import Query
 
 if TYPE_CHECKING:
     from sqlalchemy.sql.selectable import ColumnExpressionArgument  # type:ignore[attr-defined]
@@ -331,3 +332,41 @@ NEGATIVE_MAPPING_CLAUSE = and_(
     SemanticMappingModel.predicate_modifier == "Not",
 )
 UNCURATED_CLAUSE = SemanticMappingModel.justification != manual_mapping_curation
+
+#: A mapping from :class:`Query` fields to functions that produce appropriate
+#: clauses for database querying
+QUERY_TO_CLAUSE: dict[str, Callable[[str], ColumnExpressionArgument[bool]]] = {
+    "query": lambda value: or_(
+        col(SemanticMappingModel.subject).icontains(value.lower()),
+        col(SemanticMappingModel.subject_name).icontains(value.lower()),
+        col(SemanticMappingModel.object).icontains(value.lower()),
+        col(SemanticMappingModel.object_name).icontains(value.lower()),
+        func.json_extract(SemanticMappingModel.mapping_tool, "$.name").icontains(value.lower()),
+    ),
+    "subject_prefix": lambda value: col(SemanticMappingModel.subject).icontains(value.lower()),
+    "subject_query": lambda value: or_(
+        col(SemanticMappingModel.subject).icontains(value.lower()),
+        col(SemanticMappingModel.subject_name).icontains(value.lower()),
+    ),
+    "object_query": lambda value: or_(
+        col(SemanticMappingModel.object).icontains(value.lower()),
+        col(SemanticMappingModel.object_name).icontains(value.lower()),
+    ),
+    "object_prefix": lambda value: col(SemanticMappingModel.object).icontains(value.lower()),
+    "prefix": lambda value: or_(
+        col(SemanticMappingModel.subject).icontains(value.lower()),
+        col(SemanticMappingModel.object).icontains(value.lower()),
+    ),
+    "mapping_tool": lambda value: or_(
+        func.json_extract(SemanticMappingModel.mapping_tool, "$.name").icontains(value.lower()),
+    ),
+}
+
+
+def clauses_from_query(query: Query) -> list[ColumnExpressionArgument[bool]]:
+    """Get clauses from the query."""
+    return [
+        QUERY_TO_CLAUSE[name](value)
+        for name in Query.model_fields
+        if (value := getattr(query, name))
+    ]

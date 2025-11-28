@@ -10,9 +10,13 @@ from sssom_pydantic import SemanticMapping
 from sssom_pydantic.database import (
     NEGATIVE_MAPPING_CLAUSE,
     POSITIVE_MAPPING_CLAUSE,
+    QUERY_TO_CLAUSE,
     SemanticMappingDatabase,
     SemanticMappingModel,
+    clauses_from_query,
 )
+from sssom_pydantic.examples import EXAMPLE_MAPPINGS
+from sssom_pydantic.query import Query
 from tests import cases
 
 USER = Reference(prefix="orcid", identifier="1234")
@@ -70,6 +74,31 @@ class TestDatabase(unittest.TestCase):
         self.assertIsNotNone(mappings[0].predicate_modifier)
         self.assertIsNone(mappings[0].curation_rule_text)
 
+        # test no-op query
+        query = Query()
+        mappings = db.get_mappings(where_clauses=clauses_from_query(query))
+        self.assertEqual(4, len(mappings))
+
+        query = Query(subject_prefix="mesh")
+        mappings = db.get_mappings(where_clauses=clauses_from_query(query))
+        self.assertEqual(4, len(mappings))
+
+        query = Query(object_prefix="chebi")
+        mappings = db.get_mappings(where_clauses=clauses_from_query(query))
+        self.assertEqual(4, len(mappings))
+
+        query = Query(subject_prefix="chebi")
+        mappings = db.get_mappings(where_clauses=clauses_from_query(query))
+        self.assertEqual(0, len(mappings))
+
+        query = Query(object_prefix="mesh")
+        mappings = db.get_mappings(where_clauses=clauses_from_query(query))
+        self.assertEqual(0, len(mappings))
+
+        query = Query(query="mesh")
+        mappings = db.get_mappings(where_clauses=clauses_from_query(query))
+        self.assertEqual(4, len(mappings))
+
         db.delete_mapping(mapping_1)
 
         self.assertEqual(3, db.count_mappings())
@@ -77,3 +106,25 @@ class TestDatabase(unittest.TestCase):
         self.assertIsNotNone(db.get_mapping(_default_hash(mapping_2)))
         self.assertIsNotNone(db.get_mapping(_default_hash(mapping_3)))
         self.assertIsNotNone(db.get_mapping(_default_hash(mapping_4)))
+
+    def test_query_functionality(self) -> None:
+        """Check that all query fields are implemented."""
+        for name, model_field in Query.model_fields.items():
+            if model_field.annotation == str | None:
+                self.assertIn(name, QUERY_TO_CLAUSE)
+
+    def test_clause_generation(self) -> None:
+        """Test clause generation."""
+        query = Query(query="hello")
+        clauses = clauses_from_query(query)
+        self.assertEqual(1, len(clauses))
+
+    def test_queries(self) -> None:
+        """Generate and execute variety of queries."""
+        db = SemanticMappingDatabase.memory(semantic_mapping_hash=_default_hash)
+        db.add_mappings(EXAMPLE_MAPPINGS)
+        for mapping in EXAMPLE_MAPPINGS:
+            queries = [Query(query=mapping.subject.prefix)]
+            for query in queries:
+                results = db.get_mappings(clauses_from_query(query))
+                self.assertNotEqual(0, len(results))

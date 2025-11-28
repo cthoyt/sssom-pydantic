@@ -20,6 +20,7 @@ import sssom_pydantic.io
 from sssom_pydantic import MappingSet, MappingSetRecord, SemanticMapping
 from sssom_pydantic.constants import MULTIVALUED
 from sssom_pydantic.database import SemanticMappingModel
+from sssom_pydantic.examples import EXAMPLE_MAPPINGS
 from sssom_pydantic.io import _chomp_frontmatter, append, append_unprocessed, write_unprocessed
 from sssom_pydantic.models import Record
 from tests.cases import (
@@ -35,55 +36,6 @@ from tests.cases import (
     _m,
     _r,
 )
-
-# TODO grow this list to cover the whole spec, and also have
-#  a meta-test that this is complete wrt the spec
-ROUND_TRIP_TESTS = [
-    SemanticMapping(
-        subject=R1,
-        predicate=P1,
-        object=R2,
-        source=Reference.from_curie("w3id:biopragmatics/biomappings/sssom/biomappings.sssom.tsv"),
-        justification=manual_mapping_curation.curie,
-    ),
-    SemanticMapping(  # test multiple random keys in `other`
-        subject=R1,
-        predicate=P1,
-        object=R2,
-        justification=manual_mapping_curation.curie,
-        other={"key1": "value1", "key2": "value2"},
-    ),
-    SemanticMapping(  # test a single key in `other`
-        subject=R1,
-        predicate=P1,
-        object=R2,
-        justification=manual_mapping_curation.curie,
-        other={"key": "value"},
-    ),
-    SemanticMapping(
-        subject=R1,
-        predicate=P1,
-        object=R2,
-        justification=manual_mapping_curation.curie,
-        cardinality="1:1",
-    ),
-    SemanticMapping(
-        subject=R1,
-        predicate=P1,
-        object=R2,
-        justification=manual_mapping_curation.curie,
-        provider="https://github.com/biopragmatics/biomappings",
-    ),
-    SemanticMapping(
-        subject=R1,
-        subject_type=Reference.from_curie("owl:Class"),
-        predicate=P1,
-        object=R2,
-        object_type=Reference.from_curie("owl:Class"),
-        justification=manual_mapping_curation.curie,
-        provider="https://github.com/biopragmatics/biomappings",
-    ),
-]
 
 
 class TestIO(unittest.TestCase):
@@ -205,7 +157,7 @@ class TestIO(unittest.TestCase):
         converter = curies.Converter.from_prefix_map(
             {**TEST_PREFIX_MAP, "w3id": "https://w3id.org/"}
         )
-        for expected_mapping in ROUND_TRIP_TESTS:
+        for expected_mapping in EXAMPLE_MAPPINGS:
             with self.subTest():
                 path = self.directory.joinpath("test.sssom.tsv")
                 sssom_pydantic.write(
@@ -405,7 +357,7 @@ class TestDatabase(unittest.TestCase):
         """Test database roundtrip."""
         from sqlmodel import Session, SQLModel, create_engine, select
 
-        for expected_mapping in ROUND_TRIP_TESTS:
+        for expected_mapping in EXAMPLE_MAPPINGS:
             with self.subTest():
                 orm_model = SemanticMappingModel.from_semantic_mapping(expected_mapping)
                 engine = create_engine("sqlite:///:memory:")
