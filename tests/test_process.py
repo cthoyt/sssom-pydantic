@@ -14,8 +14,10 @@ from curies.vocabulary import (
 
 from sssom_pydantic import SemanticMapping
 from sssom_pydantic.api import NOT
-from sssom_pydantic.process import Mark, curate
+from sssom_pydantic.process import UNSURE, Mark, curate
 from tests.cases import R1, R2
+
+today = datetime.date.today()
 
 
 class TestProcess(unittest.TestCase):
@@ -23,12 +25,17 @@ class TestProcess(unittest.TestCase):
 
     def test_curate(self) -> None:
         """Test curation."""
-        today = datetime.date.today()
         author = charlie.pair.to_pydantic()
         mapping = SemanticMapping(
             subject=R1, predicate=exact_match, object=R2, justification=lexical_matching_process
         )
-
+        mapping_unsure = SemanticMapping(
+            subject=R1,
+            predicate=exact_match,
+            object=R2,
+            justification=lexical_matching_process,
+            curation_rule_text=[UNSURE],
+        )
         with self.assertRaises(ValueError):
             curate(mapping, author, "NOPE")  # type:ignore[arg-type]
 
@@ -89,16 +96,7 @@ class TestProcess(unittest.TestCase):
                     mapping_date=today,
                 ),
             ),
-            (
-                "unsure",
-                SemanticMapping(
-                    subject=R1,
-                    predicate=exact_match,
-                    object=R2,
-                    justification=lexical_matching_process,
-                    curation_rule_text=["sssom-curator-unsure"],
-                ),
-            ),
+            ("unsure", mapping_unsure),
         ]
         for i, (mark, expected) in enumerate(cases):
             with self.subTest(line=i, mark=mark):
@@ -107,3 +105,29 @@ class TestProcess(unittest.TestCase):
                     curate(mapping, author, mark).model_dump(exclude_none=True, exclude_unset=True),
                     msg=f"[{i}] failed for {mark}",
                 )
+
+    def test_curate_unsure(self) -> None:
+        """Test overriding an unsure annotation."""
+        author = charlie.pair.to_pydantic()
+
+        self.assertEqual(
+            SemanticMapping(
+                subject=R1,
+                predicate=exact_match,
+                object=R2,
+                justification=manual_mapping_curation,
+                authors=[author],
+                mapping_date=today,
+            ).model_dump(exclude_none=True, exclude_unset=True),
+            curate(
+                SemanticMapping(
+                    subject=R1,
+                    predicate=exact_match,
+                    object=R2,
+                    justification=lexical_matching_process,
+                    curation_rule_text=[UNSURE],
+                ),
+                author,
+                "correct",
+            ).model_dump(exclude_none=True, exclude_unset=True),
+        )

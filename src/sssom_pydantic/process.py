@@ -177,6 +177,11 @@ def curate(
         "similarity_score": None,
         **kwargs,
     }
+    if mapping.curation_rule_text is not None and UNSURE in mapping.curation_rule_text:
+        update["curation_rule_text"] = [
+            m for m in mapping.curation_rule_text if m != UNSURE
+        ] or None
+
     if mark in semantic_mapping_scopes:
         update["predicate"] = semantic_mapping_scopes[cast(SemanticMappingScope, mark)]
     elif mark == "incorrect":
