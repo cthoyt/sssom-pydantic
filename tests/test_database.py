@@ -10,9 +10,11 @@ from sssom_pydantic import SemanticMapping
 from sssom_pydantic.database import (
     NEGATIVE_MAPPING_CLAUSE,
     POSITIVE_MAPPING_CLAUSE,
+    QUERY_TO_CLAUSE,
     SemanticMappingDatabase,
     SemanticMappingModel,
 )
+from sssom_pydantic.query import Query
 from tests import cases
 
 USER = Reference(prefix="orcid", identifier="1234")
@@ -77,3 +79,9 @@ class TestDatabase(unittest.TestCase):
         self.assertIsNotNone(db.get_mapping(_default_hash(mapping_2)))
         self.assertIsNotNone(db.get_mapping(_default_hash(mapping_3)))
         self.assertIsNotNone(db.get_mapping(_default_hash(mapping_4)))
+
+    def test_query_functionality(self) -> None:
+        """Check that all query fields are implemented."""
+        for name, model_field in Query.model_fields.items():
+            if model_field.annotation == str | None:
+                self.assertIn(name, QUERY_TO_CLAUSE)
