@@ -59,16 +59,10 @@ def filter_mappings(mappings: Iterable[SemanticMapping], state: Query) -> Iterab
     """Filter mappings based on a query."""
     for name, model_field in Query.model_fields.items():
         value = getattr(state, name)
-        if not value:
+        if value is None:
             continue
         if model_field.annotation == str | None:
-            value = value.casefold()
-            get_strings = QUERY_TO_FUNC[name]
-            mappings = (
-                mapping
-                for mapping in mappings
-                if any(value in string.casefold() for string in get_strings(mapping) if string)
-            )
+            mappings = _help_filter(mappings, name, value)
         elif name == "same_text":
             mappings = (
                 mapping
@@ -83,6 +77,16 @@ def filter_mappings(mappings: Iterable[SemanticMapping], state: Query) -> Iterab
     yield from mappings
 
 
+def _help_filter(
+    mappings: Iterable[SemanticMapping], name: str, value: str
+) -> Iterable[SemanticMapping]:
+    value = value.casefold()
+    get_strings = QUERY_TO_FUNC[name]
+    for mapping in mappings:
+        if any(value in string.casefold() for string in get_strings(mapping) if string):
+            yield mapping
+
+
 #: A mapping from :class:`Query` fields to functions producing strings for checking
 QUERY_TO_FUNC: dict[str, Callable[[SemanticMapping], list[str | None]]] = {
     "query": lambda mapping: [
@@ -94,8 +98,8 @@ QUERY_TO_FUNC: dict[str, Callable[[SemanticMapping], list[str | None]]] = {
     ],
     "subject_prefix": lambda mapping: [mapping.subject.curie],
     "subject_query": lambda mapping: [mapping.subject.curie, mapping.subject_name],
-    "object_query": lambda mapping: [mapping.object.curie, mapping.object_name],
     "object_prefix": lambda mapping: [mapping.object.curie],
+    "object_query": lambda mapping: [mapping.object.curie, mapping.object_name],
     "prefix": lambda mapping: [mapping.subject.curie, mapping.object.curie],
     "mapping_tool": lambda mapping: [mapping.mapping_tool_name],
 }
