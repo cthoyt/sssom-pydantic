@@ -21,6 +21,8 @@ if TYPE_CHECKING:
     from _typeshed import SupportsRichComparison
 
 __all__ = [
+    "UNSURE",
+    "Call",
     "CanonicalMappingTuple",
     "Hasher",
     "Mark",
@@ -47,8 +49,11 @@ Hasher: TypeAlias = Callable[[MappingTypeVar], HashTarget]
 #: A function that makes a comparable score for a semantic mapping
 Scorer: TypeAlias = Callable[[MappingTypeVar], "SupportsRichComparison"]
 
-#: A mark when curating
-Mark: TypeAlias = Literal["correct", "incorrect", "unsure"] | SemanticMappingScope
+#: A decision about a specific curation
+Call: TypeAlias = Literal["correct", "incorrect", "unsure"]
+
+#: A decision or an overwrite for a specific curation
+Mark: TypeAlias = Call | SemanticMappingScope
 
 
 def remove_redundant_internal(
