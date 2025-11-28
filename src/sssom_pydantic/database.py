@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import datetime
-from collections.abc import Generator, Iterable
+from collections.abc import Generator, Iterable, Sequence
 from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 import sqlmodel
@@ -273,3 +273,20 @@ class SemanticMappingDatabase:
         """Get a mapping."""
         with self.get_session() as session:
             return session.exec(self._get_mapping_by_reference(reference)).first()
+
+    def get_mappings(
+        self,
+        where_clauses: list[ColumnExpressionArgument[bool]] | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
+    ) -> Sequence[SemanticMappingModel]:
+        """Get mappings."""
+        with self.get_session() as session:
+            statement = select(SemanticMappingModel)
+            if where_clauses:
+                statement = statement.where(*where_clauses)
+            if limit is not None:
+                statement = statement.limit(limit)
+            if offset is not None:
+                statement = statement.offset(offset)
+            return session.exec(statement).all()

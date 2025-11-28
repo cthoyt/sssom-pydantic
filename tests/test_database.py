@@ -7,7 +7,7 @@ from curies import Reference
 from curies.vocabulary import lexical_matching_process
 
 from sssom_pydantic import SemanticMapping
-from sssom_pydantic.database import SemanticMappingDatabase
+from sssom_pydantic.database import SemanticMappingDatabase, SemanticMappingModel
 from tests import cases
 
 USER = Reference(prefix="orcid", identifier="1234")
@@ -39,6 +39,16 @@ class TestDatabase(unittest.TestCase):
         db.add_mapping(mapping_2)
 
         self.assertEqual(2, db.count_mappings())
+
+        mappings = db.get_mappings(
+            where_clauses=[SemanticMappingModel.justification == lexical_matching_process]
+        )
+        self.assertEqual(1, len(mappings))
+        self.assertEqual(lexical_matching_process, mappings[0].justification)
+
+        self.assertEqual(1, len(db.get_mappings(limit=1)))
+        self.assertEqual(2, len(db.get_mappings()))
+        self.assertEqual(2, len(db.get_mappings(limit=1000)))
 
         db.delete_mapping(mapping_1)
 
