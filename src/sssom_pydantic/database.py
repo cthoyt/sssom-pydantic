@@ -232,13 +232,7 @@ class SemanticMappingDatabase:
 
     def add_mapping(self, mapping: SemanticMapping) -> None:
         """Add a mapping to the database."""
-        with self.get_session() as session:
-            session.add(
-                SemanticMappingModel.from_semantic_mapping(
-                    mapping.model_copy(update={"record": self._hsh(mapping)})
-                )
-            )
-            session.commit()
+        return self.add_mappings([mapping])
 
     def add_mappings(self, mappings: Iterable[SemanticMapping]) -> None:
         """Add mappings to the database."""
@@ -257,10 +251,13 @@ class SemanticMappingDatabase:
 
     def delete_mapping(self, reference: Reference | SemanticMapping) -> None:
         """Delete a mapping from the database."""
-        if isinstance(reference, SemanticMapping):
-            reference = self._hsh(reference)
-
+        reference = self._ensure(reference)
         with self.get_session() as session:
             if obj := session.exec(self._get_mapping_by_reference(reference)).first():
                 session.delete(obj)
                 session.commit()
+
+    def _ensure(self, reference: Reference | SemanticMapping) -> Reference:
+        if isinstance(reference, SemanticMapping):
+            return self._hsh(reference)
+        return reference
