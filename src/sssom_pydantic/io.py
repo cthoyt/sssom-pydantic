@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import csv
+import datetime
 import logging
 from collections import ChainMap, Counter, defaultdict
 from collections.abc import Collection, Generator, Iterable, Mapping, Sequence
@@ -316,13 +317,15 @@ def write_unprocessed(
 
 
 def _get_condensation(records: Iterable[Record]) -> dict[str, Any]:
-    values: defaultdict[str, Counter[str | float | None | tuple[str, ...]]] = defaultdict(Counter)
+    values: defaultdict[str, Counter[str | float | None | datetime.date | tuple[str, ...]]] = (
+        defaultdict(Counter)
+    )
     for record in records:
         for key in PROPAGATABLE:
             value = getattr(record, key)
             if isinstance(value, list):
                 values[key][tuple(sorted(value))] += 1
-            elif value is None or isinstance(value, str | float):
+            elif value is None or isinstance(value, str | float | datetime.date):
                 values[key][value] += 1
             else:
                 raise TypeError(f"unhandled value type: {type(value)} for {value}")
