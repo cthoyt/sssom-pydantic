@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import datetime
+
 from curies import NamableReference, NamedReference, Reference
 from curies.vocabulary import manual_mapping_curation
 
@@ -59,5 +61,22 @@ EXAMPLE_MAPPINGS = [
         object_type=Reference.from_curie("owl:Class"),
         justification=manual_mapping_curation.curie,
         provider="https://github.com/biopragmatics/biomappings",
+    ),
+    # This example is about when the mapping was done
+    SemanticMapping(
+        subject=R1,
+        predicate=P1,
+        object=R2,
+        justification=manual_mapping_curation.curie,
+        mapping_date=datetime.date(2025, 11, 30),
+    ),
+    # This example is about when the mapping was done + publication
+    SemanticMapping(
+        subject=R1,
+        predicate=P1,
+        object=R2,
+        justification=manual_mapping_curation.curie,
+        mapping_date=datetime.date(2025, 11, 29),
+        publication_date=datetime.date(2025, 11, 30),
     ),
 ]
