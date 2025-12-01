@@ -7,7 +7,7 @@ from curies.vocabulary import exact_match, manual_mapping_curation
 from jskos import Concept
 
 from sssom_pydantic import SemanticMapping
-from sssom_pydantic.contrib.jskos_export import mapping_to_jskos
+from sssom_pydantic.contrib.jskos_export import mapping_set_to_jskos
 
 
 class TestJSKOSExport(unittest.TestCase):
@@ -35,4 +35,4 @@ class TestJSKOSExport(unittest.TestCase):
             ],
         }
         expected = Concept.model_validate(d)
-        self.assertEqual(expected, mapping_to_jskos(mapping, converter))
+        self.assertEqual(expected, mapping_set_to_jskos(mapping, converter))
