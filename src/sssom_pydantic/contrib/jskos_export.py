@@ -19,8 +19,8 @@ def mapping_set_to_jskos(
 ) -> Concept:
     """Convert a mapping set to JSKOS."""
     rv = Concept(
-        identifier=metadata.id,
-        license=[{"uri": metadata.license}],
+        identifier=[metadata.id],
+        license=[Concept(uri=metadata.license)],
         mappings=[mapping_to_jskos(mapping, converter) for mapping in mappings],
     )
     return rv
@@ -30,9 +30,11 @@ def mapping_to_jskos(mapping: SemanticMapping, converter: curies.Converter) -> j
     """Convert a mapping to JSKOS."""
     _r = partial(converter.expand_reference, strict=True)
 
-    return jskos.Mapping(
-        type=[_r(mapping.predicate)],
-        source={"memberSet": [{"uri": _r(mapping.source)}]},
-        target={"memberSet": [{"uri": _r(mapping.target)}]},
-        justification=_r(mapping.justification),
+    return jskos.Mapping.model_validate(
+        {
+            "type": [_r(mapping.predicate)],
+            "from": Concept(member_set=[Concept(uri=_r(mapping.subject))]),
+            "to": Concept(member_set=[Concept(uri=_r(mapping.object))]),
+            "justification": _r(mapping.justification),
+        }
     )

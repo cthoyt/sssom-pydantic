@@ -6,7 +6,7 @@ from curies import Converter, Reference
 from curies.vocabulary import exact_match, manual_mapping_curation
 from jskos import Concept
 
-from sssom_pydantic import SemanticMapping
+from sssom_pydantic import MappingSet, SemanticMapping
 from sssom_pydantic.contrib.jskos_export import mapping_set_to_jskos
 
 
@@ -15,7 +15,16 @@ class TestJSKOSExport(unittest.TestCase):
 
     def test_jskos(self) -> None:
         """Test JSKOS export."""
-        converter = Converter()
+        converter = Converter.from_prefix_map(
+            {
+                "skos": "http://www.w3.org/2004/02/skos/core#",
+                "x": "https://example.org/",
+                "semapv": "https://w3id.org/semapv/vocab/",
+            }
+        )
+        mapping_set_id = "https://example.org/mappings"
+        license_uri = "https://creativecommons.org/licenses/by/4.0/"
+        mapping_set = MappingSet(id=mapping_set_id)
         mapping = SemanticMapping(
             subject=Reference(prefix="x", identifier="1"),
             predicate=exact_match,
@@ -23,8 +32,8 @@ class TestJSKOSExport(unittest.TestCase):
             justification=manual_mapping_curation,
         )
         d = {
-            "license": [{"uri": "https://creativecommons.org/licenses/by/4.0/"}],
-            "uri": "https://example.org/mappings",
+            "license": [{"uri": license_uri}],
+            "uri": mapping_set_id,
             "mappings": [
                 {
                     "type": ["http://www.w3.org/2004/02/skos/core#exactMatch"],
@@ -35,4 +44,9 @@ class TestJSKOSExport(unittest.TestCase):
             ],
         }
         expected = Concept.model_validate(d)
-        self.assertEqual(expected, mapping_set_to_jskos(mapping, converter))
+        self.assertEqual(
+            expected.model_dump(exclude_none=True, exclude_unset=True),
+            mapping_set_to_jskos([mapping], converter, mapping_set).model_dump(
+                exclude_unset=True, exclude_none=True
+            ),
+        )
