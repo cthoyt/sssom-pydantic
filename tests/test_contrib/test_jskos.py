@@ -5,6 +5,7 @@ import unittest
 
 from curies import Converter, Reference
 from curies.vocabulary import exact_match, manual_mapping_curation
+from pydantic import BaseModel
 
 from sssom_pydantic import MappingSet, SemanticMapping
 from sssom_pydantic.contrib.jskos_export import mapping_set_to_jskos
@@ -13,6 +14,13 @@ from sssom_pydantic.contrib.jskos_export import mapping_set_to_jskos
 @unittest.skipUnless(importlib.util.find_spec("jskos"), reason="requires JSKOS")
 class TestJSKOSExport(unittest.TestCase):
     """Test JSKOS export."""
+
+    def assert_model_equal(self, expected: BaseModel, actual: BaseModel) -> None:
+        """Assert two models are equal."""
+        self.assertEqual(
+            expected.model_dump(exclude_none=True, exclude_unset=True),
+            actual.model_dump(exclude_unset=True, exclude_none=True),
+        )
 
     def test_jskos(self) -> None:
         """Test JSKOS export."""
@@ -47,9 +55,4 @@ class TestJSKOSExport(unittest.TestCase):
             ],
         }
         expected = Concept.model_validate(d)
-        self.assertEqual(
-            expected.model_dump(exclude_none=True, exclude_unset=True),
-            mapping_set_to_jskos([mapping], converter, mapping_set).model_dump(
-                exclude_unset=True, exclude_none=True
-            ),
-        )
+        self.assert_model_equal(expected, mapping_set_to_jskos([mapping], converter, mapping_set))
