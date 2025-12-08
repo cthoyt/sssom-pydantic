@@ -8,7 +8,6 @@ from curies.vocabulary import exact_match, manual_mapping_curation
 from pydantic import BaseModel
 
 from sssom_pydantic import MappingSet, SemanticMapping
-from sssom_pydantic.contrib.jskos_export import mapping_set_to_jskos
 
 
 @unittest.skipUnless(importlib.util.find_spec("jskos"), reason="requires JSKOS")
@@ -25,6 +24,8 @@ class TestJSKOSExport(unittest.TestCase):
     def test_jskos(self) -> None:
         """Test JSKOS export."""
         from jskos import Concept
+
+        from sssom_pydantic.contrib.jskos_export import mapping_set_to_jskos
 
         converter = Converter.from_prefix_map(
             {
