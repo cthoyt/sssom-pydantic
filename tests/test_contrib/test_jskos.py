@@ -10,7 +10,7 @@ from sssom_pydantic import MappingSet, SemanticMapping
 from sssom_pydantic.contrib.jskos_export import mapping_set_to_jskos
 
 
-@importlib.util.find_spec("jskos")
+@unittest.skipUnless(importlib.util.find_spec("jskos"), reason="requires JSKOS")
 class TestJSKOSExport(unittest.TestCase):
     """Test JSKOS export."""
 
