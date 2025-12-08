@@ -1,20 +1,23 @@
 """Test JSKOS export."""
 
+import importlib.util
 import unittest
 
 from curies import Converter, Reference
 from curies.vocabulary import exact_match, manual_mapping_curation
-from jskos import Concept
 
 from sssom_pydantic import MappingSet, SemanticMapping
 from sssom_pydantic.contrib.jskos_export import mapping_set_to_jskos
 
 
+@importlib.util.find_spec("jskos")
 class TestJSKOSExport(unittest.TestCase):
     """Test JSKOS export."""
 
     def test_jskos(self) -> None:
         """Test JSKOS export."""
+        from jskos import Concept
+
         converter = Converter.from_prefix_map(
             {
                 "skos": "http://www.w3.org/2004/02/skos/core#",
