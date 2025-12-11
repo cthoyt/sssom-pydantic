@@ -23,7 +23,7 @@ from sqlmodel.sql._expression_select_cls import SelectOfScalar
 from typing_extensions import Self
 
 from sssom_pydantic import MappingTool, SemanticMapping
-from sssom_pydantic.api import SemanticMappingHash
+from sssom_pydantic.api import SemanticMappingHash, mapping_hash_v1
 from sssom_pydantic.models import Cardinality
 from sssom_pydantic.process import Mark, curate
 from sssom_pydantic.query import Query
@@ -189,13 +189,13 @@ class SemanticMappingDatabase:
         self,
         *,
         engine: Engine,
-        semantic_mapping_hash: SemanticMappingHash,
+        semantic_mapping_hash: SemanticMappingHash | None = None,
         session_cls: type[Session] | None = None,
     ) -> None:
         """Construct a database."""
         self.engine = engine
         self.session_cls = session_cls if session_cls is not None else Session
-        self._hsh = semantic_mapping_hash
+        self._hsh = semantic_mapping_hash if semantic_mapping_hash is not None else mapping_hash_v1
         SQLModel.metadata.create_all(self.engine)
 
     @classmethod
@@ -203,7 +203,7 @@ class SemanticMappingDatabase:
         cls,
         *,
         connection: str,
-        semantic_mapping_hash: SemanticMappingHash,
+        semantic_mapping_hash: SemanticMappingHash | None = None,
         session_cls: type[Session] | None = None,
     ) -> Self:
         """Construct a database by a connection string."""
@@ -217,7 +217,7 @@ class SemanticMappingDatabase:
     def memory(
         cls,
         *,
-        semantic_mapping_hash: SemanticMappingHash,
+        semantic_mapping_hash: SemanticMappingHash | None = None,
         session_cls: type[Session] | None = None,
     ) -> Self:
         """Construct an in-memory database."""
