@@ -48,4 +48,4 @@ class TestFastAPI(unittest.TestCase):
             response.raise_for_status()
             response_json = response.json()
             actual = SemanticMapping.model_validate(response_json)
-            self.assert_model_equal(expected, actual)
+            self.assert_model_equal(_m(record=reference), actual)
