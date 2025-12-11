@@ -155,6 +155,7 @@ UNSURE = "sssom-curator-unsure"
 
 def curate(
     mapping: SemanticMapping,
+    /,
     authors: Reference | list[Reference],
     mark: Mark,
     confidence: float | None = None,

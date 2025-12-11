@@ -5,7 +5,7 @@ from __future__ import annotations
 import contextlib
 import datetime
 from collections.abc import Callable, Generator, Iterable, Sequence
-from typing import TYPE_CHECKING, Any, ClassVar, Literal
+from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Literal, ParamSpec
 
 import sqlmodel
 from curies import NamableReference, Reference
@@ -38,6 +38,8 @@ __all__ = [
     "SemanticMappingDatabase",
     "SemanticMappingModel",
 ]
+
+P = ParamSpec("P")
 
 
 class MappingToolTypeDecorator(TypeDecorator[MappingTool]):
@@ -308,19 +310,14 @@ class SemanticMappingDatabase:
         """Curate a mapping."""
         if isinstance(authors, Reference):
             authors = [authors]
-        mapping = self.get_mapping(reference)
-        if mapping is None:
-            raise ValueError
-        new_mapping = curate(
-            mapping.to_semantic_mapping(),
+        self._mutate(
+            reference,
+            curate,
             authors=authors,
             mark=mark,
             confidence=confidence,
             **kwargs,
         )
-        new_mapping = new_mapping.model_copy(update={"record": self._hsh(new_mapping)})
-        self.add_mapping(new_mapping)
-        self.delete_mapping(reference)
 
     def publish(
         self,
@@ -328,10 +325,19 @@ class SemanticMappingDatabase:
         date: datetime.date | None = None,
     ) -> None:
         """Publish a mapping."""
+        self._mutate(reference, publish, date=date)
+
+    def _mutate(
+        self,
+        reference: Reference,
+        f: Callable[Concatenate[SemanticMapping, P], SemanticMapping],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> None:
         mapping = self.get_mapping(reference)
         if mapping is None:
             raise ValueError
-        new_mapping = publish(mapping.to_semantic_mapping(), date=date)
+        new_mapping = f(mapping.to_semantic_mapping(), *args, **kwargs)
         new_mapping = new_mapping.model_copy(update={"record": self._hsh(new_mapping)})
         self.add_mapping(new_mapping)
         self.delete_mapping(reference)
