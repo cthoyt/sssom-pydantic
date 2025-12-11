@@ -1,13 +1,12 @@
 """Test the database."""
 
 import datetime
-import hashlib
 import unittest
 
 from curies import Reference
 from curies.vocabulary import charlie, lexical_matching_process, manual_mapping_curation
 
-from sssom_pydantic import SemanticMapping
+from sssom_pydantic.api import SemanticMapping, mapping_hash_v1
 from sssom_pydantic.database import (
     NEGATIVE_MAPPING_CLAUSE,
     POSITIVE_MAPPING_CLAUSE,
@@ -22,16 +21,6 @@ from tests import cases
 
 USER = Reference(prefix="orcid", identifier="1234")
 
-DEFAULT_HASH_PREFIX = "sssom-curator-hash-v2"
-DEFAULT_HASH_EXCLUDE: set[str] = {"record", "cardinality", "cardinality_scope"}
-
-
-def _default_hash(m: SemanticMapping) -> Reference:
-    """Hash a mapping into a reference."""
-    h = hashlib.md5(usedforsecurity=False)
-    h.update(m.model_dump_json(exclude=DEFAULT_HASH_EXCLUDE).encode("utf8"))
-    return Reference(prefix=DEFAULT_HASH_PREFIX, identifier=h.hexdigest())
-
 
 class TestDatabase(unittest.TestCase):
     """Test the database."""
@@ -43,7 +32,7 @@ class TestDatabase(unittest.TestCase):
         mapping_3 = cases._m(predicate_modifier="Not")
         mapping_4 = cases._m(justification=lexical_matching_process, curation_rule_text=["unsure"])
 
-        db = SemanticMappingDatabase.memory(semantic_mapping_hash=_default_hash)
+        db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
 
         self.assertEqual(0, db.count_mappings())
 
@@ -103,10 +92,10 @@ class TestDatabase(unittest.TestCase):
         db.delete_mapping(mapping_1)
 
         self.assertEqual(3, db.count_mappings())
-        self.assertIsNone(db.get_mapping(_default_hash(mapping_1)))
-        self.assertIsNotNone(db.get_mapping(_default_hash(mapping_2)))
-        self.assertIsNotNone(db.get_mapping(_default_hash(mapping_3)))
-        self.assertIsNotNone(db.get_mapping(_default_hash(mapping_4)))
+        self.assertIsNone(db.get_mapping(mapping_hash_v1(mapping_1)))
+        self.assertIsNotNone(db.get_mapping(mapping_hash_v1(mapping_2)))
+        self.assertIsNotNone(db.get_mapping(mapping_hash_v1(mapping_3)))
+        self.assertIsNotNone(db.get_mapping(mapping_hash_v1(mapping_4)))
 
     def test_query_functionality(self) -> None:
         """Check that all query fields are implemented."""
@@ -122,7 +111,7 @@ class TestDatabase(unittest.TestCase):
 
     def test_queries(self) -> None:
         """Generate and execute variety of queries."""
-        db = SemanticMappingDatabase.memory(semantic_mapping_hash=_default_hash)
+        db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
         db.add_mappings(EXAMPLE_MAPPINGS)
         for mapping in EXAMPLE_MAPPINGS:
             queries = [Query(query=mapping.subject.prefix)]
@@ -140,7 +129,7 @@ class TestDatabase(unittest.TestCase):
             confidence=0.95,
         )
 
-        db = SemanticMappingDatabase.memory(semantic_mapping_hash=_default_hash)
+        db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
         db.add_mapping(mapping)
         original_hash = db._hsh(mapping)
         db.curate(original_hash, authors=charlie, mark="correct")
@@ -167,7 +156,7 @@ class TestDatabase(unittest.TestCase):
             publication_date=None,
         )
 
-        db = SemanticMappingDatabase.memory(semantic_mapping_hash=_default_hash)
+        db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
         db.add_mapping(mapping)
         original_hash = db._hsh(mapping)
         db.publish(original_hash)
