@@ -1,11 +1,12 @@
 """Test the database."""
 
+import datetime
 import unittest
 
 from curies import Reference
-from curies.vocabulary import lexical_matching_process, manual_mapping_curation
+from curies.vocabulary import charlie, lexical_matching_process, manual_mapping_curation
 
-from sssom_pydantic.api import mapping_hash_v1
+from sssom_pydantic.api import SemanticMapping, mapping_hash_v1
 from sssom_pydantic.database import (
     NEGATIVE_MAPPING_CLAUSE,
     POSITIVE_MAPPING_CLAUSE,
@@ -117,3 +118,56 @@ class TestDatabase(unittest.TestCase):
             for query in queries:
                 results = db.get_mappings(clauses_from_query(query))
                 self.assertNotEqual(0, len(results))
+
+    def test_curate(self) -> None:
+        """Test curation in the database."""
+        mapping = SemanticMapping(
+            subject=cases.R1,
+            predicate=cases.P1,
+            object=cases.R2,
+            justification=lexical_matching_process,
+            confidence=0.95,
+        )
+
+        db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
+        db.add_mapping(mapping)
+        original_hash = db._hsh(mapping)
+        db.curate(original_hash, authors=charlie, mark="correct")
+        self.assertIsNone(db.get_mapping(original_hash))
+
+        expected = SemanticMapping(
+            subject=cases.R1,
+            predicate=cases.P1,
+            object=cases.R2,
+            justification=manual_mapping_curation,
+            authors=[charlie],
+            mapping_date=datetime.date.today(),
+        )
+        self.assertIsNotNone(db.get_mapping(db._hsh(expected)))
+
+    def test_publish(self) -> None:
+        """Test curation in the database."""
+        mapping = SemanticMapping(
+            subject=cases.R1,
+            predicate=cases.P1,
+            object=cases.R2,
+            justification=manual_mapping_curation,
+            authors=[charlie],
+            publication_date=None,
+        )
+
+        db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
+        db.add_mapping(mapping)
+        original_hash = db._hsh(mapping)
+        db.publish(original_hash)
+        self.assertIsNone(db.get_mapping(original_hash))
+
+        expected = SemanticMapping(
+            subject=cases.R1,
+            predicate=cases.P1,
+            object=cases.R2,
+            justification=manual_mapping_curation,
+            authors=[charlie],
+            publication_date=datetime.date.today(),
+        )
+        self.assertIsNotNone(db.get_mapping(db._hsh(expected)))

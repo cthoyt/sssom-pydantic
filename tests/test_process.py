@@ -16,7 +16,7 @@ from pydantic import BaseModel
 
 from sssom_pydantic import SemanticMapping
 from sssom_pydantic.api import NOT
-from sssom_pydantic.process import UNSURE, Mark, curate
+from sssom_pydantic.process import UNSURE, Mark, curate, publish
 from tests.cases import R1, R2
 
 today = datetime.date.today()
@@ -144,4 +144,87 @@ class TestProcess(unittest.TestCase):
                     author,
                     "correct",
                 ),
+            )
+
+    def test_publish(self) -> None:
+        """Test the publication workflow."""
+        yesterday = today - datetime.timedelta(days=1)
+        # no worries
+        self.assert_model_equal(
+            SemanticMapping(
+                subject=R1,
+                predicate=exact_match,
+                object=R2,
+                justification=manual_mapping_curation,
+                publication_date=today,
+            ),
+            publish(
+                SemanticMapping(
+                    subject=R1,
+                    predicate=exact_match,
+                    object=R2,
+                    justification=manual_mapping_curation,
+                ),
+            ),
+        )
+        self.assert_model_equal(
+            SemanticMapping(
+                subject=R1,
+                predicate=exact_match,
+                object=R2,
+                justification=manual_mapping_curation,
+                publication_date=today,
+            ),
+            publish(
+                SemanticMapping(
+                    subject=R1,
+                    predicate=exact_match,
+                    object=R2,
+                    justification=manual_mapping_curation,
+                    publication_date=yesterday,
+                ),
+                exists_action="overwrite",
+            ),
+        )
+        self.assert_model_equal(
+            SemanticMapping(
+                subject=R1,
+                predicate=exact_match,
+                object=R2,
+                justification=manual_mapping_curation,
+                publication_date=yesterday,
+            ),
+            publish(
+                SemanticMapping(
+                    subject=R1,
+                    predicate=exact_match,
+                    object=R2,
+                    justification=manual_mapping_curation,
+                    publication_date=yesterday,
+                ),
+                exists_action="keep",
+            ),
+        )
+        with self.assertRaises(ValueError):
+            publish(
+                SemanticMapping(
+                    subject=R1,
+                    predicate=exact_match,
+                    object=R2,
+                    justification=manual_mapping_curation,
+                    publication_date=yesterday,
+                ),
+                exists_action="error",
+            )
+
+        with self.assertRaises(ValueError):
+            publish(
+                SemanticMapping(
+                    subject=R1,
+                    predicate=exact_match,
+                    object=R2,
+                    justification=manual_mapping_curation,
+                    publication_date=yesterday,
+                ),
+                exists_action="blahblah",  # type:ignore
             )
