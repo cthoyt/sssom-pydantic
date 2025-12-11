@@ -116,7 +116,7 @@ class TestDatabase(unittest.TestCase):
         for mapping in EXAMPLE_MAPPINGS:
             queries = [Query(query=mapping.subject.prefix)]
             for query in queries:
-                results = db.get_mappings(clauses_from_query(query))
+                results = db.get_mappings(query)
                 self.assertNotEqual(0, len(results))
 
     def test_curate(self) -> None:
