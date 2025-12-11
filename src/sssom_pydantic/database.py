@@ -322,6 +322,20 @@ class SemanticMappingDatabase:
         self.add_mapping(new_mapping)
         self.delete_mapping(reference)
 
+    def publish(
+        self,
+        reference: Reference,
+        date: datetime.date | None = None,
+    ) -> None:
+        """Publish a mapping."""
+        mapping = self.get_mapping(reference)
+        if mapping is None:
+            raise ValueError
+        new_mapping = publish_mapping(mapping.to_semantic_mapping(), date=date)
+        new_mapping = new_mapping.model_copy(update={"record": self._hsh(new_mapping)})
+        self.add_mapping(new_mapping)
+        self.delete_mapping(reference)
+
 
 POSITIVE_MAPPING_CLAUSE = and_(
     SemanticMappingModel.justification == manual_mapping_curation,
