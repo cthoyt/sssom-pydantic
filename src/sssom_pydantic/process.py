@@ -28,7 +28,7 @@ __all__ = [
     "Mark",
     "curate",
     "get_canonical_tuple",
-    "publish_mapping",
+    "publish",
     "remove_redundant_external",
     "remove_redundant_internal",
 ]
@@ -201,7 +201,7 @@ def curate(
     return new_mapping
 
 
-def publish_mapping(
+def publish(
     mapping: SemanticMapping,
     /,
     *,

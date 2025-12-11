@@ -25,7 +25,7 @@ from typing_extensions import Self
 from sssom_pydantic import MappingTool, SemanticMapping
 from sssom_pydantic.api import SemanticMappingHash
 from sssom_pydantic.models import Cardinality
-from sssom_pydantic.process import Mark, curate
+from sssom_pydantic.process import Mark, curate, publish
 from sssom_pydantic.query import Query
 
 if TYPE_CHECKING:
@@ -331,7 +331,7 @@ class SemanticMappingDatabase:
         mapping = self.get_mapping(reference)
         if mapping is None:
             raise ValueError
-        new_mapping = publish_mapping(mapping.to_semantic_mapping(), date=date)
+        new_mapping = publish(mapping.to_semantic_mapping(), date=date)
         new_mapping = new_mapping.model_copy(update={"record": self._hsh(new_mapping)})
         self.add_mapping(new_mapping)
         self.delete_mapping(reference)
