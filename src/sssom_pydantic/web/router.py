@@ -4,7 +4,7 @@ import datetime
 from typing import Annotated, TypeAlias, cast
 
 from curies import Reference
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
 
 from sssom_pydantic import SemanticMapping
 from sssom_pydantic.database import SemanticMappingDatabase
@@ -25,9 +25,12 @@ def get_controller(request: Request) -> SemanticMappingDatabase:
 #: annotation for FastAPI.
 AnnotatedController: TypeAlias = Annotated[SemanticMappingDatabase, Depends(get_controller)]
 
+#: A type alias for a CURIE passed via the path
+AnnotatedCURIE = Annotated[str, Path(description="The CURIE for mapping record")]
+
 
 @router.get("/mapping/{curie}")
-def get_mapping(controller: AnnotatedController, curie: str) -> SemanticMapping:
+def get_mapping(controller: AnnotatedController, curie: AnnotatedCURIE) -> SemanticMapping:
     """Get a mapping by CURIE."""
     mapping = controller.get_mapping(Reference.from_curie(curie))
     if mapping is None:
@@ -36,7 +39,7 @@ def get_mapping(controller: AnnotatedController, curie: str) -> SemanticMapping:
 
 
 @router.delete("/mapping/{curie}")
-def delete_mapping(controller: AnnotatedController, curie: str) -> str:
+def delete_mapping(controller: AnnotatedController, curie: AnnotatedCURIE) -> str:
     """Get a mapping by CURIE."""
     controller.delete_mapping(Reference.from_curie(curie))
     return "ok"
@@ -52,7 +55,7 @@ def post_mapping(controller: AnnotatedController, mapping: SemanticMapping) -> s
 @router.post("/action/publish/{curie}")
 def publish_mapping(
     controller: AnnotatedController,
-    curie: str,
+    curie: AnnotatedCURIE,
     date: Annotated[datetime.date | None, Query(...)] = None,
 ) -> str:
     """Publish a mapping with the given CURIE."""
@@ -60,10 +63,10 @@ def publish_mapping(
     return "ok"
 
 
-@router.post("/action/publish/{curie}")
+@router.post("/action/curate/{curie}")
 def curate_mapping(
     controller: AnnotatedController,
-    curie: str,
+    curie: AnnotatedCURIE,
     date: Annotated[datetime.date | None, Query(...)] = None,
 ) -> str:
     """Publish a mapping with the given CURIE."""
