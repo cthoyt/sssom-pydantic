@@ -1,11 +1,12 @@
 """Construct a FastAPI app."""
 
+import json
 from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI
 
-from sssom_pydantic.api import SemanticMappingHash
+from sssom_pydantic.api import SemanticMappingHash, mapping_hash_v1
 
 from .router import router
 from ..database import SemanticMappingDatabase
@@ -22,6 +23,8 @@ def get_app(
 ) -> FastAPI:
     """Get a FastAPI app."""
     if database is None:
+        if semantic_mapping_hash is None:
+            semantic_mapping_hash = mapping_hash_v1
         database = SemanticMappingDatabase.memory(semantic_mapping_hash=semantic_mapping_hash)
     app = FastAPI()
     app.state.database = database
@@ -36,10 +39,4 @@ def get_openapi_schema() -> dict[str, Any]:
 
 def write_openapi_schema(path: Path) -> None:
     """Write the OpenAPI schema."""
-    import json
-
     path.write_text(json.dumps(get_openapi_schema(), indent=2))
-
-
-if __name__ == "__main__":
-    write_openapi_schema(Path.home().joinpath("Desktop", "schema.json"))
