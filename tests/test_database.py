@@ -66,27 +66,27 @@ class TestDatabase(unittest.TestCase):
 
         # test no-op query
         query = Query()
-        mappings = db.get_mappings(where_clauses=clauses_from_query(query))
+        mappings = db.get_mappings(where_clauses=query)
         self.assertEqual(4, len(mappings))
 
         query = Query(subject_prefix="mesh")
-        mappings = db.get_mappings(where_clauses=clauses_from_query(query))
+        mappings = db.get_mappings(where_clauses=query)
         self.assertEqual(4, len(mappings))
 
         query = Query(object_prefix="chebi")
-        mappings = db.get_mappings(where_clauses=clauses_from_query(query))
+        mappings = db.get_mappings(where_clauses=query)
         self.assertEqual(4, len(mappings))
 
         query = Query(subject_prefix="chebi")
-        mappings = db.get_mappings(where_clauses=clauses_from_query(query))
+        mappings = db.get_mappings(where_clauses=query)
         self.assertEqual(0, len(mappings))
 
         query = Query(object_prefix="mesh")
-        mappings = db.get_mappings(where_clauses=clauses_from_query(query))
+        mappings = db.get_mappings(where_clauses=query)
         self.assertEqual(0, len(mappings))
 
         query = Query(query="mesh")
-        mappings = db.get_mappings(where_clauses=clauses_from_query(query))
+        mappings = db.get_mappings(where_clauses=query)
         self.assertEqual(4, len(mappings))
 
         db.delete_mapping(mapping_1)
