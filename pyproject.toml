@@ -79,6 +79,7 @@ typing = [
     "click-types",
     "types-requests",
     "sqlmodel",
+    "fastapi",
 ]
 docs-lint = [
     { include-group = "docs" },

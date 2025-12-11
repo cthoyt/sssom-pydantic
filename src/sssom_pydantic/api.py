@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime
 import functools
+import hashlib
 import warnings
 from collections.abc import Callable
 from typing import Any, Literal, TypeAlias
@@ -31,6 +32,7 @@ __all__ = [
     "SemanticMapping",
     "SemanticMappingHash",
     "SemanticMappingPredicate",
+    "mapping_hash_v1",
 ]
 
 PredicateModifier: TypeAlias = Literal["Not"]
@@ -622,3 +624,14 @@ class ExtensionDefinition(BaseModel):
             property=self.property.curie if self.property else None,
             type_hint=self.type_hint.curie if self.type_hint else None,
         )
+
+
+MAPPING_HASH_V1_PREFIX = "sssom-pydantic-mapping-hash-v2"
+MAPPING_HASH_V1_EXCLUDE: set[str] = {"record", "cardinality", "cardinality_scope"}
+
+
+def mapping_hash_v1(m: SemanticMapping) -> Reference:
+    """Hash a mapping into a reference."""
+    h = hashlib.md5(usedforsecurity=False)
+    h.update(m.model_dump_json(exclude=MAPPING_HASH_V1_EXCLUDE).encode("utf8"))
+    return Reference(prefix=MAPPING_HASH_V1_PREFIX, identifier=h.hexdigest())

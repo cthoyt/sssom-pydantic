@@ -28,6 +28,7 @@ __all__ = [
     "Mark",
     "curate",
     "get_canonical_tuple",
+    "publish_mapping",
     "remove_redundant_external",
     "remove_redundant_internal",
 ]
@@ -198,3 +199,26 @@ def curate(
 
     new_mapping = mapping.model_copy(update=update)
     return new_mapping
+
+
+def publish_mapping(
+    mapping: SemanticMapping,
+    /,
+    *,
+    exists_action: Literal["error", "overwrite", "keep"] | None = None,
+    date: datetime.date | None = None,
+) -> SemanticMapping:
+    """Add a publication date to the mapping."""
+    if mapping.publication_date is not None:
+        if exists_action == "error" or exists_action is None:
+            raise ValueError
+        elif exists_action == "keep":
+            return mapping
+        elif exists_action == "overwrite":
+            pass  # just use the implementation below to update the publication date
+        else:
+            raise ValueError(f"invalid exists_action: {exists_action}")
+    rv = mapping.model_copy(
+        update={"publication_date": date if date is not None else datetime.date.today()}
+    )
+    return rv

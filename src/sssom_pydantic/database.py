@@ -23,9 +23,9 @@ from sqlmodel.sql._expression_select_cls import SelectOfScalar
 from typing_extensions import Self
 
 from sssom_pydantic import MappingTool, SemanticMapping
-from sssom_pydantic.api import SemanticMappingHash
+from sssom_pydantic.api import SemanticMappingHash, mapping_hash_v1
 from sssom_pydantic.models import Cardinality
-from sssom_pydantic.process import Mark, curate
+from sssom_pydantic.process import Mark, curate, publish_mapping
 from sssom_pydantic.query import Query
 
 if TYPE_CHECKING:
@@ -189,13 +189,13 @@ class SemanticMappingDatabase:
         self,
         *,
         engine: Engine,
-        semantic_mapping_hash: SemanticMappingHash,
+        semantic_mapping_hash: SemanticMappingHash | None = None,
         session_cls: type[Session] | None = None,
     ) -> None:
         """Construct a database."""
         self.engine = engine
         self.session_cls = session_cls if session_cls is not None else Session
-        self._hsh = semantic_mapping_hash
+        self._hsh = semantic_mapping_hash if semantic_mapping_hash is not None else mapping_hash_v1
         SQLModel.metadata.create_all(self.engine)
 
     @classmethod
@@ -203,7 +203,7 @@ class SemanticMappingDatabase:
         cls,
         *,
         connection: str,
-        semantic_mapping_hash: SemanticMappingHash,
+        semantic_mapping_hash: SemanticMappingHash | None = None,
         session_cls: type[Session] | None = None,
     ) -> Self:
         """Construct a database by a connection string."""
@@ -217,7 +217,7 @@ class SemanticMappingDatabase:
     def memory(
         cls,
         *,
-        semantic_mapping_hash: SemanticMappingHash,
+        semantic_mapping_hash: SemanticMappingHash | None = None,
         session_cls: type[Session] | None = None,
     ) -> Self:
         """Construct an in-memory database."""
@@ -318,6 +318,20 @@ class SemanticMappingDatabase:
             confidence=confidence,
             **kwargs,
         )
+        new_mapping = new_mapping.model_copy(update={"record": self._hsh(new_mapping)})
+        self.add_mapping(new_mapping)
+        self.delete_mapping(reference)
+
+    def publish(
+        self,
+        reference: Reference,
+        date: datetime.date | None = None,
+    ) -> None:
+        """Publish a mapping."""
+        mapping = self.get_mapping(reference)
+        if mapping is None:
+            raise ValueError
+        new_mapping = publish_mapping(mapping.to_semantic_mapping(), date=date)
         new_mapping = new_mapping.model_copy(update={"record": self._hsh(new_mapping)})
         self.add_mapping(new_mapping)
         self.delete_mapping(reference)

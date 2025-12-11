@@ -1,12 +1,11 @@
 """Test the database."""
 
-import hashlib
 import unittest
 
 from curies import Reference
 from curies.vocabulary import lexical_matching_process, manual_mapping_curation
 
-from sssom_pydantic import SemanticMapping
+from sssom_pydantic.api import mapping_hash_v1 as _default_hash
 from sssom_pydantic.database import (
     NEGATIVE_MAPPING_CLAUSE,
     POSITIVE_MAPPING_CLAUSE,
@@ -20,16 +19,6 @@ from sssom_pydantic.query import Query
 from tests import cases
 
 USER = Reference(prefix="orcid", identifier="1234")
-
-DEFAULT_HASH_PREFIX = "sssom-curator-hash-v2"
-DEFAULT_HASH_EXCLUDE: set[str] = {"record", "cardinality", "cardinality_scope"}
-
-
-def _default_hash(m: SemanticMapping) -> Reference:
-    """Hash a mapping into a reference."""
-    h = hashlib.md5(usedforsecurity=False)
-    h.update(m.model_dump_json(exclude=DEFAULT_HASH_EXCLUDE).encode("utf8"))
-    return Reference(prefix=DEFAULT_HASH_PREFIX, identifier=h.hexdigest())
 
 
 class TestDatabase(unittest.TestCase):
