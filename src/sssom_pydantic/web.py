@@ -1,16 +1,24 @@
 """Mock an API."""
 
 import datetime
-from typing import Annotated, TypeAlias, cast
+import json
+import pathlib
+from typing import Annotated, Any, TypeAlias, cast
 
 from curies import Reference
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
+from curies.vocabulary import charlie, exact_match, manual_mapping_curation
+from fastapi import APIRouter, Body, Depends, FastAPI, HTTPException, Path, Query, Request
 
 from sssom_pydantic import SemanticMapping
+from sssom_pydantic.api import SemanticMappingHash, mapping_hash_v1
 from sssom_pydantic.database import SemanticMappingDatabase
+from sssom_pydantic.examples import R1, R2
 
 __all__ = [
+    "get_app",
+    "get_openapi_schema",
     "router",
+    "write_openapi_schema",
 ]
 
 router = APIRouter()
@@ -46,7 +54,23 @@ def delete_mapping(controller: AnnotatedController, curie: AnnotatedCURIE) -> st
 
 
 @router.post("/mapping/")
-def post_mapping(controller: AnnotatedController, mapping: SemanticMapping) -> str:
+def post_mapping(
+    controller: AnnotatedController,
+    mapping: Annotated[
+        SemanticMapping,
+        Body(
+            examples=[
+                SemanticMapping(
+                    subject=R1,
+                    predicate=exact_match,
+                    object=R2,
+                    justification=manual_mapping_curation,
+                    authors=[charlie],
+                ),
+            ]
+        ),
+    ],
+) -> str:
     """Add a mapping by CURIE."""
     controller.add_mapping(mapping)
     return "ok"
@@ -72,3 +96,36 @@ def curate_mapping(
     """Publish a mapping with the given CURIE."""
     controller.publish(Reference.from_curie(curie), date=date)
     return "ok"
+
+
+def get_app(
+    *,
+    database: SemanticMappingDatabase | None = None,
+    semantic_mapping_hash: SemanticMappingHash | None = None,
+) -> FastAPI:
+    """Get a FastAPI app."""
+    if database is None:
+        if semantic_mapping_hash is None:
+            semantic_mapping_hash = mapping_hash_v1
+        database = SemanticMappingDatabase.memory(semantic_mapping_hash=semantic_mapping_hash)
+    app = FastAPI()
+    app.state.database = database
+    app.include_router(router)
+    return app
+
+
+def get_openapi_schema() -> dict[str, Any]:
+    """Get the OpenAPI schema."""
+    return get_app().openapi()
+
+
+def write_openapi_schema(path: str | pathlib.Path) -> None:
+    """Write the OpenAPI schema."""
+    path = pathlib.Path(path).expanduser().resolve()
+    path.write_text(json.dumps(get_openapi_schema(), indent=2))
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(get_app(), host="0.0.0.0", port=8776)  # noqa:S104
