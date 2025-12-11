@@ -206,29 +206,25 @@ class TestProcess(unittest.TestCase):
             ),
         )
         with self.assertRaises(ValueError):
-            (
-                publish(
-                    SemanticMapping(
-                        subject=R1,
-                        predicate=exact_match,
-                        object=R2,
-                        justification=manual_mapping_curation,
-                        publication_date=yesterday,
-                    ),
-                    exists_action="error",
+            publish(
+                SemanticMapping(
+                    subject=R1,
+                    predicate=exact_match,
+                    object=R2,
+                    justification=manual_mapping_curation,
+                    publication_date=yesterday,
                 ),
+                exists_action="error",
             )
 
         with self.assertRaises(ValueError):
-            (
-                publish(
-                    SemanticMapping(
-                        subject=R1,
-                        predicate=exact_match,
-                        object=R2,
-                        justification=manual_mapping_curation,
-                        publication_date=yesterday,
-                    ),
-                    exists_action="blahblah",  # type:ignore
+            publish(
+                SemanticMapping(
+                    subject=R1,
+                    predicate=exact_match,
+                    object=R2,
+                    justification=manual_mapping_curation,
+                    publication_date=yesterday,
                 ),
+                exists_action="blahblah",  # type:ignore
             )
