@@ -236,12 +236,16 @@ class SemanticMappingDatabase:
             yield session
 
     def count_mappings(
-        self, where_clauses: list[ColumnExpressionArgument[bool]] | None = None
+        self, where_clauses: Query | list[ColumnExpressionArgument[bool]] | None = None
     ) -> int:
         """Count the mappings in the database."""
         with self.get_session() as session:
             statement = select(func.count()).select_from(SemanticMappingModel)
-            if where_clauses:
+            if where_clauses is None:
+                pass
+            elif isinstance(where_clauses, Query):
+                statement = statement.where(*clauses_from_query(where_clauses))
+            else:
                 statement = statement.where(*where_clauses)
             return session.exec(statement).one()
 
@@ -289,14 +293,18 @@ class SemanticMappingDatabase:
 
     def get_mappings(
         self,
-        where_clauses: list[ColumnExpressionArgument[bool]] | None = None,
+        where_clauses: Query | list[ColumnExpressionArgument[bool]] | None = None,
         limit: int | None = None,
         offset: int | None = None,
     ) -> Sequence[SemanticMappingModel]:
         """Get mappings."""
         with self.get_session() as session:
             statement = select(SemanticMappingModel)
-            if where_clauses:
+            if where_clauses is None:
+                pass
+            elif isinstance(where_clauses, Query):
+                statement = statement.where(*clauses_from_query(where_clauses))
+            else:
                 statement = statement.where(*where_clauses)
             if limit is not None:
                 statement = statement.limit(limit)

@@ -66,27 +66,27 @@ class TestDatabase(unittest.TestCase):
 
         # test no-op query
         query = Query()
-        mappings = db.get_mappings(where_clauses=clauses_from_query(query))
+        mappings = db.get_mappings(where_clauses=query)
         self.assertEqual(4, len(mappings))
 
         query = Query(subject_prefix="mesh")
-        mappings = db.get_mappings(where_clauses=clauses_from_query(query))
+        mappings = db.get_mappings(where_clauses=query)
         self.assertEqual(4, len(mappings))
 
         query = Query(object_prefix="chebi")
-        mappings = db.get_mappings(where_clauses=clauses_from_query(query))
+        mappings = db.get_mappings(where_clauses=query)
         self.assertEqual(4, len(mappings))
 
         query = Query(subject_prefix="chebi")
-        mappings = db.get_mappings(where_clauses=clauses_from_query(query))
+        mappings = db.get_mappings(where_clauses=query)
         self.assertEqual(0, len(mappings))
 
         query = Query(object_prefix="mesh")
-        mappings = db.get_mappings(where_clauses=clauses_from_query(query))
+        mappings = db.get_mappings(where_clauses=query)
         self.assertEqual(0, len(mappings))
 
         query = Query(query="mesh")
-        mappings = db.get_mappings(where_clauses=clauses_from_query(query))
+        mappings = db.get_mappings(where_clauses=query)
         self.assertEqual(4, len(mappings))
 
         db.delete_mapping(mapping_1)
@@ -116,7 +116,7 @@ class TestDatabase(unittest.TestCase):
         for mapping in EXAMPLE_MAPPINGS:
             queries = [Query(query=mapping.subject.prefix)]
             for query in queries:
-                results = db.get_mappings(clauses_from_query(query))
+                results = db.get_mappings(query)
                 self.assertNotEqual(0, len(results))
 
     def test_curate(self) -> None:
