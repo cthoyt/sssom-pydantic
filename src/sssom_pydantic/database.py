@@ -315,9 +315,9 @@ class SemanticMappingDatabase:
                 statement = statement.offset(offset)
             return session.exec(statement).all()
 
-    def read(self, path: str | Path) -> list[Reference]:
+    def read(self, path: str | Path, **kwargs: Any) -> list[Reference]:
         """Read mappings from a file into the database."""
-        mappings = sssom_pydantic.read(path)
+        mappings, _converter, _metadata = sssom_pydantic.read(path, **kwargs)
         return self.add_mappings(mappings)
 
     def write(
@@ -332,8 +332,8 @@ class SemanticMappingDatabase:
     ) -> None:
         """Write the database to a file."""
         mappings = self.get_mappings(where_clauses=where_clauses, limit=limit, offset=offset)
-        wm = (m.to_semantic_mapping() for m in mappings)
-        sssom_pydantic.write(wm, path, metadata=metadata, converter=converter)
+        mapping_it = (m.to_semantic_mapping() for m in mappings)
+        sssom_pydantic.write(mapping_it, path, metadata=metadata, converter=converter)
 
     def curate(
         self,
