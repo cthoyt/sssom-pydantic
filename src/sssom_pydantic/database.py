@@ -256,7 +256,12 @@ class SemanticMappingDatabase:
         with self.get_session() as session:
             for mapping in mappings:
                 reference = self._hsh(mapping)
-                session.add(mapping.model_copy(update={"record": reference}))
+                session.add(
+                    SemanticMappingModel.from_semantic_mapping(
+                        mapping.model_copy(update={"record": reference})
+                    )
+                )
+                rv.append(reference)
             session.commit()
         return rv
 
