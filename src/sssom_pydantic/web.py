@@ -13,6 +13,7 @@ from sssom_pydantic import SemanticMapping
 from sssom_pydantic.api import SemanticMappingHash, mapping_hash_v1
 from sssom_pydantic.database import SemanticMappingDatabase
 from sssom_pydantic.examples import R1, R2
+from sssom_pydantic.process import Mark
 
 __all__ = [
     "get_app",
@@ -89,10 +90,11 @@ def publish_mapping(
 def curate_mapping(
     database: AnnotatedDatabase,
     curie: AnnotatedCURIE,
-    date: Annotated[datetime.date | None, Query(...)] = None,
+    authors: Annotated[list[Reference], Body(...)],
+    mark: Annotated[Mark, Body(...)],
 ) -> Reference:
     """Publish a mapping with the given CURIE."""
-    return database.publish(Reference.from_curie(curie), date=date)
+    return database.curate(Reference.from_curie(curie), authors=authors, mark=mark)
 
 
 def get_app(

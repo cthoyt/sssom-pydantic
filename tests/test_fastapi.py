@@ -1,10 +1,16 @@
 """Test mapping API."""
 
+import datetime
 import tempfile
 import unittest
 from pathlib import Path
 
 from curies import Reference
+from curies.vocabulary import (
+    charlie,
+    lexical_matching_process,
+    manual_mapping_curation,
+)
 from pydantic import BaseModel
 from starlette.testclient import TestClient
 
@@ -54,6 +60,9 @@ class TestFastAPI(unittest.TestCase):
         actual = SemanticMapping.model_validate(response_json)
         self.assert_model_equal(_m(record=reference), actual)
 
+        self.client.delete(f"/mapping/{reference.curie}")
+        self.assertEqual(0, self.database.count_mappings())
+
     def test_post_mapping(self) -> None:
         """Test posting a mapping to the API."""
         mapping = _m()
@@ -68,3 +77,29 @@ class TestFastAPI(unittest.TestCase):
         self.assertEqual(reference, actual)
 
         self.assertIsNotNone(self.database.get_mapping(reference))
+
+    def test_curate_mapping(self) -> None:
+        """Test curating a mapping through the API."""
+        mapping_predicted = _m(justification=lexical_matching_process, confidence=1)
+
+        response = self.client.post("/mapping", json=mapping_predicted.model_dump())
+        post_reference = Reference.model_validate(response.json())
+
+        curation_response = self.client.post(
+            f"/action/curate/{post_reference.curie}",
+            json={"authors": [charlie.model_dump()], "mark": "correct"},
+        )
+        curation_response.raise_for_status()
+        curation_reference = Reference.model_validate(curation_response.json())
+
+        get_response = self.client.get(f"/mapping/{curation_reference.curie}")
+        get_response.raise_for_status()
+        actual = SemanticMapping.model_validate(get_response.json())
+
+        mapping_curated = _m(
+            justification=manual_mapping_curation, authors=[charlie], date=datetime.date.today()
+        )
+        mapping_curated = mapping_curated.model_copy(
+            update={"record": self.database._hsh(mapping_curated)}
+        )
+        self.assert_model_equal(mapping_curated, actual)
