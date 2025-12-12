@@ -1,4 +1,14 @@
-"""Database model."""
+"""Database model.
+
+.. code-block:: python
+
+    from sssom_pydantic.database import SemanticMappingDatabase
+    from sssom_pydantic.api import mapping_hash_v1
+
+    database = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
+    database.read("https://w3id.org/biopragmatics/biomappings/biomappings.sssom.tsv")
+
+"""
 
 from __future__ import annotations
 
@@ -197,7 +207,14 @@ class SemanticMappingDatabase:
         semantic_mapping_hash: SemanticMappingHash,
         session_cls: type[Session] | None = None,
     ) -> None:
-        """Construct a database."""
+        """Construct a database.
+
+        :param engine: SQLAlchemy engine instance
+        :param semantic_mapping_hash: A function that deterministically hashes a mapping.
+            This is required until the SSSOM specification
+            `defines a standard hashing procedure <https://github.com/mapping-commons/sssom/issues/436>`_.
+        :param session_cls: SQLAlchemy session class. By default, this uses :class:`sqlmodel.Session
+        """
         self.engine = engine
         self.session_cls = session_cls if session_cls is not None else Session
         self._hsh = semantic_mapping_hash
