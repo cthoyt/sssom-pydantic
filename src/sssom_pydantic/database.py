@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import contextlib
 import datetime
-from collections.abc import Callable, Generator, Iterable, Sequence
+from collections.abc import Callable, Collection, Generator, Iterable, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Literal, ParamSpec, cast
 
@@ -332,9 +332,17 @@ class SemanticMappingDatabase:
                 statement = statement.offset(offset)
             return session.exec(statement).all()
 
-    def read(self, path: str | Path, **kwargs: Any) -> list[Reference]:
+    def read(
+        self,
+        path: str | Path,
+        metadata: MappingSet | MappingSetRecord | Metadata | None = None,
+        converter: curies.Converter | None = None,
+        **kwargs: Any,
+    ) -> list[Reference]:
         """Read mappings from a file into the database."""
-        mappings, _converter, _metadata = sssom_pydantic.read(path, **kwargs)
+        mappings, _converter, _metadata = sssom_pydantic.read(
+            path, metadata=metadata, converter=converter, **kwargs
+        )
         return self.add_mappings(mappings)
 
     def write(
@@ -343,6 +351,7 @@ class SemanticMappingDatabase:
         *,
         metadata: MappingSet | Metadata | MappingSetRecord | None = None,
         converter: curies.Converter | None = None,
+        exclude_columns: Collection[str] | None = None,
         where_clauses: Query | list[ColumnExpressionArgument[bool]] | None = None,
         limit: int | None = None,
         offset: int | None = None,
@@ -350,7 +359,13 @@ class SemanticMappingDatabase:
         """Write the database to a file."""
         mappings = self.get_mappings(where_clauses=where_clauses, limit=limit, offset=offset)
         mapping_it = (m.to_semantic_mapping() for m in mappings)
-        sssom_pydantic.write(mapping_it, path, metadata=metadata, converter=converter)
+        sssom_pydantic.write(
+            mapping_it,
+            path,
+            metadata=metadata,
+            converter=converter,
+            exclude_columns=exclude_columns,
+        )
 
     def curate(
         self,

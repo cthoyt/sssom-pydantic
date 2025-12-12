@@ -1,11 +1,14 @@
 """Test the database."""
 
 import datetime
+import tempfile
 import unittest
+from pathlib import Path
 
 from curies import Reference
 from curies.vocabulary import charlie, lexical_matching_process, manual_mapping_curation
 
+import sssom_pydantic
 from sssom_pydantic.api import SemanticMapping, mapping_hash_v1
 from sssom_pydantic.database import (
     NEGATIVE_MAPPING_CLAUSE,
@@ -18,6 +21,7 @@ from sssom_pydantic.database import (
 from sssom_pydantic.examples import EXAMPLE_MAPPINGS
 from sssom_pydantic.query import Query
 from tests import cases
+from tests.cases import TEST_CONVERTER, TEST_METADATA
 
 USER = Reference(prefix="orcid", identifier="1234")
 
@@ -171,3 +175,23 @@ class TestDatabase(unittest.TestCase):
             publication_date=datetime.date.today(),
         )
         self.assertIsNotNone(db.get_mapping(db._hsh(expected)))
+
+    def test_read(self) -> None:
+        """Test reading mappings from a file."""
+        # TODO why are `other` and `source` not making the round trip?
+        mappings = [m for m in EXAMPLE_MAPPINGS if not m.other and not m.source]
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir).joinpath("test.sssom.tsv")
+            sssom_pydantic.write(mappings, path, converter=TEST_CONVERTER, metadata=TEST_METADATA)
+            db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
+            db.read(path, converter=TEST_CONVERTER, metadata=TEST_METADATA)
+
+            written_path = Path(tmpdir).joinpath("test2.sssom.tsv")
+            db.write(
+                written_path,
+                converter=TEST_CONVERTER,
+                metadata=TEST_METADATA,
+                exclude_columns=["record_id"],
+            )
+            self.assertEqual(path.read_text(), written_path.read_text())
