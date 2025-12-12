@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 
 __all__ = [
     "MARKS",
+    "MARK_TO_CALL",
     "UNSURE",
     "Call",
     "CanonicalMappingTuple",
@@ -59,6 +60,17 @@ Mark: TypeAlias = Call | SemanticMappingScope
 
 #: A set of all possible marks.
 MARKS: set[Mark] = set(get_args(Call)).union(get_args(SemanticMappingScope))
+
+#: Mapping from marks to calls
+MARK_TO_CALL: dict[Mark, Call] = {
+    "correct": "correct",
+    "incorrect": "incorrect",
+    "unsure": "unsure",
+    "BROAD": "correct",
+    "NARROW": "correct",
+    "CLOSE": "correct",
+    "RELATED": "correct",
+}
 
 
 def remove_redundant_internal(
