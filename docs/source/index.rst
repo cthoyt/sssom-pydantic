@@ -9,6 +9,7 @@ SSSOM Pydantic |release| Documentation
     installation
     usage
     cli
+    contrib
 
 Indices and Tables
 ------------------

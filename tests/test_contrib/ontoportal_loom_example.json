@@ -1,0 +1,77 @@
+{
+  "id": null,
+  "source": "LOOM",
+  "classes": [
+    {
+      "@id": "http://purl.obolibrary.org/obo/ogms/OMRE_0000023",
+      "@type": "http://www.w3.org/2002/07/owl#Class",
+      "links": {
+        "self": "https://data.bioontology.org/ontologies/AERO/classes/http%3A%2F%2Fpurl.obolibrary.org%2Fobo%2Fogms%2FOMRE_0000023",
+        "ontology": "https://data.bioontology.org/ontologies/AERO",
+        "children": "https://data.bioontology.org/ontologies/AERO/classes/http%3A%2F%2Fpurl.obolibrary.org%2Fobo%2Fogms%2FOMRE_0000023/children",
+        "parents": "https://data.bioontology.org/ontologies/AERO/classes/http%3A%2F%2Fpurl.obolibrary.org%2Fobo%2Fogms%2FOMRE_0000023/parents",
+        "descendants": "https://data.bioontology.org/ontologies/AERO/classes/http%3A%2F%2Fpurl.obolibrary.org%2Fobo%2Fogms%2FOMRE_0000023/descendants",
+        "ancestors": "https://data.bioontology.org/ontologies/AERO/classes/http%3A%2F%2Fpurl.obolibrary.org%2Fobo%2Fogms%2FOMRE_0000023/ancestors",
+        "instances": "https://data.bioontology.org/ontologies/AERO/classes/http%3A%2F%2Fpurl.obolibrary.org%2Fobo%2Fogms%2FOMRE_0000023/instances",
+        "tree": "https://data.bioontology.org/ontologies/AERO/classes/http%3A%2F%2Fpurl.obolibrary.org%2Fobo%2Fogms%2FOMRE_0000023/tree",
+        "notes": "https://data.bioontology.org/ontologies/AERO/classes/http%3A%2F%2Fpurl.obolibrary.org%2Fobo%2Fogms%2FOMRE_0000023/notes",
+        "mappings": "https://data.bioontology.org/ontologies/AERO/classes/http%3A%2F%2Fpurl.obolibrary.org%2Fobo%2Fogms%2FOMRE_0000023/mappings",
+        "ui": "http://bioportal.bioontology.org/ontologies/AERO?p=classes&conceptid=http%3A%2F%2Fpurl.obolibrary.org%2Fobo%2Fogms%2FOMRE_0000023",
+        "@context": {
+          "self": "http://www.w3.org/2002/07/owl#Class",
+          "ontology": "http://data.bioontology.org/metadata/Ontology",
+          "children": "http://www.w3.org/2002/07/owl#Class",
+          "parents": "http://www.w3.org/2002/07/owl#Class",
+          "descendants": "http://www.w3.org/2002/07/owl#Class",
+          "ancestors": "http://www.w3.org/2002/07/owl#Class",
+          "instances": "http://data.bioontology.org/metadata/Instance",
+          "tree": "http://www.w3.org/2002/07/owl#Class",
+          "notes": "http://data.bioontology.org/metadata/Note",
+          "mappings": "http://data.bioontology.org/metadata/Mapping",
+          "ui": "http://www.w3.org/2002/07/owl#Class"
+        }
+      },
+      "@context": {
+        "@vocab": "http://data.bioontology.org/metadata/",
+        "@language": "en"
+      }
+    },
+    {
+      "@id": "http://purl.bioontology.org/ontology/SNOMEDCT/3415004",
+      "@type": "http://www.w3.org/2002/07/owl#Class",
+      "links": {
+        "self": "https://data.bioontology.org/ontologies/SNOMEDCT/classes/http%3A%2F%2Fpurl.bioontology.org%2Fontology%2FSNOMEDCT%2F3415004",
+        "ontology": "https://data.bioontology.org/ontologies/SNOMEDCT",
+        "children": "https://data.bioontology.org/ontologies/SNOMEDCT/classes/http%3A%2F%2Fpurl.bioontology.org%2Fontology%2FSNOMEDCT%2F3415004/children",
+        "parents": "https://data.bioontology.org/ontologies/SNOMEDCT/classes/http%3A%2F%2Fpurl.bioontology.org%2Fontology%2FSNOMEDCT%2F3415004/parents",
+        "descendants": "https://data.bioontology.org/ontologies/SNOMEDCT/classes/http%3A%2F%2Fpurl.bioontology.org%2Fontology%2FSNOMEDCT%2F3415004/descendants",
+        "ancestors": "https://data.bioontology.org/ontologies/SNOMEDCT/classes/http%3A%2F%2Fpurl.bioontology.org%2Fontology%2FSNOMEDCT%2F3415004/ancestors",
+        "instances": "https://data.bioontology.org/ontologies/SNOMEDCT/classes/http%3A%2F%2Fpurl.bioontology.org%2Fontology%2FSNOMEDCT%2F3415004/instances",
+        "tree": "https://data.bioontology.org/ontologies/SNOMEDCT/classes/http%3A%2F%2Fpurl.bioontology.org%2Fontology%2FSNOMEDCT%2F3415004/tree",
+        "notes": "https://data.bioontology.org/ontologies/SNOMEDCT/classes/http%3A%2F%2Fpurl.bioontology.org%2Fontology%2FSNOMEDCT%2F3415004/notes",
+        "mappings": "https://data.bioontology.org/ontologies/SNOMEDCT/classes/http%3A%2F%2Fpurl.bioontology.org%2Fontology%2FSNOMEDCT%2F3415004/mappings",
+        "ui": "http://bioportal.bioontology.org/ontologies/SNOMEDCT?p=classes&conceptid=http%3A%2F%2Fpurl.bioontology.org%2Fontology%2FSNOMEDCT%2F3415004",
+        "@context": {
+          "self": "http://www.w3.org/2002/07/owl#Class",
+          "ontology": "http://data.bioontology.org/metadata/Ontology",
+          "children": "http://www.w3.org/2002/07/owl#Class",
+          "parents": "http://www.w3.org/2002/07/owl#Class",
+          "descendants": "http://www.w3.org/2002/07/owl#Class",
+          "ancestors": "http://www.w3.org/2002/07/owl#Class",
+          "instances": "http://data.bioontology.org/metadata/Instance",
+          "tree": "http://www.w3.org/2002/07/owl#Class",
+          "notes": "http://data.bioontology.org/metadata/Note",
+          "mappings": "http://data.bioontology.org/metadata/Mapping",
+          "ui": "http://www.w3.org/2002/07/owl#Class"
+        }
+      },
+      "@context": {
+        "@vocab": "http://data.bioontology.org/metadata/",
+        "@language": "en"
+      }
+    }
+  ],
+  "process": null,
+  "@id": "",
+  "@type": "http://data.bioontology.org/metadata/Mapping"
+}

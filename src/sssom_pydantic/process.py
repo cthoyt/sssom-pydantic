@@ -2,22 +2,33 @@
 
 from __future__ import annotations
 
+import datetime
 import itertools as itt
 from collections import defaultdict
 from collections.abc import Callable, Iterable
-from typing import TYPE_CHECKING, TypeAlias, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Literal, TypeAlias, TypeVar, cast
 
 from curies import Reference
+from curies.vocabulary import (
+    SemanticMappingScope,
+    manual_mapping_curation,
+    semantic_mapping_scopes,
+)
 
-from . import RequiredSemanticMapping
+from . import RequiredSemanticMapping, SemanticMapping
 
 if TYPE_CHECKING:
     from _typeshed import SupportsRichComparison
 
 __all__ = [
+    "UNSURE",
+    "Call",
     "CanonicalMappingTuple",
     "Hasher",
+    "Mark",
+    "curate",
     "get_canonical_tuple",
+    "publish",
     "remove_redundant_external",
     "remove_redundant_internal",
 ]
@@ -38,6 +49,12 @@ Hasher: TypeAlias = Callable[[MappingTypeVar], HashTarget]
 
 #: A function that makes a comparable score for a semantic mapping
 Scorer: TypeAlias = Callable[[MappingTypeVar], "SupportsRichComparison"]
+
+#: A decision about a specific curation
+Call: TypeAlias = Literal["correct", "incorrect", "unsure"]
+
+#: A decision or an overwrite for a specific curation
+Mark: TypeAlias = Call | SemanticMappingScope
 
 
 def remove_redundant_internal(
@@ -131,3 +148,78 @@ def _get_predicate_helper(
         return key(mapping) not in skip_tuples
 
     return _keep_mapping
+
+
+UNSURE = "sssom-curator-unsure"
+
+
+def curate(
+    mapping: SemanticMapping,
+    /,
+    authors: Reference | list[Reference],
+    mark: Mark,
+    confidence: float | None = None,
+    **kwargs: Any,
+) -> SemanticMapping:
+    """Curate a mapping."""
+    if mark == "unsure":
+        if mapping.curation_rule_text and UNSURE in mapping.curation_rule_text:
+            raise ValueError("this mapping has already been marked as unsure")
+        curation_rule_text = mapping.curation_rule_text or []
+        curation_rule_text.append(UNSURE)
+        curation_rule_text.sort()
+        return mapping.model_copy(update={"curation_rule_text": curation_rule_text})
+
+    if isinstance(authors, Reference):
+        authors = [authors]
+
+    update = {
+        "justification": manual_mapping_curation,
+        "mapping_date": datetime.date.today(),
+        "authors": authors,
+        "confidence": confidence,
+        # Zero out the following
+        "mapping_tool": None,
+        "similarity_measure": None,
+        "similarity_score": None,
+        **kwargs,
+    }
+    if mapping.curation_rule_text is not None and UNSURE in mapping.curation_rule_text:
+        update["curation_rule_text"] = [
+            m for m in mapping.curation_rule_text if m != UNSURE
+        ] or None
+
+    if mark in semantic_mapping_scopes:
+        update["predicate"] = semantic_mapping_scopes[cast(SemanticMappingScope, mark)]
+    elif mark == "incorrect":
+        update["predicate_modifier"] = "Not"
+    elif mark == "correct":
+        pass  # nothing needed here!
+    else:
+        raise ValueError(f"invalid mark: {mark}")
+
+    new_mapping = mapping.model_copy(update=update)
+    return new_mapping
+
+
+def publish(
+    mapping: SemanticMapping,
+    /,
+    *,
+    exists_action: Literal["error", "overwrite", "keep"] | None = None,
+    date: datetime.date | None = None,
+) -> SemanticMapping:
+    """Add a publication date to the mapping."""
+    if mapping.publication_date is not None:
+        if exists_action == "error" or exists_action is None:
+            raise ValueError
+        elif exists_action == "keep":
+            return mapping
+        elif exists_action == "overwrite":
+            pass  # just use the implementation below to update the publication date
+        else:
+            raise ValueError(f"invalid exists_action: {exists_action}")
+    rv = mapping.model_copy(
+        update={"publication_date": date if date is not None else datetime.date.today()}
+    )
+    return rv

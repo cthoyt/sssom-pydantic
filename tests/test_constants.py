@@ -112,14 +112,19 @@ class TestSchema(unittest.TestCase):
     def test_value_types(self) -> None:
         """Test that values with entity references are type annotated as references."""
         maps = {
+            # get rid of the redundant suffix `_id`
             "record_id": "record",
             "subject_id": "subject",
             "predicate_id": "predicate",
             "object_id": "object",
-            "mapping_justification": "justification",
             "reviewer_id": "reviewers",
             "author_id": "authors",
             "creator_id": "creators",
+            # get rid of the redundant prefix `mapping_`
+            "mapping_justification": "justification",
+            "mapping_cardinality": "cardinality",
+            "mapping_source": "source",
+            "mapping_provider": "provider",
         }
         skips = {
             # skip these because they're mapped in a custom way
@@ -129,6 +134,8 @@ class TestSchema(unittest.TestCase):
             "subject_label",
             "predicate_label",
             "object_label",
+            "other",  # is a dict[str, str]
+            "mapping_provider",  # is an AnyURL
             # skip these because they're not included
             "creator_label",
             "author_label",
@@ -142,9 +149,7 @@ class TestSchema(unittest.TestCase):
                 multivalued = slot in MULTIVALUED
                 match self.view.get_slot(slot).range:
                     case "EntityReference":
-                        if annotation is Reference:
-                            self.assertNotIn(slot, MULTIVALUED)
-                        elif multivalued:
+                        if multivalued:
                             self.assertEqual(
                                 list[Reference] | None,
                                 annotation,
@@ -152,9 +157,9 @@ class TestSchema(unittest.TestCase):
                                 f"references, but got {annotation}",
                             )
                         else:
-                            self.assertEqual(
-                                Reference | None,
+                            self.assertIn(
                                 annotation,
+                                {Reference, Reference | None},
                                 msg=f"{slot} should be annotated as a reference",
                             )
                     case "string" | "NonRelativeURI":
@@ -187,7 +192,12 @@ class TestSchema(unittest.TestCase):
                     case "predicate_modifier_enum":
                         self.assertEqual(typing.Literal["Not"] | None, annotation)
                     case "entity_type_enum":
-                        pass
+                        self.assertEqual(
+                            Reference | None,
+                            annotation,
+                            msg=f"{slot} with LinkML type 'entity_type_enum' should "
+                            f"be annotated as a reference",
+                        )
                     case _:
                         self.fail(
                             f"missing handling for {slot} with "

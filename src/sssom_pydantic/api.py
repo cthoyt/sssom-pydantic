@@ -4,14 +4,17 @@ from __future__ import annotations
 
 import datetime
 import functools
+import hashlib
 import warnings
 from collections.abc import Callable
 from typing import Any, Literal, TypeAlias
 
 import curies
 from curies import NamableReference, Reference, Triple
+from curies.mixins import SemanticallyStandardizable
 from curies.vocabulary import matching_processes
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AnyUrl, BaseModel, ConfigDict, Field
+from typing_extensions import Self
 
 from .constants import MULTIVALUED, PROPAGATABLE, Row
 from .models import Cardinality, Record
@@ -27,7 +30,9 @@ __all__ = [
     "PredicateModifier",
     "RequiredSemanticMapping",
     "SemanticMapping",
+    "SemanticMappingHash",
     "SemanticMappingPredicate",
+    "mapping_hash_v1",
 ]
 
 PredicateModifier: TypeAlias = Literal["Not"]
@@ -197,7 +202,7 @@ def _join(references: list[Reference] | None) -> list[str] | None:
     return [r.curie for r in references]
 
 
-class SemanticMapping(CoreSemanticMapping):
+class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
     """Represents all fields for SSSOM.."""
 
     model_config = ConfigDict(frozen=True)
@@ -207,7 +212,8 @@ class SemanticMapping(CoreSemanticMapping):
     subject_preprocessing: list[Reference] | None = Field(None)
     subject_source: Reference | None = Field(None)
     subject_source_version: str | None = Field(None)
-    subject_type: str | None = Field(None)
+    # https://w3id.org/sssom/subject_type
+    subject_type: Reference | None = Field(None)
 
     predicate_type: Reference | None = Field(None)
 
@@ -216,7 +222,7 @@ class SemanticMapping(CoreSemanticMapping):
     object_preprocessing: list[Reference] | None = Field(None)
     object_source: Reference | None = Field(None)
     object_source_version: str | None = Field(None)
-    object_type: str | None = Field(None)
+    object_type: Reference | None = Field(None)
 
     creators: list[Reference] | None = Field(
         None,
@@ -246,14 +252,17 @@ class SemanticMapping(CoreSemanticMapping):
     issue_tracker_item: Reference | None = Field(None)
 
     #: see https://mapping-commons.github.io/sssom/MappingCardinalityEnum/
-    mapping_cardinality: Cardinality | None = Field(None)  # TODO rename
+    #: and https://w3id.org/sssom/mapping_cardinality
+    cardinality: Cardinality | None = Field(None)
     cardinality_scope: list[str] | None = Field(None)
-    mapping_provider: str | None = Field(None)  # TODO rename
-    mapping_source: Reference | None = Field(None)  # TODO rename
+    # https://w3id.org/sssom/mapping_provider
+    provider: AnyUrl | None = Field(None)
+    # https://w3id.org/sssom/mapping_source
+    source: Reference | None = Field(None)
 
     match_string: list[str] | None = Field(None)
 
-    other: str | None = Field(None)  # TODO this is a dictionary
+    other: dict[str, str] | None = Field(None)
     see_also: list[str] | None = Field(None)
     similarity_measure: str | None = Field(None)
     similarity_score: float | None = Field(None)
@@ -263,9 +272,11 @@ class SemanticMapping(CoreSemanticMapping):
         rv = super().get_prefixes()
         for x in [
             self.subject_source,
+            self.subject_type,
             self.predicate_type,
             self.object_source,
-            self.mapping_source,
+            self.object_type,
+            self.source,
         ]:
             if x is not None:
                 rv.add(x.prefix)
@@ -300,7 +311,7 @@ class SemanticMapping(CoreSemanticMapping):
             subject_preprocessing=self.subject_preprocessing,
             subject_source=self.subject_source,
             subject_source_version=self.subject_source_version,
-            subject_type=self.subject_type,
+            subject_type=self.subject_type.curie if self.subject_type is not None else None,
             #
             predicate_id=self.predicate.curie,
             predicate_label=self.predicate_name,
@@ -314,7 +325,7 @@ class SemanticMapping(CoreSemanticMapping):
             object_preprocessing=self.object_preprocessing,
             object_source=self.object_source,
             object_source_version=self.object_source_version,
-            object_type=self.object_type,
+            object_type=self.object_type.curie if self.object_type is not None else None,
             #
             mapping_justification=self.justification.curie,
             #
@@ -335,10 +346,10 @@ class SemanticMapping(CoreSemanticMapping):
             issue_tracker_item=self.issue_tracker_item,
             license=self.license,
             #
-            mapping_cardinality=self.mapping_cardinality,
+            mapping_cardinality=self.cardinality,
             cardinality_scope=self.cardinality_scope,
-            mapping_provider=self.mapping_provider,
-            mapping_source=self.mapping_source,
+            mapping_provider=str(self.provider) if self.provider else None,
+            mapping_source=self.source.curie if self.source else None,
             mapping_tool=self.mapping_tool.name
             if self.mapping_tool is not None and self.mapping_tool.name is not None
             else None,
@@ -350,15 +361,48 @@ class SemanticMapping(CoreSemanticMapping):
             else None,
             match_string=self.match_string,
             #
-            other=self.other,
+            other=_dict_to_other(self.other) if self.other else None,
             see_also=self.see_also,
             similarity_measure=self.similarity_measure,
             similarity_score=self.similarity_score,
         )
 
+    def standardize(self, converter: curies.Converter) -> Self:
+        """Standardize."""
+        update: dict[str, Reference | list[Reference]] = {}
+        for name, field_info in self.__class__.model_fields.items():
+            value = getattr(self, name)
+            if value is None:
+                continue
+            if field_info.annotation in {Reference, Reference | None}:
+                update[name] = converter.standardize_reference(value, strict=True)
+            elif field_info.annotation in {list[Reference], list[Reference] | None}:
+                update[name] = [converter.standardize_reference(r, strict=True) for r in value]
+        return self.model_copy(update=update)
+
+
+OTHER_PRIMARY_SEP = "|"
+OTHER_SECONDARY_SEP = "="
+
+
+def _dict_to_other(x: dict[str, str]) -> str:
+    return OTHER_PRIMARY_SEP.join(f"{k}{OTHER_SECONDARY_SEP}{v}" for k, v in sorted(x.items()))
+
+
+def _other_to_dict(x: str) -> dict[str, str]:
+    return dict(_xx(y) for y in x.split(OTHER_PRIMARY_SEP))
+
+
+def _xx(s: str) -> tuple[str, str]:
+    left, right = s.split(OTHER_SECONDARY_SEP)
+    return left, right
+
 
 #: A predicate for a semantic mapping
 SemanticMappingPredicate: TypeAlias = Callable[[SemanticMapping], bool]
+
+#: A function that hashes a semantic mapping into a reference
+SemanticMappingHash: TypeAlias = Callable[[SemanticMapping], Reference]
 
 
 class MappingTool(BaseModel):
@@ -432,7 +476,7 @@ class MappingSetRecord(BaseModel):
             #
             publication_date=self.publication_date,
             see_also=self.see_also,
-            other=self.other,
+            other=_other_to_dict(self.other) if self.other else None,
             comment=self.comment,
             sssom_version=self.sssom_version,
             license=self.license,
@@ -580,3 +624,14 @@ class ExtensionDefinition(BaseModel):
             property=self.property.curie if self.property else None,
             type_hint=self.type_hint.curie if self.type_hint else None,
         )
+
+
+MAPPING_HASH_V1_PREFIX = "sssom-pydantic-mapping-hash-v2"
+MAPPING_HASH_V1_EXCLUDE: set[str] = {"record", "cardinality", "cardinality_scope"}
+
+
+def mapping_hash_v1(m: SemanticMapping) -> Reference:
+    """Hash a mapping into a reference."""
+    h = hashlib.md5(usedforsecurity=False)
+    h.update(m.model_dump_json(exclude=MAPPING_HASH_V1_EXCLUDE).encode("utf8"))
+    return Reference(prefix=MAPPING_HASH_V1_PREFIX, identifier=h.hexdigest())
