@@ -31,14 +31,14 @@ def get_controller(request: Request) -> SemanticMappingDatabase:
 
 #: A type alias for a controller that contains a dependency injection
 #: annotation for FastAPI.
-AnnotatedController: TypeAlias = Annotated[SemanticMappingDatabase, Depends(get_controller)]
+AnnotatedDatabase: TypeAlias = Annotated[SemanticMappingDatabase, Depends(get_controller)]
 
 #: A type alias for a CURIE passed via the path
 AnnotatedCURIE = Annotated[str, Path(description="The CURIE for mapping record")]
 
 
 @router.get("/mapping/{curie}")
-def get_mapping(controller: AnnotatedController, curie: AnnotatedCURIE) -> SemanticMapping:
+def get_mapping(controller: AnnotatedDatabase, curie: AnnotatedCURIE) -> SemanticMapping:
     """Get a mapping by CURIE."""
     mapping = controller.get_mapping(Reference.from_curie(curie))
     if mapping is None:
@@ -47,7 +47,7 @@ def get_mapping(controller: AnnotatedController, curie: AnnotatedCURIE) -> Seman
 
 
 @router.delete("/mapping/{curie}")
-def delete_mapping(controller: AnnotatedController, curie: AnnotatedCURIE) -> str:
+def delete_mapping(controller: AnnotatedDatabase, curie: AnnotatedCURIE) -> str:
     """Get a mapping by CURIE."""
     controller.delete_mapping(Reference.from_curie(curie))
     return "ok"
@@ -55,7 +55,7 @@ def delete_mapping(controller: AnnotatedController, curie: AnnotatedCURIE) -> st
 
 @router.post("/mapping/")
 def post_mapping(
-    controller: AnnotatedController,
+    database: AnnotatedDatabase,
     mapping: Annotated[
         SemanticMapping,
         Body(
@@ -70,32 +70,29 @@ def post_mapping(
             ]
         ),
     ],
-) -> str:
+) -> Reference:
     """Add a mapping by CURIE."""
-    controller.add_mapping(mapping)
-    return "ok"
+    return database.add_mapping(mapping)
 
 
 @router.post("/action/publish/{curie}")
 def publish_mapping(
-    controller: AnnotatedController,
+    database: AnnotatedDatabase,
     curie: AnnotatedCURIE,
     date: Annotated[datetime.date | None, Query(...)] = None,
-) -> str:
+) -> Reference:
     """Publish a mapping with the given CURIE."""
-    controller.publish(Reference.from_curie(curie), date=date)
-    return "ok"
+    return database.publish(Reference.from_curie(curie), date=date)
 
 
 @router.post("/action/curate/{curie}")
 def curate_mapping(
-    controller: AnnotatedController,
+    database: AnnotatedDatabase,
     curie: AnnotatedCURIE,
     date: Annotated[datetime.date | None, Query(...)] = None,
-) -> str:
+) -> Reference:
     """Publish a mapping with the given CURIE."""
-    controller.publish(Reference.from_curie(curie), date=date)
-    return "ok"
+    return database.publish(Reference.from_curie(curie), date=date)
 
 
 def get_app(

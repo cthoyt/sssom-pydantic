@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from curies import Reference
 from pydantic import BaseModel
 from starlette.testclient import TestClient
 
@@ -24,28 +25,46 @@ class TestFastAPI(unittest.TestCase):
             actual.model_dump(exclude_unset=True, exclude_none=True),
         )
 
-    def test_api(self) -> None:
-        """Test the components of a mapping API."""
+    def setUp(self) -> None:
+        """Set up the test case with a database."""
+        self.td = tempfile.TemporaryDirectory()
+        self.path = Path(self.td.name).joinpath("test.db")
+        self.database = SemanticMappingDatabase.from_connection(
+            connection=f"sqlite:///{self.path}",
+            semantic_mapping_hash=mapping_hash_v1,
+        )
+        self.app = get_app(database=self.database)
+        self.client = TestClient(self.app)
+
+    def tearDown(self) -> None:
+        """Tear down the test case."""
+        self.td.cleanup()
+
+    def test_get_mapping(self) -> None:
+        """Test getting a mapping from the API."""
         expected = _m()
+        self.database.add_mapping(expected)
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            # this can't be memory because of weird thread-safe stuff
-            path = Path(tmpdir).joinpath("test.db")
+        reference = self.database._hsh(expected)
+        self.assertIsNotNone(self.database.get_mapping(reference))
 
-            database = SemanticMappingDatabase.from_connection(
-                connection=f"sqlite:///{path}",
-                semantic_mapping_hash=mapping_hash_v1,
-            )
-            database.add_mapping(expected)
+        response = self.client.get(f"/mapping/{reference.curie}")
+        response.raise_for_status()
+        response_json = response.json()
+        actual = SemanticMapping.model_validate(response_json)
+        self.assert_model_equal(_m(record=reference), actual)
 
-            reference = database._hsh(expected)
-            self.assertIsNotNone(database.get_mapping(reference))
+    def test_post_mapping(self) -> None:
+        """Test posting a mapping to the API."""
+        mapping = _m()
 
-            app = get_app(database=database)
-            client = TestClient(app)
+        reference = self.database._hsh(mapping)
+        self.assertEqual(0, self.database.count_mappings())
 
-            response = client.get(f"/mapping/{reference.curie}")
-            response.raise_for_status()
-            response_json = response.json()
-            actual = SemanticMapping.model_validate(response_json)
-            self.assert_model_equal(_m(record=reference), actual)
+        response = self.client.post("/mapping", json=mapping.model_dump())
+        response.raise_for_status()
+
+        actual = Reference.model_validate(response.json())
+        self.assertEqual(reference, actual)
+
+        self.assertIsNotNone(self.database.get_mapping(reference))
