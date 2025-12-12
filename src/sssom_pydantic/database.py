@@ -1,12 +1,24 @@
-"""Database model."""
+"""Database model.
+
+.. code-block:: python
+
+    from sssom_pydantic.database import SemanticMappingDatabase
+    from sssom_pydantic.api import mapping_hash_v1
+
+    database = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
+    database.read("https://w3id.org/biopragmatics/biomappings/biomappings.sssom.tsv")
+
+"""
 
 from __future__ import annotations
 
 import contextlib
 import datetime
-from collections.abc import Callable, Generator, Iterable, Sequence
+from collections.abc import Callable, Collection, Generator, Iterable, Sequence
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Literal, ParamSpec, cast
 
+import curies
 import sqlmodel
 from curies import NamableReference, Reference
 from curies.database import (
@@ -22,8 +34,9 @@ from sqlmodel import JSON, Column, Field, Session, SQLModel, String, and_, col, 
 from sqlmodel.sql._expression_select_cls import SelectOfScalar
 from typing_extensions import Self
 
-from sssom_pydantic import MappingTool, SemanticMapping
-from sssom_pydantic.api import SemanticMappingHash
+import sssom_pydantic
+from sssom_pydantic import MappingTool, Metadata, SemanticMapping
+from sssom_pydantic.api import MappingSet, MappingSetRecord, SemanticMappingHash
 from sssom_pydantic.models import Cardinality
 from sssom_pydantic.process import Mark, curate, publish
 from sssom_pydantic.query import Query
@@ -194,7 +207,14 @@ class SemanticMappingDatabase:
         semantic_mapping_hash: SemanticMappingHash,
         session_cls: type[Session] | None = None,
     ) -> None:
-        """Construct a database."""
+        """Construct a database.
+
+        :param engine: SQLAlchemy engine instance
+        :param semantic_mapping_hash: A function that deterministically hashes a mapping.
+            This is required until the SSSOM specification
+            `defines a standard hashing procedure <https://github.com/mapping-commons/sssom/issues/436>`_.
+        :param session_cls: SQLAlchemy session class. By default, this uses :class:`sqlmodel.Session
+        """
         self.engine = engine
         self.session_cls = session_cls if session_cls is not None else Session
         self._hsh = semantic_mapping_hash
@@ -311,6 +331,41 @@ class SemanticMappingDatabase:
             if offset is not None:
                 statement = statement.offset(offset)
             return session.exec(statement).all()
+
+    def read(
+        self,
+        path: str | Path,
+        metadata: MappingSet | MappingSetRecord | Metadata | None = None,
+        converter: curies.Converter | None = None,
+        **kwargs: Any,
+    ) -> list[Reference]:
+        """Read mappings from a file into the database."""
+        mappings, _converter, _metadata = sssom_pydantic.read(
+            path, metadata=metadata, converter=converter, **kwargs
+        )
+        return self.add_mappings(mappings)
+
+    def write(
+        self,
+        path: str | Path,
+        *,
+        metadata: MappingSet | Metadata | MappingSetRecord | None = None,
+        converter: curies.Converter | None = None,
+        exclude_columns: Collection[str] | None = None,
+        where_clauses: Query | list[ColumnExpressionArgument[bool]] | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
+    ) -> None:
+        """Write the database to a file."""
+        mappings = self.get_mappings(where_clauses=where_clauses, limit=limit, offset=offset)
+        mapping_it = (m.to_semantic_mapping() for m in mappings)
+        sssom_pydantic.write(
+            mapping_it,
+            path,
+            metadata=metadata,
+            converter=converter,
+            exclude_columns=exclude_columns,
+        )
 
     def curate(
         self,
