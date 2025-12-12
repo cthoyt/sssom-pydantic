@@ -61,6 +61,7 @@ tests = [
     "pytest",
     "coverage[toml]",
     "linkml_runtime",
+    "httpx",
 ]
 docs = [
     "sphinx>=8",
@@ -79,6 +80,7 @@ typing = [
     "click-types",
     "types-requests",
     "sqlmodel",
+    "fastapi",
 ]
 docs-lint = [
     { include-group = "docs" },
@@ -124,6 +126,9 @@ ontoportal = [
 ]
 database = [
     "sqlmodel",
+]
+fastapi = [
+    "fastapi",
 ]
 
 # See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#urls

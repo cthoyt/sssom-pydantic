@@ -5,7 +5,7 @@ from __future__ import annotations
 import contextlib
 import datetime
 from collections.abc import Callable, Generator, Iterable, Sequence
-from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Literal, ParamSpec
+from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Literal, ParamSpec, cast
 
 import sqlmodel
 from curies import NamableReference, Reference
@@ -249,20 +249,25 @@ class SemanticMappingDatabase:
                 statement = statement.where(*where_clauses)
             return session.exec(statement).one()
 
-    def add_mapping(self, mapping: SemanticMapping) -> None:
+    def add_mapping(self, mapping: SemanticMapping) -> Reference:
         """Add a mapping to the database."""
-        return self.add_mappings([mapping])
+        rv = self.add_mappings([mapping])
+        return rv[0]
 
-    def add_mappings(self, mappings: Iterable[SemanticMapping]) -> None:
+    def add_mappings(self, mappings: Iterable[SemanticMapping]) -> list[Reference]:
         """Add mappings to the database."""
+        rv: list[Reference] = []
         with self.get_session() as session:
-            session.add_all(
-                SemanticMappingModel.from_semantic_mapping(
-                    mapping.model_copy(update={"record": self._hsh(mapping)})
+            for mapping in mappings:
+                reference = self._hsh(mapping)
+                session.add(
+                    SemanticMappingModel.from_semantic_mapping(
+                        mapping.model_copy(update={"record": reference})
+                    )
                 )
-                for mapping in mappings
-            )
+                rv.append(reference)
             session.commit()
+        return rv
 
     @staticmethod
     def _get_mapping_by_reference(reference: Reference) -> SelectOfScalar[SemanticMappingModel]:
@@ -314,11 +319,11 @@ class SemanticMappingDatabase:
         mark: Mark,
         confidence: float | None = None,
         **kwargs: Any,
-    ) -> None:
-        """Curate a mapping."""
+    ) -> Reference:
+        """Curate a mapping and return the new mapping's record."""
         if isinstance(authors, Reference):
             authors = [authors]
-        self._mutate(
+        return self._mutate(
             reference,
             curate,
             authors=authors,
@@ -331,9 +336,9 @@ class SemanticMappingDatabase:
         self,
         reference: Reference,
         date: datetime.date | None = None,
-    ) -> None:
-        """Publish a mapping."""
-        self._mutate(reference, publish, date=date)
+    ) -> Reference:
+        """Publish a mapping and return the new mapping's record."""
+        return self._mutate(reference, publish, date=date)
 
     def _mutate(
         self,
@@ -341,7 +346,7 @@ class SemanticMappingDatabase:
         f: Callable[Concatenate[SemanticMapping, P], SemanticMapping],
         *args: P.args,
         **kwargs: P.kwargs,
-    ) -> None:
+    ) -> Reference:
         mapping = self.get_mapping(reference)
         if mapping is None:
             raise ValueError
@@ -349,6 +354,7 @@ class SemanticMappingDatabase:
         new_mapping = new_mapping.model_copy(update={"record": self._hsh(new_mapping)})
         self.add_mapping(new_mapping)
         self.delete_mapping(reference)
+        return cast(Reference, new_mapping.record)
 
 
 POSITIVE_MAPPING_CLAUSE = and_(
