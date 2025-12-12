@@ -103,3 +103,20 @@ class TestFastAPI(unittest.TestCase):
         )
         expected = expected.model_copy(update={"record": self.database._hsh(expected)})
         self.assert_model_equal(expected, actual)
+
+        publish_response = self.client.post(f"/action/publish/{curation_reference.curie}")
+        publish_response.raise_for_status()
+        publish_reference = Reference.model_validate(publish_response.json())
+
+        published_mapping_response = self.client.get(f"/mapping/{publish_reference.curie}")
+        published_mapping_response.raise_for_status()
+        published_mapping = SemanticMapping.model_validate(published_mapping_response.json())
+
+        expected_2 = _m(
+            justification=manual_mapping_curation,
+            authors=[charlie],
+            mapping_date=datetime.date.today(),
+            publication_date=datetime.date.today(),
+        )
+        expected_2 = expected_2.model_copy(update={"record": self.database._hsh(expected_2)})
+        self.assert_model_equal(expected_2, published_mapping)
