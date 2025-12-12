@@ -163,6 +163,7 @@ def curate(
     authors: Reference | list[Reference],
     mark: Mark,
     confidence: float | None = None,
+    add_date: bool = True,
     **kwargs: Any,
 ) -> SemanticMapping:
     """Curate a mapping."""
@@ -179,7 +180,6 @@ def curate(
 
     update = {
         "justification": manual_mapping_curation,
-        "mapping_date": datetime.date.today(),
         "authors": authors,
         "confidence": confidence,
         # Zero out the following
@@ -188,6 +188,12 @@ def curate(
         "similarity_score": None,
         **kwargs,
     }
+
+    # Add a flag for maintaining backwards compatibility
+    # with workflows that don't track this
+    if add_date:
+        update["mapping_date"] = datetime.date.today()
+
     if mapping.curation_rule_text is not None and UNSURE in mapping.curation_rule_text:
         update["curation_rule_text"] = [
             m for m in mapping.curation_rule_text if m != UNSURE
