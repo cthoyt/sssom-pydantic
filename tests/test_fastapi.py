@@ -96,10 +96,10 @@ class TestFastAPI(unittest.TestCase):
         get_response.raise_for_status()
         actual = SemanticMapping.model_validate(get_response.json())
 
-        mapping_curated = _m(
-            justification=manual_mapping_curation, authors=[charlie], date=datetime.date.today()
+        expected = _m(
+            justification=manual_mapping_curation,
+            authors=[charlie],
+            mapping_date=datetime.date.today(),
         )
-        mapping_curated = mapping_curated.model_copy(
-            update={"record": self.database._hsh(mapping_curated)}
-        )
-        self.assert_model_equal(mapping_curated, actual)
+        expected = expected.model_copy(update={"record": self.database._hsh(expected)})
+        self.assert_model_equal(expected, actual)
