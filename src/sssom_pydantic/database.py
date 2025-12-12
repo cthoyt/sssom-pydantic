@@ -5,8 +5,10 @@ from __future__ import annotations
 import contextlib
 import datetime
 from collections.abc import Callable, Generator, Iterable, Sequence
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Literal, ParamSpec, cast
 
+import curies
 import sqlmodel
 from curies import NamableReference, Reference
 from curies.database import (
@@ -22,8 +24,9 @@ from sqlmodel import JSON, Column, Field, Session, SQLModel, String, and_, col, 
 from sqlmodel.sql._expression_select_cls import SelectOfScalar
 from typing_extensions import Self
 
-from sssom_pydantic import MappingTool, SemanticMapping
-from sssom_pydantic.api import SemanticMappingHash
+import sssom_pydantic
+from sssom_pydantic import MappingTool, Metadata, SemanticMapping
+from sssom_pydantic.api import MappingSet, MappingSetRecord, SemanticMappingHash
 from sssom_pydantic.models import Cardinality
 from sssom_pydantic.process import Mark, curate, publish
 from sssom_pydantic.query import Query
@@ -311,6 +314,26 @@ class SemanticMappingDatabase:
             if offset is not None:
                 statement = statement.offset(offset)
             return session.exec(statement).all()
+
+    def read(self, path: str | Path) -> list[Reference]:
+        """Read mappings from a file into the database."""
+        mappings = sssom_pydantic.read(path)
+        return self.add_mappings(mappings)
+
+    def write(
+        self,
+        path: str | Path,
+        *,
+        metadata: MappingSet | Metadata | MappingSetRecord | None = None,
+        converter: curies.Converter | None = None,
+        where_clauses: Query | list[ColumnExpressionArgument[bool]] | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
+    ) -> None:
+        """Write the database to a file."""
+        mappings = self.get_mappings(where_clauses=where_clauses, limit=limit, offset=offset)
+        wm = (m.to_semantic_mapping() for m in mappings)
+        sssom_pydantic.write(wm, path, metadata=metadata, converter=converter)
 
     def curate(
         self,
