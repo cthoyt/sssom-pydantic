@@ -6,7 +6,7 @@ import datetime
 import itertools as itt
 from collections import defaultdict
 from collections.abc import Callable, Iterable
-from typing import TYPE_CHECKING, Any, Literal, TypeAlias, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Literal, TypeAlias, TypeVar, cast, get_args
 
 from curies import Reference
 from curies.vocabulary import (
@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from _typeshed import SupportsRichComparison
 
 __all__ = [
+    "MARKS",
     "UNSURE",
     "Call",
     "CanonicalMappingTuple",
@@ -55,6 +56,9 @@ Call: TypeAlias = Literal["correct", "incorrect", "unsure"]
 
 #: A decision or an overwrite for a specific curation
 Mark: TypeAlias = Call | SemanticMappingScope
+
+#: A set of all possible marks.
+MARKS: set[Mark] = set(get_args(Call)).union(get_args(SemanticMappingScope))
 
 
 def remove_redundant_internal(
