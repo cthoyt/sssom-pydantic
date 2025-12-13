@@ -373,6 +373,7 @@ class SemanticMappingDatabase:
         authors: Reference | list[Reference],
         mark: Mark,
         confidence: float | None = None,
+        add_date: bool = True,
         **kwargs: Any,
     ) -> Reference:
         """Curate a mapping and return the new mapping's record."""
@@ -384,6 +385,7 @@ class SemanticMappingDatabase:
             authors=authors,
             mark=mark,
             confidence=confidence,
+            add_date=add_date,
             **kwargs,
         )
 
