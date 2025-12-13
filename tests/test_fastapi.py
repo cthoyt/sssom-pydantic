@@ -11,6 +11,7 @@ from curies.vocabulary import (
     lexical_matching_process,
     manual_mapping_curation,
 )
+from fastapi import FastAPI
 from pydantic import BaseModel
 from starlette.testclient import TestClient
 
@@ -45,6 +46,11 @@ class TestFastAPI(unittest.TestCase):
     def tearDown(self) -> None:
         """Tear down the test case."""
         self.td.cleanup()
+
+    def test_get_missing_mapping(self) -> None:
+        """Test getting a missing mapping from the API."""
+        response = self.client.get("/mapping/nope:nope")
+        self.assertEqual(response.status_code, 404)
 
     def test_get_mapping(self) -> None:
         """Test getting a mapping from the API."""
@@ -120,3 +126,12 @@ class TestFastAPI(unittest.TestCase):
         )
         expected_2 = expected_2.model_copy(update={"record": self.database._hsh(expected_2)})
         self.assert_model_equal(expected_2, published_mapping)
+
+
+class TestInstantiation(unittest.TestCase):
+    """Test instantiation."""
+
+    def test_instantiation(self) -> None:
+        """Test instantiation without passing an explicit database."""
+        app = get_app()
+        self.assertIsInstance(app, FastAPI)
