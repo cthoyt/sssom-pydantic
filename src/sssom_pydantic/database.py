@@ -449,10 +449,15 @@ QUERY_TO_CLAUSE: dict[str, Callable[[str], ColumnExpressionArgument[bool]]] = {
     "mapping_tool": lambda value: or_(
         func.json_extract(SemanticMappingModel.mapping_tool, "$.name").icontains(value.lower()),
     ),
-    # TODO add normalization
-    "same_text": lambda value: SemanticMappingModel.subject_name
-    == SemanticMappingModel.object_name,
+    "same_text": lambda value: and_(
+        SemanticMappingModel.predicate == "skos:exactMatch",
+        _sqla_string_norm(SemanticMappingModel.subject_name) == _sqla_string_norm(SemanticMappingModel.object_name),
+    ),
 }
+
+
+def _sqla_string_norm(column: Any) -> Any:
+    return func.lower(func.replace(column, "-", ""))
 
 
 def clauses_from_query(query: Query | None = None) -> list[ColumnExpressionArgument[bool]]:
