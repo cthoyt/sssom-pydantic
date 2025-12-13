@@ -449,6 +449,7 @@ QUERY_TO_CLAUSE: dict[str, Callable[[str], ColumnExpressionArgument[bool]]] = {
     "mapping_tool": lambda value: or_(
         func.json_extract(SemanticMappingModel.mapping_tool, "$.name").icontains(value.lower()),
     ),
+    "same_text": lambda value: SemanticMappingModel.subject_name.lower() == SemanticMappingModel.object_name.lower()
 }
 
 

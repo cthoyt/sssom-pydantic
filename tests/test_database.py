@@ -104,8 +104,7 @@ class TestDatabase(unittest.TestCase):
     def test_query_functionality(self) -> None:
         """Check that all query fields are implemented."""
         for name, model_field in Query.model_fields.items():
-            if model_field.annotation == str | None:
-                self.assertIn(name, QUERY_TO_CLAUSE)
+            self.assertIn(name, QUERY_TO_CLAUSE)
 
     def test_clause_generation(self) -> None:
         """Test clause generation."""
