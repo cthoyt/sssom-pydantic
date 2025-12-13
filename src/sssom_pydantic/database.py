@@ -452,8 +452,10 @@ QUERY_TO_CLAUSE: dict[str, Callable[[str], ColumnExpressionArgument[bool]]] = {
 }
 
 
-def clauses_from_query(query: Query) -> list[ColumnExpressionArgument[bool]]:
+def clauses_from_query(query: Query | None = None) -> list[ColumnExpressionArgument[bool]]:
     """Get clauses from the query."""
+    if query is None:
+        return []
     return [
         QUERY_TO_CLAUSE[name](value)
         for name in Query.model_fields
