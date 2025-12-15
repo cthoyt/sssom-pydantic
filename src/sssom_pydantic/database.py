@@ -48,6 +48,7 @@ __all__ = [
     "NEGATIVE_MAPPING_CLAUSE",
     "POSITIVE_MAPPING_CLAUSE",
     "UNCURATED_CLAUSE",
+    "UNSURE_CLAUSE",
     "SemanticMappingDatabase",
     "SemanticMappingModel",
 ]
@@ -422,7 +423,16 @@ NEGATIVE_MAPPING_CLAUSE = and_(
     SemanticMappingModel.justification == manual_mapping_curation,
     SemanticMappingModel.predicate_modifier == "Not",
 )
-UNCURATED_CLAUSE = SemanticMappingModel.justification != manual_mapping_curation
+UNCURATED_CLAUSE = and_(
+    SemanticMappingModel.justification != manual_mapping_curation,
+    SemanticMappingModel.curation_rule_text.is_(None),
+)
+UNSURE_CLAUSE = and_(
+    SemanticMappingModel.justification != manual_mapping_curation,
+    SemanticMappingModel.curation_rule_text.is_not(
+        None
+    ),  # TODO be more specific about what it contains
+)
 
 #: A mapping from :class:`Query` fields to functions that produce appropriate
 #: clauses for database querying

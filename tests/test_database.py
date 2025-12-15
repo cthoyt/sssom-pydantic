@@ -123,7 +123,7 @@ class TestDatabase(unittest.TestCase):
                 results = db.get_mappings(query)
                 self.assertNotEqual(0, len(results))
 
-    def test_curate(self) -> None:
+    def test_curate_correct(self) -> None:
         """Test curation in the database."""
         mapping = SemanticMapping(
             subject=cases.R1,
@@ -146,6 +146,31 @@ class TestDatabase(unittest.TestCase):
             justification=manual_mapping_curation,
             authors=[charlie],
             mapping_date=datetime.date.today(),
+        )
+        self.assertIsNotNone(db.get_mapping(db._hsh(expected)))
+
+    def test_curate_unsure(self) -> None:
+        """Test curating a mapping as unsure in the database."""
+        mapping = SemanticMapping(
+            subject=cases.R1,
+            predicate=cases.P1,
+            object=cases.R2,
+            justification=lexical_matching_process,
+            confidence=0.95,
+        )
+
+        db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
+        db.add_mapping(mapping)
+        original_hash = db._hsh(mapping)
+        db.curate(original_hash, authors=charlie, mark="unsure")
+        self.assertIsNone(db.get_mapping(original_hash))
+
+        expected = SemanticMapping(
+            subject=cases.R1,
+            predicate=cases.P1,
+            object=cases.R2,
+            justification=lexical_matching_process,
+            confidence=0.95,
         )
         self.assertIsNotNone(db.get_mapping(db._hsh(expected)))
 
