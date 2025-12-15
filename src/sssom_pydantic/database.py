@@ -424,7 +424,7 @@ UNCURATED_CLAUSE = SemanticMappingModel.justification != manual_mapping_curation
 
 #: A mapping from :class:`Query` fields to functions that produce appropriate
 #: clauses for database querying
-QUERY_TO_CLAUSE: dict[str, Callable[[str], ColumnExpressionArgument[bool]]] = {
+QUERY_TO_CLAUSE: dict[str, Callable[[str], ColumnExpressionArgument[bool] | None]] = {
     "query": lambda value: or_(
         col(SemanticMappingModel.subject).icontains(value.lower()),
         col(SemanticMappingModel.subject_name).icontains(value.lower()),
@@ -452,7 +452,9 @@ QUERY_TO_CLAUSE: dict[str, Callable[[str], ColumnExpressionArgument[bool]]] = {
     "same_text": lambda value: and_(
         SemanticMappingModel.predicate == "skos:exactMatch",
         _str_norm(SemanticMappingModel.subject_name) == _str_norm(SemanticMappingModel.object_name),
-    ),
+    )
+    if value
+    else None,
 }
 
 
@@ -465,7 +467,7 @@ def clauses_from_query(query: Query | None = None) -> list[ColumnExpressionArgum
     if query is None:
         return []
     return [
-        QUERY_TO_CLAUSE[name](value)
+        clause
         for name in Query.model_fields
-        if (value := getattr(query, name))
+        if (value := getattr(query, name)) and (clause := QUERY_TO_CLAUSE[name](value)) is not None
     ]
