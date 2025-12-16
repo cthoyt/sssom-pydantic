@@ -6,7 +6,11 @@ import unittest
 from pathlib import Path
 
 from curies import Reference
-from curies.vocabulary import charlie, lexical_matching_process, manual_mapping_curation
+from curies.vocabulary import (
+    charlie,
+    lexical_matching_process,
+    manual_mapping_curation,
+)
 
 import sssom_pydantic
 from sssom_pydantic.api import SemanticMapping, mapping_hash_v1
@@ -149,6 +153,59 @@ class TestDatabase(unittest.TestCase):
         )
         self.assertIsNotNone(db.get_mapping(db._hsh(expected)))
 
+    def test_curate_incorrect(self) -> None:
+        """Test curation in the database."""
+        mapping = SemanticMapping(
+            subject=cases.R1,
+            predicate=cases.P1,
+            object=cases.R2,
+            justification=lexical_matching_process,
+            confidence=0.95,
+        )
+
+        db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
+        db.add_mapping(mapping)
+        original_hash = db._hsh(mapping)
+        db.curate(original_hash, authors=charlie, mark="incorrect")
+        self.assertIsNone(db.get_mapping(original_hash))
+
+        expected = SemanticMapping(
+            subject=cases.R1,
+            predicate=cases.P1,
+            object=cases.R2,
+            justification=manual_mapping_curation,
+            authors=[charlie],
+            mapping_date=datetime.date.today(),
+            predicate_modifier="Not",
+        )
+        self.assertIsNotNone(db.get_mapping(db._hsh(expected)))
+
+    def test_curate_broad(self) -> None:
+        """Test curation in the database."""
+        mapping = SemanticMapping(
+            subject=cases.R1,
+            predicate=cases.P1,
+            object=cases.R2,
+            justification=lexical_matching_process,
+            confidence=0.95,
+        )
+
+        db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
+        db.add_mapping(mapping)
+        original_hash = db._hsh(mapping)
+        db.curate(original_hash, authors=charlie, mark="BROAD")
+        self.assertIsNone(db.get_mapping(original_hash))
+
+        expected = SemanticMapping(
+            subject=cases.R1,
+            predicate="skos:broadMatch",
+            object=cases.R2,
+            justification=manual_mapping_curation,
+            authors=[charlie],
+            mapping_date=datetime.date.today(),
+        )
+        self.assertIsNotNone(db.get_mapping(db._hsh(expected)))
+
     def test_curate_unsure(self) -> None:
         """Test curating a mapping as unsure in the database."""
         mapping = SemanticMapping(
@@ -171,6 +228,7 @@ class TestDatabase(unittest.TestCase):
             object=cases.R2,
             justification=lexical_matching_process,
             confidence=0.95,
+            curation_rule_text=["sssom-curator-unsure"],
         )
         self.assertIsNotNone(db.get_mapping(db._hsh(expected)))
 
