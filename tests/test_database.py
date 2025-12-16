@@ -11,6 +11,7 @@ from curies.vocabulary import (
     lexical_matching_process,
     manual_mapping_curation,
 )
+from pydantic import BaseModel
 
 import sssom_pydantic
 from sssom_pydantic.api import SemanticMapping, mapping_hash_v1
@@ -18,6 +19,8 @@ from sssom_pydantic.database import (
     NEGATIVE_MAPPING_CLAUSE,
     POSITIVE_MAPPING_CLAUSE,
     QUERY_TO_CLAUSE,
+    UNSURE_CLAUSE,
+    UNCURATED_CLAUSE,
     SemanticMappingDatabase,
     SemanticMappingModel,
     clauses_from_query,
@@ -33,6 +36,36 @@ USER = Reference(prefix="orcid", identifier="1234")
 
 class TestDatabase(unittest.TestCase):
     """Test the database."""
+
+    def assert_model_equal(self, expected: SemanticMapping, actual: SemanticMapping) -> None:
+        """Assert two models are equal."""
+        return self.assertEqual(
+            expected.model_dump(
+                exclude_none=True, exclude_unset=True, exclude_defaults=True, exclude={"record"}
+            ),
+            actual.model_dump(
+                exclude_none=True, exclude_unset=True, exclude_defaults=True, exclude={"record"}
+            ),
+        )
+
+    def assert_models_equal(
+        self, expected: list[SemanticMapping], actual: list[SemanticMapping]
+    ) -> None:
+        """Assert two models are equal."""
+        return self.assertEqual(
+            [
+                e.model_dump(
+                    exclude_none=True, exclude_unset=True, exclude_defaults=True, exclude={"record"}
+                )
+                for e in sorted(expected)
+            ],
+            [
+                a.model_dump(
+                    exclude_none=True, exclude_unset=True, exclude_defaults=True, exclude={"record"}
+                )
+                for a in sorted(actual)
+            ],
+        )
 
     def test_db(self) -> None:
         """Test the database."""
@@ -279,3 +312,52 @@ class TestDatabase(unittest.TestCase):
                 exclude_columns=["record_id"],
             )
             self.assertEqual(path.read_text(), written_path.read_text())
+
+    def test_query_unsure(self) -> None:
+        """Test querying for unsure curations."""
+        m1 = SemanticMapping(
+            subject="a:1",
+            predicate="skos:exactMatch",
+            object="b:1",
+            justification=lexical_matching_process,
+            confidence=0.95,
+        )
+        m2 = SemanticMapping(
+            subject="a:2",
+            predicate="skos:exactMatch",
+            object="b:2",
+            justification=lexical_matching_process,
+            confidence=0.95,
+        )
+        m2_curated = SemanticMapping(
+            subject="a:2",
+            predicate="skos:exactMatch",
+            object="b:2",
+            justification=lexical_matching_process,
+            confidence=0.95,
+            curation_rule_text=[UNSURE],
+        )
+
+        db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
+        db.add_mappings([m1, m2])
+        db.curate(mapping_hash_v1(m2), authors=charlie, mark="unsure")
+
+        self.assert_models_equal(
+            [m1, m2_curated],
+            sorted(
+                [m.to_semantic_mapping() for m in db.get_mappings()],
+                key=lambda m: m.subject.identifier,
+            ),
+        )
+
+        uncurated_mappings = db.get_mappings([UNCURATED_CLAUSE])
+        self.assert_models_equal(
+            [m1],
+            [m.to_semantic_mapping() for m in uncurated_mappings],
+        )
+
+        unsure_mappings = db.get_mappings([UNSURE_CLAUSE])
+        self.assert_models_equal(
+            [m2_curated],
+            [m.to_semantic_mapping() for m in unsure_mappings],
+        )
