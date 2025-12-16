@@ -23,6 +23,7 @@ from sssom_pydantic.database import (
     clauses_from_query,
 )
 from sssom_pydantic.examples import EXAMPLE_MAPPINGS
+from sssom_pydantic.process import UNSURE
 from sssom_pydantic.query import Query
 from tests import cases
 from tests.cases import TEST_CONVERTER, TEST_METADATA
@@ -38,7 +39,7 @@ class TestDatabase(unittest.TestCase):
         mapping_1 = cases._m()
         mapping_2 = cases._m(justification=lexical_matching_process)
         mapping_3 = cases._m(predicate_modifier="Not")
-        mapping_4 = cases._m(justification=lexical_matching_process, curation_rule_text=["unsure"])
+        mapping_4 = cases._m(justification=lexical_matching_process, curation_rule_text=[UNSURE])
 
         db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
 
@@ -228,7 +229,7 @@ class TestDatabase(unittest.TestCase):
             object=cases.R2,
             justification=lexical_matching_process,
             confidence=0.95,
-            curation_rule_text=["sssom-curator-unsure"],
+            curation_rule_text=[UNSURE],
         )
         self.assertIsNotNone(db.get_mapping(db._hsh(expected)))
 
