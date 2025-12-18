@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from curies import Reference
+from curies import NamedReference, Reference
 from curies.vocabulary import (
     charlie,
     lexical_matching_process,
@@ -361,3 +361,33 @@ class TestDatabase(unittest.TestCase):
             [m2_curated],
             [m.to_semantic_mapping() for m in unsure_mappings],
         )
+
+    def test_query_same_text(self) -> None:
+        """Test querying for same text."""
+        m1 = SemanticMapping(
+            subject=NamedReference.from_curie("a:1", name="example"),
+            predicate="skos:exactMatch",
+            object=NamedReference.from_curie("b:1", name="example"),
+            justification=lexical_matching_process,
+            confidence=0.95,
+        )
+        m2 = SemanticMapping(
+            subject=NamedReference.from_curie("a:2", name="Test"),
+            predicate="skos:exactMatch",
+            object=NamedReference.from_curie("b:2", name="test"),
+            justification=lexical_matching_process,
+            confidence=0.95,
+        )
+        m3 = SemanticMapping(
+            subject="a:4",
+            predicate="skos:exactMatch",
+            object="b:4",
+            justification=lexical_matching_process,
+            confidence=0.95,
+        )
+
+        db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
+        db.add_mappings([m1, m2, m3])
+        mappings = db.get_mappings(Query(same_text=True))
+
+        self.assert_models_equal([m1, m2], [m.to_semantic_mapping() for m in mappings])
