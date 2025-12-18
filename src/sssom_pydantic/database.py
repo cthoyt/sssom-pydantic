@@ -38,7 +38,7 @@ import sssom_pydantic
 from sssom_pydantic import MappingTool, Metadata, SemanticMapping
 from sssom_pydantic.api import MappingSet, MappingSetRecord, SemanticMappingHash
 from sssom_pydantic.models import Cardinality
-from sssom_pydantic.process import Mark, curate, publish
+from sssom_pydantic.process import UNSURE, Mark, curate, publish
 from sssom_pydantic.query import Query
 
 if TYPE_CHECKING:
@@ -47,7 +47,8 @@ if TYPE_CHECKING:
 __all__ = [
     "NEGATIVE_MAPPING_CLAUSE",
     "POSITIVE_MAPPING_CLAUSE",
-    "UNCURATED_CLAUSE",
+    "UNCURATED_NOT_UNSURE_CLAUSE",
+    "UNCURATED_UNSURE_CLAUSE",
     "SemanticMappingDatabase",
     "SemanticMappingModel",
 ]
@@ -373,6 +374,7 @@ class SemanticMappingDatabase:
         authors: Reference | list[Reference],
         mark: Mark,
         confidence: float | None = None,
+        add_date: bool = True,
         **kwargs: Any,
     ) -> Reference:
         """Curate a mapping and return the new mapping's record."""
@@ -384,6 +386,7 @@ class SemanticMappingDatabase:
             authors=authors,
             mark=mark,
             confidence=confidence,
+            add_date=add_date,
             **kwargs,
         )
 
@@ -420,7 +423,18 @@ NEGATIVE_MAPPING_CLAUSE = and_(
     SemanticMappingModel.justification == manual_mapping_curation,
     SemanticMappingModel.predicate_modifier == "Not",
 )
-UNCURATED_CLAUSE = SemanticMappingModel.justification != manual_mapping_curation
+UNCURATED_NOT_UNSURE_CLAUSE = and_(
+    SemanticMappingModel.justification != manual_mapping_curation,
+    or_(
+        col(SemanticMappingModel.comment).is_(None),
+        ~col(SemanticMappingModel.comment).contains(UNSURE),
+    ),
+)
+UNCURATED_UNSURE_CLAUSE = and_(
+    SemanticMappingModel.justification != manual_mapping_curation,
+    col(SemanticMappingModel.comment).is_not(None),
+    col(SemanticMappingModel.comment).contains(UNSURE),
+)
 
 #: A mapping from :class:`Query` fields to functions that produce appropriate
 #: clauses for database querying

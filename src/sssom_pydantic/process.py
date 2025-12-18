@@ -167,6 +167,7 @@ def _get_predicate_helper(
 
 
 UNSURE = "sssom-curator-unsure"
+UNSURE_SUFFIX = f" ({UNSURE})"
 
 
 def curate(
@@ -180,12 +181,13 @@ def curate(
 ) -> SemanticMapping:
     """Curate a mapping."""
     if mark == "unsure":
-        if mapping.curation_rule_text and UNSURE in mapping.curation_rule_text:
+        if mapping.comment is None:
+            comment = UNSURE
+        elif UNSURE in mapping.comment:
             raise ValueError("this mapping has already been marked as unsure")
-        curation_rule_text = mapping.curation_rule_text or []
-        curation_rule_text.append(UNSURE)
-        curation_rule_text.sort()
-        return mapping.model_copy(update={"curation_rule_text": curation_rule_text})
+        else:
+            comment = mapping.comment.rstrip() + UNSURE_SUFFIX
+        return mapping.model_copy(update={"comment": comment})
 
     if isinstance(authors, Reference):
         authors = [authors]
@@ -206,10 +208,15 @@ def curate(
     if add_date:
         update["mapping_date"] = datetime.date.today()
 
-    if mapping.curation_rule_text is not None and UNSURE in mapping.curation_rule_text:
-        update["curation_rule_text"] = [
-            m for m in mapping.curation_rule_text if m != UNSURE
-        ] or None
+    if mapping.comment is not None and UNSURE in mapping.comment:
+        if mapping.comment == UNSURE:
+            update["comment"] = None
+        elif mapping.comment.endswith(UNSURE_SUFFIX):
+            update["comment"] = mapping.comment.removesuffix(UNSURE_SUFFIX)
+        else:
+            raise NotImplementedError(
+                f"not sure how to automatically remove annotation in comment: {mapping.comment}"
+            )
 
     if mark in semantic_mapping_scopes:
         update["predicate"] = semantic_mapping_scopes[cast(SemanticMappingScope, mark)]
