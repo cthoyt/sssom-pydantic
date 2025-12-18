@@ -16,7 +16,7 @@ import contextlib
 import datetime
 from collections.abc import Callable, Collection, Generator, Iterable, Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Literal, ParamSpec, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Literal, ParamSpec, cast, overload
 
 import curies
 import sqlmodel
@@ -307,10 +307,28 @@ class SemanticMappingDatabase:
             return self._hsh(reference)
         return reference
 
-    def get_mapping(self, reference: Reference) -> SemanticMappingModel | None:
+    # docstr-coverage:excused `overload`
+    @overload
+    def get_mapping(
+        self, reference: Reference, *, strict: Literal[True] = ...
+    ) -> SemanticMappingModel: ...
+
+    # docstr-coverage:excused `overload`
+    @overload
+    def get_mapping(
+        self, reference: Reference, *, strict: Literal[False] = ...
+    ) -> SemanticMappingModel | None: ...
+
+    def get_mapping(
+        self, reference: Reference, *, strict: bool = False
+    ) -> SemanticMappingModel | None:
         """Get a mapping."""
         with self.get_session() as session:
-            return session.exec(self._get_mapping_by_reference(reference)).first()
+            s = session.exec(self._get_mapping_by_reference(reference))
+            if strict:
+                return s.one()
+            else:
+                return s.first()
 
     def get_mappings(
         self,
@@ -473,8 +491,12 @@ QUERY_TO_CLAUSE: dict[str, Callable[[str], ColumnExpressionArgument[bool] | None
         else or_(
             col(SemanticMappingModel.subject_name).is_(None),
             col(SemanticMappingModel.object_name).is_(None),
-            _str_norm(SemanticMappingModel.subject_name)
-            != _str_norm(SemanticMappingModel.object_name),
+            and_(
+                col(SemanticMappingModel.subject_name).is_not(None),
+                col(SemanticMappingModel.object_name).is_not(None),
+                _str_norm(SemanticMappingModel.subject_name)
+                != _str_norm(SemanticMappingModel.object_name),
+            ),
         ),
     )
     if value is not None
@@ -493,5 +515,6 @@ def clauses_from_query(query: Query | None = None) -> list[ColumnExpressionArgum
     return [
         clause
         for name in Query.model_fields
-        if (value := getattr(query, name)) and (clause := QUERY_TO_CLAUSE[name](value)) is not None
+        if (value := getattr(query, name)) is not None
+        and (clause := QUERY_TO_CLAUSE[name](value)) is not None
     ]

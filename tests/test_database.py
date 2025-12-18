@@ -379,15 +379,20 @@ class TestDatabase(unittest.TestCase):
             confidence=0.95,
         )
         m3 = SemanticMapping(
-            subject="a:4",
+            subject="a:3",
             predicate="skos:exactMatch",
-            object="b:4",
+            object="b:3",
             justification=lexical_matching_process,
             confidence=0.95,
         )
 
         db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
         db.add_mappings([m1, m2, m3])
+
+        self.assertIsNotNone(db.get_mapping(db._hsh(m1), strict=True).subject_name)
+        self.assertIsNotNone(db.get_mapping(db._hsh(m2), strict=True).subject_name)
+        self.assertIsNone(db.get_mapping(db._hsh(m3), strict=True).subject_name)
+
         self.assert_models_equal(
             [m1, m2], [m.to_semantic_mapping() for m in db.get_mappings(Query(same_text=True))]
         )
