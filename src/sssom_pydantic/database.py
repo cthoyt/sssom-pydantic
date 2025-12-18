@@ -38,7 +38,7 @@ import sssom_pydantic
 from sssom_pydantic import MappingTool, Metadata, SemanticMapping
 from sssom_pydantic.api import MappingSet, MappingSetRecord, SemanticMappingHash
 from sssom_pydantic.models import Cardinality
-from sssom_pydantic.process import Mark, curate, publish
+from sssom_pydantic.process import UNSURE, Mark, curate, publish
 from sssom_pydantic.query import Query
 
 if TYPE_CHECKING:
@@ -425,13 +425,11 @@ NEGATIVE_MAPPING_CLAUSE = and_(
 )
 UNCURATED_CLAUSE = and_(
     SemanticMappingModel.justification != manual_mapping_curation,
-    SemanticMappingModel.curation_rule_text.is_(None),
+    ~col(SemanticMappingModel.comment).contains(UNSURE),
 )
 UNSURE_CLAUSE = and_(
     SemanticMappingModel.justification != manual_mapping_curation,
-    SemanticMappingModel.curation_rule_text.is_not(
-        None
-    ),  # TODO be more specific about what it contains
+    col(SemanticMappingModel.comment).contains(UNSURE),
 )
 
 #: A mapping from :class:`Query` fields to functions that produce appropriate

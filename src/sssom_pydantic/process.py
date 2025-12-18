@@ -180,12 +180,13 @@ def curate(
 ) -> SemanticMapping:
     """Curate a mapping."""
     if mark == "unsure":
-        if mapping.curation_rule_text and UNSURE in mapping.curation_rule_text:
+        if mapping.comment is not None and UNSURE in mapping.comment:
             raise ValueError("this mapping has already been marked as unsure")
-        curation_rule_text = mapping.curation_rule_text or []
-        curation_rule_text.append(UNSURE)
-        curation_rule_text.sort()
-        return mapping.model_copy(update={"curation_rule_text": curation_rule_text})
+        if mapping.comment is None:
+            comment = UNSURE
+        else:
+            comment = mapping.comment.rstrip() + f" ({UNSURE})"
+        return mapping.model_copy(update={"comment": comment})
 
     if isinstance(authors, Reference):
         authors = [authors]

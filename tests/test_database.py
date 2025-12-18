@@ -11,7 +11,6 @@ from curies.vocabulary import (
     lexical_matching_process,
     manual_mapping_curation,
 )
-from pydantic import BaseModel
 
 import sssom_pydantic
 from sssom_pydantic.api import SemanticMapping, mapping_hash_v1
@@ -19,8 +18,8 @@ from sssom_pydantic.database import (
     NEGATIVE_MAPPING_CLAUSE,
     POSITIVE_MAPPING_CLAUSE,
     QUERY_TO_CLAUSE,
-    UNSURE_CLAUSE,
     UNCURATED_CLAUSE,
+    UNSURE_CLAUSE,
     SemanticMappingDatabase,
     SemanticMappingModel,
     clauses_from_query,
