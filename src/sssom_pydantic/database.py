@@ -425,10 +425,14 @@ NEGATIVE_MAPPING_CLAUSE = and_(
 )
 UNCURATED_CLAUSE = and_(
     SemanticMappingModel.justification != manual_mapping_curation,
-    ~col(SemanticMappingModel.comment).contains(UNSURE),
+    or_(
+        col(SemanticMappingModel.comment).is_(None),
+        ~col(SemanticMappingModel.comment).contains(UNSURE),
+    ),
 )
 UNSURE_CLAUSE = and_(
     SemanticMappingModel.justification != manual_mapping_curation,
+    col(SemanticMappingModel.comment).is_not(None),
     col(SemanticMappingModel.comment).contains(UNSURE),
 )
 

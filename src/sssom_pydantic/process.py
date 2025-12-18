@@ -167,6 +167,7 @@ def _get_predicate_helper(
 
 
 UNSURE = "sssom-curator-unsure"
+UNSURE_SUFFIX = f" ({UNSURE})"
 
 
 def curate(
@@ -185,7 +186,7 @@ def curate(
         if mapping.comment is None:
             comment = UNSURE
         else:
-            comment = mapping.comment.rstrip() + f" ({UNSURE})"
+            comment = mapping.comment.rstrip() + UNSURE_SUFFIX
         return mapping.model_copy(update={"comment": comment})
 
     if isinstance(authors, Reference):
@@ -220,6 +221,12 @@ def curate(
         pass  # nothing needed here!
     else:
         raise ValueError(f"invalid mark: {mark}")
+
+    if mapping.comment:
+        if mapping.comment == UNSURE:
+            update["comment"] = None
+        elif mapping.comment.endswith(UNSURE_SUFFIX):
+            update["comment"] = mapping.comment.removesuffix(UNSURE_SUFFIX)
 
     new_mapping = mapping.model_copy(update=update)
     return new_mapping

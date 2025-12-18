@@ -71,7 +71,7 @@ class TestDatabase(unittest.TestCase):
         mapping_1 = cases._m()
         mapping_2 = cases._m(justification=lexical_matching_process)
         mapping_3 = cases._m(predicate_modifier="Not")
-        mapping_4 = cases._m(justification=lexical_matching_process, curation_rule_text=[UNSURE])
+        mapping_4 = cases._m(justification=lexical_matching_process, comment=UNSURE)
 
         db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
 
@@ -97,13 +97,13 @@ class TestDatabase(unittest.TestCase):
         self.assertEqual(1, len(mappings))
         self.assertEqual(manual_mapping_curation, mappings[0].justification)
         self.assertIsNone(mappings[0].predicate_modifier)
-        self.assertIsNone(mappings[0].curation_rule_text)
+        self.assertIsNone(mappings[0].comment)
 
         mappings = db.get_mappings(where_clauses=[NEGATIVE_MAPPING_CLAUSE])
         self.assertEqual(1, len(mappings))
         self.assertEqual(manual_mapping_curation, mappings[0].justification)
         self.assertIsNotNone(mappings[0].predicate_modifier)
-        self.assertIsNone(mappings[0].curation_rule_text)
+        self.assertIsNone(mappings[0].comment)
 
         # test no-op query
         query = Query()
@@ -261,7 +261,7 @@ class TestDatabase(unittest.TestCase):
             object=cases.R2,
             justification=lexical_matching_process,
             confidence=0.95,
-            curation_rule_text=[UNSURE],
+            comment=UNSURE,
         )
         self.assertIsNotNone(db.get_mapping(db._hsh(expected)))
 
@@ -334,12 +334,14 @@ class TestDatabase(unittest.TestCase):
             object="b:2",
             justification=lexical_matching_process,
             confidence=0.95,
-            curation_rule_text=[UNSURE],
+            comment=UNSURE,
         )
 
         db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
         db.add_mappings([m1, m2])
-        db.curate(mapping_hash_v1(m2), authors=charlie, mark="unsure")
+        m2_curated_reference = db.curate(mapping_hash_v1(m2), authors=charlie, mark="unsure")
+        self.assertEqual(mapping_hash_v1(m2_curated), m2_curated_reference)
+        self.assertEqual(2, db.count_mappings())
 
         self.assert_models_equal(
             [m1, m2_curated],

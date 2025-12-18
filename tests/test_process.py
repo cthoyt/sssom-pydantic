@@ -77,7 +77,7 @@ class TestProcess(unittest.TestCase):
                         predicate=predicate,
                         object=R2,
                         justification=lexical_matching_process,
-                        curation_rule_text=[UNSURE],
+                        comment=UNSURE,
                     ),
                 ),
                 (
@@ -139,7 +139,7 @@ class TestProcess(unittest.TestCase):
                         predicate=predicate,
                         object=R2,
                         justification=lexical_matching_process,
-                        curation_rule_text=[UNSURE],
+                        comment=UNSURE,
                     ),
                     author,
                     "correct",
