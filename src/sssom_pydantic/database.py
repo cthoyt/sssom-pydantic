@@ -47,8 +47,8 @@ if TYPE_CHECKING:
 __all__ = [
     "NEGATIVE_MAPPING_CLAUSE",
     "POSITIVE_MAPPING_CLAUSE",
-    "UNCURATED_CLAUSE",
-    "UNSURE_CLAUSE",
+    "UNCURATED_NOT_UNSURE_CLAUSE",
+    "UNCURATED_UNSURE_CLAUSE",
     "SemanticMappingDatabase",
     "SemanticMappingModel",
 ]
@@ -423,14 +423,14 @@ NEGATIVE_MAPPING_CLAUSE = and_(
     SemanticMappingModel.justification == manual_mapping_curation,
     SemanticMappingModel.predicate_modifier == "Not",
 )
-UNCURATED_CLAUSE = and_(
+UNCURATED_NOT_UNSURE_CLAUSE = and_(
     SemanticMappingModel.justification != manual_mapping_curation,
     or_(
         col(SemanticMappingModel.comment).is_(None),
         ~col(SemanticMappingModel.comment).contains(UNSURE),
     ),
 )
-UNSURE_CLAUSE = and_(
+UNCURATED_UNSURE_CLAUSE = and_(
     SemanticMappingModel.justification != manual_mapping_curation,
     col(SemanticMappingModel.comment).is_not(None),
     col(SemanticMappingModel.comment).contains(UNSURE),

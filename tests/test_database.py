@@ -18,8 +18,8 @@ from sssom_pydantic.database import (
     NEGATIVE_MAPPING_CLAUSE,
     POSITIVE_MAPPING_CLAUSE,
     QUERY_TO_CLAUSE,
-    UNCURATED_CLAUSE,
-    UNSURE_CLAUSE,
+    UNCURATED_NOT_UNSURE_CLAUSE,
+    UNCURATED_UNSURE_CLAUSE,
     SemanticMappingDatabase,
     SemanticMappingModel,
     clauses_from_query,
@@ -351,13 +351,13 @@ class TestDatabase(unittest.TestCase):
             ),
         )
 
-        uncurated_mappings = db.get_mappings([UNCURATED_CLAUSE])
+        uncurated_mappings = db.get_mappings([UNCURATED_NOT_UNSURE_CLAUSE])
         self.assert_models_equal(
             [m1],
             [m.to_semantic_mapping() for m in uncurated_mappings],
         )
 
-        unsure_mappings = db.get_mappings([UNSURE_CLAUSE])
+        unsure_mappings = db.get_mappings([UNCURATED_UNSURE_CLAUSE])
         self.assert_models_equal(
             [m2_curated],
             [m.to_semantic_mapping() for m in unsure_mappings],
