@@ -16,7 +16,7 @@ import contextlib
 import datetime
 from collections.abc import Callable, Collection, Generator, Iterable, Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Literal, ParamSpec, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Literal, ParamSpec, cast, overload
 
 import curies
 import sqlmodel
@@ -307,10 +307,28 @@ class SemanticMappingDatabase:
             return self._hsh(reference)
         return reference
 
-    def get_mapping(self, reference: Reference) -> SemanticMappingModel | None:
+    # docstr-coverage:excused `overload`
+    @overload
+    def get_mapping(
+        self, reference: Reference, *, strict: Literal[True] = ...
+    ) -> SemanticMappingModel: ...
+
+    # docstr-coverage:excused `overload`
+    @overload
+    def get_mapping(
+        self, reference: Reference, *, strict: Literal[False] = ...
+    ) -> SemanticMappingModel | None: ...
+
+    def get_mapping(
+        self, reference: Reference, *, strict: bool = False
+    ) -> SemanticMappingModel | None:
         """Get a mapping."""
         with self.get_session() as session:
-            return session.exec(self._get_mapping_by_reference(reference)).first()
+            s = session.exec(self._get_mapping_by_reference(reference))
+            if strict:
+                return s.one()
+            else:
+                return s.first()
 
     def get_mappings(
         self,
@@ -438,7 +456,7 @@ UNCURATED_UNSURE_CLAUSE = and_(
 
 #: A mapping from :class:`Query` fields to functions that produce appropriate
 #: clauses for database querying
-QUERY_TO_CLAUSE: dict[str, Callable[[str], ColumnExpressionArgument[bool]]] = {
+QUERY_TO_CLAUSE: dict[str, Callable[[str], ColumnExpressionArgument[bool] | None]] = {
     "query": lambda value: or_(
         col(SemanticMappingModel.subject).icontains(value.lower()),
         col(SemanticMappingModel.subject_name).icontains(value.lower()),
@@ -463,7 +481,31 @@ QUERY_TO_CLAUSE: dict[str, Callable[[str], ColumnExpressionArgument[bool]]] = {
     "mapping_tool": lambda value: or_(
         func.json_extract(SemanticMappingModel.mapping_tool, "$.name").icontains(value.lower()),
     ),
+    "same_text": lambda value: and_(
+        SemanticMappingModel.predicate == "skos:exactMatch",
+        (
+            _str_norm(SemanticMappingModel.subject_name)
+            == _str_norm(SemanticMappingModel.object_name)
+        )
+        if value
+        else or_(
+            col(SemanticMappingModel.subject_name).is_(None),
+            col(SemanticMappingModel.object_name).is_(None),
+            and_(
+                col(SemanticMappingModel.subject_name).is_not(None),
+                col(SemanticMappingModel.object_name).is_not(None),
+                _str_norm(SemanticMappingModel.subject_name)
+                != _str_norm(SemanticMappingModel.object_name),
+            ),
+        ),
+    )
+    if value is not None
+    else None,
 }
+
+
+def _str_norm(column: Any) -> Any:
+    return func.lower(func.replace(column, "-", ""))
 
 
 def clauses_from_query(query: Query | None = None) -> list[ColumnExpressionArgument[bool]]:
@@ -471,7 +513,8 @@ def clauses_from_query(query: Query | None = None) -> list[ColumnExpressionArgum
     if query is None:
         return []
     return [
-        QUERY_TO_CLAUSE[name](value)
+        clause
         for name in Query.model_fields
-        if (value := getattr(query, name))
+        if (value := getattr(query, name)) is not None
+        and (clause := QUERY_TO_CLAUSE[name](value)) is not None
     ]

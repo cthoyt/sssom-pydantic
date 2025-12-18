@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from curies import Reference
+from curies import NamedReference, Reference
 from curies.vocabulary import (
     charlie,
     lexical_matching_process,
@@ -140,9 +140,8 @@ class TestDatabase(unittest.TestCase):
 
     def test_query_functionality(self) -> None:
         """Check that all query fields are implemented."""
-        for name, model_field in Query.model_fields.items():
-            if model_field.annotation == str | None:
-                self.assertIn(name, QUERY_TO_CLAUSE)
+        for name in Query.model_fields:
+            self.assertIn(name, QUERY_TO_CLAUSE)
 
     def test_clause_generation(self) -> None:
         """Test clause generation."""
@@ -361,4 +360,42 @@ class TestDatabase(unittest.TestCase):
         self.assert_models_equal(
             [m2_curated],
             [m.to_semantic_mapping() for m in unsure_mappings],
+        )
+
+    def test_query_same_text(self) -> None:
+        """Test querying for same text."""
+        m1 = SemanticMapping(
+            subject=NamedReference.from_curie("a:1", name="example"),
+            predicate="skos:exactMatch",
+            object=NamedReference.from_curie("b:1", name="example"),
+            justification=lexical_matching_process,
+            confidence=0.95,
+        )
+        m2 = SemanticMapping(
+            subject=NamedReference.from_curie("a:2", name="Test"),
+            predicate="skos:exactMatch",
+            object=NamedReference.from_curie("b:2", name="test"),
+            justification=lexical_matching_process,
+            confidence=0.95,
+        )
+        m3 = SemanticMapping(
+            subject="a:3",
+            predicate="skos:exactMatch",
+            object="b:3",
+            justification=lexical_matching_process,
+            confidence=0.95,
+        )
+
+        db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
+        db.add_mappings([m1, m2, m3])
+
+        self.assertIsNotNone(db.get_mapping(db._hsh(m1), strict=True).subject_name)
+        self.assertIsNotNone(db.get_mapping(db._hsh(m2), strict=True).subject_name)
+        self.assertIsNone(db.get_mapping(db._hsh(m3), strict=True).subject_name)
+
+        self.assert_models_equal(
+            [m1, m2], [m.to_semantic_mapping() for m in db.get_mappings(Query(same_text=True))]
+        )
+        self.assert_models_equal(
+            [m3], [m.to_semantic_mapping() for m in db.get_mappings(Query(same_text=False))]
         )
