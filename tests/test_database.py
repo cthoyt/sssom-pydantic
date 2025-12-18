@@ -388,6 +388,9 @@ class TestDatabase(unittest.TestCase):
 
         db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
         db.add_mappings([m1, m2, m3])
-        mappings = db.get_mappings(Query(same_text=True))
-
-        self.assert_models_equal([m1, m2], [m.to_semantic_mapping() for m in mappings])
+        self.assert_models_equal(
+            [m1, m2], [m.to_semantic_mapping() for m in db.get_mappings(Query(same_text=True))]
+        )
+        self.assert_models_equal(
+            [m3], [m.to_semantic_mapping() for m in db.get_mappings(Query(same_text=False))]
+        )

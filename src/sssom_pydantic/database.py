@@ -465,9 +465,19 @@ QUERY_TO_CLAUSE: dict[str, Callable[[str], ColumnExpressionArgument[bool] | None
     ),
     "same_text": lambda value: and_(
         SemanticMappingModel.predicate == "skos:exactMatch",
-        _str_norm(SemanticMappingModel.subject_name) == _str_norm(SemanticMappingModel.object_name),
+        (
+            _str_norm(SemanticMappingModel.subject_name)
+            == _str_norm(SemanticMappingModel.object_name)
+        )
+        if value
+        else or_(
+            col(SemanticMappingModel.subject_name).is_(None),
+            col(SemanticMappingModel.object_name).is_(None),
+            _str_norm(SemanticMappingModel.subject_name)
+            != _str_norm(SemanticMappingModel.object_name),
+        ),
     )
-    if value
+    if value is not None
     else None,
 }
 
