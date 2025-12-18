@@ -6,7 +6,11 @@ import unittest
 from pathlib import Path
 
 from curies import Reference
-from curies.vocabulary import charlie, lexical_matching_process, manual_mapping_curation
+from curies.vocabulary import (
+    charlie,
+    lexical_matching_process,
+    manual_mapping_curation,
+)
 
 import sssom_pydantic
 from sssom_pydantic.api import SemanticMapping, mapping_hash_v1
@@ -14,11 +18,14 @@ from sssom_pydantic.database import (
     NEGATIVE_MAPPING_CLAUSE,
     POSITIVE_MAPPING_CLAUSE,
     QUERY_TO_CLAUSE,
+    UNCURATED_NOT_UNSURE_CLAUSE,
+    UNCURATED_UNSURE_CLAUSE,
     SemanticMappingDatabase,
     SemanticMappingModel,
     clauses_from_query,
 )
 from sssom_pydantic.examples import EXAMPLE_MAPPINGS
+from sssom_pydantic.process import UNSURE
 from sssom_pydantic.query import Query
 from tests import cases
 from tests.cases import TEST_CONVERTER, TEST_METADATA
@@ -29,12 +36,42 @@ USER = Reference(prefix="orcid", identifier="1234")
 class TestDatabase(unittest.TestCase):
     """Test the database."""
 
+    def assert_model_equal(self, expected: SemanticMapping, actual: SemanticMapping) -> None:
+        """Assert two models are equal."""
+        return self.assertEqual(
+            expected.model_dump(
+                exclude_none=True, exclude_unset=True, exclude_defaults=True, exclude={"record"}
+            ),
+            actual.model_dump(
+                exclude_none=True, exclude_unset=True, exclude_defaults=True, exclude={"record"}
+            ),
+        )
+
+    def assert_models_equal(
+        self, expected: list[SemanticMapping], actual: list[SemanticMapping]
+    ) -> None:
+        """Assert two models are equal."""
+        return self.assertEqual(
+            [
+                e.model_dump(
+                    exclude_none=True, exclude_unset=True, exclude_defaults=True, exclude={"record"}
+                )
+                for e in sorted(expected)
+            ],
+            [
+                a.model_dump(
+                    exclude_none=True, exclude_unset=True, exclude_defaults=True, exclude={"record"}
+                )
+                for a in sorted(actual)
+            ],
+        )
+
     def test_db(self) -> None:
         """Test the database."""
         mapping_1 = cases._m()
         mapping_2 = cases._m(justification=lexical_matching_process)
         mapping_3 = cases._m(predicate_modifier="Not")
-        mapping_4 = cases._m(justification=lexical_matching_process, curation_rule_text=["unsure"])
+        mapping_4 = cases._m(justification=lexical_matching_process, comment=UNSURE)
 
         db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
 
@@ -60,13 +97,13 @@ class TestDatabase(unittest.TestCase):
         self.assertEqual(1, len(mappings))
         self.assertEqual(manual_mapping_curation, mappings[0].justification)
         self.assertIsNone(mappings[0].predicate_modifier)
-        self.assertIsNone(mappings[0].curation_rule_text)
+        self.assertIsNone(mappings[0].comment)
 
         mappings = db.get_mappings(where_clauses=[NEGATIVE_MAPPING_CLAUSE])
         self.assertEqual(1, len(mappings))
         self.assertEqual(manual_mapping_curation, mappings[0].justification)
         self.assertIsNotNone(mappings[0].predicate_modifier)
-        self.assertIsNone(mappings[0].curation_rule_text)
+        self.assertIsNone(mappings[0].comment)
 
         # test no-op query
         query = Query()
@@ -123,7 +160,7 @@ class TestDatabase(unittest.TestCase):
                 results = db.get_mappings(query)
                 self.assertNotEqual(0, len(results))
 
-    def test_curate(self) -> None:
+    def test_curate_correct(self) -> None:
         """Test curation in the database."""
         mapping = SemanticMapping(
             subject=cases.R1,
@@ -146,6 +183,85 @@ class TestDatabase(unittest.TestCase):
             justification=manual_mapping_curation,
             authors=[charlie],
             mapping_date=datetime.date.today(),
+        )
+        self.assertIsNotNone(db.get_mapping(db._hsh(expected)))
+
+    def test_curate_incorrect(self) -> None:
+        """Test curation in the database."""
+        mapping = SemanticMapping(
+            subject=cases.R1,
+            predicate=cases.P1,
+            object=cases.R2,
+            justification=lexical_matching_process,
+            confidence=0.95,
+        )
+
+        db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
+        db.add_mapping(mapping)
+        original_hash = db._hsh(mapping)
+        db.curate(original_hash, authors=charlie, mark="incorrect")
+        self.assertIsNone(db.get_mapping(original_hash))
+
+        expected = SemanticMapping(
+            subject=cases.R1,
+            predicate=cases.P1,
+            object=cases.R2,
+            justification=manual_mapping_curation,
+            authors=[charlie],
+            mapping_date=datetime.date.today(),
+            predicate_modifier="Not",
+        )
+        self.assertIsNotNone(db.get_mapping(db._hsh(expected)))
+
+    def test_curate_broad(self) -> None:
+        """Test curation in the database."""
+        mapping = SemanticMapping(
+            subject=cases.R1,
+            predicate=cases.P1,
+            object=cases.R2,
+            justification=lexical_matching_process,
+            confidence=0.95,
+        )
+
+        db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
+        db.add_mapping(mapping)
+        original_hash = db._hsh(mapping)
+        db.curate(original_hash, authors=charlie, mark="BROAD")
+        self.assertIsNone(db.get_mapping(original_hash))
+
+        expected = SemanticMapping(
+            subject=cases.R1,
+            predicate="skos:broadMatch",
+            object=cases.R2,
+            justification=manual_mapping_curation,
+            authors=[charlie],
+            mapping_date=datetime.date.today(),
+        )
+        self.assertIsNotNone(db.get_mapping(db._hsh(expected)))
+
+    def test_curate_unsure(self) -> None:
+        """Test curating a mapping as unsure in the database."""
+        mapping = SemanticMapping(
+            subject=cases.R1,
+            predicate=cases.P1,
+            object=cases.R2,
+            justification=lexical_matching_process,
+            confidence=0.95,
+        )
+
+        db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
+        db.add_mapping(mapping)
+        original_hash = db._hsh(mapping)
+        db.curate(original_hash, authors=charlie, mark="unsure")
+        self.assertIsNone(db.get_mapping(original_hash))
+
+        expected = SemanticMapping(
+            subject=cases.R1,
+            predicate=cases.P1,
+            object=cases.R2,
+            justification=lexical_matching_process,
+            confidence=0.95,
+            comment=UNSURE,
         )
         self.assertIsNotNone(db.get_mapping(db._hsh(expected)))
 
@@ -195,3 +311,54 @@ class TestDatabase(unittest.TestCase):
                 exclude_columns=["record_id"],
             )
             self.assertEqual(path.read_text(), written_path.read_text())
+
+    def test_query_unsure(self) -> None:
+        """Test querying for unsure curations."""
+        m1 = SemanticMapping(
+            subject="a:1",
+            predicate="skos:exactMatch",
+            object="b:1",
+            justification=lexical_matching_process,
+            confidence=0.95,
+        )
+        m2 = SemanticMapping(
+            subject="a:2",
+            predicate="skos:exactMatch",
+            object="b:2",
+            justification=lexical_matching_process,
+            confidence=0.95,
+        )
+        m2_curated = SemanticMapping(
+            subject="a:2",
+            predicate="skos:exactMatch",
+            object="b:2",
+            justification=lexical_matching_process,
+            confidence=0.95,
+            comment=UNSURE,
+        )
+
+        db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
+        db.add_mappings([m1, m2])
+        m2_curated_reference = db.curate(mapping_hash_v1(m2), authors=charlie, mark="unsure")
+        self.assertEqual(mapping_hash_v1(m2_curated), m2_curated_reference)
+        self.assertEqual(2, db.count_mappings())
+
+        self.assert_models_equal(
+            [m1, m2_curated],
+            sorted(
+                [m.to_semantic_mapping() for m in db.get_mappings()],
+                key=lambda m: m.subject.identifier,
+            ),
+        )
+
+        uncurated_mappings = db.get_mappings([UNCURATED_NOT_UNSURE_CLAUSE])
+        self.assert_models_equal(
+            [m1],
+            [m.to_semantic_mapping() for m in uncurated_mappings],
+        )
+
+        unsure_mappings = db.get_mappings([UNCURATED_UNSURE_CLAUSE])
+        self.assert_models_equal(
+            [m2_curated],
+            [m.to_semantic_mapping() for m in unsure_mappings],
+        )
