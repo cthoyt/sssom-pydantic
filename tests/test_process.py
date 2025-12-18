@@ -20,6 +20,7 @@ from sssom_pydantic.process import UNSURE, Mark, curate, publish
 from tests.cases import R1, R2
 
 today = datetime.date.today()
+author = charlie.pair.to_pydantic()
 
 
 class TestProcess(unittest.TestCase):
@@ -37,8 +38,6 @@ class TestProcess(unittest.TestCase):
 
     def test_curate(self) -> None:
         """Test curation."""
-        author = charlie.pair.to_pydantic()
-
         for predicate in semantic_mapping_scopes.values():
             mapping = SemanticMapping(
                 subject=R1, predicate=predicate, object=R2, justification=lexical_matching_process
@@ -119,10 +118,31 @@ class TestProcess(unittest.TestCase):
                     expected, curate(mapping, author, mark), msg=f"[{i}] failed for {mark}"
                 )
 
+    def test_curate_with_comment(self) -> None:
+        """Test that comment makes it through without worry."""
+        predicate = exact_match
+        mapping = SemanticMapping(
+            subject=R1,
+            predicate=predicate,
+            object=R2,
+            justification=lexical_matching_process,
+            comment="comment",
+        )
+        self.assert_model_equal(
+            SemanticMapping(
+                subject=R1,
+                predicate=predicate,
+                object=R2,
+                justification=manual_mapping_curation,
+                authors=[author],
+                mapping_date=today,
+                comment="comment",
+            ),
+            curate(mapping, author, "correct"),
+        )
+
     def test_curate_unsure(self) -> None:
         """Test overriding an unsure annotation."""
-        author = charlie.pair.to_pydantic()
-
         for predicate in semantic_mapping_scopes.values():
             self.assert_model_equal(
                 SemanticMapping(
@@ -143,6 +163,72 @@ class TestProcess(unittest.TestCase):
                     ),
                     author,
                     "correct",
+                ),
+            )
+
+    def test_curate_unsure_2(self) -> None:
+        """Test overriding an unsure annotation."""
+        for predicate in semantic_mapping_scopes.values():
+            self.assert_model_equal(
+                SemanticMapping(
+                    subject=R1,
+                    predicate=predicate,
+                    object=R2,
+                    justification=manual_mapping_curation,
+                    authors=[author],
+                    mapping_date=today,
+                    comment="some text before.",
+                ),
+                curate(
+                    SemanticMapping(
+                        subject=R1,
+                        predicate=predicate,
+                        object=R2,
+                        justification=lexical_matching_process,
+                        comment=f"some text before. ({UNSURE})",
+                    ),
+                    author,
+                    "correct",
+                ),
+            )
+
+    def test_curate_unsure_3(self) -> None:
+        """Test overriding an unsure annotation."""
+        for predicate in semantic_mapping_scopes.values():
+            with self.assertRaises(ValueError):
+                curate(
+                    SemanticMapping(
+                        subject=R1,
+                        predicate=predicate,
+                        object=R2,
+                        justification=lexical_matching_process,
+                        comment=UNSURE,
+                    ),
+                    author,
+                    "unsure",
+                )
+
+    def test_curate_unsure_4(self) -> None:
+        """Test overriding an unsure annotation."""
+        for predicate in semantic_mapping_scopes.values():
+            self.assert_model_equal(
+                SemanticMapping(
+                    subject=R1,
+                    predicate=predicate,
+                    object=R2,
+                    justification=lexical_matching_process,
+                    comment=f"something ({UNSURE})",
+                ),
+                curate(
+                    SemanticMapping(
+                        subject=R1,
+                        predicate=predicate,
+                        object=R2,
+                        justification=lexical_matching_process,
+                        comment="something",
+                    ),
+                    author,
+                    "unsure",
                 ),
             )
 
