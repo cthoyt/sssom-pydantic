@@ -425,7 +425,7 @@ class SemanticMappingDatabase:
     ) -> Reference:
         mapping = self.get_mapping(reference)
         if mapping is None:
-            raise ValueError
+            raise KeyError
         new_mapping = f(mapping.to_semantic_mapping(), *args, **kwargs)
         new_mapping = new_mapping.model_copy(update={"record": self._hsh(new_mapping)})
         self.add_mapping(new_mapping)
