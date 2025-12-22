@@ -45,6 +45,7 @@ if TYPE_CHECKING:
     from sqlalchemy.sql.selectable import ColumnExpressionArgument  # type:ignore[attr-defined]
 
 __all__ = [
+    "DEFAULT_SORT",
     "NEGATIVE_MAPPING_CLAUSE",
     "POSITIVE_MAPPING_CLAUSE",
     "UNCURATED_NOT_UNSURE_CLAUSE",
@@ -335,20 +336,31 @@ class SemanticMappingDatabase:
         where_clauses: Query | list[ColumnExpressionArgument[bool]] | None = None,
         limit: int | None = None,
         offset: int | None = None,
+        order_by: ColumnExpressionArgument[Any] | list[ColumnExpressionArgument[Any]] | None = None,
     ) -> Sequence[SemanticMappingModel]:
         """Get mappings."""
         with self.get_session() as session:
             statement = select(SemanticMappingModel)
+
             if where_clauses is None:
                 pass
             elif isinstance(where_clauses, Query):
                 statement = statement.where(*clauses_from_query(where_clauses))
             else:
                 statement = statement.where(*where_clauses)
+
             if limit is not None:
                 statement = statement.limit(limit)
             if offset is not None:
                 statement = statement.offset(offset)
+
+            if order_by is None:
+                pass
+            elif isinstance(order_by, list):
+                statement = statement.order_by(*order_by)
+            else:
+                statement = statement.order_by(order_by)
+
             return session.exec(statement).all()
 
     def read(
@@ -453,6 +465,15 @@ UNCURATED_UNSURE_CLAUSE = and_(
     col(SemanticMappingModel.comment).is_not(None),
     col(SemanticMappingModel.comment).contains(UNSURE),
 )
+
+#: The default sort order by subject, predicate, and object CURIEs
+#: that can be passed to :meth:`SemanticMappingDatabase.get_mappings`
+#: ``order_by`` argument
+DEFAULT_SORT = [
+    SemanticMappingModel.subject,
+    SemanticMappingModel.predicate,
+    SemanticMappingModel.object,
+]
 
 #: A mapping from :class:`Query` fields to functions that produce appropriate
 #: clauses for database querying
