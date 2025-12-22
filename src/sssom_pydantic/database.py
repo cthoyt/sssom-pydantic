@@ -45,6 +45,7 @@ if TYPE_CHECKING:
     from sqlalchemy.sql.selectable import ColumnExpressionArgument  # type:ignore[attr-defined]
 
 __all__ = [
+    "DEFAULT_SORT",
     "NEGATIVE_MAPPING_CLAUSE",
     "POSITIVE_MAPPING_CLAUSE",
     "UNCURATED_NOT_UNSURE_CLAUSE",
@@ -464,6 +465,15 @@ UNCURATED_UNSURE_CLAUSE = and_(
     col(SemanticMappingModel.comment).is_not(None),
     col(SemanticMappingModel.comment).contains(UNSURE),
 )
+
+#: The default sort order by subject, predicate, and object CURIEs
+#: that can be passed to :meth:`SemanticMappingDatabase.get_mappings`
+#: ``order_by`` argument
+DEFAULT_SORT = [
+    SemanticMappingModel.subject,
+    SemanticMappingModel.predicate,
+    SemanticMappingModel.object,
+]
 
 #: A mapping from :class:`Query` fields to functions that produce appropriate
 #: clauses for database querying
