@@ -52,6 +52,7 @@ __all__ = [
     "UNCURATED_UNSURE_CLAUSE",
     "SemanticMappingDatabase",
     "SemanticMappingModel",
+    "clauses_from_query",
 ]
 
 P = ParamSpec("P")
