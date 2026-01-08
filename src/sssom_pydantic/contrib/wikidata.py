@@ -108,7 +108,7 @@ def get_quickstatements_lines(
     if orcid_to_wikidata is None:
         orcid_to_wikidata = _get_orcid_to_wikidata(mappings)
 
-    lines = []
+    lines: list[Line] = []
     for mapping in mappings:
         if wikidata_property_id := prefix_to_wikidata.get(mapping.object.prefix):
             if mapping.object in wikidata_id_to_references.get(mapping.subject.identifier, set()):
@@ -213,7 +213,7 @@ SKOS_TO_WIKIDATA: dict[curies.Reference, str] = {
 def _get_mapping_qualifiers(
     mapping: SemanticMapping, orcid_to_wikidata: dict[str, str]
 ) -> list[Qualifier]:
-    rv = []
+    rv: list[Qualifier] = []
 
     # see https://www.wikidata.org/wiki/Property:S275
     if wikidata_license_id := _get_wikidata_license(mapping.license):

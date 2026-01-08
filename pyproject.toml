@@ -82,6 +82,7 @@ typing = [
     "sqlmodel",
     "fastapi",
     "wikidata-client",
+    "ndex2",
 ]
 docs-lint = [
     { include-group = "docs" },
