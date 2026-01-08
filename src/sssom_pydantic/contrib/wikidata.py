@@ -30,6 +30,8 @@ if TYPE_CHECKING:
 __all__ = [
     "get_quickstatements_lines",
     "open_quickstatements_tab",
+    "read_to_quickstatements_lines",
+    "read_to_quickstatements_tab",
 ]
 
 X = TypeVar("X")
@@ -48,6 +50,12 @@ def open_quickstatements_tab(
     """Create a QuickStatements tab from mappings."""
     lines = get_quickstatements_lines(mappings, converter, metadata)
     quickstatements_client.lines_to_new_tab(lines)
+
+
+def read_to_quickstatements_lines(path_or_url: str | Path, **kwargs: Any) -> list[Line]:
+    """Read an SSSOM file and get QuickStatements v2 lines."""
+    mappings, converter, metadata = read(path_or_url, **kwargs)
+    return get_quickstatements_lines(mappings, converter, metadata)
 
 
 def get_quickstatements_lines(
