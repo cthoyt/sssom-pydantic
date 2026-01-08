@@ -12,7 +12,7 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Collection
 from textwrap import dedent
-from typing import TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 import bioregistry
 import curies
@@ -22,7 +22,10 @@ from curies import Converter
 from curies.vocabulary import exact_match
 from quickstatements_client import Line, Qualifier, TextLine, TextQualifier
 
-from sssom_pydantic import MappingSet, SemanticMapping
+from sssom_pydantic import MappingSet, SemanticMapping, read
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 __all__ = [
     "get_quickstatements_lines",
@@ -31,6 +34,12 @@ __all__ = [
 
 X = TypeVar("X")
 Y = TypeVar("Y")
+
+
+def read_to_quickstatements_tab(path_or_url: str | Path, **kwargs: Any) -> None:
+    """Read an SSSOM file and open the Quickstatements v2 uploader with the web browser."""
+    mappings, converter, metadata = read(path_or_url, **kwargs)
+    open_quickstatements_tab(mappings, converter, metadata)
 
 
 def open_quickstatements_tab(
@@ -65,7 +74,9 @@ def get_quickstatements_lines(
 
     # This makes a mapping from the prefixes appearing in mappings to
     # Wikidata properties. For example, mappings whose objects use
-    # ChEBI get mapped to P683
+    # ChEBI get mapped to P683. We still want to keep prefixes that
+    # don't have a Wikidata property since we can construct URIs
+    # with the exact match (P2888) predicate.
     object_prefix_to_wikidata: dict[str, str | None] = {
         mapping.object.prefix: prefix_to_wikidata.get(mapping.object.prefix) for mapping in mappings
     }
@@ -78,8 +89,6 @@ def get_quickstatements_lines(
 
     wikidata_id_to_exact = _get_wikidata_to_exact_matches(wikidata_ids, converter)
 
-    wikidata_id_to_references = _combine(wikidata_id_to_references, wikidata_id_to_exact)
-
     # filter out all mappings that can already be found on wikidata
     mappings = [
         mapping
@@ -89,17 +98,22 @@ def get_quickstatements_lines(
 
     lines = []
     for mapping in mappings:
-        wikidata_prop = prefix_to_wikidata.get(mapping.object.prefix)
-        if wikidata_prop:
+        if wikidata_property_id := prefix_to_wikidata.get(mapping.object.prefix):
+            if mapping.object in wikidata_id_to_references.get(mapping.subject.identifier, set()):
+                continue
             line = TextLine(
                 subject=mapping.subject.identifier,
-                predicate=wikidata_prop,
+                predicate=wikidata_property_id,
                 target=mapping.object.identifier,
                 qualifiers=[*mapping_set_qualifiers, *_get_mapping_qualifiers(mapping)],
             )
             lines.append(line)
         else:
-            object_uri = converter.expand_reference(mapping.object, strict=True)
+            if mapping.object in wikidata_id_to_exact.get(mapping.subject.identifier, set()):
+                continue
+            object_uri = converter.expand_reference(mapping.object)
+            if object_uri is None:
+                continue
             line = TextLine(
                 subject=mapping.subject.identifier,
                 predicate="P2888",  # exact match
@@ -145,14 +159,6 @@ def _get_wikidata_to_exact_matches(
     for m in wikidata_client.query(sparql):
         if reference := converter.parse(m["o"]):
             rv[m["s"]].add(reference.to_pydantic())
-    return dict(rv)
-
-
-def _combine(*args: dict[X, set[Y]]) -> dict[X, set[Y]]:
-    rv = defaultdict(set)
-    for d in args:
-        for k, values in d.items():
-            rv[k].update(values)
     return dict(rv)
 
 
