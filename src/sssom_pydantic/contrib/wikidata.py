@@ -10,17 +10,18 @@ Original proposal here: https://doi.org/10.5281/zenodo.17662905
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Collection
+from collections.abc import Collection, Iterable
+from itertools import chain
 from textwrap import dedent
 from typing import TYPE_CHECKING, Any, TypeVar
 
 import bioregistry
 import curies
+import curies.vocabulary as cv
 import quickstatements_client
 import wikidata_client
 from curies import Converter
-from curies.vocabulary import exact_match
-from quickstatements_client import Line, Qualifier, TextLine, TextQualifier
+from quickstatements_client import EntityQualifier, Line, Qualifier, TextLine, TextQualifier
 
 from sssom_pydantic import MappingSet, SemanticMapping, read
 
@@ -65,7 +66,7 @@ def get_quickstatements_lines(
     mappings = [
         mapping
         for mapping in mappings
-        if mapping.subject.prefix == "wikidata" and mapping.predicate == exact_match
+        if mapping.subject.prefix == "wikidata" and mapping.predicate_modifier is None
     ]
 
     # construct a list of qualifiers that apply to all mappings in the
@@ -97,6 +98,8 @@ def get_quickstatements_lines(
 
     wikidata_id_to_exact = _get_wikidata_to_exact_matches(wikidata_ids, converter)
 
+    orcid_to_wikidata = _get_orcid_to_wikidata(mappings)
+
     # filter out all mappings that can already be found on wikidata
     mappings = [
         mapping
@@ -113,7 +116,10 @@ def get_quickstatements_lines(
                 subject=mapping.subject.identifier,
                 predicate=wikidata_property_id,
                 target=mapping.object.identifier,
-                qualifiers=[*mapping_set_qualifiers, *_get_mapping_qualifiers(mapping)],
+                qualifiers=[
+                    *mapping_set_qualifiers,
+                    *_get_mapping_qualifiers(mapping, orcid_to_wikidata),
+                ],
             )
             lines.append(line)
         else:
@@ -126,7 +132,10 @@ def get_quickstatements_lines(
                 subject=mapping.subject.identifier,
                 predicate="P2888",  # exact match
                 target=object_uri,
-                qualifiers=[*mapping_set_qualifiers, *_get_mapping_qualifiers(mapping)],
+                qualifiers=[
+                    *mapping_set_qualifiers,
+                    *_get_mapping_qualifiers(mapping, orcid_to_wikidata),
+                ],
             )
             lines.append(line)
     return lines
@@ -158,7 +167,7 @@ def _get_wikidata_to_exact_matches(
 ) -> dict[str, set[curies.Reference]]:
     # P2888 is "exact match", see https://www.wikidata.org/wiki/Property:P2888
     sparql = dedent(f"""\
-        SELECT ?s ?p ?o WHERE {{
+        SELECT ?s ?o WHERE {{
             VALUES ?s {{ {_values_for_sparql(wikidata_ids)} }}
             ?s wdt:P2888 ?o .
         }}
@@ -174,5 +183,55 @@ def _values_for_sparql(wikidata_ids: Collection[str]) -> str:
     return " ".join("wd:" + x for x in sorted(wikidata_ids))
 
 
-def _get_mapping_qualifiers(mapping: SemanticMapping) -> list[Qualifier]:
-    return []
+def _get_wikidata_license(mapping_license: str | None) -> str | None:
+    if mapping_license is None:
+        return None
+    return None
+
+
+def _get_orcid_to_wikidata(mappings: Iterable[SemanticMapping]) -> dict[str, str]:
+    orcids: set[str] = {
+        person.identifier
+        for mapping in mappings
+        # TODO creators?
+        for person in chain(mapping.authors or [], mappings.reviewers or [])
+        if person.prefix == "orcid"
+    }
+    return wikidata_client.get_entities_by_orcid(orcids)
+
+
+SKOS_TO_WIKIDATA: dict[curies.Reference, str] = {
+    cv.exact_match: "Q39893449",  # see https://www.wikidata.org/wiki/Q39893449
+    cv.related_match: "Q39894604",  # see https://www.wikidata.org/wiki/Q39894604
+    cv.close_match: "Q39893184",  # see https://www.wikidata.org/wiki/Q39893184
+    cv.narrow_match: "Q39893967",  # see https://www.wikidata.org/wiki/Q39893967
+    cv.broad_match: "Q39894595",  # see https://www.wikidata.org/wiki/Q39894595
+}
+
+
+def _get_mapping_qualifiers(
+    mapping: SemanticMapping, orcid_to_wikidata: dict[str, str]
+) -> list[Qualifier]:
+    rv = []
+
+    # see https://www.wikidata.org/wiki/Property:S275
+    if wikidata_license_id := _get_wikidata_license(mapping.license):
+        rv.append(EntityQualifier(predicate="S275", target=wikidata_license_id))
+
+    # see https://www.wikidata.org/wiki/Property:P4390
+    if ss := SKOS_TO_WIKIDATA.get(mapping.predicate):
+        rv.append(EntityQualifier(predicate="S4390", target=ss))
+
+    for author in mapping.authors:
+        if author.prefix == "orcid" and (
+            author_wikidata_id := orcid_to_wikidata.get(author.identifier)
+        ):
+            rv.append(EntityQualifier(predicate="S50", target=author_wikidata_id))
+
+    for reviewer in mapping.reviewers or []:
+        if reviewer.prefix == "orcid" and (
+            reviewer_wikidata_id := orcid_to_wikidata.get(reviewer.identifier)
+        ):
+            rv.append(EntityQualifier(predicate="S4032", target=reviewer_wikidata_id))
+
+    return rv
