@@ -1,10 +1,36 @@
-"""Upload from SSSOM to Wikidata with Quickstatements v2.
+"""Implements between semantic mappings in SSSOM and Wikidata.
 
-The [Simple Standard for Sharing Ontology Mappings (SSSOM)](github.com/mapping-commons/sssom)
-supports encoding equivalents, exact matches, cross-references, and other kinds of semantic
-mappings in a simple, tabular format.
+Wikidata encodes semantic mappings in two ways:
 
-Original proposal here: https://doi.org/10.5281/zenodo.17662905
+1. Using the `exact match (P2888) <https://www.wikidata.org/wiki/Property:P2888>`_
+   property with a URI as the object. For example, `cell wall (Q128700)
+   <https://www.wikidata.org/wiki/Q128700>`_ maps to the Gene Ontology (GO) term for
+   `cell wall <https://purl.obolibrary.org/obo/GO_0005618>`_ by its URI
+   ``http://purl.obolibrary.org/obo/GO_0005618``.
+2. Using semantic space-specific properties (e.g. `P683
+   <https://www.wikidata.org/wiki/Property:P683>`_ for ChEBI) with local unique
+   identifiers as the object. For example, `acetic acid (Q47512)
+   <https://www.wikidata.org/wiki/Q47512>`_ maps to the ChEBI term for `acetic acid
+   <https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:15366>`_ using the `P683
+   <https://www.wikidata.org/wiki/Property:P683>`_ property for ChEBI and local unique
+   identifier for acetic acid (within ChEBI) ``15366``.
+
+Wikidata has a data structure that enables annotating qualifiers onto triples.
+Therefore, other parts of semantic mappings modeled in SSSOM can be ported:
+
+1. Authors and reviewers can be mapped from ORCiD identifiers to Wikidata identifiers,
+   then encoded using the `S50 <https://www.wikidata.org/wiki/Property:P50>`_ and `S4032
+   <https://www.wikidata.org/wiki/Property:P4032>`_ properties, respectively
+2. A SKOS-flavored mapping predicate (i.e., exact, narrow, broad, close, related) can be
+   encoded using the `S4390 <https://www.wikidata.org/wiki/Property:P4390>`_ property
+3. The publication date can be encoded using the `S577
+   <https://www.wikidata.org/wiki/Property:P577>`_ property
+4. The license can be mapped from text to a Wikidata identifier, then encoded using the
+   `S275 <https://www.wikidata.org/wiki/Property:P275>`_ property
+
+Note that properties that normally start with a ``P`` when used in triples are changed
+to start with an ``S`` when used as qualifiers. Other fields in SSSOM could potentially
+be mapped to Wikidata later.
 """
 
 from __future__ import annotations
