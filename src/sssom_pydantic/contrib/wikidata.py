@@ -162,20 +162,16 @@ def _get_wikidata_to_property_matches(
     wikidata_ids: Collection[str],
     prefix_to_wikidata: dict[str, str | None],
 ) -> dict[str, set[curies.Reference]]:
-    values = _values_for_sparql(wikidata_ids)
     rv: defaultdict[str, set[curies.Reference]] = defaultdict(set)
-
     for prefix, wikidata_property_id in prefix_to_wikidata.items():
         if wikidata_property_id is None:
             continue
-        sparql = dedent(f"""\
-            SELECT ?s ?o WHERE {{
-                VALUES ?s {{ {values} }}
-                ?s wdt:{wikidata_property_id} ?o .
-            }}
-        """)
-        for record in wikidata_client.query(sparql):
-            rv[record["s"]].add(curies.Reference(prefix=prefix, identifier=record["o"]))
+        properties = wikidata_client.get_properties(
+            wikidata_ids, wikidata_property_id, single_value=False
+        )
+        for wikidata_id, external_ids in properties.items():
+            for external_id in external_ids:
+                rv[wikidata_id].add(curies.Reference(prefix=prefix, identifier=external_id))
     return dict(rv)
 
 

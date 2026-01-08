@@ -8,7 +8,10 @@ from curies.vocabulary import charlie, exact_match, manual_mapping_curation
 from quickstatements_client import EntityQualifier, TextLine, TextQualifier
 
 from sssom_pydantic import SemanticMapping
-from sssom_pydantic.contrib.wikidata import get_quickstatements_lines
+from sssom_pydantic.contrib.wikidata import (
+    _get_wikidata_to_property_matches,
+    get_quickstatements_lines,
+)
 from tests.cases import TEST_MAPPING_SET, TEST_MAPPING_SET_ID, TEST_PREFIX_MAP
 
 CHARLIE_WD = "Q47475003"
@@ -89,3 +92,18 @@ class TestWikidata(unittest.TestCase):
                 )
                 self.assertEqual(1, len(lines))
                 self.assertEqual(line, lines[0])
+
+    def test_existing(self) -> None:
+        """Test looking up existing mappings."""
+        res = _get_wikidata_to_property_matches(
+            wikidata_ids=["Q47512"],
+            prefix_to_wikidata={
+                "chebi": "P683",
+                "pdb": "P638",  # exists, but not for this entry
+                "bioregistry": None,  # does not exist
+            },
+        )
+        self.assertEqual(
+            {"Q47512": {Reference(prefix="chebi", identifier="15366")}},
+            res,
+        )
