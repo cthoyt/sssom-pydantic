@@ -39,30 +39,39 @@ X = TypeVar("X")
 Y = TypeVar("Y")
 
 
-def read_to_quickstatements_tab(path_or_url: str | Path, **kwargs: Any) -> None:
+def read_to_quickstatements_tab(
+    path_or_url: str | Path, *, read_kwargs: dict[str, Any] | None = None, **kwargs: Any
+) -> None:
     """Read an SSSOM file and open the Quickstatements v2 uploader with the web browser."""
-    mappings, converter, metadata = read(path_or_url, **kwargs)
-    open_quickstatements_tab(mappings, converter, metadata)
+    mappings, converter, metadata = read(path_or_url, **(read_kwargs or {}))
+    open_quickstatements_tab(mappings, converter, metadata, **kwargs)
 
 
 def open_quickstatements_tab(
-    mappings: list[SemanticMapping], converter: curies.Converter, metadata: MappingSet
+    mappings: list[SemanticMapping],
+    converter: curies.Converter,
+    metadata: MappingSet,
+    **kwargs: Any,
 ) -> None:
     """Create a QuickStatements tab from mappings."""
-    lines = get_quickstatements_lines(mappings, converter, metadata)
+    lines = get_quickstatements_lines(mappings, converter, metadata, **kwargs)
     quickstatements_client.lines_to_new_tab(lines)
 
 
-def read_to_quickstatements_lines(path_or_url: str | Path, **kwargs: Any) -> list[Line]:
+def read_to_quickstatements_lines(
+    path_or_url: str | Path, *, read_kwargs: dict[str, Any] | None = None, **kwargs: Any
+) -> list[Line]:
     """Read an SSSOM file and get QuickStatements v2 lines."""
-    mappings, converter, metadata = read(path_or_url, **kwargs)
-    return get_quickstatements_lines(mappings, converter, metadata)
+    mappings, converter, metadata = read(path_or_url, **(read_kwargs or {}))
+    return get_quickstatements_lines(mappings, converter, metadata, **kwargs)
 
 
 def get_quickstatements_lines(
     mappings: list[SemanticMapping],
     converter: curies.Converter,
     mapping_set: MappingSet,
+    *,
+    # the following are passable in case of caching
     wikidata_id_to_references: dict[str, set[curies.Reference]] | None = None,
     wikidata_id_to_exact: dict[str, set[curies.Reference]] | None = None,
     orcid_to_wikidata: dict[str, str] | None = None,
