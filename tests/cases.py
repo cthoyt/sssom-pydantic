@@ -17,7 +17,9 @@ __all__ = [
     "R1",
     "R2",
     "TEST_CONVERTER",
+    "TEST_MAPPING_SET",
     "TEST_MAPPING_SET_ID",
+    "TEST_METADATA",
     "TEST_METADATA_W_PREFIX_MAP",
     "TEST_PREFIX_MAP",
     "_m",
@@ -75,6 +77,7 @@ TEST_METADATA = MappingSetRecord(
     mapping_set_id=TEST_MAPPING_SET_ID,
     license="spdx:cc0-1.0",
 )
+TEST_MAPPING_SET = TEST_METADATA.process(TEST_CONVERTER)
 TEST_METADATA_W_PREFIX_MAP = MappingSetRecord(
     curie_map=TEST_PREFIX_MAP,
     mapping_set_id=TEST_MAPPING_SET_ID,
