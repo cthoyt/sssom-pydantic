@@ -26,28 +26,11 @@ from sssom_pydantic import MappingSet, SemanticMapping
 
 __all__ = [
     "get_quickstatements_lines",
-    "get_quickstatements_lines_from_msdf",
     "open_quickstatements_tab",
-    "open_quickstatements_tab_from_msdf",
 ]
 
 X = TypeVar("X")
 Y = TypeVar("Y")
-
-
-def open_quickstatements_tab_from_msdf(
-    mappings: list[SemanticMapping], converter: curies.Converter, metadata: MappingSet
-) -> None:
-    """Create a QuickStatements tab from mappings."""
-    lines = get_quickstatements_lines_from_msdf(mappings, converter, metadata)
-    quickstatements_client.lines_to_new_tab(lines)
-
-
-def get_quickstatements_lines_from_msdf(
-    mappings: list[SemanticMapping], converter: curies.Converter, metadata: MappingSet
-) -> list[Line]:
-    """Get lines for QuickStatements that can be used to upload SSSOM to Wikidata."""
-    return get_quickstatements_lines(mappings, converter, metadata)
 
 
 def open_quickstatements_tab(
