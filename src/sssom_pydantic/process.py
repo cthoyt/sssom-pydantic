@@ -6,7 +6,7 @@ import datetime
 import itertools as itt
 from collections import defaultdict
 from collections.abc import Callable, Iterable
-from typing import TYPE_CHECKING, Any, Literal, TypeAlias, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Literal, TypeAlias, TypeVar, cast, get_args
 
 from curies import Reference
 from curies.vocabulary import (
@@ -21,6 +21,8 @@ if TYPE_CHECKING:
     from _typeshed import SupportsRichComparison
 
 __all__ = [
+    "MARKS",
+    "MARK_TO_CALL",
     "UNSURE",
     "Call",
     "CanonicalMappingTuple",
@@ -55,6 +57,20 @@ Call: TypeAlias = Literal["correct", "incorrect", "unsure"]
 
 #: A decision or an overwrite for a specific curation
 Mark: TypeAlias = Call | SemanticMappingScope
+
+#: A set of all possible marks.
+MARKS: set[Mark] = set(get_args(Call)).union(get_args(SemanticMappingScope))
+
+#: Mapping from marks to calls
+MARK_TO_CALL: dict[Mark, Call] = {
+    "correct": "correct",
+    "incorrect": "incorrect",
+    "unsure": "unsure",
+    "BROAD": "correct",
+    "NARROW": "correct",
+    "CLOSE": "correct",
+    "RELATED": "correct",
+}
 
 
 def remove_redundant_internal(
@@ -151,6 +167,7 @@ def _get_predicate_helper(
 
 
 UNSURE = "sssom-curator-unsure"
+UNSURE_SUFFIX = f" ({UNSURE})"
 
 
 def curate(
@@ -159,23 +176,24 @@ def curate(
     authors: Reference | list[Reference],
     mark: Mark,
     confidence: float | None = None,
+    add_date: bool = True,
     **kwargs: Any,
 ) -> SemanticMapping:
     """Curate a mapping."""
     if mark == "unsure":
-        if mapping.curation_rule_text and UNSURE in mapping.curation_rule_text:
+        if mapping.comment is None:
+            comment = UNSURE
+        elif UNSURE in mapping.comment:
             raise ValueError("this mapping has already been marked as unsure")
-        curation_rule_text = mapping.curation_rule_text or []
-        curation_rule_text.append(UNSURE)
-        curation_rule_text.sort()
-        return mapping.model_copy(update={"curation_rule_text": curation_rule_text})
+        else:
+            comment = mapping.comment.rstrip() + UNSURE_SUFFIX
+        return mapping.model_copy(update={"comment": comment})
 
     if isinstance(authors, Reference):
         authors = [authors]
 
     update = {
         "justification": manual_mapping_curation,
-        "mapping_date": datetime.date.today(),
         "authors": authors,
         "confidence": confidence,
         # Zero out the following
@@ -184,10 +202,21 @@ def curate(
         "similarity_score": None,
         **kwargs,
     }
-    if mapping.curation_rule_text is not None and UNSURE in mapping.curation_rule_text:
-        update["curation_rule_text"] = [
-            m for m in mapping.curation_rule_text if m != UNSURE
-        ] or None
+
+    # Add a flag for maintaining backwards compatibility
+    # with workflows that don't track this
+    if add_date:
+        update["mapping_date"] = datetime.date.today()
+
+    if mapping.comment is not None and UNSURE in mapping.comment:
+        if mapping.comment == UNSURE:
+            update["comment"] = None
+        elif mapping.comment.endswith(UNSURE_SUFFIX):
+            update["comment"] = mapping.comment.removesuffix(UNSURE_SUFFIX)
+        else:
+            raise NotImplementedError(
+                f"not sure how to automatically remove annotation in comment: {mapping.comment}"
+            )
 
     if mark in semantic_mapping_scopes:
         update["predicate"] = semantic_mapping_scopes[cast(SemanticMappingScope, mark)]

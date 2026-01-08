@@ -1,9 +1,7 @@
 """Mock an API."""
 
 import datetime
-import json
-import pathlib
-from typing import Annotated, Any, TypeAlias, cast
+from typing import Annotated, TypeAlias, cast
 
 from curies import Reference
 from curies.vocabulary import charlie, exact_match, manual_mapping_curation
@@ -13,13 +11,11 @@ from sssom_pydantic import SemanticMapping
 from sssom_pydantic.api import SemanticMappingHash, mapping_hash_v1
 from sssom_pydantic.database import SemanticMappingDatabase
 from sssom_pydantic.examples import R1, R2
-from sssom_pydantic.process import Mark
+from sssom_pydantic.process import MARKS, Mark
 
 __all__ = [
     "get_app",
-    "get_openapi_schema",
     "router",
-    "write_openapi_schema",
 ]
 
 router = APIRouter()
@@ -80,7 +76,9 @@ def post_mapping(
 def publish_mapping(
     database: AnnotatedDatabase,
     curie: AnnotatedCURIE,
-    date: Annotated[datetime.date | None, Query(...)] = None,
+    date: Annotated[
+        datetime.date | None, Query(..., description="The date on which the mapping was published")
+    ] = None,
 ) -> Reference:
     """Publish a mapping with the given CURIE."""
     return database.publish(Reference.from_curie(curie), date=date)
@@ -90,8 +88,8 @@ def publish_mapping(
 def curate_mapping(
     database: AnnotatedDatabase,
     curie: AnnotatedCURIE,
-    authors: Annotated[list[Reference], Body(...)],
-    mark: Annotated[Mark, Body(...)],
+    authors: Annotated[list[Reference], Body(..., examples=[charlie])],
+    mark: Annotated[Mark, Body(..., examples=list(MARKS))],
 ) -> Reference:
     """Publish a mapping with the given CURIE."""
     return database.curate(Reference.from_curie(curie), authors=authors, mark=mark)
@@ -102,26 +100,29 @@ def get_app(
     database: SemanticMappingDatabase | None = None,
     semantic_mapping_hash: SemanticMappingHash | None = None,
 ) -> FastAPI:
-    """Get a FastAPI app."""
+    """Get a FastAPI app.
+
+    :param database: A mapping database
+    :param semantic_mapping_hash: A function that deterministically hashes a mapping.
+        This is required until the SSSOM specification
+        `defines a standard hashing procedure <https://github.com/mapping-commons/sssom/issues/436>`_.
+    :returns: A FastAPI app
+
+    If you want to write the OpenAPI schema to a JSON file, do the following:
+
+    .. code-block:: python
+
+        app = get_app()
+        schema = app.openapi()
+    """
     if database is None:
-        if semantic_mapping_hash is None:
-            semantic_mapping_hash = mapping_hash_v1
-        database = SemanticMappingDatabase.memory(semantic_mapping_hash=semantic_mapping_hash)
+        database = SemanticMappingDatabase.memory(
+            semantic_mapping_hash=semantic_mapping_hash or mapping_hash_v1
+        )
     app = FastAPI()
     app.state.database = database
     app.include_router(router)
     return app
-
-
-def get_openapi_schema() -> dict[str, Any]:
-    """Get the OpenAPI schema."""
-    return get_app().openapi()
-
-
-def write_openapi_schema(path: str | pathlib.Path) -> None:
-    """Write the OpenAPI schema."""
-    path = pathlib.Path(path).expanduser().resolve()
-    path.write_text(json.dumps(get_openapi_schema(), indent=2))
 
 
 if __name__ == "__main__":
