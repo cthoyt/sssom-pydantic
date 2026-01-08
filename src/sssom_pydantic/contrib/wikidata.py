@@ -12,7 +12,6 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Collection, Iterable
 from itertools import chain
-from textwrap import dedent
 from typing import TYPE_CHECKING, Any, TypeVar
 
 import bioregistry
@@ -179,17 +178,13 @@ def _get_wikidata_to_exact_matches(
     wikidata_ids: Collection[str], converter: Converter
 ) -> dict[str, set[curies.Reference]]:
     # P2888 is "exact match", see https://www.wikidata.org/wiki/Property:P2888
-    sparql = dedent(f"""\
-        SELECT ?s ?o WHERE {{
-            VALUES ?s {{ {_values_for_sparql(wikidata_ids)} }}
-            ?s wdt:P2888 ?o .
-        }}
-    """)
-    rv: defaultdict[str, set[curies.Reference]] = defaultdict(set)
-    for m in wikidata_client.query(sparql):
-        if reference := converter.parse(m["o"]):
-            rv[m["s"]].add(reference.to_pydantic())
-    return dict(rv)
+    res = wikidata_client.get_properties(wikidata_ids, "P2888", single_value=False)
+    return {
+        wikidata_id: {
+            reference.to_pydantic() for uri in uris if (reference := converter.parse(uri))
+        }
+        for wikidata_id, uris in res.items()
+    }
 
 
 def _values_for_sparql(wikidata_ids: Collection[str]) -> str:
