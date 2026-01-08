@@ -31,6 +31,21 @@ Therefore, other parts of semantic mappings modeled in SSSOM can be ported:
 Note that properties that normally start with a ``P`` when used in triples are changed
 to start with an ``S`` when used as qualifiers. Other fields in SSSOM could potentially
 be mapped to Wikidata later.
+
+This module implements the following interactive workflows:
+
+1. Read an SSSOM file, convert mappings to Wikidata schema, then open a QuickStatements
+   tab in the web browser using :func:`read_and_open_quickstatements`
+2. Convert in-memory semantic mappings to the Wikidata schema, then open a
+   QuickStatements tab in the web browser using :func:`open_quickstatements`
+
+It also implements the following non-interactive workflows, which should be used with
+caution since they write directly to Wikidata:
+
+1. Read an SSSOM file, convert mappings to Wikidata schema, then post non-interactively
+   to Wikidata via QuickStatements using :func:`read_and_post`
+2. Convert in-memory semantic mappings to the Wikidata schema, then post
+   non-interactively to Wikidata via QuickStatements using :func:`post`
 """
 
 from __future__ import annotations
@@ -63,24 +78,38 @@ if TYPE_CHECKING:
 
 __all__ = [
     "get_quickstatements_lines",
-    "open_quickstatements_tab",
+    "open_quickstatements",
+    "post",
+    "read_and_open_quickstatements",
+    "read_and_post",
     "read_to_quickstatements_lines",
-    "read_to_quickstatements_tab",
 ]
 
 X = TypeVar("X")
 Y = TypeVar("Y")
 
 
-def read_to_quickstatements_tab(
+def read_and_open_quickstatements(
     path_or_url: str | Path, *, read_kwargs: dict[str, Any] | None = None, **kwargs: Any
 ) -> None:
     """Read an SSSOM file and open the Quickstatements v2 uploader with the web browser."""
     mappings, converter, metadata = read(path_or_url, **(read_kwargs or {}))
-    open_quickstatements_tab(mappings, converter=converter, metadata=metadata, **kwargs)
+    open_quickstatements(mappings, converter=converter, metadata=metadata, **kwargs)
 
 
-def open_quickstatements_tab(
+def read_and_post(
+    path_or_url: str | Path,
+    *,
+    read_kwargs: dict[str, Any] | None = None,
+    batch_name: str | None = None,
+    **kwargs: Any,
+) -> None:
+    """."""
+    mappings, converter, metadata = read(path_or_url, **(read_kwargs or {}))
+    post(mappings, converter=converter, metadata=metadata, batch_name=batch_name, **kwargs)
+
+
+def open_quickstatements(
     mappings: list[SemanticMapping],
     *,
     converter: curies.Converter | None = None,
@@ -90,6 +119,19 @@ def open_quickstatements_tab(
     """Create a QuickStatements tab from mappings."""
     lines = get_quickstatements_lines(mappings, converter=converter, metadata=metadata, **kwargs)
     quickstatements_client.lines_to_new_tab(lines)
+
+
+def post(
+    mappings: list[SemanticMapping],
+    *,
+    converter: curies.Converter | None = None,
+    metadata: MappingSet | None = None,
+    batch_name: str | None = None,
+    **kwargs: Any,
+) -> None:
+    """Post QuickStatements non-interactively, use with caution."""
+    lines = get_quickstatements_lines(mappings, converter=converter, metadata=metadata, **kwargs)
+    quickstatements_client.post_lines(lines, batch_name=batch_name)
 
 
 def read_to_quickstatements_lines(
@@ -296,7 +338,7 @@ def _demo() -> None:
         license="CC0-1.0",
         publication_date=datetime.date(2025, 1, 8),
     )
-    open_quickstatements_tab([mapping], wikidata_id_to_references={})
+    open_quickstatements([mapping], wikidata_id_to_references={})
 
 
 if __name__ == "__main__":
