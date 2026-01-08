@@ -2,20 +2,20 @@
 
 import unittest
 
-import curies
-from curies import Reference
+from curies import Converter, Reference
 from curies.vocabulary import charlie, exact_match, manual_mapping_curation
 from quickstatements_client import EntityQualifier, TextLine, TextQualifier
 
 from sssom_pydantic import SemanticMapping
 from sssom_pydantic.contrib.wikidata import (
+    _get_wikidata_to_exact_matches,
     _get_wikidata_to_property_matches,
     get_quickstatements_lines,
 )
 from tests.cases import TEST_MAPPING_SET, TEST_MAPPING_SET_ID, TEST_PREFIX_MAP
 
 CHARLIE_WD = "Q47475003"
-TEST_CONVERTER = curies.Converter.from_prefix_map(TEST_PREFIX_MAP)
+TEST_CONVERTER = Converter.from_prefix_map(TEST_PREFIX_MAP)
 TEST_CONVERTER.add_prefix("ex", "https://example.org/")
 
 
@@ -93,7 +93,7 @@ class TestWikidata(unittest.TestCase):
                 self.assertEqual(1, len(lines))
                 self.assertEqual(line, lines[0])
 
-    def test_existing(self) -> None:
+    def test_lookup_mapping_in_property(self) -> None:
         """Test looking up existing mappings."""
         res = _get_wikidata_to_property_matches(
             wikidata_ids=["Q47512"],
@@ -103,7 +103,12 @@ class TestWikidata(unittest.TestCase):
                 "bioregistry": None,  # does not exist
             },
         )
-        self.assertEqual(
-            {"Q47512": {Reference(prefix="chebi", identifier="15366")}},
-            res,
-        )
+        self.assertEqual({"Q47512": {Reference(prefix="chebi", identifier="15366")}}, res)
+
+    def test_lookup_mapping_in_exact_match(self) -> None:
+        """Test looking up existing mappings."""
+        # https://www.wikidata.org/wiki/Q128700
+        # http://purl.obolibrary.org/obo/GO_0005618
+        converter = Converter.from_prefix_map({"GO": "http://purl.obolibrary.org/obo/GO_"})
+        res = _get_wikidata_to_exact_matches(wikidata_ids=["Q128700"], converter=converter)
+        self.assertEqual({"Q128700": {Reference(prefix="GO", identifier="0005618")}}, res)
