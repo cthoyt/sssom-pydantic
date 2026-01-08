@@ -83,14 +83,6 @@ def get_quickstatements_lines(
         if mapping.subject.prefix == "wikidata" and mapping.predicate_modifier is None
     ]
 
-    # construct a list of qualifiers that apply to all mappings in the
-    # mapping set, such as the mapping set ID, creators, etc.
-    mapping_set_qualifiers = [
-        # this sets the "reference URL" to the mapping set ID
-        TextQualifier(predicate="S854", target=mapping_set.id),
-        # could also add more metadata here
-    ]
-
     # Get the mapping from Bioregistry prefixes to Wikidata prefixes,
     # e.g., `chebi` maps to `P683`
     prefix_to_wikidata = bioregistry.get_registry_map("wikidata")
@@ -119,6 +111,13 @@ def get_quickstatements_lines(
 
     lines: list[Line] = []
     for mapping in mappings:
+        # construct a list of qualifiers that apply to all mappings in the
+        # mapping set, such as the mapping set ID, creators, etc.
+        mapping_set_qualifiers = [
+            # this sets the "reference URL" to the mapping set ID
+            TextQualifier(predicate="S854", target=mapping_set.id),
+            # could also add more metadata here
+        ]
         if wikidata_property_id := prefix_to_wikidata.get(mapping.object.prefix):
             if mapping.object in wikidata_id_to_references.get(mapping.subject.identifier, set()):
                 continue
@@ -193,10 +192,18 @@ def _values_for_sparql(wikidata_ids: Collection[str]) -> str:
     return " ".join("wd:" + x for x in sorted(wikidata_ids))
 
 
+_TEMP_LICENSE_MAP = {
+    "ccby40": "Q20007257",
+    "cc0": "Q6938433",
+    "cc010": "Q6938433",
+}
+
+
 def _get_wikidata_license(mapping_license: str | None) -> str | None:
     if mapping_license is None:
         return None
-    return None
+    # FIXME make a more detailed implementation
+    return _TEMP_LICENSE_MAP.get(mapping_license.lower().replace("-", "").replace(".", ""))
 
 
 def _get_orcid_to_wikidata(mappings: Iterable[SemanticMapping]) -> dict[str, str]:
@@ -229,8 +236,8 @@ def _get_mapping_qualifiers(
         rv.append(EntityQualifier(predicate="S275", target=wikidata_license_id))
 
     # see https://www.wikidata.org/wiki/Property:P4390
-    if ss := SKOS_TO_WIKIDATA.get(mapping.predicate):
-        rv.append(EntityQualifier(predicate="S4390", target=ss))
+    if skos_wikidata_id := SKOS_TO_WIKIDATA.get(mapping.predicate):
+        rv.append(EntityQualifier(predicate="S4390", target=skos_wikidata_id))
 
     for author in mapping.authors or []:
         if author.prefix == "orcid" and (
