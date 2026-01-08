@@ -21,7 +21,15 @@ import curies.vocabulary as cv
 import quickstatements_client
 import wikidata_client
 from curies import Converter
-from quickstatements_client import EntityQualifier, Line, Qualifier, TextLine, TextQualifier
+from quickstatements_client import (
+    DateQualifier,
+    EntityQualifier,
+    Line,
+    Qualifier,
+    TextLine,
+    TextQualifier,
+)
+from quickstatements_client.model import prepare_date
 
 from sssom_pydantic import MappingSet, SemanticMapping, read
 
@@ -44,17 +52,18 @@ def read_to_quickstatements_tab(
 ) -> None:
     """Read an SSSOM file and open the Quickstatements v2 uploader with the web browser."""
     mappings, converter, metadata = read(path_or_url, **(read_kwargs or {}))
-    open_quickstatements_tab(mappings, converter, metadata, **kwargs)
+    open_quickstatements_tab(mappings, converter=converter, metadata=metadata, **kwargs)
 
 
 def open_quickstatements_tab(
     mappings: list[SemanticMapping],
-    converter: curies.Converter,
-    metadata: MappingSet,
+    *,
+    converter: curies.Converter | None = None,
+    metadata: MappingSet | None = None,
     **kwargs: Any,
 ) -> None:
     """Create a QuickStatements tab from mappings."""
-    lines = get_quickstatements_lines(mappings, converter, metadata, **kwargs)
+    lines = get_quickstatements_lines(mappings, converter=converter, metadata=metadata, **kwargs)
     quickstatements_client.lines_to_new_tab(lines)
 
 
@@ -63,20 +72,23 @@ def read_to_quickstatements_lines(
 ) -> list[Line]:
     """Read an SSSOM file and get QuickStatements v2 lines."""
     mappings, converter, metadata = read(path_or_url, **(read_kwargs or {}))
-    return get_quickstatements_lines(mappings, converter, metadata, **kwargs)
+    return get_quickstatements_lines(mappings, converter=converter, metadata=metadata, **kwargs)
 
 
 def get_quickstatements_lines(
     mappings: list[SemanticMapping],
-    converter: curies.Converter,
-    mapping_set: MappingSet,
     *,
+    converter: curies.Converter | None = None,
+    metadata: MappingSet | None = None,
     # the following are passable in case of caching
     wikidata_id_to_references: dict[str, set[curies.Reference]] | None = None,
     wikidata_id_to_exact: dict[str, set[curies.Reference]] | None = None,
     orcid_to_wikidata: dict[str, str] | None = None,
 ) -> list[Line]:
     """Get lines for QuickStatements that can be used to upload SSSOM to Wikidata."""
+    if converter is None:
+        converter = bioregistry.get_default_converter()
+
     mappings = [
         mapping
         for mapping in mappings
@@ -110,29 +122,28 @@ def get_quickstatements_lines(
         orcid_to_wikidata = _get_orcid_to_wikidata(mappings)
 
     lines: list[Line] = []
+    skipped = 0
     for mapping in mappings:
-        # construct a list of qualifiers that apply to all mappings in the
-        # mapping set, such as the mapping set ID, creators, etc.
-        mapping_set_qualifiers = [
+        mapping_set_qualifiers = _get_mapping_qualifiers(mapping, orcid_to_wikidata)
+
+        if metadata is not None:
             # this sets the "reference URL" to the mapping set ID
-            TextQualifier(predicate="S854", target=mapping_set.id),
-            # could also add more metadata here
-        ]
+            mapping_set_qualifiers.append(TextQualifier(predicate="S854", target=metadata.id))
+
         if wikidata_property_id := prefix_to_wikidata.get(mapping.object.prefix):
             if mapping.object in wikidata_id_to_references.get(mapping.subject.identifier, set()):
+                skipped += 1
                 continue
             line = TextLine(
                 subject=mapping.subject.identifier,
                 predicate=wikidata_property_id,
                 target=mapping.object.identifier,
-                qualifiers=[
-                    *mapping_set_qualifiers,
-                    *_get_mapping_qualifiers(mapping, orcid_to_wikidata),
-                ],
+                qualifiers=mapping_set_qualifiers,
             )
             lines.append(line)
         else:
             if mapping.object in wikidata_id_to_exact.get(mapping.subject.identifier, set()):
+                skipped += 1
                 continue
             object_uri = converter.expand_reference(mapping.object)
             if object_uri is None:
@@ -141,10 +152,7 @@ def get_quickstatements_lines(
                 subject=mapping.subject.identifier,
                 predicate="P2888",  # exact match
                 target=object_uri,
-                qualifiers=[
-                    *mapping_set_qualifiers,
-                    *_get_mapping_qualifiers(mapping, orcid_to_wikidata),
-                ],
+                qualifiers=mapping_set_qualifiers,
             )
             lines.append(line)
     return lines
@@ -251,4 +259,28 @@ def _get_mapping_qualifiers(
         ):
             rv.append(EntityQualifier(predicate="S4032", target=reviewer_wikidata_id))
 
+    if mapping.publication_date:
+        rv.append(DateQualifier(predicate="S577", target=prepare_date(mapping.publication_date)))
+
     return rv
+
+
+def _demo() -> None:
+    import datetime
+
+    from curies import Reference
+
+    mapping = SemanticMapping(
+        subject=Reference(prefix="wikidata", identifier="Q47512"),
+        predicate=cv.exact_match,
+        object=Reference(prefix="chebi", identifier="15366"),
+        justification=cv.manual_mapping_curation,
+        authors=[cv.charlie],
+        license="CC0-1.0",
+        publication_date=datetime.date(2025, 1, 8),
+    )
+    open_quickstatements_tab([mapping], wikidata_id_to_references={})
+
+
+if __name__ == "__main__":
+    _demo()

@@ -34,8 +34,8 @@ class TestWikidata(unittest.TestCase):
                     predicate="P683",
                     target="15366",
                     qualifiers=[
-                        TextQualifier(predicate="S854", target=TEST_MAPPING_SET_ID),
                         EntityQualifier(predicate="S4390", target="Q39893449"),
+                        TextQualifier(predicate="S854", target=TEST_MAPPING_SET_ID),
                     ],
                 ),
             ),
@@ -53,10 +53,10 @@ class TestWikidata(unittest.TestCase):
                     predicate="P683",
                     target="15366",
                     qualifiers=[
-                        TextQualifier(predicate="S854", target=TEST_MAPPING_SET_ID),
                         EntityQualifier(predicate="S275", target="Q20007257"),
                         EntityQualifier(predicate="S4390", target="Q39893449"),
                         EntityQualifier(predicate="S50", target=CHARLIE_WD),
+                        TextQualifier(predicate="S854", target=TEST_MAPPING_SET_ID),
                     ],
                 ),
             ),
@@ -72,8 +72,8 @@ class TestWikidata(unittest.TestCase):
                     predicate="P2888",
                     target="https://example.org/chebi",
                     qualifiers=[
-                        TextQualifier(predicate="S854", target=TEST_MAPPING_SET_ID),
                         EntityQualifier(predicate="S4390", target="Q39893449"),
+                        TextQualifier(predicate="S854", target=TEST_MAPPING_SET_ID),
                     ],
                 ),
             ),
@@ -81,8 +81,8 @@ class TestWikidata(unittest.TestCase):
             with self.subTest():
                 lines = get_quickstatements_lines(
                     [mapping],
-                    TEST_CONVERTER,
-                    TEST_MAPPING_SET,
+                    converter=TEST_CONVERTER,
+                    metadata=TEST_MAPPING_SET,
                     wikidata_id_to_exact={},
                     wikidata_id_to_references={},
                     orcid_to_wikidata={charlie.identifier: CHARLIE_WD},
