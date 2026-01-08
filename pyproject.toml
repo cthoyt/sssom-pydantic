@@ -81,6 +81,7 @@ typing = [
     "types-requests",
     "sqlmodel",
     "fastapi",
+    "wikidata-client",
 ]
 docs-lint = [
     { include-group = "docs" },
@@ -129,6 +130,9 @@ database = [
 ]
 fastapi = [
     "fastapi",
+]
+wikidata = [
+    "wikidata-client",
 ]
 
 # See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#urls

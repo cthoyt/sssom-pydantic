@@ -60,7 +60,12 @@ def read_to_quickstatements_lines(path_or_url: str | Path, **kwargs: Any) -> lis
 
 
 def get_quickstatements_lines(
-    mappings: list[SemanticMapping], converter: curies.Converter, mapping_set: MappingSet
+    mappings: list[SemanticMapping],
+    converter: curies.Converter,
+    mapping_set: MappingSet,
+    wikidata_id_to_references: dict[str, set[curies.Reference]] | None = None,
+    wikidata_id_to_exact: dict[str, set[curies.Reference]] | None = None,
+    orcid_to_wikidata: dict[str, str] | None = None,
 ) -> list[Line]:
     """Get lines for QuickStatements that can be used to upload SSSOM to Wikidata."""
     mappings = [
@@ -92,20 +97,16 @@ def get_quickstatements_lines(
 
     wikidata_ids: set[str] = {mapping.subject.identifier for mapping in mappings}
 
-    wikidata_id_to_references = _get_wikidata_to_property_matches(
-        wikidata_ids, object_prefix_to_wikidata
-    )
+    if wikidata_id_to_references is None:
+        wikidata_id_to_references = _get_wikidata_to_property_matches(
+            wikidata_ids, object_prefix_to_wikidata
+        )
 
-    wikidata_id_to_exact = _get_wikidata_to_exact_matches(wikidata_ids, converter)
+    if wikidata_id_to_exact is None:
+        wikidata_id_to_exact = _get_wikidata_to_exact_matches(wikidata_ids, converter)
 
-    orcid_to_wikidata = _get_orcid_to_wikidata(mappings)
-
-    # filter out all mappings that can already be found on wikidata
-    mappings = [
-        mapping
-        for mapping in mappings
-        if mapping.object not in wikidata_id_to_references.get(mapping.subject.identifier, set())
-    ]
+    if orcid_to_wikidata is None:
+        orcid_to_wikidata = _get_orcid_to_wikidata(mappings)
 
     lines = []
     for mapping in mappings:
@@ -194,7 +195,7 @@ def _get_orcid_to_wikidata(mappings: Iterable[SemanticMapping]) -> dict[str, str
         person.identifier
         for mapping in mappings
         # TODO creators?
-        for person in chain(mapping.authors or [], mappings.reviewers or [])
+        for person in chain(mapping.authors or [], mapping.reviewers or [])
         if person.prefix == "orcid"
     }
     return wikidata_client.get_entities_by_orcid(orcids)
@@ -222,7 +223,7 @@ def _get_mapping_qualifiers(
     if ss := SKOS_TO_WIKIDATA.get(mapping.predicate):
         rv.append(EntityQualifier(predicate="S4390", target=ss))
 
-    for author in mapping.authors:
+    for author in mapping.authors or []:
         if author.prefix == "orcid" and (
             author_wikidata_id := orcid_to_wikidata.get(author.identifier)
         ):
