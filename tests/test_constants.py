@@ -11,10 +11,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.request import urlretrieve
 
-from pydantic import AnyUrl
-
 import pystow
 from curies import Reference
+from pydantic import AnyUrl
 
 from sssom_pydantic import MappingSetRecord, Record, SemanticMapping
 from sssom_pydantic.constants import (
