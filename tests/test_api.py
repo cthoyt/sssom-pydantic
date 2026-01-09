@@ -20,7 +20,7 @@ import sssom_pydantic.io
 from sssom_pydantic import MappingSet, MappingSetRecord, SemanticMapping
 from sssom_pydantic.constants import MULTIVALUED
 from sssom_pydantic.database import SemanticMappingModel
-from sssom_pydantic.examples import EXAMPLE_MAPPINGS
+from sssom_pydantic.examples import EXAMPLES
 from sssom_pydantic.io import _chomp_frontmatter, append, append_unprocessed, write_unprocessed
 from sssom_pydantic.models import Record
 from tests.cases import (
@@ -157,18 +157,18 @@ class TestIO(unittest.TestCase):
         converter = curies.Converter.from_prefix_map(
             {**TEST_PREFIX_MAP, "w3id": "https://w3id.org/"}
         )
-        for expected_mapping in EXAMPLE_MAPPINGS:
-            with self.subTest():
+        for example in EXAMPLES:
+            with self.subTest(desc=example.description):
                 path = self.directory.joinpath("test.sssom.tsv")
                 sssom_pydantic.write(
-                    [expected_mapping], path, converter=converter, metadata=TEST_METADATA
+                    [example.semantic_mapping], path, converter=converter, metadata=TEST_METADATA
                 )
                 mappings, _, _ = sssom_pydantic.read(path)
                 self.assertEqual(
                     1, len(mappings), msg=f"Failed, file contents:\n\n{path.read_text()}"
                 )
                 self.assertEqual(
-                    expected_mapping.model_dump(exclude_none=True, exclude_unset=True),
+                    example.semantic_mapping.model_dump(exclude_none=True, exclude_unset=True),
                     mappings[0].model_dump(exclude_none=True, exclude_unset=True),
                 )
 
@@ -357,9 +357,9 @@ class TestDatabase(unittest.TestCase):
         """Test database roundtrip."""
         from sqlmodel import Session, SQLModel, create_engine, select
 
-        for expected_mapping in EXAMPLE_MAPPINGS:
-            with self.subTest():
-                orm_model = SemanticMappingModel.from_semantic_mapping(expected_mapping)
+        for example in EXAMPLES:
+            with self.subTest(desc=example.description):
+                orm_model = SemanticMappingModel.from_semantic_mapping(example.semantic_mapping)
                 engine = create_engine("sqlite:///:memory:")
                 SQLModel.metadata.create_all(engine)
 
@@ -371,4 +371,4 @@ class TestDatabase(unittest.TestCase):
                     statement = select(SemanticMappingModel)
                     orm_models = session.exec(statement).all()
                     self.assertEqual(1, len(orm_models))
-                    self.assertEqual(expected_mapping, orm_models[0].to_semantic_mapping())
+                    self.assertEqual(example.semantic_mapping, orm_models[0].to_semantic_mapping())
