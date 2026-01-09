@@ -4,6 +4,7 @@ import importlib.util
 import subprocess
 import tempfile
 import unittest
+from copy import deepcopy
 from pathlib import Path
 
 from curies import Converter, Reference
@@ -68,11 +69,14 @@ class TestJSKOSExport(unittest.TestCase):
         """Test converting examples to JSKOS then back."""
         import jskos
 
+        converter = deepcopy(TEST_CONVERTER)
+        converter.add_prefix("w3id", "https://w3id.org/")
+
         for i, example in enumerate(EXAMPLE_MAPPINGS):
             with self.subTest(i=i), tempfile.TemporaryDirectory() as td:
                 tsv_path = Path(td).joinpath("example.sssom.tsv")
                 sssom_pydantic.write(
-                    [example], tsv_path, metadata=TEST_METADATA, converter=TEST_CONVERTER
+                    [example], tsv_path, metadata=TEST_METADATA, converter=converter
                 )
 
                 # Convert the SSSOM TSV to JSKOS using the sssom-js package
@@ -91,4 +95,6 @@ class TestJSKOSExport(unittest.TestCase):
                         tsv_path.as_posix(),
                     ]
                 )
-                jskos.read(jskos_path)
+                # these are concepts, not sure if the KOS class actually
+                # makes any sense
+                jskos.Concept.model_validate_json(jskos_path.read_text())
