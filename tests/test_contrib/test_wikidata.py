@@ -2,6 +2,7 @@
 
 import unittest
 
+import requests.exceptions
 from curies import Converter, Reference
 from curies.vocabulary import charlie, exact_match, manual_mapping_curation
 from quickstatements_client import EntityQualifier, TextLine, TextQualifier
@@ -82,33 +83,45 @@ class TestWikidata(unittest.TestCase):
             ),
         ]:
             with self.subTest():
-                lines = get_quickstatements_lines(
-                    [mapping],
-                    converter=TEST_CONVERTER,
-                    metadata=TEST_MAPPING_SET,
-                    wikidata_id_to_exact={},
-                    wikidata_id_to_references={},
-                    orcid_to_wikidata={charlie.identifier: CHARLIE_WD},
-                )
-                self.assertEqual(1, len(lines))
-                self.assertEqual(line, lines[0])
+                try:
+                    lines = get_quickstatements_lines(
+                        [mapping],
+                        converter=TEST_CONVERTER,
+                        metadata=TEST_MAPPING_SET,
+                        wikidata_id_to_exact={},
+                        wikidata_id_to_references={},
+                        orcid_to_wikidata={charlie.identifier: CHARLIE_WD},
+                    )
+                except requests.exceptions.ReadTimeout:
+                    continue
+                else:
+                    self.assertEqual(1, len(lines))
+                    self.assertEqual(line, lines[0])
 
     def test_lookup_mapping_in_property(self) -> None:
         """Test looking up existing mappings."""
-        res = _get_wikidata_to_property_matches(
-            wikidata_ids=["Q47512"],
-            prefix_to_wikidata={
-                "chebi": "P683",
-                "pdb": "P638",  # exists, but not for this entry
-                "bioregistry": None,  # does not exist
-            },
-        )
-        self.assertEqual({"Q47512": {Reference(prefix="chebi", identifier="15366")}}, res)
+        try:
+            res = _get_wikidata_to_property_matches(
+                wikidata_ids=["Q47512"],
+                prefix_to_wikidata={
+                    "chebi": "P683",
+                    "pdb": "P638",  # exists, but not for this entry
+                    "bioregistry": None,  # does not exist
+                },
+            )
+        except requests.exceptions.ReadTimeout:
+            pass
+        else:
+            self.assertEqual({"Q47512": {Reference(prefix="chebi", identifier="15366")}}, res)
 
     def test_lookup_mapping_in_exact_match(self) -> None:
         """Test looking up existing mappings."""
         # https://www.wikidata.org/wiki/Q128700
         # http://purl.obolibrary.org/obo/GO_0005618
         converter = Converter.from_prefix_map({"GO": "http://purl.obolibrary.org/obo/GO_"})
-        res = _get_wikidata_to_exact_matches(wikidata_ids=["Q128700"], converter=converter)
-        self.assertEqual({"Q128700": {Reference(prefix="GO", identifier="0005618")}}, res)
+        try:
+            res = _get_wikidata_to_exact_matches(wikidata_ids=["Q128700"], converter=converter)
+        except requests.exceptions.ReadTimeout:
+            pass
+        else:
+            self.assertEqual({"Q128700": {Reference(prefix="GO", identifier="0005618")}}, res)
