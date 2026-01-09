@@ -13,7 +13,7 @@ from pydantic import BaseModel
 
 import sssom_pydantic
 from sssom_pydantic import SemanticMapping
-from sssom_pydantic.examples import EXAMPLE_MAPPINGS
+from sssom_pydantic.examples import EXAMPLES
 from tests.cases import TEST_CONVERTER, TEST_METADATA
 
 
@@ -72,11 +72,14 @@ class TestJSKOSExport(unittest.TestCase):
         converter = deepcopy(TEST_CONVERTER)
         converter.add_prefix("w3id", "https://w3id.org/")
 
-        for i, example in enumerate(EXAMPLE_MAPPINGS):
-            with self.subTest(i=i), tempfile.TemporaryDirectory() as td:
+        for i, example in enumerate(EXAMPLES):
+            with self.subTest(i=i, desc=example.description), tempfile.TemporaryDirectory() as td:
                 tsv_path = Path(td).joinpath("example.sssom.tsv")
                 sssom_pydantic.write(
-                    [example], tsv_path, metadata=TEST_METADATA, converter=converter
+                    [example.semantic_mapping],
+                    tsv_path,
+                    metadata=TEST_METADATA,
+                    converter=converter,
                 )
 
                 # Convert the SSSOM TSV to JSKOS using the sssom-js package
@@ -97,4 +100,11 @@ class TestJSKOSExport(unittest.TestCase):
                 )
                 # these are concepts, not sure if the KOS class actually
                 # makes any sense
-                jskos.Concept.model_validate_json(jskos_path.read_text())
+                text = jskos_path.read_text()
+                if not text:
+                    self.fail("no output was produced for")
+
+                try:
+                    jskos.Concept.model_validate_json(text)
+                except ValueError as e:
+                    self.fail(msg=f"\n\n{e}\n\n{text}")
