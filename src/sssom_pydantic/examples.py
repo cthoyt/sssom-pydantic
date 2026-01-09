@@ -5,11 +5,16 @@ from __future__ import annotations
 import datetime
 
 from curies import NamableReference, NamedReference, Reference
-from curies.vocabulary import charlie, manual_mapping_curation
+from curies.vocabulary import (
+    charlie,
+    lexical_matching_process,
+    manual_mapping_curation,
+    semantic_similarity,
+)
 from pydantic import BaseModel
 
 from sssom_pydantic import SemanticMapping
-from sssom_pydantic.api import mapping_hash_v1
+from sssom_pydantic.api import MappingTool, mapping_hash_v1
 
 __all__ = [
     "EXAMPLES",
@@ -49,6 +54,10 @@ simple_with_reviewer = ExampleMapping(
     description="A simple mapping with a reviewer",
     semantic_mapping=simple.model_copy(update={"reviewers": [charlie]}),
 )
+simple_with_creator = ExampleMapping(
+    description="A simple mapping with a creator",
+    semantic_mapping=simple.model_copy(update={"creators": [charlie]}),
+)
 simple_with_confidence = ExampleMapping(
     description="A simple mapping with a confidence",
     semantic_mapping=simple.model_copy(update={"confidence": 0.99}),
@@ -56,6 +65,69 @@ simple_with_confidence = ExampleMapping(
 simple_with_comment = ExampleMapping(
     description="A simple mapping with a comment",
     semantic_mapping=simple.model_copy(update={"comment": "a great mapping"}),
+)
+simple_with_license = ExampleMapping(
+    description="A simple mapping with a license",
+    semantic_mapping=simple.model_copy(update={"license": "https://spdx.org/licenses/CC-BY-4.0"}),
+)
+simple_with_modifier = ExampleMapping(
+    description="A simple mapping with a license",
+    semantic_mapping=simple.model_copy(update={"predicate_modifier": "Not"}),
+)
+simple_with_categories = ExampleMapping(
+    description="A simple mapping with subject and object categories",
+    semantic_mapping=simple.model_copy(
+        update={
+            "subject_category": "biolink:Chemical",
+            "object_category": "biolink:Chemical",
+        }
+    ),
+)
+
+simple_predicted = SemanticMapping(
+    subject=R1,
+    predicate=P1,
+    object=R2,
+    justification=lexical_matching_process.curie,
+)
+
+simple_with_match_field = ExampleMapping(
+    description="A simple mapping with subject and object match fields",
+    semantic_mapping=simple_predicted.model_copy(
+        update={
+            "subject_match_field": "rdfs:label",
+            "object_match_field": "rdfs:label",
+        }
+    ),
+)
+simple_with_preprocessing = ExampleMapping(
+    description="A simple mapping with subject and object preprocessing",
+    semantic_mapping=simple_predicted.model_copy(
+        update={
+            "subject_preprocessing": "semapv:Stemming",
+            "object_preprocessing": "semapv:Stemming",
+        }
+    ),
+)
+simple_with_mapping_tool = ExampleMapping(
+    description="A simple mapping with a mapping tool",
+    semantic_mapping=simple_predicted.model_copy(
+        update={
+            "mapping_tool": MappingTool(name="test tool"),
+        }
+    ),
+)
+
+simple_with_similarity = ExampleMapping(
+    description="A simple mapping with a similarity measure and score",
+    semantic_mapping=SemanticMapping(
+        subject=R1,
+        predicate=P1,
+        object=R2,
+        justification=semantic_similarity.curie,
+        similarity_measure="wikidata:Q865360",
+        similarity_score=0.75,
+    ),
 )
 
 e1 = ExampleMapping(
