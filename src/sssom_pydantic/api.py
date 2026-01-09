@@ -530,7 +530,7 @@ class MappingSet(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    id: str = Field(...)
+    id: AnyUrl = Field(...)
     confidence: float | None = Field(None)
     description: str | None = Field(None)
     source: list[str] | None = Field(None)
@@ -542,7 +542,7 @@ class MappingSet(BaseModel):
     other: str | None = Field(None)
     comment: str | None = Field(None)
     sssom_version: str | None = Field(None)
-    license: str | None = Field(None)
+    license: AnyUrl | None = Field(None)
     issue_tracker: str | None = Field(None)
     extension_definitions: list[ExtensionDefinition] | None = Field(None)
     creators: list[Reference] | None = None
