@@ -9,7 +9,7 @@ from curies import NamableReference, NamedReference, Reference
 from curies.vocabulary import charlie, exact_match, manual_mapping_curation
 
 from sssom_pydantic import MappingSetRecord
-from sssom_pydantic.api import SemanticMapping
+from sssom_pydantic.api import SemanticMapping, MAPPING_HASH_V1_PREFIX
 from sssom_pydantic.models import Record
 
 __all__ = [
@@ -72,6 +72,8 @@ TEST_PREFIX_MAP = {
     "skos": "http://www.w3.org/2004/02/skos/core#",
     "sssom": "https://w3id.org/sssom/",
     "spdx": "https://spdx.org/licenses/",
+    "w3id": "https://w3id.org/",
+    MAPPING_HASH_V1_PREFIX: f"https://w3id.org/sssom/{MAPPING_HASH_V1_PREFIX}/",
 }
 TEST_CONVERTER = curies.Converter.from_prefix_map(TEST_PREFIX_MAP)
 TEST_METADATA = MappingSetRecord(

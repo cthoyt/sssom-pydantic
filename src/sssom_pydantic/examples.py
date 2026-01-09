@@ -131,8 +131,8 @@ simple_with_match_field = ExampleMapping(
     description="A simple mapping with subject and object match fields",
     semantic_mapping=simple_predicted.model_copy(
         update={
-            "subject_match_field": "rdfs:label",
-            "object_match_field": "rdfs:label",
+            "subject_match_field": ["rdfs:label"],
+            "object_match_field": ["rdfs:label"],
         }
     ),
 )
@@ -140,9 +140,9 @@ simple_with_preprocessing = ExampleMapping(
     description="A simple mapping with subject and object preprocessing",
     semantic_mapping=simple_predicted.model_copy(
         update={
-            "subject_preprocessing": "semapv:Stemming",
-            "object_preprocessing": "semapv:Stemming",
-            "match_string": "ammeline",
+            "subject_preprocessing": ["semapv:Stemming"],
+            "object_preprocessing": ["semapv:Stemming"],
+            "match_string": ["ammeline"],
         }
     ),
 )
