@@ -14,6 +14,7 @@ from typing import Any, NamedTuple, TextIO, TypeAlias, TypeVar
 import curies
 import yaml
 from curies import Converter, Reference
+from pydantic import AnyUrl
 from pystow.utils import safe_open
 from tqdm import tqdm
 
@@ -316,21 +317,24 @@ def write_unprocessed(
         writer.writerows(_unprocess_row(record, exclude=exclude) for record in records)
 
 
-def _get_condensation(records: Iterable[Record]) -> dict[str, Any]:
-    values: defaultdict[str, Counter[str | float | None | datetime.date | tuple[str, ...]]] = (
-        defaultdict(Counter)
-    )
+CondensationTypes: TypeAlias = str | float | None | datetime.date | tuple[str, ...]
+
+
+def _get_condensation(records: Iterable[Record]) -> dict[str, CondensationTypes]:
+    values: defaultdict[str, Counter[CondensationTypes]] = defaultdict(Counter)
     for record in records:
         for key in PROPAGATABLE:
             value = getattr(record, key)
             if isinstance(value, list):
                 values[key][tuple(sorted(value))] += 1
+            elif isinstance(value, AnyUrl):
+                values[key][str(value)] += 1
             elif value is None or isinstance(value, str | float | datetime.date):
                 values[key][value] += 1
             else:
                 raise TypeError(f"unhandled value type: {type(value)} for {value}")
 
-    condensed = {}
+    condensed: dict[str, CondensationTypes] = {}
     for key, counter in values.items():
         if len(counter) != 1:
             continue
