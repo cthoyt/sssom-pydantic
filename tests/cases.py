@@ -9,7 +9,7 @@ from curies import NamableReference, NamedReference, Reference
 from curies.vocabulary import charlie, exact_match, manual_mapping_curation
 
 from sssom_pydantic import MappingSetRecord
-from sssom_pydantic.api import SemanticMapping, MAPPING_HASH_V1_PREFIX
+from sssom_pydantic.api import MAPPING_HASH_V1_PREFIX, SemanticMapping
 from sssom_pydantic.models import Record
 
 __all__ = [
