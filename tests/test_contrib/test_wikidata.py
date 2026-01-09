@@ -110,7 +110,7 @@ class TestWikidata(unittest.TestCase):
                 },
             )
         except requests.exceptions.ReadTimeout:
-            pass
+            raise unittest.skip("wikidata SPARQL is not available") from None
         else:
             self.assertEqual({"Q47512": {Reference(prefix="chebi", identifier="15366")}}, res)
 
@@ -122,6 +122,6 @@ class TestWikidata(unittest.TestCase):
         try:
             res = _get_wikidata_to_exact_matches(wikidata_ids=["Q128700"], converter=converter)
         except requests.exceptions.ReadTimeout:
-            pass
+            raise unittest.skip("wikidata SPARQL is not available") from None
         else:
             self.assertEqual({"Q128700": {Reference(prefix="GO", identifier="0005618")}}, res)
