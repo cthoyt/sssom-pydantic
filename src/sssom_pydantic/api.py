@@ -215,6 +215,7 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
     # https://w3id.org/sssom/subject_type
     subject_type: Reference | None = Field(None)
 
+    # TODO limit with https://mapping-commons.github.io/sssom/EntityTypeEnum/
     predicate_type: Reference | None = Field(None)
 
     object_category: str | None = Field(None)

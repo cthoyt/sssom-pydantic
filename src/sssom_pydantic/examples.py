@@ -83,6 +83,42 @@ simple_with_categories = ExampleMapping(
         }
     ),
 )
+simple_with_issue_tracker = ExampleMapping(
+    description="A simple mapping with an issue tracker",
+    semantic_mapping=simple.model_copy(
+        update={"issue_tracker_item": "https://example.org/issue-tracker/1"}
+    ),
+)
+simple_with_see_also = ExampleMapping(
+    description="A simple mapping with see also list",
+    semantic_mapping=simple.model_copy(
+        update={
+            "see_also": [
+                "https://example.org/a",
+                "https://example.org/b",
+            ]
+        }
+    ),
+)
+simple_with_sources = ExampleMapping(
+    description="A simple mapping with sources",
+    semantic_mapping=simple.model_copy(
+        update={
+            "subject_source": "bioregistry:mesh",
+            "subject_source_version": "2025",
+            "object_source": "bioregistry:chebi",
+            "object_source_version": "150",
+        }
+    ),
+)
+simple_with_predicate_type = ExampleMapping(
+    description="A simple mapping with a predicate type",
+    semantic_mapping=simple.model_copy(
+        update={
+            "predicate_type": "owl:AnnotationProperty",
+        }
+    ),
+)
 
 simple_predicted = SemanticMapping(
     subject=R1,
@@ -106,6 +142,7 @@ simple_with_preprocessing = ExampleMapping(
         update={
             "subject_preprocessing": "semapv:Stemming",
             "object_preprocessing": "semapv:Stemming",
+            "match_string": "ammeline",
         }
     ),
 )
@@ -117,6 +154,23 @@ simple_with_mapping_tool = ExampleMapping(
         }
     ),
 )
+simple_with_curation_rule = ExampleMapping(
+    description="A simple mapping with a curation rule",
+    semantic_mapping=simple_predicted.model_copy(
+        update={
+            "curation_rule": ["DISEASE_MAPPING_COMMONS_RULES:MPR2"],
+        }
+    ),
+)
+simple_with_curation_rule_text = ExampleMapping(
+    description="A simple mapping with a curation rule as text",
+    semantic_mapping=simple_predicted.model_copy(
+        update={
+            "curation_rule_text": ["vibed it"],
+        }
+    ),
+)
+
 
 simple_with_similarity = ExampleMapping(
     description="A simple mapping with a similarity measure and score",
@@ -201,6 +255,17 @@ e4d = ExampleMapping(
         object=R2,
         justification=manual_mapping_curation.curie,
         cardinality="n:n",
+    ),
+)
+e4d_scoped = ExampleMapping(
+    description="test a mapping annotated with n-n cardinality and cardinality scope",
+    semantic_mapping=SemanticMapping(
+        subject=R1,
+        predicate=P1,
+        object=R2,
+        justification=manual_mapping_curation.curie,
+        cardinality="n:n",
+        cardinality_scope=["predicate_id", "object_source"],
     ),
 )
 
