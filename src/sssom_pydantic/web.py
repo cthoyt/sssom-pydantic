@@ -104,8 +104,9 @@ def get_app(
 
     :param database: A mapping database
     :param semantic_mapping_hash: A function that deterministically hashes a mapping.
-        This is required until the SSSOM specification
-        `defines a standard hashing procedure <https://github.com/mapping-commons/sssom/issues/436>`_.
+        This is required until the SSSOM specification `defines a standard hashing
+        procedure <https://github.com/mapping-commons/sssom/issues/436>`_.
+
     :returns: A FastAPI app
 
     If you want to write the OpenAPI schema to a JSON file, do the following:

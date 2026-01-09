@@ -82,16 +82,15 @@ def remove_redundant_internal(
     """Remove redundant mappings.
 
     :param mappings: An iterable of mappings
-    :param key: A function that hashes the mappings. If not given, will
-        only use the subject/object to has the mapping.
-    :param scorer: A function that gives a score to a given mapping,
-        where a higher score means it's more likely to be kept.
-        Any function returning a comparable value can be used, but
-        int/float are the easiest to understand.
+    :param key: A function that hashes the mappings. If not given, will only use the
+        subject/object to has the mapping.
+    :param scorer: A function that gives a score to a given mapping, where a higher
+        score means it's more likely to be kept. Any function returning a comparable
+        value can be used, but int/float are the easiest to understand.
 
-    :returns: A list of mappings that have had duplicates dropped. This
-        does not necessarily maintain order, since dictionary-based
-        aggregation happens in the implementation.
+    :returns: A list of mappings that have had duplicates dropped. This does not
+        necessarily maintain order, since dictionary-based aggregation happens in the
+        implementation.
     """
     if key is None:
         key = cast(Hasher[MappingTypeVar, HashTarget], get_canonical_tuple)
@@ -150,10 +149,11 @@ def _get_predicate_helper(
     """Construct a predicate for mapping membership.
 
     :param mappings: A variadic number of mapping lists, which are all indexed
-    :param key: A function that hashes a given semantic mapping. If not given, one
-        that uses the combination of subject + object will be used.
-    :returns: A predicate that can be used to check if new mappings are already
-        in the given mapping list(s)
+    :param key: A function that hashes a given semantic mapping. If not given, one that
+        uses the combination of subject + object will be used.
+
+    :returns: A predicate that can be used to check if new mappings are already in the
+        given mapping list(s)
     """
     if key is None:
         key = cast(Hasher[MappingTypeVar, HashTarget], get_canonical_tuple)
