@@ -71,15 +71,16 @@ TEST_PREFIX_MAP = {
     "semapv": "https://w3id.org/semapv/vocab/",
     "skos": "http://www.w3.org/2004/02/skos/core#",
     "sssom": "https://w3id.org/sssom/",
+    "spdx": "https://spdx.org/licenses/",
 }
 TEST_CONVERTER = curies.Converter.from_prefix_map(TEST_PREFIX_MAP)
 TEST_METADATA = MappingSetRecord(
     mapping_set_id=TEST_MAPPING_SET_ID,
-    license="spdx:cc0-1.0",
+    license="https://spdx.org/licenses/CC0-1.0",
 )
 TEST_MAPPING_SET = TEST_METADATA.process(TEST_CONVERTER)
 TEST_METADATA_W_PREFIX_MAP = MappingSetRecord(
     curie_map=TEST_PREFIX_MAP,
     mapping_set_id=TEST_MAPPING_SET_ID,
-    license="spdx:cc0-1.0",
+    license="https://spdx.org/licenses/CC0-1.0",
 )

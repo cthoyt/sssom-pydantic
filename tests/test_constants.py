@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.request import urlretrieve
 
+from pydantic import AnyUrl
+
 import pystow
 from curies import Reference
 
@@ -230,7 +232,7 @@ class TestSchema(unittest.TestCase):
                                 annotation,
                                 msg=f"{slot} should be annotated as a reference",
                             )
-                    case "string" | "NonRelativeURI":
+                    case "string":
                         if multivalued:
                             self.assertIn(
                                 annotation,
@@ -241,6 +243,19 @@ class TestSchema(unittest.TestCase):
                             self.assertIn(
                                 annotation,
                                 {str, str | None},
+                                msg=f"{slot} should be annotated as a string",
+                            )
+                    case "NonRelativeURI":
+                        if multivalued:
+                            self.assertIn(
+                                annotation,
+                                {list[AnyUrl], list[AnyUrl] | None},
+                                msg=f"{slot} should be annotated as a list[str]",
+                            )
+                        else:
+                            self.assertIn(
+                                annotation,
+                                {AnyUrl, AnyUrl | None},
                                 msg=f"{slot} should be annotated as a string",
                             )
                     case "double":

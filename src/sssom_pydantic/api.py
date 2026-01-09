@@ -422,22 +422,22 @@ class MappingSetRecord(BaseModel):
 
     curie_map: dict[str, str] | None = None
 
-    mapping_set_id: str = Field(...)
+    mapping_set_id: AnyUrl = Field(...)
     mapping_set_confidence: float | None = Field(None)
     mapping_set_description: str | None = Field(None)
-    mapping_set_source: list[str] | None = Field(None)
+    mapping_set_source: list[AnyUrl] | None = Field(None)
     mapping_set_title: str | None = Field(None)
     mapping_set_version: str | None = Field(None)
 
     publication_date: datetime.date | None = Field(None)
-    see_also: list[str] | None = Field(None)
+    see_also: list[AnyUrl] | None = Field(None)
     other: str | None = Field(None)
     comment: str | None = Field(None)
     sssom_version: str | None = Field(None)
     # note that this diverges from the SSSOM spec, which says license is required
     # and injects a placeholder license... I don't think this is actually valuable
-    license: str | None = Field(None)
-    issue_tracker: str | None = Field(None)
+    license: AnyUrl | None = Field(None)
+    issue_tracker: AnyUrl | None = Field(None)
     extension_definitions: list[ExtensionDefinitionRecord] | None = Field(None)
     creator_id: list[str] | None = None
     creator_label: list[str] | None = None
@@ -447,7 +447,7 @@ class MappingSetRecord(BaseModel):
     curation_rule: list[str] | None = None
     curation_rule_text: list[str] | None = None
     mapping_date: datetime.date | None = None
-    mapping_provider: str | None = None
+    mapping_provider: AnyUrl | None = None
     mapping_tool: str | None = None
     mapping_tool_id: str | None = None
     mapping_tool_version: str | None = None
