@@ -5,10 +5,11 @@ from __future__ import annotations
 import datetime
 
 from curies import NamableReference, NamedReference, Reference
-from curies.vocabulary import manual_mapping_curation
+from curies.vocabulary import charlie, manual_mapping_curation
 from pydantic import BaseModel
 
 from sssom_pydantic import SemanticMapping
+from sssom_pydantic.api import mapping_hash_v1
 
 __all__ = [
     "EXAMPLES",
@@ -26,6 +27,36 @@ class ExampleMapping(BaseModel):
     description: str
     semantic_mapping: SemanticMapping
 
+
+# the simplest possible mapping
+simple = SemanticMapping(
+    subject=R1,
+    predicate=P1,
+    object=R2,
+    justification=manual_mapping_curation.curie,
+)
+
+e1_with_hash = ExampleMapping(
+    description="A simple mapping with a reference for the mapping itself in the `record` field",
+    semantic_mapping=simple.model_copy(update={"record": mapping_hash_v1(simple)}),
+)
+
+simple_with_author = ExampleMapping(
+    description="A simple mapping with an author",
+    semantic_mapping=simple.model_copy(update={"authors": [charlie]}),
+)
+simple_with_reviewer = ExampleMapping(
+    description="A simple mapping with a reviewer",
+    semantic_mapping=simple.model_copy(update={"reviewers": [charlie]}),
+)
+simple_with_confidence = ExampleMapping(
+    description="A simple mapping with a confidence",
+    semantic_mapping=simple.model_copy(update={"confidence": 0.99}),
+)
+simple_with_comment = ExampleMapping(
+    description="A simple mapping with a comment",
+    semantic_mapping=simple.model_copy(update={"comment": "a great mapping"}),
+)
 
 e1 = ExampleMapping(
     description="A simple mapping with a source",

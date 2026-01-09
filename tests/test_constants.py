@@ -287,12 +287,11 @@ class TestExampleCompleteness(unittest.TestCase):
 
     def test_completeness(self) -> None:
         """Test there's an example for all fields."""
-        counter = Counter()
+        counter: Counter[str] = Counter()
         for example in EXAMPLES:
             for k, _v in example.semantic_mapping.model_dump(exclude_none=True).items():
                 counter[k] += 1
 
-        missing_field_names = set(SemanticMapping.model_fields).difference(counter)
-        if missing_field_names:
-            text = "\n".join(sorted(missing_field_names))
-            self.fail(msg=f"the following fields aren't covered by an example:\n\n{text}")
+        for field in SemanticMapping.model_fields:
+            with self.subTest(field=field):
+                self.assertIn(field, set(counter), msg=f"\n\nthere's no example that uses {field}")
