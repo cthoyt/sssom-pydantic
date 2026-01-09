@@ -55,10 +55,16 @@ class Query(BaseModel):
     )
 
 
-def filter_mappings(mappings: Iterable[SemanticMapping], state: Query) -> Iterable[SemanticMapping]:
+def filter_mappings(
+    mappings: Iterable[SemanticMapping], query: Query | None
+) -> Iterable[SemanticMapping]:
     """Filter mappings based on a query."""
+    if query is None:
+        yield from mappings
+        return
+
     for name, model_field in Query.model_fields.items():
-        value = getattr(state, name)
+        value = getattr(query, name)
         if value is None:
             continue
         if model_field.annotation == str | None:

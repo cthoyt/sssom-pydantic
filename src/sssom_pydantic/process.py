@@ -6,7 +6,7 @@ import datetime
 import itertools as itt
 from collections import defaultdict
 from collections.abc import Callable, Iterable
-from typing import TYPE_CHECKING, Any, Literal, TypeAlias, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Literal, TypeAlias, TypeVar, cast, get_args
 
 from curies import Reference
 from curies.vocabulary import (
@@ -21,6 +21,8 @@ if TYPE_CHECKING:
     from _typeshed import SupportsRichComparison
 
 __all__ = [
+    "MARKS",
+    "MARK_TO_CALL",
     "UNSURE",
     "Call",
     "CanonicalMappingTuple",
@@ -28,6 +30,7 @@ __all__ = [
     "Mark",
     "curate",
     "get_canonical_tuple",
+    "publish",
     "remove_redundant_external",
     "remove_redundant_internal",
 ]
@@ -55,6 +58,20 @@ Call: TypeAlias = Literal["correct", "incorrect", "unsure"]
 #: A decision or an overwrite for a specific curation
 Mark: TypeAlias = Call | SemanticMappingScope
 
+#: A set of all possible marks.
+MARKS: set[Mark] = set(get_args(Call)).union(get_args(SemanticMappingScope))
+
+#: Mapping from marks to calls
+MARK_TO_CALL: dict[Mark, Call] = {
+    "correct": "correct",
+    "incorrect": "incorrect",
+    "unsure": "unsure",
+    "BROAD": "correct",
+    "NARROW": "correct",
+    "CLOSE": "correct",
+    "RELATED": "correct",
+}
+
 
 def remove_redundant_internal(
     mappings: Iterable[MappingTypeVar],
@@ -65,16 +82,15 @@ def remove_redundant_internal(
     """Remove redundant mappings.
 
     :param mappings: An iterable of mappings
-    :param key: A function that hashes the mappings. If not given, will
-        only use the subject/object to has the mapping.
-    :param scorer: A function that gives a score to a given mapping,
-        where a higher score means it's more likely to be kept.
-        Any function returning a comparable value can be used, but
-        int/float are the easiest to understand.
+    :param key: A function that hashes the mappings. If not given, will only use the
+        subject/object to has the mapping.
+    :param scorer: A function that gives a score to a given mapping, where a higher
+        score means it's more likely to be kept. Any function returning a comparable
+        value can be used, but int/float are the easiest to understand.
 
-    :returns: A list of mappings that have had duplicates dropped. This
-        does not necessarily maintain order, since dictionary-based
-        aggregation happens in the implementation.
+    :returns: A list of mappings that have had duplicates dropped. This does not
+        necessarily maintain order, since dictionary-based aggregation happens in the
+        implementation.
     """
     if key is None:
         key = cast(Hasher[MappingTypeVar, HashTarget], get_canonical_tuple)
@@ -133,10 +149,11 @@ def _get_predicate_helper(
     """Construct a predicate for mapping membership.
 
     :param mappings: A variadic number of mapping lists, which are all indexed
-    :param key: A function that hashes a given semantic mapping. If not given, one
-        that uses the combination of subject + object will be used.
-    :returns: A predicate that can be used to check if new mappings are already
-        in the given mapping list(s)
+    :param key: A function that hashes a given semantic mapping. If not given, one that
+        uses the combination of subject + object will be used.
+
+    :returns: A predicate that can be used to check if new mappings are already in the
+        given mapping list(s)
     """
     if key is None:
         key = cast(Hasher[MappingTypeVar, HashTarget], get_canonical_tuple)
@@ -150,30 +167,33 @@ def _get_predicate_helper(
 
 
 UNSURE = "sssom-curator-unsure"
+UNSURE_SUFFIX = f" ({UNSURE})"
 
 
 def curate(
     mapping: SemanticMapping,
+    /,
     authors: Reference | list[Reference],
     mark: Mark,
     confidence: float | None = None,
+    add_date: bool = True,
     **kwargs: Any,
 ) -> SemanticMapping:
     """Curate a mapping."""
     if mark == "unsure":
-        if mapping.curation_rule_text and UNSURE in mapping.curation_rule_text:
+        if mapping.comment is None:
+            comment = UNSURE
+        elif UNSURE in mapping.comment:
             raise ValueError("this mapping has already been marked as unsure")
-        curation_rule_text = mapping.curation_rule_text or []
-        curation_rule_text.append(UNSURE)
-        curation_rule_text.sort()
-        return mapping.model_copy(update={"curation_rule_text": curation_rule_text})
+        else:
+            comment = mapping.comment.rstrip() + UNSURE_SUFFIX
+        return mapping.model_copy(update={"comment": comment})
 
     if isinstance(authors, Reference):
         authors = [authors]
 
     update = {
         "justification": manual_mapping_curation,
-        "mapping_date": datetime.date.today(),
         "authors": authors,
         "confidence": confidence,
         # Zero out the following
@@ -182,10 +202,21 @@ def curate(
         "similarity_score": None,
         **kwargs,
     }
-    if mapping.curation_rule_text is not None and UNSURE in mapping.curation_rule_text:
-        update["curation_rule_text"] = [
-            m for m in mapping.curation_rule_text if m != UNSURE
-        ] or None
+
+    # Add a flag for maintaining backwards compatibility
+    # with workflows that don't track this
+    if add_date:
+        update["mapping_date"] = datetime.date.today()
+
+    if mapping.comment is not None and UNSURE in mapping.comment:
+        if mapping.comment == UNSURE:
+            update["comment"] = None
+        elif mapping.comment.endswith(UNSURE_SUFFIX):
+            update["comment"] = mapping.comment.removesuffix(UNSURE_SUFFIX)
+        else:
+            raise NotImplementedError(
+                f"not sure how to automatically remove annotation in comment: {mapping.comment}"
+            )
 
     if mark in semantic_mapping_scopes:
         update["predicate"] = semantic_mapping_scopes[cast(SemanticMappingScope, mark)]
@@ -198,3 +229,26 @@ def curate(
 
     new_mapping = mapping.model_copy(update=update)
     return new_mapping
+
+
+def publish(
+    mapping: SemanticMapping,
+    /,
+    *,
+    exists_action: Literal["error", "overwrite", "keep"] | None = None,
+    date: datetime.date | None = None,
+) -> SemanticMapping:
+    """Add a publication date to the mapping."""
+    if mapping.publication_date is not None:
+        if exists_action == "error" or exists_action is None:
+            raise ValueError
+        elif exists_action == "keep":
+            return mapping
+        elif exists_action == "overwrite":
+            pass  # just use the implementation below to update the publication date
+        else:
+            raise ValueError(f"invalid exists_action: {exists_action}")
+    rv = mapping.model_copy(
+        update={"publication_date": date if date is not None else datetime.date.today()}
+    )
+    return rv

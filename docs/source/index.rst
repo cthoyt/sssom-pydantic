@@ -1,5 +1,6 @@
-SSSOM Pydantic |release| Documentation
-======================================
+########################################
+ SSSOM Pydantic |release| Documentation
+########################################
 
 .. toctree::
     :maxdepth: 2
@@ -11,8 +12,9 @@ SSSOM Pydantic |release| Documentation
     cli
     contrib
 
-Indices and Tables
-------------------
+********************
+ Indices and Tables
+********************
 
 - :ref:`genindex`
 - :ref:`modindex`

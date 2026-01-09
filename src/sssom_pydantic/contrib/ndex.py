@@ -124,4 +124,8 @@ def _get_prefix_map(
 
     prefixes: set[str] = {prefix for mapping in mappings for prefix in mapping.get_prefixes()}
     # TODO is there a better version of this?
-    return {prefix: bioregistry.get_uri_prefix(prefix) for prefix in prefixes}
+    return {
+        prefix: uri_prefix
+        for prefix in prefixes
+        if (uri_prefix := bioregistry.get_uri_prefix(prefix))
+    }
