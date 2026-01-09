@@ -41,7 +41,7 @@ class TestSSSOMPy(unittest.TestCase):
         self.assertNotIn("curie_map", msdf.metadata)
         # note that msdf.metadata will always have a license injected here,
         # regardless of what is put in
-        self.assertEqual(TEST_METADATA.model_dump(exclude_none=True), msdf.metadata)
+        self.assertEqual(TEST_METADATA.model_dump(exclude_none=True, mode="json"), msdf.metadata)
 
     def test_to_pandas_1(self) -> None:
         """Test simplest reading."""

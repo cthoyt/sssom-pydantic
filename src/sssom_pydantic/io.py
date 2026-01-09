@@ -64,9 +64,9 @@ Y = TypeVar("Y")
 def _safe_dump_mapping_set(m: Metadata | MappingSet | MappingSetRecord) -> Metadata:
     match m:
         case MappingSet():
-            return m.to_record().model_dump(exclude_none=True, exclude_unset=True)
+            return m.to_record().model_dump(exclude_none=True, exclude_unset=True, mode="json")
         case MappingSetRecord():
-            return m.model_dump(exclude_none=True, exclude_unset=True)
+            return m.model_dump(exclude_none=True, exclude_unset=True, mode="json")
         case _:
             return m
 
@@ -455,7 +455,7 @@ def _get_metadata(metadata: MappingSet | MappingSetRecord | Metadata | None) -> 
     mapping_set_record = _get_mapping_set_record(metadata)
     if mapping_set_record is None:
         return {}
-    return mapping_set_record.model_dump(exclude_none=True, exclude_unset=True)
+    return mapping_set_record.model_dump(exclude_none=True, exclude_unset=True, mode="json")
 
 
 def _get_mapping_set_record(
