@@ -42,40 +42,40 @@ simple = SemanticMapping(
 )
 
 e1_with_hash = ExampleMapping(
-    description="A simple mapping with a reference for the mapping itself in the `record` field",
+    description="reference for the mapping itself in the `record` field",
     semantic_mapping=simple.model_copy(update={"record": mapping_hash_v1(simple)}),
 )
 
 simple_with_author = ExampleMapping(
-    description="A simple mapping with an author",
+    description="author",
     semantic_mapping=simple.model_copy(update={"authors": [charlie]}),
 )
 simple_with_reviewer = ExampleMapping(
-    description="A simple mapping with a reviewer",
+    description="reviewer",
     semantic_mapping=simple.model_copy(update={"reviewers": [charlie]}),
 )
 simple_with_creator = ExampleMapping(
-    description="A simple mapping with a creator",
+    description="creator",
     semantic_mapping=simple.model_copy(update={"creators": [charlie]}),
 )
 simple_with_confidence = ExampleMapping(
-    description="A simple mapping with a confidence",
+    description="confidence",
     semantic_mapping=simple.model_copy(update={"confidence": 0.99}),
 )
 simple_with_comment = ExampleMapping(
-    description="A simple mapping with a comment",
+    description="comment",
     semantic_mapping=simple.model_copy(update={"comment": "a great mapping"}),
 )
 simple_with_license = ExampleMapping(
-    description="A simple mapping with a license",
+    description="license",
     semantic_mapping=simple.model_copy(update={"license": "https://spdx.org/licenses/CC-BY-4.0"}),
 )
 simple_with_modifier = ExampleMapping(
-    description="A simple mapping with a license",
+    description="predicate modifier",
     semantic_mapping=simple.model_copy(update={"predicate_modifier": "Not"}),
 )
 simple_with_categories = ExampleMapping(
-    description="A simple mapping with subject and object categories",
+    description="subject and object categories",
     semantic_mapping=simple.model_copy(
         update={
             "subject_category": "biolink:Chemical",
@@ -84,13 +84,13 @@ simple_with_categories = ExampleMapping(
     ),
 )
 simple_with_issue_tracker = ExampleMapping(
-    description="A simple mapping with an issue tracker",
+    description="issue tracker",
     semantic_mapping=simple.model_copy(
         update={"issue_tracker_item": "https://example.org/issue-tracker/1"}
     ),
 )
 simple_with_see_also = ExampleMapping(
-    description="A simple mapping with see also list",
+    description="see also list",
     semantic_mapping=simple.model_copy(
         update={
             "see_also": [
@@ -101,7 +101,7 @@ simple_with_see_also = ExampleMapping(
     ),
 )
 simple_with_sources = ExampleMapping(
-    description="A simple mapping with sources",
+    description="subject and object sources",
     semantic_mapping=simple.model_copy(
         update={
             "subject_source": "bioregistry:mesh",
@@ -112,7 +112,7 @@ simple_with_sources = ExampleMapping(
     ),
 )
 simple_with_predicate_type = ExampleMapping(
-    description="A simple mapping with a predicate type",
+    description="predicate type",
     semantic_mapping=simple.model_copy(
         update={
             "predicate_type": "owl:AnnotationProperty",
@@ -128,7 +128,7 @@ simple_predicted = SemanticMapping(
 )
 
 simple_with_match_field = ExampleMapping(
-    description="A simple mapping with subject and object match fields",
+    description="subject and object match fields",
     semantic_mapping=simple_predicted.model_copy(
         update={
             "subject_match_field": ["rdfs:label"],
@@ -137,7 +137,7 @@ simple_with_match_field = ExampleMapping(
     ),
 )
 simple_with_preprocessing = ExampleMapping(
-    description="A simple mapping with subject and object preprocessing",
+    description="subject and object preprocessing",
     semantic_mapping=simple_predicted.model_copy(
         update={
             "subject_preprocessing": ["semapv:Stemming"],
@@ -147,7 +147,7 @@ simple_with_preprocessing = ExampleMapping(
     ),
 )
 simple_with_mapping_tool = ExampleMapping(
-    description="A simple mapping with a mapping tool",
+    description="mapping tool",
     semantic_mapping=simple_predicted.model_copy(
         update={
             "mapping_tool": MappingTool(name="test tool"),
@@ -155,7 +155,7 @@ simple_with_mapping_tool = ExampleMapping(
     ),
 )
 simple_with_curation_rule = ExampleMapping(
-    description="A simple mapping with a curation rule",
+    description="curation rule",
     semantic_mapping=simple_predicted.model_copy(
         update={
             "curation_rule": ["DISEASE_MAPPING_COMMONS_RULES:MPR2"],
@@ -163,7 +163,7 @@ simple_with_curation_rule = ExampleMapping(
     ),
 )
 simple_with_curation_rule_text = ExampleMapping(
-    description="A simple mapping with a curation rule as text",
+    description="curation rule as text",
     semantic_mapping=simple_predicted.model_copy(
         update={
             "curation_rule_text": ["vibed it"],
@@ -173,7 +173,7 @@ simple_with_curation_rule_text = ExampleMapping(
 
 
 simple_with_similarity = ExampleMapping(
-    description="A simple mapping with a similarity measure and score",
+    description="similarity measure and score",
     semantic_mapping=SemanticMapping(
         subject=R1,
         predicate=P1,
@@ -185,7 +185,7 @@ simple_with_similarity = ExampleMapping(
 )
 
 e1 = ExampleMapping(
-    description="A simple mapping with a source",
+    description="source",
     semantic_mapping=SemanticMapping(
         subject=R1,
         predicate=P1,
@@ -218,7 +218,7 @@ e3 = ExampleMapping(
 )
 
 e4 = ExampleMapping(
-    description="test a mapping annotated with 1-1 cardinality",
+    description="1-1 cardinality",
     semantic_mapping=SemanticMapping(
         subject=R1,
         predicate=P1,
@@ -228,7 +228,7 @@ e4 = ExampleMapping(
     ),
 )
 e4b = ExampleMapping(
-    description="test a mapping annotated with 1-n cardinality",
+    description="1-n cardinality",
     semantic_mapping=SemanticMapping(
         subject=R1,
         predicate=P1,
@@ -238,7 +238,7 @@ e4b = ExampleMapping(
     ),
 )
 e4c = ExampleMapping(
-    description="test a mapping annotated with n-1 cardinality",
+    description="n-1 cardinality",
     semantic_mapping=SemanticMapping(
         subject=R1,
         predicate=P1,
@@ -248,7 +248,7 @@ e4c = ExampleMapping(
     ),
 )
 e4d = ExampleMapping(
-    description="test a mapping annotated with n-n cardinality",
+    description="n-n cardinality",
     semantic_mapping=SemanticMapping(
         subject=R1,
         predicate=P1,
@@ -258,7 +258,7 @@ e4d = ExampleMapping(
     ),
 )
 e4d_scoped = ExampleMapping(
-    description="test a mapping annotated with n-n cardinality and cardinality scope",
+    description="n-n cardinality and cardinality scope",
     semantic_mapping=SemanticMapping(
         subject=R1,
         predicate=P1,
@@ -270,7 +270,7 @@ e4d_scoped = ExampleMapping(
 )
 
 e5 = ExampleMapping(
-    description="test a mapping with a given provider as a URI",
+    description="provider as a URI",
     semantic_mapping=SemanticMapping(
         subject=R1,
         predicate=P1,
@@ -281,7 +281,7 @@ e5 = ExampleMapping(
 )
 
 e6 = ExampleMapping(
-    description="test a mapping that annotates explicit subject and object types",
+    description="explicit subject and object types",
     semantic_mapping=SemanticMapping(
         subject=R1,
         subject_type=Reference.from_curie("owl:Class"),

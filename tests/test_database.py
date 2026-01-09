@@ -24,7 +24,7 @@ from sssom_pydantic.database import (
     SemanticMappingModel,
     clauses_from_query,
 )
-from sssom_pydantic.examples import EXAMPLE_MAPPINGS
+from sssom_pydantic.examples import EXAMPLE_MAPPINGS, EXAMPLES
 from sssom_pydantic.process import UNSURE
 from sssom_pydantic.query import Query
 from tests import cases
@@ -293,23 +293,24 @@ class TestDatabase(unittest.TestCase):
 
     def test_read(self) -> None:
         """Test reading mappings from a file."""
-        # TODO why are `other` and `source` not making the round trip?
-        mappings = [m for m in EXAMPLE_MAPPINGS if not m.other and not m.source]
+        for example in EXAMPLES:
+            with self.subTest(desc=example.description), tempfile.TemporaryDirectory() as tmpdir:
+                mappings = [example.semantic_mapping]
+                path = Path(tmpdir).joinpath("test.sssom.tsv")
+                sssom_pydantic.write(
+                    mappings, path, converter=TEST_CONVERTER, metadata=TEST_METADATA
+                )
+                db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
+                db.read(path, converter=TEST_CONVERTER, metadata=TEST_METADATA)
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            path = Path(tmpdir).joinpath("test.sssom.tsv")
-            sssom_pydantic.write(mappings, path, converter=TEST_CONVERTER, metadata=TEST_METADATA)
-            db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
-            db.read(path, converter=TEST_CONVERTER, metadata=TEST_METADATA)
-
-            written_path = Path(tmpdir).joinpath("test2.sssom.tsv")
-            db.write(
-                written_path,
-                converter=TEST_CONVERTER,
-                metadata=TEST_METADATA,
-                exclude_columns=["record_id"],
-            )
-            self.assertEqual(path.read_text(), written_path.read_text())
+                written_path = Path(tmpdir).joinpath("test2.sssom.tsv")
+                db.write(
+                    written_path,
+                    converter=TEST_CONVERTER,
+                    metadata=TEST_METADATA,
+                    exclude_columns=["record_id"],
+                )
+                self.assertEqual(path.read_text(), written_path.read_text())
 
     def test_query_unsure(self) -> None:
         """Test querying for unsure curations."""
