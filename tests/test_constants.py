@@ -7,6 +7,7 @@ import importlib.util
 import tempfile
 import typing
 import unittest
+from collections import Counter
 from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.request import urlretrieve
@@ -22,6 +23,7 @@ from sssom_pydantic.constants import (
     MULTIVALUED,
     PROPAGATABLE,
 )
+from sssom_pydantic.examples import EXAMPLES
 from sssom_pydantic.models import Cardinality
 
 if TYPE_CHECKING:
@@ -278,3 +280,19 @@ class TestSchema(unittest.TestCase):
                             f"missing handling for slot {slot} with range "
                             f"{self.view.get_slot(slot).range}"
                         )
+
+
+class TestExampleCompleteness(unittest.TestCase):
+    """Test that the examples cover the full set of cases."""
+
+    def test_completeness(self) -> None:
+        """Test there's an example for all fields."""
+        counter = Counter()
+        for example in EXAMPLES:
+            for k, _v in example.semantic_mapping.model_dump(exclude_none=True).items():
+                counter[k] += 1
+
+        missing_field_names = set(SemanticMapping.model_fields).difference(counter)
+        if missing_field_names:
+            text = "\n".join(sorted(missing_field_names))
+            self.fail(msg=f"the following fields aren't covered by an example:\n\n{text}")
