@@ -83,7 +83,7 @@ class TestJSKOSExport(unittest.TestCase):
                         "npx",
                         "sssom-js",
                         "--from",
-                        "csv",
+                        "tsv",
                         "--to",
                         "jskos",
                         "--output",
