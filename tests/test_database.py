@@ -13,7 +13,7 @@ from curies.vocabulary import (
 )
 
 import sssom_pydantic
-from sssom_pydantic.api import SemanticMapping, mapping_hash_v1, MAPPING_HASH_V1_PREFIX
+from sssom_pydantic.api import MAPPING_HASH_V1_PREFIX, SemanticMapping, mapping_hash_v1
 from sssom_pydantic.database import (
     NEGATIVE_MAPPING_CLAUSE,
     POSITIVE_MAPPING_CLAUSE,
@@ -293,18 +293,19 @@ class TestDatabase(unittest.TestCase):
 
     def test_read(self) -> None:
         """Test reading mappings from a file."""
-        # FIXME when excluding columns while writing, should also exclude them from building up the prefix list
-        converter = TEST_CONVERTER.get_subconverter(TEST_CONVERTER.get_prefixes() - {MAPPING_HASH_V1_PREFIX})
-        
+        # FIXME when excluding columns while writing, should also exclude
+        #  them from building up the prefix list
+        converter = TEST_CONVERTER.get_subconverter(
+            TEST_CONVERTER.get_prefixes() - {MAPPING_HASH_V1_PREFIX}
+        )
+
         for example in EXAMPLES:
             if example.description == "reference for the mapping itself in the `record` field":
                 continue
             with self.subTest(desc=example.description), tempfile.TemporaryDirectory() as tmpdir:
                 mappings = [example.semantic_mapping]
                 path = Path(tmpdir).joinpath("test.sssom.tsv")
-                sssom_pydantic.write(
-                    mappings, path, converter=converter, metadata=TEST_METADATA
-                )
+                sssom_pydantic.write(mappings, path, converter=converter, metadata=TEST_METADATA)
                 db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
                 db.read(path, converter=converter, metadata=TEST_METADATA)
 
