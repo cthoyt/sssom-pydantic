@@ -69,10 +69,10 @@ class TestJSKOSExport(unittest.TestCase):
         """Test converting examples to JSKOS then back."""
         import jskos
 
-        converter = deepcopy(TEST_CONVERTER)
+        converter = TEST_CONVERTER
 
         for i, example in enumerate(EXAMPLES):
-            with self.subTest(i=i, desc=example.description), tempfile.TemporaryDirectory() as td:
+            with self.subTest(desc=example.description), tempfile.TemporaryDirectory() as td:
                 tsv_path = Path(td).joinpath("example.sssom.tsv")
                 sssom_pydantic.write(
                     [example.semantic_mapping],
