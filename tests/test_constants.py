@@ -143,6 +143,10 @@ class TestSchema(unittest.TestCase):
             "creator_label",
             "author_label",
             "reviewer_label",
+            # these are deliberately underspecified as strings in the
+            # spec, but sssom-pydantic requires they're CURIEs
+            "subject_category",
+            "object_category",
         }
         for slot in self.mapping_slots:
             if slot in skips:
