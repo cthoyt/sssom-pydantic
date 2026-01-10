@@ -283,8 +283,6 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
             self.subject_category,
             self.object_category,
         ]:
-            if isinstance(x, str):
-                raise ValueError(f"should not be string: {x}")
             if x is not None:
                 rv.add(x.prefix)
         for y in [
@@ -292,6 +290,7 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
             self.subject_preprocessing,
             self.object_match_field,
             self.object_preprocessing,
+            self.authors,
             self.creators,
             self.reviewers,
             self.curation_rule,
