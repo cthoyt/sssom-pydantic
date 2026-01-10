@@ -9,7 +9,7 @@ from curies import NamableReference, NamedReference, Reference
 from curies.vocabulary import charlie, exact_match, manual_mapping_curation
 
 from sssom_pydantic import MappingSetRecord
-from sssom_pydantic.api import SemanticMapping
+from sssom_pydantic.api import MAPPING_HASH_V1_PREFIX, SemanticMapping
 from sssom_pydantic.models import Record
 
 __all__ = [
@@ -71,15 +71,22 @@ TEST_PREFIX_MAP = {
     "semapv": "https://w3id.org/semapv/vocab/",
     "skos": "http://www.w3.org/2004/02/skos/core#",
     "sssom": "https://w3id.org/sssom/",
+    "spdx": "https://spdx.org/licenses/",
+    "w3id": "https://w3id.org/",
+    MAPPING_HASH_V1_PREFIX: f"https://w3id.org/sssom/{MAPPING_HASH_V1_PREFIX}/",
+    "issue": "https://github.com/cthoyt/sssom-pydantic/issues/",
+    "biolink": "https://w3id.org/biolink/vocab/",
+    "rule": "https://example.org/disease-rule/",
+    "bioregistry": "https://bioregistry.io/",
 }
 TEST_CONVERTER = curies.Converter.from_prefix_map(TEST_PREFIX_MAP)
 TEST_METADATA = MappingSetRecord(
     mapping_set_id=TEST_MAPPING_SET_ID,
-    license="spdx:cc0-1.0",
+    license="https://spdx.org/licenses/CC0-1.0",
 )
 TEST_MAPPING_SET = TEST_METADATA.process(TEST_CONVERTER)
 TEST_METADATA_W_PREFIX_MAP = MappingSetRecord(
     curie_map=TEST_PREFIX_MAP,
     mapping_set_id=TEST_MAPPING_SET_ID,
-    license="spdx:cc0-1.0",
+    license="https://spdx.org/licenses/CC0-1.0",
 )

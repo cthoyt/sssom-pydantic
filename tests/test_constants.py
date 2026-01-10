@@ -7,12 +7,14 @@ import importlib.util
 import tempfile
 import typing
 import unittest
+from collections import Counter
 from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.request import urlretrieve
 
 import pystow
 from curies import Reference
+from pydantic import AnyUrl
 
 from sssom_pydantic import MappingSetRecord, Record, SemanticMapping
 from sssom_pydantic.constants import (
@@ -21,6 +23,7 @@ from sssom_pydantic.constants import (
     MULTIVALUED,
     PROPAGATABLE,
 )
+from sssom_pydantic.examples import EXAMPLES
 from sssom_pydantic.models import Cardinality
 
 if TYPE_CHECKING:
@@ -140,6 +143,10 @@ class TestSchema(unittest.TestCase):
             "creator_label",
             "author_label",
             "reviewer_label",
+            # these are deliberately underspecified as strings in the
+            # spec, but sssom-pydantic requires they're CURIEs
+            "subject_category",
+            "object_category",
         }
         for slot in self.mapping_slots:
             if slot in skips:
@@ -230,7 +237,7 @@ class TestSchema(unittest.TestCase):
                                 annotation,
                                 msg=f"{slot} should be annotated as a reference",
                             )
-                    case "string" | "NonRelativeURI":
+                    case "string":
                         if multivalued:
                             self.assertIn(
                                 annotation,
@@ -241,6 +248,19 @@ class TestSchema(unittest.TestCase):
                             self.assertIn(
                                 annotation,
                                 {str, str | None},
+                                msg=f"{slot} should be annotated as a string",
+                            )
+                    case "NonRelativeURI":
+                        if multivalued:
+                            self.assertIn(
+                                annotation,
+                                {list[AnyUrl], list[AnyUrl] | None},
+                                msg=f"{slot} should be annotated as a list[str]",
+                            )
+                        else:
+                            self.assertIn(
+                                annotation,
+                                {AnyUrl, AnyUrl | None},
                                 msg=f"{slot} should be annotated as a string",
                             )
                     case "double":
@@ -264,3 +284,18 @@ class TestSchema(unittest.TestCase):
                             f"missing handling for slot {slot} with range "
                             f"{self.view.get_slot(slot).range}"
                         )
+
+
+class TestExampleCompleteness(unittest.TestCase):
+    """Test that the examples cover the full set of cases."""
+
+    def test_completeness(self) -> None:
+        """Test there's an example for all fields."""
+        counter: Counter[str] = Counter()
+        for example in EXAMPLES:
+            for k, _v in example.semantic_mapping.model_dump(exclude_none=True).items():
+                counter[k] += 1
+
+        for field in SemanticMapping.model_fields:
+            with self.subTest(field=field):
+                self.assertIn(field, set(counter), msg=f"\n\nthere's no example that uses {field}")

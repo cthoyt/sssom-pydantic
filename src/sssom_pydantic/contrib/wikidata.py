@@ -195,7 +195,7 @@ def get_quickstatements_lines(
 
         if metadata is not None:
             # this sets the "reference URL" to the mapping set ID
-            mapping_set_qualifiers.append(TextQualifier(predicate="S854", target=metadata.id))
+            mapping_set_qualifiers.append(TextQualifier(predicate="S854", target=str(metadata.id)))
 
         if wikidata_property_id := prefix_to_wikidata.get(mapping.object.prefix):
             if mapping.object in wikidata_id_to_references.get(mapping.subject.identifier, set()):
