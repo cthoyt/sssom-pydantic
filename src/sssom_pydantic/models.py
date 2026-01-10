@@ -7,7 +7,7 @@ from collections.abc import Callable
 from typing import Literal, TypeAlias
 
 from curies.vocabulary import matching_processes
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AnyUrl, BaseModel, ConfigDict, Field
 
 from .constants import PREDICATE_TYPES
 
@@ -109,7 +109,7 @@ class Record(BaseModel):
     #: see https://mapping-commons.github.io/sssom/MappingCardinalityEnum/
     mapping_cardinality: Cardinality | None = Field(None)
     cardinality_scope: list[str] | None = Field(None)
-    mapping_provider: str | None = Field(None)
+    mapping_provider: AnyUrl | None = Field(None)
     mapping_source: str | None = Field(None)
     mapping_tool: str | None = Field(None)
     mapping_tool_id: str | None = Field(None)

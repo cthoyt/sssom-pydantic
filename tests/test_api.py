@@ -154,9 +154,7 @@ class TestIO(unittest.TestCase):
     def test_round_trip(self) -> None:
         """Test that mappings can be written and read."""
         self.maxDiff = None
-        converter = curies.Converter.from_prefix_map(
-            {**TEST_PREFIX_MAP, "w3id": "https://w3id.org/"}
-        )
+        converter = curies.Converter.from_prefix_map(TEST_PREFIX_MAP)
         for example in EXAMPLES:
             with self.subTest(desc=example.description):
                 path = self.directory.joinpath("test.sssom.tsv")

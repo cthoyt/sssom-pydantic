@@ -13,7 +13,7 @@ from curies.vocabulary import (
 )
 
 import sssom_pydantic
-from sssom_pydantic.api import SemanticMapping, mapping_hash_v1
+from sssom_pydantic.api import MAPPING_HASH_V1_PREFIX, SemanticMapping, mapping_hash_v1
 from sssom_pydantic.database import (
     NEGATIVE_MAPPING_CLAUSE,
     POSITIVE_MAPPING_CLAUSE,
@@ -24,7 +24,7 @@ from sssom_pydantic.database import (
     SemanticMappingModel,
     clauses_from_query,
 )
-from sssom_pydantic.examples import EXAMPLE_MAPPINGS
+from sssom_pydantic.examples import EXAMPLE_MAPPINGS, EXAMPLES
 from sssom_pydantic.process import UNSURE
 from sssom_pydantic.query import Query
 from tests import cases
@@ -293,23 +293,30 @@ class TestDatabase(unittest.TestCase):
 
     def test_read(self) -> None:
         """Test reading mappings from a file."""
-        # TODO why are `other` and `source` not making the round trip?
-        mappings = [m for m in EXAMPLE_MAPPINGS if not m.other and not m.source]
+        # FIXME when excluding columns while writing, should also exclude
+        #  them from building up the prefix list
+        converter = TEST_CONVERTER.get_subconverter(
+            TEST_CONVERTER.get_prefixes() - {MAPPING_HASH_V1_PREFIX}
+        )
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            path = Path(tmpdir).joinpath("test.sssom.tsv")
-            sssom_pydantic.write(mappings, path, converter=TEST_CONVERTER, metadata=TEST_METADATA)
-            db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
-            db.read(path, converter=TEST_CONVERTER, metadata=TEST_METADATA)
+        for example in EXAMPLES:
+            if example.description == "reference for the mapping itself in the `record` field":
+                continue
+            with self.subTest(desc=example.description), tempfile.TemporaryDirectory() as tmpdir:
+                mappings = [example.semantic_mapping]
+                path = Path(tmpdir).joinpath("test.sssom.tsv")
+                sssom_pydantic.write(mappings, path, converter=converter, metadata=TEST_METADATA)
+                db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
+                db.read(path, converter=converter, metadata=TEST_METADATA)
 
-            written_path = Path(tmpdir).joinpath("test2.sssom.tsv")
-            db.write(
-                written_path,
-                converter=TEST_CONVERTER,
-                metadata=TEST_METADATA,
-                exclude_columns=["record_id"],
-            )
-            self.assertEqual(path.read_text(), written_path.read_text())
+                written_path = Path(tmpdir).joinpath("test2.sssom.tsv")
+                db.write(
+                    written_path,
+                    converter=converter,
+                    metadata=TEST_METADATA,
+                    exclude_columns=["record_id"],
+                )
+                self.assertEqual(path.read_text(), written_path.read_text())
 
     def test_query_unsure(self) -> None:
         """Test querying for unsure curations."""

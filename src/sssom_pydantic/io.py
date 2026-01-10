@@ -14,6 +14,7 @@ from typing import Any, NamedTuple, TextIO, TypeAlias, TypeVar
 import curies
 import yaml
 from curies import Converter, Reference
+from pydantic import AnyUrl
 from pystow.utils import safe_open
 from tqdm import tqdm
 
@@ -64,9 +65,9 @@ Y = TypeVar("Y")
 def _safe_dump_mapping_set(m: Metadata | MappingSet | MappingSetRecord) -> Metadata:
     match m:
         case MappingSet():
-            return m.to_record().model_dump(exclude_none=True, exclude_unset=True)
+            return m.to_record().model_dump(exclude_none=True, exclude_unset=True, mode="json")
         case MappingSetRecord():
-            return m.model_dump(exclude_none=True, exclude_unset=True)
+            return m.model_dump(exclude_none=True, exclude_unset=True, mode="json")
         case _:
             return m
 
@@ -106,7 +107,7 @@ def record_to_semantic_mapping(record: Record, converter: curies.Converter) -> S
 
     if record.mapping_tool_id or record.mapping_tool:
         mapping_tool = MappingTool(
-            reference=converter.parse_curie(record.mapping_tool_id, strict=True).to_pydantic()
+            reference=converter.parse(record.mapping_tool_id, strict=True).to_pydantic()
             if record.mapping_tool_id
             else None,
             name=record.mapping_tool,
@@ -117,15 +118,18 @@ def record_to_semantic_mapping(record: Record, converter: curies.Converter) -> S
     else:
         mapping_tool = None
 
-    def _parse_curies(x: list[str] | None) -> list[Reference] | None:
-        if not x:
+    def _parse_curies_or_uris(curies_or_uris: list[str] | None) -> list[Reference] | None:
+        if not curies_or_uris:
             return None
-        return [converter.parse_curie(y, strict=True).to_pydantic() for y in x]
+        return [
+            converter.parse(curie_or_uri, strict=True).to_pydantic()
+            for curie_or_uri in curies_or_uris
+        ]
 
-    def _parse_curie(x: str | None) -> Reference | None:
-        if not x:
+    def _parse_curie_or_uri(curie_or_uri: str | None) -> Reference | None:
+        if not curie_or_uri:
             return None
-        return converter.parse_curie(x, strict=True).to_pydantic()
+        return converter.parse(curie_or_uri, strict=True).to_pydantic()
 
     return SemanticMapping(
         subject=subject,
@@ -134,38 +138,38 @@ def record_to_semantic_mapping(record: Record, converter: curies.Converter) -> S
         justification=mapping_justification,
         predicate_modifier=record.predicate_modifier,
         # core
-        record=_parse_curie(record.record_id),
-        authors=_parse_curies(record.author_id),
+        record=_parse_curie_or_uri(record.record_id),
+        authors=_parse_curies_or_uris(record.author_id),
         confidence=record.confidence,
         mapping_tool=mapping_tool,
         license=record.license,
         # remaining
-        subject_category=record.subject_category,
-        subject_match_field=_parse_curies(record.subject_match_field),
-        subject_preprocessing=_parse_curies(record.subject_preprocessing),
-        subject_source=_parse_curie(record.subject_source),
+        subject_category=_parse_curie_or_uri(record.subject_category),
+        subject_match_field=_parse_curies_or_uris(record.subject_match_field),
+        subject_preprocessing=_parse_curies_or_uris(record.subject_preprocessing),
+        subject_source=_parse_curie_or_uri(record.subject_source),
         subject_source_version=record.subject_source_version,
         subject_type=record.subject_type,
-        predicate_type=_parse_curie(record.predicate_type),
-        object_category=record.object_category,
-        object_match_field=_parse_curies(record.object_match_field),
-        object_preprocessing=_parse_curies(record.object_preprocessing),
-        object_source=_parse_curie(record.object_source),
+        predicate_type=_parse_curie_or_uri(record.predicate_type),
+        object_category=_parse_curie_or_uri(record.object_category),
+        object_match_field=_parse_curies_or_uris(record.object_match_field),
+        object_preprocessing=_parse_curies_or_uris(record.object_preprocessing),
+        object_source=_parse_curie_or_uri(record.object_source),
         object_source_version=record.object_source_version,
         object_type=record.subject_type,
-        creators=_parse_curies(record.creator_id),
-        reviewers=_parse_curies(record.reviewer_id),
+        creators=_parse_curies_or_uris(record.creator_id),
+        reviewers=_parse_curies_or_uris(record.reviewer_id),
         publication_date=record.publication_date,
         mapping_date=record.mapping_date,
         comment=record.comment,
-        curation_rule=_parse_curies(record.curation_rule),
+        curation_rule=_parse_curies_or_uris(record.curation_rule),
         curation_rule_text=record.curation_rule_text,
         # TODO get fancy with rewriting github issues?
-        issue_tracker_item=_parse_curie(record.issue_tracker_item),
+        issue_tracker_item=_parse_curie_or_uri(record.issue_tracker_item),
         cardinality=record.mapping_cardinality,
         cardinality_scope=record.cardinality_scope,
         provider=record.mapping_provider,
-        source=_parse_curie(record.mapping_source),
+        source=_parse_curie_or_uri(record.mapping_source),
         match_string=record.match_string,
         other=_other_to_dict(record.other) if record.other else None,
         see_also=record.see_also,
@@ -316,21 +320,24 @@ def write_unprocessed(
         writer.writerows(_unprocess_row(record, exclude=exclude) for record in records)
 
 
-def _get_condensation(records: Iterable[Record]) -> dict[str, Any]:
-    values: defaultdict[str, Counter[str | float | None | datetime.date | tuple[str, ...]]] = (
-        defaultdict(Counter)
-    )
+CondensationTypes: TypeAlias = str | float | None | datetime.date | tuple[str, ...]
+
+
+def _get_condensation(records: Iterable[Record]) -> dict[str, CondensationTypes]:
+    values: defaultdict[str, Counter[CondensationTypes]] = defaultdict(Counter)
     for record in records:
         for key in PROPAGATABLE:
             value = getattr(record, key)
             if isinstance(value, list):
                 values[key][tuple(sorted(value))] += 1
+            elif isinstance(value, AnyUrl):
+                values[key][str(value)] += 1
             elif value is None or isinstance(value, str | float | datetime.date):
                 values[key][value] += 1
             else:
                 raise TypeError(f"unhandled value type: {type(value)} for {value}")
 
-    condensed = {}
+    condensed: dict[str, CondensationTypes] = {}
     for key, counter in values.items():
         if len(counter) != 1:
             continue
@@ -455,7 +462,7 @@ def _get_metadata(metadata: MappingSet | MappingSetRecord | Metadata | None) -> 
     mapping_set_record = _get_mapping_set_record(metadata)
     if mapping_set_record is None:
         return {}
-    return mapping_set_record.model_dump(exclude_none=True, exclude_unset=True)
+    return mapping_set_record.model_dump(exclude_none=True, exclude_unset=True, mode="json")
 
 
 def _get_mapping_set_record(
