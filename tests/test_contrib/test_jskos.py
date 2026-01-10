@@ -70,7 +70,6 @@ class TestJSKOSExport(unittest.TestCase):
         import jskos
 
         converter = deepcopy(TEST_CONVERTER)
-        converter.add_prefix("w3id", "https://w3id.org/")
 
         for i, example in enumerate(EXAMPLES):
             with self.subTest(i=i, desc=example.description), tempfile.TemporaryDirectory() as td:
@@ -102,7 +101,7 @@ class TestJSKOSExport(unittest.TestCase):
                 # makes any sense
                 text = jskos_path.read_text()
                 if not text:
-                    self.fail("no output was produced for")
+                    self.fail(f"no output was produced for: {example.description}. Original data:\n\n{tsv_path.read_text()}")
 
                 try:
                     jskos.Concept.model_validate_json(text)
