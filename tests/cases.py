@@ -78,6 +78,7 @@ TEST_PREFIX_MAP = {
     "biolink": "https://w3id.org/biolink/vocab/",
     "rule": "https://example.org/disease-rule/",
     "bioregistry": "https://bioregistry.io/",
+    "orcid": "https://orcid.org/",
 }
 TEST_CONVERTER = curies.Converter.from_prefix_map(TEST_PREFIX_MAP)
 TEST_METADATA = MappingSetRecord(

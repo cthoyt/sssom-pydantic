@@ -199,6 +199,11 @@ def write(
     if sort:
         mappings = sorted(mappings)
     records, prefixes = _prepare_records(mappings)
+    if metadata is not None:
+        if converter is None:
+            raise NotImplementedError("when passing non-parsed metadata, need a converter")
+        metadata = _get_mapping_set(metadata, converter)
+        prefixes.update(metadata.get_prefixes())
     write_unprocessed(
         records,
         path=path,
@@ -207,6 +212,16 @@ def write(
         prefixes=prefixes,
         exclude_columns=exclude_columns,
     )
+
+
+def _get_mapping_set(
+    m: MappingSet | Metadata | MappingSetRecord, converter: Converter
+) -> MappingSet:
+    if isinstance(m, MappingSet):
+        return m
+    if isinstance(m, MappingSetRecord):
+        return m.process(converter)
+    raise NotImplementedError
 
 
 def append(
