@@ -74,6 +74,10 @@ TEST_PREFIX_MAP = {
     "spdx": "https://spdx.org/licenses/",
     "w3id": "https://w3id.org/",
     MAPPING_HASH_V1_PREFIX: f"https://w3id.org/sssom/{MAPPING_HASH_V1_PREFIX}/",
+    "issue": "https://github.com/cthoyt/sssom-pydantic/issues/",
+    "biolink": "https://w3id.org/biolink/vocab/",
+    "rule": "https://example.org/disease-rule/",
+    "bioregistry": "https://bioregistry.io/",
 }
 TEST_CONVERTER = curies.Converter.from_prefix_map(TEST_PREFIX_MAP)
 TEST_METADATA = MappingSetRecord(

@@ -78,15 +78,15 @@ simple_with_categories = ExampleMapping(
     description="subject and object categories",
     semantic_mapping=simple.model_copy(
         update={
-            "subject_category": "biolink:Chemical",
-            "object_category": "biolink:Chemical",
+            "subject_category": Reference.from_curie("biolink:Chemical"),
+            "object_category": Reference.from_curie("biolink:Chemical"),
         }
     ),
 )
 simple_with_issue_tracker = ExampleMapping(
     description="issue tracker",
     semantic_mapping=simple.model_copy(
-        update={"issue_tracker_item": "https://example.org/issue-tracker/1"}
+        update={"issue_tracker_item": Reference.from_curie("issue:1")}
     ),
 )
 simple_with_see_also = ExampleMapping(
@@ -104,9 +104,9 @@ simple_with_sources = ExampleMapping(
     description="subject and object sources",
     semantic_mapping=simple.model_copy(
         update={
-            "subject_source": "bioregistry:mesh",
+            "subject_source": Reference.from_curie("bioregistry:mesh"),
             "subject_source_version": "2025",
-            "object_source": "bioregistry:chebi",
+            "object_source": Reference.from_curie("bioregistry:chebi"),
             "object_source_version": "150",
         }
     ),
@@ -115,7 +115,7 @@ simple_with_predicate_type = ExampleMapping(
     description="predicate type",
     semantic_mapping=simple.model_copy(
         update={
-            "predicate_type": "owl:AnnotationProperty",
+            "predicate_type": Reference.from_curie("owl:AnnotationProperty"),
         }
     ),
 )
@@ -131,8 +131,8 @@ simple_with_match_field = ExampleMapping(
     description="subject and object match fields",
     semantic_mapping=simple_predicted.model_copy(
         update={
-            "subject_match_field": ["rdfs:label"],
-            "object_match_field": ["rdfs:label"],
+            "subject_match_field": [Reference.from_curie("rdfs:label")],
+            "object_match_field": [Reference.from_curie("rdfs:label")],
         }
     ),
 )
@@ -140,8 +140,8 @@ simple_with_preprocessing = ExampleMapping(
     description="subject and object preprocessing",
     semantic_mapping=simple_predicted.model_copy(
         update={
-            "subject_preprocessing": ["semapv:Stemming"],
-            "object_preprocessing": ["semapv:Stemming"],
+            "subject_preprocessing": [Reference.from_curie("semapv:Stemming")],
+            "object_preprocessing": [Reference.from_curie("semapv:Stemming")],
             "match_string": ["ammeline"],
         }
     ),
@@ -158,7 +158,7 @@ simple_with_curation_rule = ExampleMapping(
     description="curation rule",
     semantic_mapping=simple_predicted.model_copy(
         update={
-            "curation_rule": ["DISEASE_MAPPING_COMMONS_RULES:MPR2"],
+            "curation_rule": [Reference.from_curie("rule:MPR2")],
         }
     ),
 )
@@ -265,7 +265,7 @@ e4d_scoped = ExampleMapping(
         object=R2,
         justification=manual_mapping_curation.curie,
         cardinality="n:n",
-        cardinality_scope=["predicate_id", "object_source"],
+        cardinality_scope=["object_source", "predicate_id"],
     ),
 )
 

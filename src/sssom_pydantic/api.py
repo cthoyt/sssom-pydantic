@@ -207,7 +207,8 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
 
     model_config = ConfigDict(frozen=True)
 
-    subject_category: str | None = Field(None)
+    # https://w3id.org/sssom/subject_category
+    subject_category: Reference | None = Field(None)
     subject_match_field: list[Reference] | None = Field(None)
     subject_preprocessing: list[Reference] | None = Field(None)
     subject_source: Reference | None = Field(None)
@@ -218,7 +219,7 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
     # TODO limit with https://mapping-commons.github.io/sssom/EntityTypeEnum/
     predicate_type: Reference | None = Field(None)
 
-    object_category: str | None = Field(None)
+    object_category: Reference | None = Field(None)
     object_match_field: list[Reference] | None = Field(None)
     object_preprocessing: list[Reference] | None = Field(None)
     object_source: Reference | None = Field(None)
@@ -278,7 +279,12 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
             self.object_source,
             self.object_type,
             self.source,
+            self.issue_tracker_item,
+            self.subject_category,
+            self.object_category,
         ]:
+            if isinstance(x, str):
+                raise ValueError(f"should not be string: {x}")
             if x is not None:
                 rv.add(x.prefix)
         for y in [
@@ -302,31 +308,41 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
         else:
             pass
 
+        def _safe_curies(x: list[Reference] | None) -> list[str] | None:
+            if not x:
+                return None
+            return [c.curie for c in x]
+
+        def _safe_curie(x: Reference | None) -> str | None:
+            if x is None:
+                return None
+            return x.curie
+
         return Record(
-            record_id=self.record.curie if self.record is not None else None,
+            record_id=_safe_curie(self.record),
             #
             subject_id=self.subject.curie,
             subject_label=self.subject_name,
-            subject_category=self.subject_category,
-            subject_match_field=self.subject_match_field,
-            subject_preprocessing=self.subject_preprocessing,
-            subject_source=self.subject_source,
+            subject_category=_safe_curie(self.subject_category),
+            subject_match_field=_safe_curies(self.subject_match_field),
+            subject_preprocessing=_safe_curies(self.subject_preprocessing),
+            subject_source=_safe_curie(self.subject_source),
             subject_source_version=self.subject_source_version,
-            subject_type=self.subject_type.curie if self.subject_type is not None else None,
+            subject_type=_safe_curie(self.subject_type),
             #
             predicate_id=self.predicate.curie,
             predicate_label=self.predicate_name,
             predicate_modifier=self.predicate_modifier,
-            predicate_type=self.predicate_type,
+            predicate_type=_safe_curie(self.predicate_type),
             #
             object_id=self.object.curie,
             object_label=self.object_name,
-            object_category=self.object_category,
-            object_match_field=self.object_match_field,
-            object_preprocessing=self.object_preprocessing,
-            object_source=self.object_source,
+            object_category=_safe_curie(self.object_category),
+            object_match_field=_safe_curies(self.object_match_field),
+            object_preprocessing=_safe_curies(self.object_preprocessing),
+            object_source=_safe_curie(self.object_source),
             object_source_version=self.object_source_version,
-            object_type=self.object_type.curie if self.object_type is not None else None,
+            object_type=_safe_curie(self.object_type),
             #
             mapping_justification=self.justification.curie,
             #
@@ -342,20 +358,20 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
             #
             comment=self.comment,
             confidence=self.confidence,
-            curation_rule=self.curation_rule,
+            curation_rule=_safe_curies(self.curation_rule),
             curation_rule_text=self.curation_rule_text,
-            issue_tracker_item=self.issue_tracker_item,
+            issue_tracker_item=_safe_curie(self.issue_tracker_item),
             license=self.license,
             #
             mapping_cardinality=self.cardinality,
             cardinality_scope=self.cardinality_scope,
             mapping_provider=self.provider,
-            mapping_source=self.source.curie if self.source else None,
+            mapping_source=_safe_curie(self.source),
             mapping_tool=self.mapping_tool.name
             if self.mapping_tool is not None and self.mapping_tool.name is not None
             else None,
-            mapping_tool_id=self.mapping_tool.reference.curie
-            if self.mapping_tool is not None and self.mapping_tool.reference is not None
+            mapping_tool_id=_safe_curie(self.mapping_tool.reference)
+            if self.mapping_tool is not None
             else None,
             mapping_tool_version=self.mapping_tool.version
             if self.mapping_tool is not None and self.mapping_tool.version is not None
