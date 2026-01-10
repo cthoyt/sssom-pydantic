@@ -4,7 +4,6 @@ import importlib.util
 import subprocess
 import tempfile
 import unittest
-from copy import deepcopy
 from pathlib import Path
 
 from curies import Converter, Reference
@@ -69,16 +68,14 @@ class TestJSKOSExport(unittest.TestCase):
         """Test converting examples to JSKOS then back."""
         import jskos
 
-        converter = TEST_CONVERTER
-
-        for i, example in enumerate(EXAMPLES):
+        for example in EXAMPLES:
             with self.subTest(desc=example.description), tempfile.TemporaryDirectory() as td:
                 tsv_path = Path(td).joinpath("example.sssom.tsv")
                 sssom_pydantic.write(
                     [example.semantic_mapping],
                     tsv_path,
                     metadata=TEST_METADATA,
-                    converter=converter,
+                    converter=TEST_CONVERTER,
                 )
 
                 # Convert the SSSOM TSV to JSKOS using the sssom-js package
@@ -101,7 +98,10 @@ class TestJSKOSExport(unittest.TestCase):
                 # makes any sense
                 text = jskos_path.read_text()
                 if not text:
-                    self.fail(f"no output was produced for: {example.description}. Original data:\n\n{tsv_path.read_text()}")
+                    self.fail(
+                        f"no output was produced for: {example.description}. "
+                        f"Original data:\n\n{tsv_path.read_text()}"
+                    )
 
                 try:
                     jskos.Concept.model_validate_json(text)
