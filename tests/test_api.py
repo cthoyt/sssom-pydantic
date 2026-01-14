@@ -288,6 +288,7 @@ class TestIO(unittest.TestCase):
                 #  chebi: http://purl.obolibrary.org/obo/CHEBI_
                 #  {prefix}: {uri_prefix}
                 #  mesh: http://id.nlm.nih.gov/mesh/
+                #  orcid: https://orcid.org/
                 #  semapv: https://w3id.org/semapv/vocab/
                 #  skos: http://www.w3.org/2004/02/skos/core#
                 #mapping_set_id: {TEST_MAPPING_SET_ID}
@@ -306,6 +307,7 @@ class TestIO(unittest.TestCase):
                 #curie_map:
                 #  chebi: http://purl.obolibrary.org/obo/CHEBI_
                 #  mesh: http://id.nlm.nih.gov/mesh/
+                #  orcid: https://orcid.org/
                 #  semapv: https://w3id.org/semapv/vocab/
                 #  skos: http://www.w3.org/2004/02/skos/core#
                 #mapping_set_id: {TEST_MAPPING_SET_ID}
@@ -324,6 +326,7 @@ class TestIO(unittest.TestCase):
                 #curie_map:
                 #  chebi: http://purl.obolibrary.org/obo/CHEBI_
                 #  mesh: http://id.nlm.nih.gov/mesh/
+                #  orcid: https://orcid.org/
                 #  semapv: https://w3id.org/semapv/vocab/
                 #  skos: http://www.w3.org/2004/02/skos/core#
                 #mapping_set_id: {TEST_MAPPING_SET_ID}
