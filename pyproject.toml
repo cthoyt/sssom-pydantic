@@ -130,6 +130,7 @@ ontoportal = [
 database = [
     "sqlmodel",
 ]
+jskos = ["jskos>=0.0.4"]
 fastapi = [
     "fastapi",
 ]

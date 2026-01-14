@@ -123,6 +123,8 @@ def _get_prefix_map(
         ) from e
 
     prefixes: set[str] = {prefix for mapping in mappings for prefix in mapping.get_prefixes()}
+    # TODO add prefixes from metadata
+
     # TODO is there a better version of this?
     return {
         prefix: uri_prefix
