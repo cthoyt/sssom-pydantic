@@ -292,6 +292,7 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
             self.subject_preprocessing,
             self.object_match_field,
             self.object_preprocessing,
+            self.authors,
             self.creators,
             self.reviewers,
             self.curation_rule,
