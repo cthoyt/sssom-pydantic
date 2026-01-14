@@ -29,7 +29,19 @@ def to_jskos(
     metadata: MappingSet | Metadata | MappingSetRecord | None = None,
     converter: curies.Converter | None = None,
 ) -> jskos.Concept:
-    """Convert mapping(s) to JSKOS using sssom-js."""
+    """Convert mapping(s) to JSKOS using sssom-js.
+
+    :param mappings: a SemanticMapping or a list of SemanticMappings
+    :param metadata: metadata about the mapping set
+    :param converter: a Converter object
+
+    :returns: a JSKOS concept representing the mapping set, with mappings contained
+        within
+
+    .. warning::
+
+        JSKOS does not yet support all SSSOM fields, so a round trip is not possible
+    """
     if isinstance(mappings, SemanticMapping):
         mappings = [mappings]
     with tempfile.TemporaryDirectory() as temporary_directory:
@@ -44,8 +56,51 @@ def to_jskos(
 
 
 def from_jskos(concept: jskos.Concept, converter: curies.Converter) -> list[SemanticMapping]:
-    """Get mappings from a JSKOS mapping."""
-    return []
+    """Get mappings from a JSKOS mapping.
+
+    :param concept: a JSKOS concept, which contains ``mappings``
+    :param converter: a Converter object used to process the JSKOS object
+
+    :returns: A list of SSSOM mappings
+
+    .. warning::
+
+        JSKOS does not yet support all SSSOM fields, so a round trip is not possible
+    """
+    return [_process_jskos_mapping(mapping, converter) for mapping in concept.mappings]
+
+
+def _process_metadata(concept: jskos.Concept) -> MappingSet:
+    raise NotImplementedError("metadata processing not yet implemented")
+
+
+def _process_jskos_mapping(
+    jskos_mapping: jskos.Mapping, converter: curies.Converter
+) -> SemanticMapping:
+    processed_mapping = jskos_mapping.process(converter)
+
+    subject = processed_mapping.from_bundle.member_set[0].reference
+    obj = processed_mapping.to_bundle.member_set[0].reference
+    justification = processed_mapping.justification
+    # TODO why isn't this parsed into a reference upstream?
+    predicate = converter.parse_uri(str(processed_mapping.type[0]), strict=True).to_pydantic()
+
+    # `und` means undefined language
+    if processed_mapping.note and "und" in processed_mapping.note:
+        comment = processed_mapping.note["und"][0]
+    else:
+        comment = None
+
+    # TODO license doesn't get propagated to JSKOS mapping
+
+    return SemanticMapping(
+        subject=subject,
+        predicate=predicate,
+        object=obj,
+        justification=justification,
+        comment=comment,
+        mapping_date=processed_mapping.created,
+    )
 
 
 def from_jskos_path(path: Path, converter: curies.Converter) -> list[SemanticMapping]:
