@@ -1,5 +1,7 @@
 """Convert semantic mappings into JSKOS format."""
 
+from __future__ import annotations
+
 import subprocess
 import tempfile
 from pathlib import Path
