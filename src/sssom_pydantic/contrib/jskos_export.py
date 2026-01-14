@@ -2,8 +2,6 @@
 
 import subprocess
 import tempfile
-from collections.abc import Generator
-from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -11,12 +9,12 @@ import curies
 import jskos
 
 import sssom_pydantic
-from sssom_pydantic.io import ReadType
+from sssom_pydantic import SemanticMapping
 
 if TYPE_CHECKING:
     import jskos
 
-    from sssom_pydantic import MappingSet, MappingSetRecord, Metadata, SemanticMapping
+    from sssom_pydantic import MappingSet, MappingSetRecord, Metadata
 
 __all__ = [
     "from_jskos",
@@ -45,37 +43,28 @@ def to_jskos(
         return _path_to_jskos(path)
 
 
-def from_jskos(concept: jskos.Concept) -> ReadType:
+def from_jskos(concept: jskos.Concept, converter: curies.Converter) -> list[SemanticMapping]:
     """Get mappings from a JSKOS mapping."""
-    with tempfile.TemporaryDirectory() as temporary_directory:
-        path = Path(temporary_directory).joinpath("tmp.sssom.json")
-        path.write_text(
-            concept.model_dump_json(
-                indent=2, exclude_none=True, exclude_defaults=True, exclude_unset=True
-            )
-        )
-        return from_jskos_path(path)
+    return []
 
 
-def from_jskos_path(path: Path) -> ReadType:
+def from_jskos_path(path: Path, converter: curies.Converter) -> list[SemanticMapping]:
     """Convert SSSOM TSV to JSKOS using sssom-js."""
-    with _convert(path, "jskos", "tsv") as processed_path:
-        return sssom_pydantic.read(processed_path)
+    from jskos import Concept
+
+    concept = Concept.model_validate_json(path.read_text())
+    return from_jskos(concept, converter)
 
 
 def _path_to_jskos(sssom_tsv_path: Path) -> jskos.Concept:
     """Convert SSSOM TSV to JSKOS using sssom-js."""
     import jskos
 
-    with _convert(sssom_tsv_path, "tsv", "jskos") as path:
-        text = path.read_text()
+    text = _convert(sssom_tsv_path, "tsv", "jskos")
     return jskos.Concept.model_validate_json(text)
 
 
-@contextmanager
-def _convert(
-    input_path: Path, input_format: str, output_format: str
-) -> Generator[Path, None, None]:
+def _convert(input_path: Path, input_format: str, output_format: str) -> str:
     with tempfile.TemporaryDirectory() as temporary_directory:
         # Convert the SSSOM TSV to JSKOS using the sssom-js package
         # on NPM (https://www.npmjs.com/package/sssom-js)
@@ -94,11 +83,13 @@ def _convert(
             ],
             stderr=subprocess.PIPE,
         )
-        # these are concepts, not sure if the KOS class actually
-        # makes any sense
+        if not output_path.is_file():
+            raise ValueError(
+                f"sssom-js produced no output.\n\nstderr: {result.stderr.decode('utf-8')}"
+            )
         text = output_path.read_text()
         if not text:
             raise ValueError(
                 f"sssom-js produced no output.\n\nstderr: {result.stderr.decode('utf-8')}"
             )
-        yield output_path
+        return text

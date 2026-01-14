@@ -11,7 +11,7 @@ from tests.cases import TEST_CONVERTER, TEST_METADATA
 class TestJSKOSExport(unittest.TestCase):
     """Test JSKOS export."""
 
-    def text_example_output(self) -> None:
+    def test_examples(self) -> None:
         """Test that all SSSOM examples can be converted to JSKOS."""
         from sssom_pydantic.contrib.jskos_export import from_jskos, to_jskos
 
@@ -20,10 +20,9 @@ class TestJSKOSExport(unittest.TestCase):
                 concept = to_jskos(
                     example.semantic_mapping, converter=TEST_CONVERTER, metadata=TEST_METADATA
                 )
-                mappings, _, _ = from_jskos(concept)
-                self.assertEqual(1, len(mappings))
+                mappings = from_jskos(concept, TEST_CONVERTER)
                 self.assertEqual(
-                    example.semantic_mapping,
-                    mappings[0],
+                    [example.semantic_mapping],
+                    mappings,
                     msg="reconstitution failed",
                 )
