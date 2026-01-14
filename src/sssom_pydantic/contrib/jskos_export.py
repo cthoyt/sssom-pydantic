@@ -11,10 +11,11 @@ import jskos
 from jskos import Concept
 
 import sssom_pydantic
-from sssom_pydantic import MappingSet, SemanticMapping
 
 if TYPE_CHECKING:
     import jskos
+
+    from sssom_pydantic import MappingSet, MappingSetRecord, Metadata, SemanticMapping
 
 __all__ = [
     "mapping_set_to_jskos",
@@ -50,7 +51,11 @@ def mapping_to_jskos(mapping: SemanticMapping, converter: curies.Converter) -> j
     )
 
 
-def mapping_to_jskos_oracle(mapping: SemanticMapping, metadata, converter):
+def mapping_to_jskos_oracle(
+    mapping: SemanticMapping,
+    metadata: MappingSet | Metadata | MappingSetRecord | None,
+    converter: curies.Converter,
+) -> jskos.Concept:
     """Convert a mapping to JSKOS using sssom-js."""
     with tempfile.TemporaryDirectory() as td:
         path = Path(td).joinpath("example.sssom.tsv")
