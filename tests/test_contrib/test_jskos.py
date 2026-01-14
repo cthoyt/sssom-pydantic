@@ -8,7 +8,6 @@ from tests.cases import TEST_CONVERTER, TEST_METADATA
 
 JSKOS_IMPLEMENTED = {
     "comment",
-    "mapping date",
 }
 
 

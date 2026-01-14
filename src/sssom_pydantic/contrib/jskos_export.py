@@ -91,15 +91,12 @@ def _process_jskos_mapping(
     else:
         comment = None
 
-    # TODO license doesn't get propagated to JSKOS mapping
-
     return SemanticMapping(
         subject=subject,
         predicate=predicate,
         object=obj,
         justification=justification,
         comment=comment,
-        mapping_date=processed_mapping.created,
     )
 
 
