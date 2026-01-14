@@ -2,18 +2,22 @@
 
 from __future__ import annotations
 
-from typing import TypeAlias
+from typing import Literal, TypeAlias
 
 import curies
 from curies import Reference
+from curies import vocabulary as v
 
 __all__ = [
     "BUILTIN_CONVERTER",
     "DEFAULT_PREFIX_MAP",
+    "ENTITY_TYPE_LITERAL_TO_REFERENCE",
+    "ENTITY_TYPE_REFERENCE_TO_LITERAL",
     "MULTIVALUED",
     "PREDICATE_TYPES",
     "PREFIX_MAP_KEY",
     "PROPAGATABLE",
+    "EntityTypeLiteral",
     "Row",
 ]
 
@@ -33,6 +37,42 @@ PREDICATE_TYPES: set[Reference] = {
     Reference(prefix="rdf", identifier="Property"),
     Reference(prefix="sssom", identifier="ComposedEntityExpression"),
 }
+
+#: The literal values for entity type enumeration that goes in the
+#: ``subject_type``, ``predicate_type``, and ``object_type`` fields.
+#: see https://mapping-commons.github.io/sssom/EntityTypeEnum/
+EntityTypeLiteral: TypeAlias = Literal[
+    "owl class",
+    "owl object property",
+    "owl data property",
+    "owl annotation property",
+    "owl named individual",
+    "skos concept",
+    "rdfs resource",
+    "rdfs class",
+    "rdfs literal",
+    "rdfs datatype",
+    "rdf property",
+    "composed entity expression",
+]
+
+#: see https://mapping-commons.github.io/sssom/EntityTypeEnum/
+ENTITY_TYPE_LITERAL_TO_REFERENCE: dict[EntityTypeLiteral, curies.Reference] = {
+    "owl class": v.owl_class,
+    "owl object property": v.owl_object_property,
+    "owl data property": v.owl_data_property,
+    "owl annotation property": v.owl_annotation_property,
+    "owl named individual": v.owl_named_individual,
+    "skos concept": v.skos_concept,
+    "rdfs resource": v.rdfs_resource,
+    "rdfs class": v.rdfs_class,
+    "rdfs literal": v.rdfs_literal,
+    "rdfs datatype": v.rdfs_datatype,
+    "rdf property": v.rdfs_property,
+    "composed entity expression": v.composed_entity_expression,
+}
+
+ENTITY_TYPE_REFERENCE_TO_LITERAL = {v: k for k, v in ENTITY_TYPE_LITERAL_TO_REFERENCE.items()}
 
 #: The set of values that should be propagated
 #: from the frontmatter to all mappings

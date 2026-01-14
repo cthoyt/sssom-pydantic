@@ -9,7 +9,7 @@ from typing import Literal, TypeAlias
 from curies.vocabulary import matching_processes
 from pydantic import AnyUrl, BaseModel, ConfigDict, Field
 
-from .constants import PREDICATE_TYPES
+from .constants import EntityTypeLiteral
 
 __all__ = [
     "Cardinality",
@@ -37,16 +37,15 @@ class Record(BaseModel):
     subject_preprocessing: list[str] | None = Field(None)
     subject_source: str | None = Field(None)
     subject_source_version: str | None = Field(None)
-    subject_type: str | None = Field(None)
+    subject_type: EntityTypeLiteral | None = Field(
+        None, description="See https://mapping-commons.github.io/sssom/subject_type"
+    )
 
     predicate_id: str = Field(...)
     predicate_label: str | None = Field(None)
     predicate_modifier: Literal["Not"] | None = Field(None)
-    predicate_type: str | None = Field(
-        None,
-        examples=[x.curie for x in PREDICATE_TYPES],
-        description="See https://mapping-commons.github.io/sssom/predicate_type/. "
-        "Values allowed are from https://mapping-commons.github.io/sssom/EntityTypeEnum/",
+    predicate_type: EntityTypeLiteral | None = Field(
+        None, description="See https://mapping-commons.github.io/sssom/predicate_type"
     )
 
     object_id: str = Field(...)
@@ -56,10 +55,8 @@ class Record(BaseModel):
     object_preprocessing: list[str] | None = Field(None)
     object_source: str | None = Field(None)
     object_source_version: str | None = Field(None)
-    object_type: str | None = Field(
-        None,
-        description="See https://mapping-commons.github.io/sssom/object_type/. "
-        "Values allowed are from https://mapping-commons.github.io/sssom/EntityTypeEnum/",
+    object_type: EntityTypeLiteral | None = Field(
+        None, description="See https://mapping-commons.github.io/sssom/object_type"
     )
 
     mapping_justification: str = Field(..., examples=[p.curie for p in matching_processes])

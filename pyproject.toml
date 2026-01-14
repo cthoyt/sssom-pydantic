@@ -51,7 +51,7 @@ license-files = [
 requires-python = ">=3.10"
 dependencies = [
     "pydantic",
-    "curies>=0.12.5",
+    "curies>=0.12.9",
     "pyyaml",
     "pystow",
 ]
