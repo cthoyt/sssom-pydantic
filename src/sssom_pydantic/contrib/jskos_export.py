@@ -82,10 +82,9 @@ def _process_jskos_mapping(
     processed_mapping = jskos_mapping.process(converter)
 
     subject = processed_mapping.from_bundle.member_set[0].reference
+    predicate = processed_mapping.type[0]
     obj = processed_mapping.to_bundle.member_set[0].reference
     justification = processed_mapping.justification
-    # TODO why isn't this parsed into a reference upstream?
-    predicate = converter.parse_uri(str(processed_mapping.type[0]), strict=True).to_pydantic()
 
     # `und` means undefined language
     if processed_mapping.note and "und" in processed_mapping.note:
