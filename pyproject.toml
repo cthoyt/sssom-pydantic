@@ -78,7 +78,7 @@ typing = [
     { include-group = "tests" },
     "mypy",
     "types-PyYAML",
-    "click-types",
+    "types-click",
     "types-requests",
     "sqlmodel",
     "fastapi",
