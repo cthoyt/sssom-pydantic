@@ -283,8 +283,6 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
             self.subject_category,
             self.object_category,
         ]:
-            if isinstance(x, str):
-                raise ValueError(f"should not be string: {x}")
             if x is not None:
                 rv.add(x.prefix)
         for y in [
