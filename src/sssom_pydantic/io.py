@@ -42,6 +42,7 @@ from .process import Hasher, MappingTypeVar, remove_redundant_external, remove_r
 
 __all__ = [
     "Metadata",
+    "ReadType",
     "append",
     "append_unprocessed",
     "lint",
@@ -408,6 +409,10 @@ def _clean_row(row: Mapping[str, str | list[str]]) -> Row:
     return rv
 
 
+#: The result of reading and processing a SSSOM TSV file
+ReadType: TypeAlias = tuple[list[SemanticMapping], Converter, MappingSet]
+
+
 def read(
     path_or_url: str | Path,
     *,
@@ -418,7 +423,7 @@ def read(
     progress_kwargs: dict[str, Any] | None = None,
     record_predicate: RecordPredicate | None = None,
     semantic_mapping_predicate: SemanticMappingPredicate | None = None,
-) -> tuple[list[SemanticMapping], Converter, MappingSet]:
+) -> ReadType:
     """Read and process SSSOM from TSV."""
     with read_iterable(
         path_or_url=path_or_url,
