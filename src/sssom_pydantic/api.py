@@ -16,7 +16,13 @@ from curies.vocabulary import matching_processes
 from pydantic import AnyUrl, BaseModel, ConfigDict, Field
 from typing_extensions import Self
 
-from .constants import MULTIVALUED, PROPAGATABLE, Row
+from .constants import (
+    ENTITY_TYPE_REFERENCE_TO_LITERAL,
+    MULTIVALUED,
+    PROPAGATABLE,
+    EntityTypeLiteral,
+    Row,
+)
 from .models import Cardinality, Record
 
 __all__ = [
@@ -317,6 +323,9 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
                 return None
             return x.curie
 
+        def _safe_entity_type(x: Reference | None) -> EntityTypeLiteral | None:
+            return ENTITY_TYPE_REFERENCE_TO_LITERAL[x] if x is not None else None
+
         return Record(
             record_id=_safe_curie(self.record),
             #
@@ -327,12 +336,12 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
             subject_preprocessing=_safe_curies(self.subject_preprocessing),
             subject_source=_safe_curie(self.subject_source),
             subject_source_version=self.subject_source_version,
-            subject_type=_safe_curie(self.subject_type),
+            subject_type=_safe_entity_type(self.subject_type),
             #
             predicate_id=self.predicate.curie,
             predicate_label=self.predicate_name,
             predicate_modifier=self.predicate_modifier,
-            predicate_type=_safe_curie(self.predicate_type),
+            predicate_type=_safe_entity_type(self.predicate_type),
             #
             object_id=self.object.curie,
             object_label=self.object_name,
@@ -341,7 +350,7 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
             object_preprocessing=_safe_curies(self.object_preprocessing),
             object_source=_safe_curie(self.object_source),
             object_source_version=self.object_source_version,
-            object_type=_safe_curie(self.object_type),
+            object_type=_safe_entity_type(self.object_type),
             #
             mapping_justification=self.justification.curie,
             #
