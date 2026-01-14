@@ -30,9 +30,11 @@ from .api import (
 )
 from .constants import (
     BUILTIN_CONVERTER,
+    ENTITY_TYPE_LITERAL_TO_REFERENCE,
     MULTIVALUED,
     PREFIX_MAP_KEY,
     PROPAGATABLE,
+    EntityTypeLiteral,
     Row,
 )
 from .models import Record, RecordPredicate
@@ -131,6 +133,11 @@ def record_to_semantic_mapping(record: Record, converter: curies.Converter) -> S
             return None
         return converter.parse(curie_or_uri, strict=True).to_pydantic()
 
+    def _safe_entity_type(entity_type: EntityTypeLiteral | None) -> Reference | None:
+        if entity_type is None:
+            return None
+        return ENTITY_TYPE_LITERAL_TO_REFERENCE[entity_type]
+
     return SemanticMapping(
         subject=subject,
         predicate=predicate,
@@ -149,14 +156,14 @@ def record_to_semantic_mapping(record: Record, converter: curies.Converter) -> S
         subject_preprocessing=_parse_curies_or_uris(record.subject_preprocessing),
         subject_source=_parse_curie_or_uri(record.subject_source),
         subject_source_version=record.subject_source_version,
-        subject_type=record.subject_type,
-        predicate_type=_parse_curie_or_uri(record.predicate_type),
+        subject_type=_safe_entity_type(record.subject_type),
+        predicate_type=_safe_entity_type(record.predicate_type),
         object_category=_parse_curie_or_uri(record.object_category),
         object_match_field=_parse_curies_or_uris(record.object_match_field),
         object_preprocessing=_parse_curies_or_uris(record.object_preprocessing),
         object_source=_parse_curie_or_uri(record.object_source),
         object_source_version=record.object_source_version,
-        object_type=record.subject_type,
+        object_type=_safe_entity_type(record.object_type),
         creators=_parse_curies_or_uris(record.creator_id),
         reviewers=_parse_curies_or_uris(record.reviewer_id),
         publication_date=record.publication_date,
@@ -199,6 +206,11 @@ def write(
     if sort:
         mappings = sorted(mappings)
     records, prefixes = _prepare_records(mappings)
+    if metadata is not None:
+        if converter is None:
+            raise NotImplementedError("when passing non-parsed metadata, need a converter")
+        metadata = _get_mapping_set(metadata, converter)
+        prefixes.update(metadata.get_prefixes())
     write_unprocessed(
         records,
         path=path,
@@ -207,6 +219,16 @@ def write(
         prefixes=prefixes,
         exclude_columns=exclude_columns,
     )
+
+
+def _get_mapping_set(
+    m: MappingSet | Metadata | MappingSetRecord, converter: Converter
+) -> MappingSet:
+    if isinstance(m, MappingSet):
+        return m
+    if isinstance(m, MappingSetRecord):
+        return m.process(converter)
+    raise NotImplementedError
 
 
 def append(
