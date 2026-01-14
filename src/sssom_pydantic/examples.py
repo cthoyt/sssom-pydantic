@@ -293,7 +293,7 @@ e6 = ExampleMapping(
 )
 
 e7 = ExampleMapping(
-    description="This example is about when the mapping was done",
+    description="mapping date",
     semantic_mapping=SemanticMapping(
         subject=R1,
         predicate=P1,
