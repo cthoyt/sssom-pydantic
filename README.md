@@ -17,8 +17,8 @@
         <img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/sssom_pydantic" /></a>
     <a href="https://github.com/cthoyt/sssom-pydantic/blob/main/LICENSE">
         <img alt="PyPI - License" src="https://img.shields.io/pypi/l/sssom_pydantic" /></a>
-    <a href='https://sssom_pydantic.readthedocs.io/en/latest/?badge=latest'>
-        <img src='https://readthedocs.org/projects/sssom_pydantic/badge/?version=latest' alt='Documentation Status' /></a>
+    <a href='https://sssom-pydantic.readthedocs.io/en/latest/?badge=latest'>
+        <img src='https://readthedocs.org/projects/sssom-pydantic/badge/?version=latest' alt='Documentation Status' /></a>
     <a href="https://codecov.io/gh/cthoyt/sssom-pydantic/branch/main">
         <img src="https://codecov.io/gh/cthoyt/sssom-pydantic/branch/main/graph/badge.svg" alt="Codecov status" /></a>  
     <a href="https://github.com/cthoyt/cookiecutter-python-package">
