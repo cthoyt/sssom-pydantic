@@ -401,8 +401,10 @@ def _clean_row(row: Mapping[str, str | list[str]]) -> Row:
             continue
         if isinstance(value, str):
             value = value.strip()
-        else:
+        elif isinstance(value, list):
             value = [vs for v in value if (vs := v.strip())]
+        else:
+            raise TypeError(f"unhandled value type: {type(value)} for {value}")
         if not value:
             continue
         rv[key] = value
