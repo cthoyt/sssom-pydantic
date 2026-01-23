@@ -87,8 +87,7 @@ def _process_jskos_mapping(
 
     subject_member_set = processed_mapping.from_bundle.member_set
     object_member_set = processed_mapping.to_bundle.member_set
-
-    if subject_member_set is None or object_member_set is None or processed_mapping.type is None:
+    if not subject_member_set or not object_member_set or not processed_mapping.type:
         return None
 
     subject = subject_member_set[0].reference
