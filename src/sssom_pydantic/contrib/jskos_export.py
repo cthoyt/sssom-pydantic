@@ -69,7 +69,11 @@ def from_jskos(concept: jskos.Concept, converter: curies.Converter) -> list[Sema
 
         JSKOS does not yet support all SSSOM fields, so a round trip is not possible
     """
-    return [_process_jskos_mapping(mapping, converter) for mapping in concept.mappings]
+    return [
+        m
+        for mapping in concept.mappings or []
+        if (m := _process_jskos_mapping(mapping, converter)) is not None
+    ]
 
 
 def _process_metadata(concept: jskos.Concept) -> MappingSet:
@@ -78,12 +82,17 @@ def _process_metadata(concept: jskos.Concept) -> MappingSet:
 
 def _process_jskos_mapping(
     jskos_mapping: jskos.Mapping, converter: curies.Converter
-) -> SemanticMapping:
+) -> SemanticMapping | None:
     processed_mapping = jskos_mapping.process(converter)
 
-    subject = processed_mapping.from_bundle.member_set[0].reference
+    subject_member_set = processed_mapping.from_bundle.member_set
+    object_member_set = processed_mapping.to_bundle.member_set
+    if not subject_member_set or not object_member_set or not processed_mapping.type:
+        return None
+
+    subject = subject_member_set[0].reference
     predicate = processed_mapping.type[0]
-    obj = processed_mapping.to_bundle.member_set[0].reference
+    obj = object_member_set[0].reference
     justification = processed_mapping.justification
 
     # `und` means undefined language
