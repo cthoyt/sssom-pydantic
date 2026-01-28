@@ -80,10 +80,6 @@ typing = [
     "types-PyYAML",
     "types-click",
     "types-requests",
-    "sqlmodel",
-    "fastapi",
-    "wikidata-client",
-    "ndex2",
 ]
 docs-lint = [
     { include-group = "docs" },

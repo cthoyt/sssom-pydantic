@@ -60,7 +60,7 @@ pyroma:
 
 [doc("run static type checking with mypy")]
 mypy:
-    uv run --group typing mypy --ignore-missing-imports --strict src/ tests/
+    uv run --group typing --all-extras mypy --ignore-missing-imports --strict src/ tests/
 
 [doc("run static type checking with ty")]
 ty:

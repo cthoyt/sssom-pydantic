@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import contextlib
 import datetime
+from abc import ABC, abstractmethod
 from collections.abc import Callable, Collection, Generator, Iterable, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Literal, ParamSpec, cast, overload
@@ -51,6 +52,7 @@ __all__ = [
     "UNCURATED_UNSURE_CLAUSE",
     "SemanticMappingDatabase",
     "SemanticMappingModel",
+    "SemanticMappingRepository",
     "clauses_from_query",
 ]
 
@@ -199,8 +201,82 @@ class SemanticMappingModel(SQLModel, table=True):
         return SemanticMapping.model_validate(d)
 
 
-class SemanticMappingDatabase:
-    """Interact with a database."""
+class SemanticMappingRepository(ABC):
+    """Interact with a repository of semantic mappings."""
+
+    @abstractmethod
+    def hash_mapping(self, mapping: SemanticMapping) -> Reference:
+        """Get a reference for the mapping."""
+
+    @abstractmethod
+    def count_mappings(
+        self, where_clauses: Query | list[ColumnExpressionArgument[bool]] | None = None
+    ) -> int:
+        """Count the mappings in the database."""
+
+    @abstractmethod
+    def add_mapping(self, mapping: SemanticMapping) -> Reference:
+        """Add a mapping to the database."""
+
+    @abstractmethod
+    def add_mappings(self, mappings: Iterable[SemanticMapping]) -> list[Reference]:
+        """Add mappings to the database."""
+
+    @abstractmethod
+    def delete_mapping(self, reference: Reference | SemanticMapping) -> None:
+        """Delete a mapping from the database."""
+
+    # docstr-coverage:excused `overload`
+    @overload
+    def get_mapping(
+        self, reference: Reference, *, strict: Literal[True] = ...
+    ) -> SemanticMappingModel: ...
+
+    # docstr-coverage:excused `overload`
+    @overload
+    def get_mapping(
+        self, reference: Reference, *, strict: Literal[False] = ...
+    ) -> SemanticMappingModel | None: ...
+
+    @abstractmethod
+    def get_mapping(
+        self, reference: Reference, *, strict: bool = False
+    ) -> SemanticMappingModel | None:
+        """Get a mapping."""
+
+    @abstractmethod
+    def get_mappings(
+        self,
+        where_clauses: Query | list[ColumnExpressionArgument[bool]] | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
+        order_by: ColumnExpressionArgument[Any] | list[ColumnExpressionArgument[Any]] | None = None,
+    ) -> Sequence[SemanticMappingModel]:
+        """Get mappings."""
+
+    @abstractmethod
+    def curate(
+        self,
+        reference: Reference,
+        authors: Reference | list[Reference],
+        mark: Mark,
+        confidence: float | None = None,
+        add_date: bool = True,
+        **kwargs: Any,
+    ) -> Reference:
+        """Curate a mapping and return the new mapping's record."""
+
+    @abstractmethod
+    def publish(
+        self,
+        reference: Reference,
+        date: datetime.date | None = None,
+    ) -> Reference:
+        """Publish a mapping and return the new mapping's record."""
+
+
+class SemanticMappingDatabase(SemanticMappingRepository):
+    """A repository of semantic mappings in a SQL database, implemented using :mod:`sqlalchemy`."""
 
     def __init__(
         self,
@@ -222,6 +298,10 @@ class SemanticMappingDatabase:
         self.session_cls = session_cls if session_cls is not None else Session
         self._hsh = semantic_mapping_hash
         SQLModel.metadata.create_all(self.engine)
+
+    def hash_mapping(self, mapping: SemanticMapping) -> Reference:
+        """Hash a mapping."""
+        return self._hsh(mapping)
 
     @classmethod
     def from_connection(
@@ -282,7 +362,7 @@ class SemanticMappingDatabase:
         rv: list[Reference] = []
         with self.get_session() as session:
             for mapping in mappings:
-                reference = self._hsh(mapping)
+                reference = self.hash_mapping(mapping)
                 session.add(
                     SemanticMappingModel.from_semantic_mapping(
                         mapping.model_copy(update={"record": reference})
@@ -306,7 +386,7 @@ class SemanticMappingDatabase:
 
     def _ensure(self, reference: Reference | SemanticMapping) -> Reference:
         if isinstance(reference, SemanticMapping):
-            return self._hsh(reference)
+            return self.hash_mapping(reference)
         return reference
 
     # docstr-coverage:excused `overload`
@@ -440,7 +520,7 @@ class SemanticMappingDatabase:
         if mapping is None:
             raise KeyError
         new_mapping = f(mapping.to_semantic_mapping(), *args, **kwargs)
-        new_mapping = new_mapping.model_copy(update={"record": self._hsh(new_mapping)})
+        new_mapping = new_mapping.model_copy(update={"record": self.hash_mapping(new_mapping)})
         self.add_mapping(new_mapping)
         self.delete_mapping(reference)
         return cast(Reference, new_mapping.record)
