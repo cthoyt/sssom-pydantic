@@ -72,6 +72,9 @@ def post_mapping(
     return repository.add_mapping(mapping)
 
 
+# TODO bulk posting mappings (test on scale up to 10k or 100k at a time)
+
+
 @router.post("/action/publish/{curie}")
 def publish_mapping(
     repository: AnnotatedRepository,
