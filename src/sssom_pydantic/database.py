@@ -385,15 +385,13 @@ class SQLSemanticMappingRepository(SemanticMappingRepository):
     @overload
     def get_mapping(
         self, reference: Reference, *, strict: Literal[True] = ...
-    ) -> SemanticMappingModel:
-        ...
+    ) -> SemanticMappingModel: ...
 
     # docstr-coverage:excused `overload`
     @overload
     def get_mapping(
         self, reference: Reference, *, strict: Literal[False] = ...
-    ) -> SemanticMappingModel | None:
-        ...
+    ) -> SemanticMappingModel | None: ...
 
     def get_mapping(
         self, reference: Reference, *, strict: bool = False
@@ -612,5 +610,5 @@ def clauses_from_query(query: Query | None = None) -> list[ColumnExpressionArgum
         clause
         for name in Query.model_fields
         if (value := getattr(query, name)) is not None
-           and (clause := QUERY_TO_CLAUSE[name](value)) is not None
+        and (clause := QUERY_TO_CLAUSE[name](value)) is not None
     ]
