@@ -52,11 +52,11 @@ class TestUtils(unittest.TestCase):
 class TestSQL(unittest.TestCase):
     """Test the database."""
 
-    db: SemanticMappingRepository
+    repository: SemanticMappingRepository
 
     def setUp(self) -> None:
         """Set up the test with a SQL database."""
-        self.db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
+        self.repository = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
 
     def assert_model_equal(self, expected: SemanticMapping, actual: SemanticMapping) -> None:
         """Assert two models are equal."""
@@ -95,7 +95,7 @@ class TestSQL(unittest.TestCase):
         mapping_3 = cases._m(predicate_modifier="Not")
         mapping_4 = cases._m(justification=lexical_matching_process, comment=UNSURE)
 
-        db = self.db
+        db = self.repository
 
         self.assertEqual(0, db.count_mappings())
 
@@ -162,7 +162,7 @@ class TestSQL(unittest.TestCase):
 
     def test_queries(self) -> None:
         """Generate and execute variety of queries."""
-        db = self.db
+        db = self.repository
         db.add_mappings(EXAMPLE_MAPPINGS)
         for mapping in EXAMPLE_MAPPINGS:
             queries = [Query(query=mapping.subject.prefix)]
@@ -180,7 +180,7 @@ class TestSQL(unittest.TestCase):
             confidence=0.95,
         )
 
-        db = self.db
+        db = self.repository
         db.add_mapping(mapping)
         original_hash = db.hash_mapping(mapping)
         db.curate(original_hash, authors=charlie, mark="correct")
@@ -206,7 +206,7 @@ class TestSQL(unittest.TestCase):
             confidence=0.95,
         )
 
-        db = self.db
+        db = self.repository
         db.add_mapping(mapping)
         original_hash = db.hash_mapping(mapping)
         db.curate(original_hash, authors=charlie, mark="incorrect")
@@ -233,7 +233,7 @@ class TestSQL(unittest.TestCase):
             confidence=0.95,
         )
 
-        db = self.db
+        db = self.repository
         db.add_mapping(mapping)
         original_hash = db.hash_mapping(mapping)
         db.curate(original_hash, authors=charlie, mark="BROAD")
@@ -259,7 +259,7 @@ class TestSQL(unittest.TestCase):
             confidence=0.95,
         )
 
-        db = self.db
+        db = self.repository
         db.add_mapping(mapping)
         original_hash = db.hash_mapping(mapping)
         db.curate(original_hash, authors=charlie, mark="unsure")
@@ -286,7 +286,7 @@ class TestSQL(unittest.TestCase):
             publication_date=None,
         )
 
-        db = self.db
+        db = self.repository
         db.add_mapping(mapping)
         original_hash = db.hash_mapping(mapping)
         db.publish(original_hash)
@@ -327,7 +327,7 @@ class TestSQL(unittest.TestCase):
             comment=UNSURE,
         )
 
-        db = self.db
+        db = self.repository
         db.add_mappings([m1, m2])
         m2_curated_reference = db.curate(mapping_hash_v1(m2), authors=charlie, mark="unsure")
         self.assertEqual(mapping_hash_v1(m2_curated), m2_curated_reference)
@@ -377,7 +377,7 @@ class TestSQL(unittest.TestCase):
             confidence=0.95,
         )
 
-        db = self.db
+        db = self.repository
         db.add_mappings([m1, m2, m3])
 
         self.assertIsNotNone(db.get_mapping(db.hash_mapping(m1), strict=True).subject_name)

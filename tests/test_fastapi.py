@@ -17,13 +17,15 @@ from starlette.testclient import TestClient
 
 from sssom_pydantic import SemanticMapping
 from sssom_pydantic.api import mapping_hash_v1
-from sssom_pydantic.database import SemanticMappingDatabase
+from sssom_pydantic.database import SemanticMappingDatabase, SemanticMappingRepository
 from sssom_pydantic.web import get_app
 from tests.cases import _m
 
 
 class TestFastAPI(unittest.TestCase):
     """Test API."""
+
+    repository: SemanticMappingRepository
 
     def assert_model_equal(self, expected: BaseModel, actual: BaseModel) -> None:
         """Assert that two models are equal."""
@@ -36,11 +38,11 @@ class TestFastAPI(unittest.TestCase):
         """Set up the test case with a database."""
         self.td = tempfile.TemporaryDirectory()
         self.path = Path(self.td.name).joinpath("test.db")
-        self.database = SemanticMappingDatabase.from_connection(
+        self.repository = SemanticMappingDatabase.from_connection(
             connection=f"sqlite:///{self.path}",
             semantic_mapping_hash=mapping_hash_v1,
         )
-        self.app = get_app(repository=self.database)
+        self.app = get_app(repository=self.repository)
         self.client = TestClient(self.app)
 
     def tearDown(self) -> None:
@@ -55,10 +57,10 @@ class TestFastAPI(unittest.TestCase):
     def test_get_mapping(self) -> None:
         """Test getting a mapping from the API."""
         expected = _m()
-        self.database.add_mapping(expected)
+        self.repository.add_mapping(expected)
 
-        reference = self.database._hsh(expected)
-        self.assertIsNotNone(self.database.get_mapping(reference))
+        reference = self.repository.hash_mapping(expected)
+        self.assertIsNotNone(self.repository.get_mapping(reference))
 
         response = self.client.get(f"/mapping/{reference.curie}")
         response.raise_for_status()
@@ -67,14 +69,14 @@ class TestFastAPI(unittest.TestCase):
         self.assert_model_equal(_m(record=reference), actual)
 
         self.client.delete(f"/mapping/{reference.curie}")
-        self.assertEqual(0, self.database.count_mappings())
+        self.assertEqual(0, self.repository.count_mappings())
 
     def test_post_mapping(self) -> None:
         """Test posting a mapping to the API."""
         mapping = _m()
 
-        reference = self.database._hsh(mapping)
-        self.assertEqual(0, self.database.count_mappings())
+        reference = self.repository.hash_mapping(mapping)
+        self.assertEqual(0, self.repository.count_mappings())
 
         response = self.client.post("/mapping", json=mapping.model_dump())
         response.raise_for_status()
@@ -82,7 +84,7 @@ class TestFastAPI(unittest.TestCase):
         actual = Reference.model_validate(response.json())
         self.assertEqual(reference, actual)
 
-        self.assertIsNotNone(self.database.get_mapping(reference))
+        self.assertIsNotNone(self.repository.get_mapping(reference))
 
     def test_curate_mapping(self) -> None:
         """Test curating a mapping through the API."""
@@ -107,7 +109,7 @@ class TestFastAPI(unittest.TestCase):
             authors=[charlie],
             mapping_date=datetime.date.today(),
         )
-        expected = expected.model_copy(update={"record": self.database._hsh(expected)})
+        expected = expected.model_copy(update={"record": self.repository.hash_mapping(expected)})
         self.assert_model_equal(expected, actual)
 
         publish_response = self.client.post(f"/action/publish/{curation_reference.curie}")
@@ -124,7 +126,9 @@ class TestFastAPI(unittest.TestCase):
             mapping_date=datetime.date.today(),
             publication_date=datetime.date.today(),
         )
-        expected_2 = expected_2.model_copy(update={"record": self.database._hsh(expected_2)})
+        expected_2 = expected_2.model_copy(
+            update={"record": self.repository.hash_mapping(expected_2)}
+        )
         self.assert_model_equal(expected_2, published_mapping)
 
 
