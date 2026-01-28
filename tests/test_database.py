@@ -21,6 +21,7 @@ from sssom_pydantic.database import (
     UNCURATED_NOT_UNSURE_CLAUSE,
     UNCURATED_UNSURE_CLAUSE,
     SemanticMappingModel,
+    SemanticMappingRepository,
     SQLSemanticMappingRepository,
     clauses_from_query,
 )
@@ -33,8 +34,29 @@ from tests.cases import TEST_CONVERTER, TEST_METADATA
 USER = Reference(prefix="orcid", identifier="1234")
 
 
-class TestDatabase(unittest.TestCase):
+class TestUtils(unittest.TestCase):
+    """Test the utility functions."""
+
+    def test_query_functionality(self) -> None:
+        """Check that all query fields are implemented."""
+        for name in Query.model_fields:
+            self.assertIn(name, QUERY_TO_CLAUSE)
+
+    def test_clause_generation(self) -> None:
+        """Test clause generation."""
+        query = Query(query="hello")
+        clauses = clauses_from_query(query)
+        self.assertEqual(1, len(clauses))
+
+
+class TestSQL(unittest.TestCase):
     """Test the database."""
+
+    db: SemanticMappingRepository
+
+    def setUp(self) -> None:
+        """Set up the test with a SQL database."""
+        self.db = SQLSemanticMappingRepository.memory(semantic_mapping_hash=mapping_hash_v1)
 
     def assert_model_equal(self, expected: SemanticMapping, actual: SemanticMapping) -> None:
         """Assert two models are equal."""
@@ -73,7 +95,7 @@ class TestDatabase(unittest.TestCase):
         mapping_3 = cases._m(predicate_modifier="Not")
         mapping_4 = cases._m(justification=lexical_matching_process, comment=UNSURE)
 
-        db = SQLSemanticMappingRepository.memory(semantic_mapping_hash=mapping_hash_v1)
+        db = self.db
 
         self.assertEqual(0, db.count_mappings())
 
@@ -138,20 +160,9 @@ class TestDatabase(unittest.TestCase):
         self.assertIsNotNone(db.get_mapping(mapping_hash_v1(mapping_3)))
         self.assertIsNotNone(db.get_mapping(mapping_hash_v1(mapping_4)))
 
-    def test_query_functionality(self) -> None:
-        """Check that all query fields are implemented."""
-        for name in Query.model_fields:
-            self.assertIn(name, QUERY_TO_CLAUSE)
-
-    def test_clause_generation(self) -> None:
-        """Test clause generation."""
-        query = Query(query="hello")
-        clauses = clauses_from_query(query)
-        self.assertEqual(1, len(clauses))
-
     def test_queries(self) -> None:
         """Generate and execute variety of queries."""
-        db = SQLSemanticMappingRepository.memory(semantic_mapping_hash=mapping_hash_v1)
+        db = self.db
         db.add_mappings(EXAMPLE_MAPPINGS)
         for mapping in EXAMPLE_MAPPINGS:
             queries = [Query(query=mapping.subject.prefix)]
@@ -169,9 +180,9 @@ class TestDatabase(unittest.TestCase):
             confidence=0.95,
         )
 
-        db = SQLSemanticMappingRepository.memory(semantic_mapping_hash=mapping_hash_v1)
+        db = self.db
         db.add_mapping(mapping)
-        original_hash = db._hsh(mapping)
+        original_hash = db.hash_mapping(mapping)
         db.curate(original_hash, authors=charlie, mark="correct")
         self.assertIsNone(db.get_mapping(original_hash))
 
@@ -183,7 +194,7 @@ class TestDatabase(unittest.TestCase):
             authors=[charlie],
             mapping_date=datetime.date.today(),
         )
-        self.assertIsNotNone(db.get_mapping(db._hsh(expected)))
+        self.assertIsNotNone(db.get_mapping(db.hash_mapping(expected)))
 
     def test_curate_incorrect(self) -> None:
         """Test curation in the database."""
@@ -195,9 +206,9 @@ class TestDatabase(unittest.TestCase):
             confidence=0.95,
         )
 
-        db = SQLSemanticMappingRepository.memory(semantic_mapping_hash=mapping_hash_v1)
+        db = self.db
         db.add_mapping(mapping)
-        original_hash = db._hsh(mapping)
+        original_hash = db.hash_mapping(mapping)
         db.curate(original_hash, authors=charlie, mark="incorrect")
         self.assertIsNone(db.get_mapping(original_hash))
 
@@ -210,7 +221,7 @@ class TestDatabase(unittest.TestCase):
             mapping_date=datetime.date.today(),
             predicate_modifier="Not",
         )
-        self.assertIsNotNone(db.get_mapping(db._hsh(expected)))
+        self.assertIsNotNone(db.get_mapping(db.hash_mapping(expected)))
 
     def test_curate_broad(self) -> None:
         """Test curation in the database."""
@@ -222,9 +233,9 @@ class TestDatabase(unittest.TestCase):
             confidence=0.95,
         )
 
-        db = SQLSemanticMappingRepository.memory(semantic_mapping_hash=mapping_hash_v1)
+        db = self.db
         db.add_mapping(mapping)
-        original_hash = db._hsh(mapping)
+        original_hash = db.hash_mapping(mapping)
         db.curate(original_hash, authors=charlie, mark="BROAD")
         self.assertIsNone(db.get_mapping(original_hash))
 
@@ -236,7 +247,7 @@ class TestDatabase(unittest.TestCase):
             authors=[charlie],
             mapping_date=datetime.date.today(),
         )
-        self.assertIsNotNone(db.get_mapping(db._hsh(expected)))
+        self.assertIsNotNone(db.get_mapping(db.hash_mapping(expected)))
 
     def test_curate_unsure(self) -> None:
         """Test curating a mapping as unsure in the database."""
@@ -248,9 +259,9 @@ class TestDatabase(unittest.TestCase):
             confidence=0.95,
         )
 
-        db = SQLSemanticMappingRepository.memory(semantic_mapping_hash=mapping_hash_v1)
+        db = self.db
         db.add_mapping(mapping)
-        original_hash = db._hsh(mapping)
+        original_hash = db.hash_mapping(mapping)
         db.curate(original_hash, authors=charlie, mark="unsure")
         self.assertIsNone(db.get_mapping(original_hash))
 
@@ -262,7 +273,7 @@ class TestDatabase(unittest.TestCase):
             confidence=0.95,
             comment=UNSURE,
         )
-        self.assertIsNotNone(db.get_mapping(db._hsh(expected)))
+        self.assertIsNotNone(db.get_mapping(db.hash_mapping(expected)))
 
     def test_publish(self) -> None:
         """Test curation in the database."""
@@ -275,9 +286,9 @@ class TestDatabase(unittest.TestCase):
             publication_date=None,
         )
 
-        db = SQLSemanticMappingRepository.memory(semantic_mapping_hash=mapping_hash_v1)
+        db = self.db
         db.add_mapping(mapping)
-        original_hash = db._hsh(mapping)
+        original_hash = db.hash_mapping(mapping)
         db.publish(original_hash)
         self.assertIsNone(db.get_mapping(original_hash))
 
@@ -289,34 +300,7 @@ class TestDatabase(unittest.TestCase):
             authors=[charlie],
             publication_date=datetime.date.today(),
         )
-        self.assertIsNotNone(db.get_mapping(db._hsh(expected)))
-
-    def test_read(self) -> None:
-        """Test reading mappings from a file."""
-        # FIXME when excluding columns while writing, should also exclude
-        #  them from building up the prefix list
-        converter = TEST_CONVERTER.get_subconverter(
-            TEST_CONVERTER.get_prefixes() - {MAPPING_HASH_V1_PREFIX}
-        )
-
-        for example in EXAMPLES:
-            if example.description == "reference for the mapping itself in the `record` field":
-                continue
-            with self.subTest(desc=example.description), tempfile.TemporaryDirectory() as tmpdir:
-                mappings = [example.semantic_mapping]
-                path = Path(tmpdir).joinpath("test.sssom.tsv")
-                sssom_pydantic.write(mappings, path, converter=converter, metadata=TEST_METADATA)
-                db = SQLSemanticMappingRepository.memory(semantic_mapping_hash=mapping_hash_v1)
-                db.read(path, converter=converter, metadata=TEST_METADATA)
-
-                written_path = Path(tmpdir).joinpath("test2.sssom.tsv")
-                db.write(
-                    written_path,
-                    converter=converter,
-                    metadata=TEST_METADATA,
-                    exclude_columns=["record_id"],
-                )
-                self.assertEqual(path.read_text(), written_path.read_text())
+        self.assertIsNotNone(db.get_mapping(db.hash_mapping(expected)))
 
     def test_query_unsure(self) -> None:
         """Test querying for unsure curations."""
@@ -343,7 +327,7 @@ class TestDatabase(unittest.TestCase):
             comment=UNSURE,
         )
 
-        db = SQLSemanticMappingRepository.memory(semantic_mapping_hash=mapping_hash_v1)
+        db = self.db
         db.add_mappings([m1, m2])
         m2_curated_reference = db.curate(mapping_hash_v1(m2), authors=charlie, mark="unsure")
         self.assertEqual(mapping_hash_v1(m2_curated), m2_curated_reference)
@@ -393,12 +377,12 @@ class TestDatabase(unittest.TestCase):
             confidence=0.95,
         )
 
-        db = SQLSemanticMappingRepository.memory(semantic_mapping_hash=mapping_hash_v1)
+        db = self.db
         db.add_mappings([m1, m2, m3])
 
-        self.assertIsNotNone(db.get_mapping(db._hsh(m1), strict=True).subject_name)
-        self.assertIsNotNone(db.get_mapping(db._hsh(m2), strict=True).subject_name)
-        self.assertIsNone(db.get_mapping(db._hsh(m3), strict=True).subject_name)
+        self.assertIsNotNone(db.get_mapping(db.hash_mapping(m1), strict=True).subject_name)
+        self.assertIsNotNone(db.get_mapping(db.hash_mapping(m2), strict=True).subject_name)
+        self.assertIsNone(db.get_mapping(db.hash_mapping(m3), strict=True).subject_name)
 
         self.assert_models_equal(
             [m1, m2], [m.to_semantic_mapping() for m in db.get_mappings(Query(same_text=True))]
@@ -406,3 +390,34 @@ class TestDatabase(unittest.TestCase):
         self.assert_models_equal(
             [m3], [m.to_semantic_mapping() for m in db.get_mappings(Query(same_text=False))]
         )
+
+
+class TestIO(unittest.TestCase):
+    """Test I/O operations."""
+
+    def test_read(self) -> None:
+        """Test reading mappings from a file."""
+        # FIXME when excluding columns while writing, should also exclude
+        #  them from building up the prefix list
+        converter = TEST_CONVERTER.get_subconverter(
+            TEST_CONVERTER.get_prefixes() - {MAPPING_HASH_V1_PREFIX}
+        )
+
+        for example in EXAMPLES:
+            if example.description == "reference for the mapping itself in the `record` field":
+                continue
+            with self.subTest(desc=example.description), tempfile.TemporaryDirectory() as tmpdir:
+                mappings = [example.semantic_mapping]
+                path = Path(tmpdir).joinpath("test.sssom.tsv")
+                sssom_pydantic.write(mappings, path, converter=converter, metadata=TEST_METADATA)
+                db = SQLSemanticMappingRepository.memory(semantic_mapping_hash=mapping_hash_v1)
+                db.read(path, converter=converter, metadata=TEST_METADATA)
+
+                written_path = Path(tmpdir).joinpath("test2.sssom.tsv")
+                db.write(
+                    written_path,
+                    converter=converter,
+                    metadata=TEST_METADATA,
+                    exclude_columns=["record_id"],
+                )
+                self.assertEqual(path.read_text(), written_path.read_text())

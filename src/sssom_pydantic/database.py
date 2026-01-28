@@ -205,6 +205,10 @@ class SemanticMappingRepository(ABC):
     """Interact with a repository of semantic mappings."""
 
     @abstractmethod
+    def hash_mapping(self, mapping: SemanticMapping) -> Reference:
+        """Get a reference for the mapping."""
+
+    @abstractmethod
     def count_mappings(
         self, where_clauses: Query | list[ColumnExpressionArgument[bool]] | None = None
     ) -> int:
@@ -272,7 +276,7 @@ class SemanticMappingRepository(ABC):
 
 
 class SQLSemanticMappingRepository(SemanticMappingRepository):
-    """Interact with a database."""
+    """A repository of semantic mappings in a SQL database, implemented using :mod:`sqlalchemy`."""
 
     def __init__(
         self,
@@ -294,6 +298,10 @@ class SQLSemanticMappingRepository(SemanticMappingRepository):
         self.session_cls = session_cls if session_cls is not None else Session
         self._hsh = semantic_mapping_hash
         SQLModel.metadata.create_all(self.engine)
+
+    def hash_mapping(self, mapping: SemanticMapping) -> Reference:
+        """Hash a mapping."""
+        return self._hsh(mapping)
 
     @classmethod
     def from_connection(
@@ -354,7 +362,7 @@ class SQLSemanticMappingRepository(SemanticMappingRepository):
         rv: list[Reference] = []
         with self.get_session() as session:
             for mapping in mappings:
-                reference = self._hsh(mapping)
+                reference = self.hash_mapping(mapping)
                 session.add(
                     SemanticMappingModel.from_semantic_mapping(
                         mapping.model_copy(update={"record": reference})
@@ -378,7 +386,7 @@ class SQLSemanticMappingRepository(SemanticMappingRepository):
 
     def _ensure(self, reference: Reference | SemanticMapping) -> Reference:
         if isinstance(reference, SemanticMapping):
-            return self._hsh(reference)
+            return self.hash_mapping(reference)
         return reference
 
     # docstr-coverage:excused `overload`
@@ -512,7 +520,7 @@ class SQLSemanticMappingRepository(SemanticMappingRepository):
         if mapping is None:
             raise KeyError
         new_mapping = f(mapping.to_semantic_mapping(), *args, **kwargs)
-        new_mapping = new_mapping.model_copy(update={"record": self._hsh(new_mapping)})
+        new_mapping = new_mapping.model_copy(update={"record": self.hash_mapping(new_mapping)})
         self.add_mapping(new_mapping)
         self.delete_mapping(reference)
         return cast(Reference, new_mapping.record)
