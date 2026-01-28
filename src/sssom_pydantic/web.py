@@ -121,9 +121,9 @@ def get_app(
         schema = app.openapi()
     """
     if repository is None:
-        from sssom_pydantic.database import SQLSemanticMappingRepository
+        from sssom_pydantic.database import SemanticMappingDatabase
 
-        repository = SQLSemanticMappingRepository.memory(
+        repository = SemanticMappingDatabase.memory(
             semantic_mapping_hash=semantic_mapping_hash or mapping_hash_v1
         )
     app = FastAPI()

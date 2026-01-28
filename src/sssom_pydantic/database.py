@@ -50,7 +50,7 @@ __all__ = [
     "POSITIVE_MAPPING_CLAUSE",
     "UNCURATED_NOT_UNSURE_CLAUSE",
     "UNCURATED_UNSURE_CLAUSE",
-    "SQLSemanticMappingRepository",
+    "SemanticMappingDatabase",
     "SemanticMappingModel",
     "SemanticMappingRepository",
     "clauses_from_query",
@@ -275,7 +275,7 @@ class SemanticMappingRepository(ABC):
         """Publish a mapping and return the new mapping's record."""
 
 
-class SQLSemanticMappingRepository(SemanticMappingRepository):
+class SemanticMappingDatabase(SemanticMappingRepository):
     """A repository of semantic mappings in a SQL database, implemented using :mod:`sqlalchemy`."""
 
     def __init__(

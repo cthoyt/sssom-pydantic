@@ -20,9 +20,9 @@ from sssom_pydantic.database import (
     QUERY_TO_CLAUSE,
     UNCURATED_NOT_UNSURE_CLAUSE,
     UNCURATED_UNSURE_CLAUSE,
+    SemanticMappingDatabase,
     SemanticMappingModel,
     SemanticMappingRepository,
-    SQLSemanticMappingRepository,
     clauses_from_query,
 )
 from sssom_pydantic.examples import EXAMPLE_MAPPINGS, EXAMPLES
@@ -56,7 +56,7 @@ class TestSQL(unittest.TestCase):
 
     def setUp(self) -> None:
         """Set up the test with a SQL database."""
-        self.db = SQLSemanticMappingRepository.memory(semantic_mapping_hash=mapping_hash_v1)
+        self.db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
 
     def assert_model_equal(self, expected: SemanticMapping, actual: SemanticMapping) -> None:
         """Assert two models are equal."""
@@ -410,7 +410,7 @@ class TestIO(unittest.TestCase):
                 mappings = [example.semantic_mapping]
                 path = Path(tmpdir).joinpath("test.sssom.tsv")
                 sssom_pydantic.write(mappings, path, converter=converter, metadata=TEST_METADATA)
-                db = SQLSemanticMappingRepository.memory(semantic_mapping_hash=mapping_hash_v1)
+                db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
                 db.read(path, converter=converter, metadata=TEST_METADATA)
 
                 written_path = Path(tmpdir).joinpath("test2.sssom.tsv")
