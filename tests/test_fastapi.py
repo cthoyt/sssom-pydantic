@@ -17,7 +17,7 @@ from starlette.testclient import TestClient
 
 from sssom_pydantic import SemanticMapping
 from sssom_pydantic.api import mapping_hash_v1
-from sssom_pydantic.database import SemanticMappingDatabase
+from sssom_pydantic.database import SQLSemanticMappingRepository
 from sssom_pydantic.web import get_app
 from tests.cases import _m
 
@@ -36,11 +36,11 @@ class TestFastAPI(unittest.TestCase):
         """Set up the test case with a database."""
         self.td = tempfile.TemporaryDirectory()
         self.path = Path(self.td.name).joinpath("test.db")
-        self.database = SemanticMappingDatabase.from_connection(
+        self.database = SQLSemanticMappingRepository.from_connection(
             connection=f"sqlite:///{self.path}",
             semantic_mapping_hash=mapping_hash_v1,
         )
-        self.app = get_app(database=self.database)
+        self.app = get_app(repository=self.database)
         self.client = TestClient(self.app)
 
     def tearDown(self) -> None:

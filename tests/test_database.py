@@ -20,8 +20,8 @@ from sssom_pydantic.database import (
     QUERY_TO_CLAUSE,
     UNCURATED_NOT_UNSURE_CLAUSE,
     UNCURATED_UNSURE_CLAUSE,
-    SemanticMappingDatabase,
     SemanticMappingModel,
+    SQLSemanticMappingRepository,
     clauses_from_query,
 )
 from sssom_pydantic.examples import EXAMPLE_MAPPINGS, EXAMPLES
@@ -73,7 +73,7 @@ class TestDatabase(unittest.TestCase):
         mapping_3 = cases._m(predicate_modifier="Not")
         mapping_4 = cases._m(justification=lexical_matching_process, comment=UNSURE)
 
-        db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
+        db = SQLSemanticMappingRepository.memory(semantic_mapping_hash=mapping_hash_v1)
 
         self.assertEqual(0, db.count_mappings())
 
@@ -151,7 +151,7 @@ class TestDatabase(unittest.TestCase):
 
     def test_queries(self) -> None:
         """Generate and execute variety of queries."""
-        db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
+        db = SQLSemanticMappingRepository.memory(semantic_mapping_hash=mapping_hash_v1)
         db.add_mappings(EXAMPLE_MAPPINGS)
         for mapping in EXAMPLE_MAPPINGS:
             queries = [Query(query=mapping.subject.prefix)]
@@ -169,7 +169,7 @@ class TestDatabase(unittest.TestCase):
             confidence=0.95,
         )
 
-        db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
+        db = SQLSemanticMappingRepository.memory(semantic_mapping_hash=mapping_hash_v1)
         db.add_mapping(mapping)
         original_hash = db._hsh(mapping)
         db.curate(original_hash, authors=charlie, mark="correct")
@@ -195,7 +195,7 @@ class TestDatabase(unittest.TestCase):
             confidence=0.95,
         )
 
-        db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
+        db = SQLSemanticMappingRepository.memory(semantic_mapping_hash=mapping_hash_v1)
         db.add_mapping(mapping)
         original_hash = db._hsh(mapping)
         db.curate(original_hash, authors=charlie, mark="incorrect")
@@ -222,7 +222,7 @@ class TestDatabase(unittest.TestCase):
             confidence=0.95,
         )
 
-        db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
+        db = SQLSemanticMappingRepository.memory(semantic_mapping_hash=mapping_hash_v1)
         db.add_mapping(mapping)
         original_hash = db._hsh(mapping)
         db.curate(original_hash, authors=charlie, mark="BROAD")
@@ -248,7 +248,7 @@ class TestDatabase(unittest.TestCase):
             confidence=0.95,
         )
 
-        db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
+        db = SQLSemanticMappingRepository.memory(semantic_mapping_hash=mapping_hash_v1)
         db.add_mapping(mapping)
         original_hash = db._hsh(mapping)
         db.curate(original_hash, authors=charlie, mark="unsure")
@@ -275,7 +275,7 @@ class TestDatabase(unittest.TestCase):
             publication_date=None,
         )
 
-        db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
+        db = SQLSemanticMappingRepository.memory(semantic_mapping_hash=mapping_hash_v1)
         db.add_mapping(mapping)
         original_hash = db._hsh(mapping)
         db.publish(original_hash)
@@ -306,7 +306,7 @@ class TestDatabase(unittest.TestCase):
                 mappings = [example.semantic_mapping]
                 path = Path(tmpdir).joinpath("test.sssom.tsv")
                 sssom_pydantic.write(mappings, path, converter=converter, metadata=TEST_METADATA)
-                db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
+                db = SQLSemanticMappingRepository.memory(semantic_mapping_hash=mapping_hash_v1)
                 db.read(path, converter=converter, metadata=TEST_METADATA)
 
                 written_path = Path(tmpdir).joinpath("test2.sssom.tsv")
@@ -343,7 +343,7 @@ class TestDatabase(unittest.TestCase):
             comment=UNSURE,
         )
 
-        db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
+        db = SQLSemanticMappingRepository.memory(semantic_mapping_hash=mapping_hash_v1)
         db.add_mappings([m1, m2])
         m2_curated_reference = db.curate(mapping_hash_v1(m2), authors=charlie, mark="unsure")
         self.assertEqual(mapping_hash_v1(m2_curated), m2_curated_reference)
@@ -393,7 +393,7 @@ class TestDatabase(unittest.TestCase):
             confidence=0.95,
         )
 
-        db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
+        db = SQLSemanticMappingRepository.memory(semantic_mapping_hash=mapping_hash_v1)
         db.add_mappings([m1, m2, m3])
 
         self.assertIsNotNone(db.get_mapping(db._hsh(m1), strict=True).subject_name)

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import contextlib
 import datetime
+from abc import ABC, abstractmethod
 from collections.abc import Callable, Collection, Generator, Iterable, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Literal, ParamSpec, cast, overload
@@ -49,8 +50,9 @@ __all__ = [
     "POSITIVE_MAPPING_CLAUSE",
     "UNCURATED_NOT_UNSURE_CLAUSE",
     "UNCURATED_UNSURE_CLAUSE",
-    "SemanticMappingDatabase",
+    "SQLSemanticMappingRepository",
     "SemanticMappingModel",
+    "SemanticMappingRepository",
     "clauses_from_query",
 ]
 
@@ -199,7 +201,77 @@ class SemanticMappingModel(SQLModel, table=True):
         return SemanticMapping.model_validate(d)
 
 
-class SemanticMappingDatabase:
+class SemanticMappingRepository(ABC):
+    """Interact with a repository of semantic mappings."""
+
+    @abstractmethod
+    def count_mappings(
+        self, where_clauses: Query | list[ColumnExpressionArgument[bool]] | None = None
+    ) -> int:
+        """Count the mappings in the database."""
+
+    @abstractmethod
+    def add_mapping(self, mapping: SemanticMapping) -> Reference:
+        """Add a mapping to the database."""
+
+    @abstractmethod
+    def add_mappings(self, mappings: Iterable[SemanticMapping]) -> list[Reference]:
+        """Add mappings to the database."""
+
+    @abstractmethod
+    def delete_mapping(self, reference: Reference | SemanticMapping) -> None:
+        """Delete a mapping from the database."""
+
+    # docstr-coverage:excused `overload`
+    @overload
+    def get_mapping(
+        self, reference: Reference, *, strict: Literal[True] = ...
+    ) -> SemanticMappingModel: ...
+
+    # docstr-coverage:excused `overload`
+    @overload
+    def get_mapping(
+        self, reference: Reference, *, strict: Literal[False] = ...
+    ) -> SemanticMappingModel | None: ...
+
+    @abstractmethod
+    def get_mapping(
+        self, reference: Reference, *, strict: bool = False
+    ) -> SemanticMappingModel | None:
+        """Get a mapping."""
+
+    @abstractmethod
+    def get_mappings(
+        self,
+        where_clauses: Query | list[ColumnExpressionArgument[bool]] | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
+        order_by: ColumnExpressionArgument[Any] | list[ColumnExpressionArgument[Any]] | None = None,
+    ) -> Sequence[SemanticMappingModel]:
+        """Get mappings."""
+
+    @abstractmethod
+    def curate(
+        self,
+        reference: Reference,
+        authors: Reference | list[Reference],
+        mark: Mark,
+        confidence: float | None = None,
+        add_date: bool = True,
+        **kwargs: Any,
+    ) -> Reference:
+        """Curate a mapping and return the new mapping's record."""
+
+    @abstractmethod
+    def publish(
+        self,
+        reference: Reference,
+        date: datetime.date | None = None,
+    ) -> Reference:
+        """Publish a mapping and return the new mapping's record."""
+
+
+class SQLSemanticMappingRepository(SemanticMappingRepository):
     """Interact with a database."""
 
     def __init__(
@@ -313,13 +385,15 @@ class SemanticMappingDatabase:
     @overload
     def get_mapping(
         self, reference: Reference, *, strict: Literal[True] = ...
-    ) -> SemanticMappingModel: ...
+    ) -> SemanticMappingModel:
+        ...
 
     # docstr-coverage:excused `overload`
     @overload
     def get_mapping(
         self, reference: Reference, *, strict: Literal[False] = ...
-    ) -> SemanticMappingModel | None: ...
+    ) -> SemanticMappingModel | None:
+        ...
 
     def get_mapping(
         self, reference: Reference, *, strict: bool = False
@@ -538,5 +612,5 @@ def clauses_from_query(query: Query | None = None) -> list[ColumnExpressionArgum
         clause
         for name in Query.model_fields
         if (value := getattr(query, name)) is not None
-        and (clause := QUERY_TO_CLAUSE[name](value)) is not None
+           and (clause := QUERY_TO_CLAUSE[name](value)) is not None
     ]
