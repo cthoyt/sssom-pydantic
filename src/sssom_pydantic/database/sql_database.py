@@ -267,7 +267,7 @@ class SemanticMappingDatabase(SemanticMappingRepository):
     @contextlib.contextmanager
     def get_session(self) -> Generator[Session, None, None]:
         """Open a context manager for a session."""
-        with self.session_cls(self.engine) as session:
+        with contextlib.closing(self.session_cls(self.engine)) as session:
             yield session
 
     def count_mappings(
