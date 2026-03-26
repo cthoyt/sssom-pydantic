@@ -58,7 +58,7 @@ dependencies = [
 tests = [
     "pytest",
     "coverage[toml]",
-    "linkml_runtime",
+    "linkml_runtime<1.10.0",
     "httpx",
 ]
 docs = [
