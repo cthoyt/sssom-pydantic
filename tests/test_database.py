@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import importlib.util
 import tempfile
 import unittest
 from pathlib import Path
+from typing import TYPE_CHECKING
 
+import pystow
 from curies import Reference
 
 import sssom_pydantic
@@ -19,6 +22,9 @@ from sssom_pydantic.examples import EXAMPLES
 from sssom_pydantic.query import Query
 from tests import cases
 from tests.cases import TEST_CONVERTER, TEST_METADATA
+
+if TYPE_CHECKING:
+    from sssom_pydantic.database.neo4j_database import Neo4jSemanticMappingRepository
 
 USER = Reference(prefix="orcid", identifier="1234")
 
@@ -44,6 +50,30 @@ class TestSQL(cases.TestRepository):
     def setUp(self) -> None:
         """Set up the test with a SQL database."""
         self.repository = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
+
+
+@unittest.skipUnless(importlib.util.find_spec("neo4j"), "Neo4j is not installed")
+class TestNeo4j(cases.TestRepository):
+    """Test for a SQL database."""
+
+    repository: Neo4jSemanticMappingRepository
+
+    def setUp(self) -> None:
+        """Set up the test with a SQL database."""
+        try:
+            from sssom_pydantic.database.neo4j_database import Neo4jSemanticMappingRepository
+        except ImportError:
+            self.skipTest("can not import neo4j")
+        self.repository = Neo4jSemanticMappingRepository(
+            user=pystow.get_config("sssom", "neo4j_username"),
+            password=pystow.get_config("sssom", "neo4j_password"),
+            uri="neo4j://localhost:7687",
+        )
+
+    def tearDown(self) -> None:
+        """Tear down the test case."""
+        self.repository.drop_all()
+        self.repository.driver.close()
 
 
 class TestIO(unittest.TestCase):
