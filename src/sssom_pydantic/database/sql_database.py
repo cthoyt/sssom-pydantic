@@ -15,7 +15,7 @@ import contextlib
 import datetime
 from collections.abc import Callable, Collection, Generator, Iterable, Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Literal, ParamSpec, cast, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, ParamSpec, overload
 
 import curies
 import sqlmodel
@@ -33,11 +33,17 @@ from sqlmodel import JSON, Column, Field, Session, SQLModel, String, and_, col, 
 from sqlmodel.sql._expression_select_cls import SelectOfScalar
 from typing_extensions import Self
 
-import sssom_pydantic
-from sssom_pydantic import MappingTool, Metadata, SemanticMapping
-from sssom_pydantic.api import MappingSet, MappingSetRecord, SemanticMappingHash
+from sssom_pydantic.api import (
+    MappingSet,
+    MappingSetRecord,
+    MappingTool,
+    SemanticMapping,
+    SemanticMappingHash,
+)
+from sssom_pydantic.database.repo import SemanticMappingRepository
+from sssom_pydantic.io import Metadata, read, write
 from sssom_pydantic.models import Cardinality
-from sssom_pydantic.process import UNSURE, Mark, curate, publish
+from sssom_pydantic.process import UNSURE
 from sssom_pydantic.query import Query
 
 if TYPE_CHECKING:
@@ -47,10 +53,12 @@ __all__ = [
     "DEFAULT_SORT",
     "NEGATIVE_MAPPING_CLAUSE",
     "POSITIVE_MAPPING_CLAUSE",
+    "QUERY_TO_CLAUSE",
     "UNCURATED_NOT_UNSURE_CLAUSE",
     "UNCURATED_UNSURE_CLAUSE",
     "SemanticMappingDatabase",
     "SemanticMappingModel",
+    "SemanticMappingRepository",
     "clauses_from_query",
 ]
 
@@ -199,8 +207,8 @@ class SemanticMappingModel(SQLModel, table=True):
         return SemanticMapping.model_validate(d)
 
 
-class SemanticMappingDatabase:
-    """Interact with a database."""
+class SemanticMappingDatabase(SemanticMappingRepository):
+    """A repository of semantic mappings in a SQL database, implemented using :mod:`sqlalchemy`."""
 
     def __init__(
         self,
@@ -222,6 +230,10 @@ class SemanticMappingDatabase:
         self.session_cls = session_cls if session_cls is not None else Session
         self._hsh = semantic_mapping_hash
         SQLModel.metadata.create_all(self.engine)
+
+    def hash_mapping(self, mapping: SemanticMapping) -> Reference:
+        """Hash a mapping."""
+        return self._hsh(mapping)
 
     @classmethod
     def from_connection(
@@ -255,7 +267,7 @@ class SemanticMappingDatabase:
     @contextlib.contextmanager
     def get_session(self) -> Generator[Session, None, None]:
         """Open a context manager for a session."""
-        with self.session_cls(self.engine) as session:
+        with contextlib.closing(self.session_cls(self.engine)) as session:
             yield session
 
     def count_mappings(
@@ -282,7 +294,7 @@ class SemanticMappingDatabase:
         rv: list[Reference] = []
         with self.get_session() as session:
             for mapping in mappings:
-                reference = self._hsh(mapping)
+                reference = self.hash_mapping(mapping)
                 session.add(
                     SemanticMappingModel.from_semantic_mapping(
                         mapping.model_copy(update={"record": reference})
@@ -304,33 +316,28 @@ class SemanticMappingDatabase:
                 session.delete(obj)
                 session.commit()
 
-    def _ensure(self, reference: Reference | SemanticMapping) -> Reference:
-        if isinstance(reference, SemanticMapping):
-            return self._hsh(reference)
-        return reference
-
     # docstr-coverage:excused `overload`
     @overload
     def get_mapping(
         self, reference: Reference, *, strict: Literal[True] = ...
-    ) -> SemanticMappingModel: ...
+    ) -> SemanticMapping: ...
 
     # docstr-coverage:excused `overload`
     @overload
     def get_mapping(
         self, reference: Reference, *, strict: Literal[False] = ...
-    ) -> SemanticMappingModel | None: ...
+    ) -> SemanticMapping | None: ...
 
-    def get_mapping(
-        self, reference: Reference, *, strict: bool = False
-    ) -> SemanticMappingModel | None:
+    def get_mapping(self, reference: Reference, *, strict: bool = False) -> SemanticMapping | None:
         """Get a mapping."""
         with self.get_session() as session:
-            s = session.exec(self._get_mapping_by_reference(reference))
-            if strict:
-                return s.one()
+            rv = session.exec(self._get_mapping_by_reference(reference)).first()
+            if rv is not None:
+                return rv.to_semantic_mapping()
+            elif strict:
+                raise ValueError
             else:
-                return s.first()
+                return None
 
     def get_mappings(
         self,
@@ -338,7 +345,7 @@ class SemanticMappingDatabase:
         limit: int | None = None,
         offset: int | None = None,
         order_by: ColumnExpressionArgument[Any] | list[ColumnExpressionArgument[Any]] | None = None,
-    ) -> Sequence[SemanticMappingModel]:
+    ) -> Sequence[SemanticMapping]:
         """Get mappings."""
         with self.get_session() as session:
             statement = select(SemanticMappingModel)
@@ -362,7 +369,7 @@ class SemanticMappingDatabase:
             else:
                 statement = statement.order_by(order_by)
 
-            return session.exec(statement).all()
+            return [mapping.to_semantic_mapping() for mapping in session.exec(statement).all()]
 
     def read(
         self,
@@ -372,7 +379,7 @@ class SemanticMappingDatabase:
         **kwargs: Any,
     ) -> list[Reference]:
         """Read mappings from a file into the database."""
-        mappings, _converter, _metadata = sssom_pydantic.read(
+        mappings, _converter, _metadata = read(
             path, metadata=metadata, converter=converter, **kwargs
         )
         return self.add_mappings(mappings)
@@ -390,60 +397,13 @@ class SemanticMappingDatabase:
     ) -> None:
         """Write the database to a file."""
         mappings = self.get_mappings(where_clauses=where_clauses, limit=limit, offset=offset)
-        mapping_it = (m.to_semantic_mapping() for m in mappings)
-        sssom_pydantic.write(
-            mapping_it,
+        write(
+            mappings,
             path,
             metadata=metadata,
             converter=converter,
             exclude_columns=exclude_columns,
         )
-
-    def curate(
-        self,
-        reference: Reference,
-        authors: Reference | list[Reference],
-        mark: Mark,
-        confidence: float | None = None,
-        add_date: bool = True,
-        **kwargs: Any,
-    ) -> Reference:
-        """Curate a mapping and return the new mapping's record."""
-        if isinstance(authors, Reference):
-            authors = [authors]
-        return self._mutate(
-            reference,
-            curate,
-            authors=authors,
-            mark=mark,
-            confidence=confidence,
-            add_date=add_date,
-            **kwargs,
-        )
-
-    def publish(
-        self,
-        reference: Reference,
-        date: datetime.date | None = None,
-    ) -> Reference:
-        """Publish a mapping and return the new mapping's record."""
-        return self._mutate(reference, publish, date=date)
-
-    def _mutate(
-        self,
-        reference: Reference,
-        f: Callable[Concatenate[SemanticMapping, P], SemanticMapping],
-        *args: P.args,
-        **kwargs: P.kwargs,
-    ) -> Reference:
-        mapping = self.get_mapping(reference)
-        if mapping is None:
-            raise KeyError
-        new_mapping = f(mapping.to_semantic_mapping(), *args, **kwargs)
-        new_mapping = new_mapping.model_copy(update={"record": self._hsh(new_mapping)})
-        self.add_mapping(new_mapping)
-        self.delete_mapping(reference)
-        return cast(Reference, new_mapping.record)
 
 
 POSITIVE_MAPPING_CLAUSE = and_(
@@ -503,26 +463,28 @@ QUERY_TO_CLAUSE: dict[str, Callable[[str], ColumnExpressionArgument[bool] | None
     "mapping_tool": lambda value: or_(
         func.json_extract(SemanticMappingModel.mapping_tool, "$.name").icontains(value.lower()),
     ),
-    "same_text": lambda value: and_(
-        SemanticMappingModel.predicate == "skos:exactMatch",
-        (
-            _str_norm(SemanticMappingModel.subject_name)
-            == _str_norm(SemanticMappingModel.object_name)
-        )
-        if value
-        else or_(
-            col(SemanticMappingModel.subject_name).is_(None),
-            col(SemanticMappingModel.object_name).is_(None),
-            and_(
-                col(SemanticMappingModel.subject_name).is_not(None),
-                col(SemanticMappingModel.object_name).is_not(None),
+    "same_text": lambda value: (
+        and_(
+            SemanticMappingModel.predicate == "skos:exactMatch",
+            (
                 _str_norm(SemanticMappingModel.subject_name)
-                != _str_norm(SemanticMappingModel.object_name),
+                == _str_norm(SemanticMappingModel.object_name)
+            )
+            if value
+            else or_(
+                col(SemanticMappingModel.subject_name).is_(None),
+                col(SemanticMappingModel.object_name).is_(None),
+                and_(
+                    col(SemanticMappingModel.subject_name).is_not(None),
+                    col(SemanticMappingModel.object_name).is_not(None),
+                    _str_norm(SemanticMappingModel.subject_name)
+                    != _str_norm(SemanticMappingModel.object_name),
+                ),
             ),
-        ),
-    )
-    if value is not None
-    else None,
+        )
+        if value is not None
+        else None
+    ),
 }
 
 
