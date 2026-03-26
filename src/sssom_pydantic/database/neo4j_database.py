@@ -17,7 +17,7 @@ from typing import (
     overload,
 )
 
-from curies import Reference
+from curies import NamableReference, Reference
 
 from sssom_pydantic.api import SemanticMapping, mapping_hash_v1
 from sssom_pydantic.database import SemanticMappingRepository
@@ -70,13 +70,13 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         cypher = "MATCH (n) DETACH DELETE n;"
         self._write(cypher)
 
-    def _write(self, cypher: LiteralString, objects: list[dict[str, Any]] | None = None) -> None:
+    def _write(self, cypher: LiteralString, *args: P.args, **kwargs: P.kwargs) -> None:
         with closing(self.driver.session()) as session:
-            session.execute_write(_get_worker(cypher), objects)
+            session.execute_write(_get_worker(cypher), *args, **kwargs)
 
     def add_mappings(self, mappings: Iterable[SemanticMapping]) -> list[Reference]:
         """Add mappings to the database."""
-        cypher: LiteralString = """\
+        cypher: LiteralString = """
             UNWIND $batch AS row
             MERGE (subject:Entity {curie: row.subject})
               SET subject.name = row.subject_label
@@ -86,13 +86,15 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
             MERGE (m:SemanticMapping {id: row.id})
               SET m.predicate = row.predicate
               SET m.subject = row.subject
+              SET m.subject_label = row.subject_label
               SET m.object = row.object
+              SET m.object_label = row.object_label
               SET m.justification = row.justification
               SET m.rest = row.rest
             MERGE (subject)-[:subject_of]->(m)
             MERGE (object)-[:object_of]->(m)
         """
-        parameters = []
+        batch = []
         references = []
         exclude_fields = {
             "record",
@@ -100,13 +102,12 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
             "predicate",
             "object",
             "justification",
-            "object_label",
             "subject_label",
         }
         for mapping in mappings:
             reference = self.hash_mapping(mapping)
             references.append(reference)
-            parameters.append(
+            batch.append(
                 {
                     "id": reference.identifier,
                     "subject": mapping.subject.curie,
@@ -123,7 +124,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
                     ),
                 }
             )
-        self._write(cypher, parameters)
+        self._write(cypher, batch=batch)
         return references
 
     def hash_mapping(self, mapping: SemanticMapping) -> Reference:
@@ -215,6 +216,17 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         data = dict(node)
         data.update(json.loads(data.pop("rest")))
         rv = SemanticMapping.model_validate(data)
+        model_update = {}
+        if subject_label := data.get("subject_label"):
+            model_update["subject"] = NamableReference(
+                prefix=rv.subject.prefix, identifier=rv.subject.identifier, name=subject_label
+            )
+        if object_label := data.get("object_label"):
+            model_update["object"] = NamableReference(
+                prefix=rv.object.prefix, identifier=rv.object.identifier, name=object_label
+            )
+        if model_update:
+            rv = rv.model_copy(update=model_update)
         return rv
 
 
@@ -233,7 +245,6 @@ def _main() -> None:
     )
     db.drop_all()
     if db.count_mappings():
-        del db
         raise ValueError("mappings exist!")
 
     db.add_mapping(EXAMPLE_MAPPINGS[0])
