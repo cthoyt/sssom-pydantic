@@ -7,9 +7,9 @@ from typing import TYPE_CHECKING, Any, Literal, overload
 from curies import Reference
 
 from .repo import SemanticMappingRepository
-from .. import MappingSet, SemanticMapping
+from ..api import MappingSet, SemanticMapping
 from ..io import append, read, write
-from ..query import Query
+from ..query import Query, filter_mappings
 
 if TYPE_CHECKING:
     from sqlalchemy.sql.selectable import ColumnExpressionArgument  # type:ignore[attr-defined]
@@ -103,12 +103,17 @@ class FileSystemSemanticMappingRepository(SemanticMappingRepository):
         order_by: ColumnExpressionArgument[Any] | list[ColumnExpressionArgument[Any]] | None = None,
     ) -> Sequence[SemanticMapping]:
         """Get a sequence of mappings."""
+        mappings = self.mappings
         if where_clauses is not None:
-            raise NotImplementedError
+            if not isinstance(where_clauses, Query):
+                raise NotImplementedError
+            mappings = list(filter_mappings(mappings, where_clauses))
         if order_by is not None:
             raise NotImplementedError
-        if offset is not None:
-            raise NotImplementedError
-        if limit is not None:
-            raise NotImplementedError
-        return self.mappings
+        if offset and limit:
+            mappings = mappings[offset : offset + limit]
+        elif offset:
+            mappings = mappings[offset:]
+        else:
+            mappings = mappings[:limit]
+        return mappings
