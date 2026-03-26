@@ -503,26 +503,28 @@ QUERY_TO_CLAUSE: dict[str, Callable[[str], ColumnExpressionArgument[bool] | None
     "mapping_tool": lambda value: or_(
         func.json_extract(SemanticMappingModel.mapping_tool, "$.name").icontains(value.lower()),
     ),
-    "same_text": lambda value: and_(
-        SemanticMappingModel.predicate == "skos:exactMatch",
-        (
-            _str_norm(SemanticMappingModel.subject_name)
-            == _str_norm(SemanticMappingModel.object_name)
-        )
-        if value
-        else or_(
-            col(SemanticMappingModel.subject_name).is_(None),
-            col(SemanticMappingModel.object_name).is_(None),
-            and_(
-                col(SemanticMappingModel.subject_name).is_not(None),
-                col(SemanticMappingModel.object_name).is_not(None),
+    "same_text": lambda value: (
+        and_(
+            SemanticMappingModel.predicate == "skos:exactMatch",
+            (
                 _str_norm(SemanticMappingModel.subject_name)
-                != _str_norm(SemanticMappingModel.object_name),
+                == _str_norm(SemanticMappingModel.object_name)
+            )
+            if value
+            else or_(
+                col(SemanticMappingModel.subject_name).is_(None),
+                col(SemanticMappingModel.object_name).is_(None),
+                and_(
+                    col(SemanticMappingModel.subject_name).is_not(None),
+                    col(SemanticMappingModel.object_name).is_not(None),
+                    _str_norm(SemanticMappingModel.subject_name)
+                    != _str_norm(SemanticMappingModel.object_name),
+                ),
             ),
-        ),
-    )
-    if value is not None
-    else None,
+        )
+        if value is not None
+        else None
+    ),
 }
 
 
