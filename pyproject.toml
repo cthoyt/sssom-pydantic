@@ -20,7 +20,6 @@ classifiers = [
     "Development Status :: 1 - Planning",
     "Environment :: Console",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Framework :: Pytest",
     "Framework :: tox",
@@ -44,9 +43,7 @@ keywords = [
 
 # License Information.
 # See PEP-639 at https://peps.python.org/pep-0639/#add-license-files-key
-license-files = [
-    "LICENSE",
-]
+license = { file = "LICENSE" }
 
 requires-python = ">=3.10"
 dependencies = [
@@ -61,7 +58,8 @@ dependencies = [
 tests = [
     "pytest",
     "coverage[toml]",
-    "linkml_runtime",
+    "linkml<1.10.0",
+    "linkml-runtime<1.10.0",
     "httpx",
 ]
 docs = [
@@ -80,10 +78,6 @@ typing = [
     "types-PyYAML",
     "types-click",
     "types-requests",
-    "sqlmodel",
-    "fastapi",
-    "wikidata-client",
-    "ndex2",
 ]
 docs-lint = [
     { include-group = "docs" },
@@ -98,6 +92,7 @@ doctests = [
     "pygments",
 ]
 pyroma = [
+    "uv-build",
     "pyroma",
     "pygments",
 ]
@@ -122,6 +117,8 @@ ndex = [
 ]
 sssompy = [
     "sssom",
+    "linkml<1.10.0",
+    "linkml-runtime<1.10.0",
     "pandas",
 ]
 ontoportal = [
