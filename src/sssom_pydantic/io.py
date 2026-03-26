@@ -416,7 +416,7 @@ ReadType: TypeAlias = tuple[list[SemanticMapping], Converter, MappingSet]
 
 
 def read(
-    path_or_url: str | Path,
+    path_or_url: str | Path | TextIO,
     *,
     metadata_path: str | Path | None = None,
     metadata: MappingSet | MappingSetRecord | Metadata | None = None,
@@ -450,7 +450,7 @@ class ReadTuple(NamedTuple):
 
 @contextlib.contextmanager
 def read_iterable(
-    path_or_url: str | Path,
+    path_or_url: str | Path | TextIO,
     *,
     metadata_path: str | Path | None = None,
     metadata: MappingSet | MappingSetRecord | Metadata | None = None,
@@ -462,7 +462,7 @@ def read_iterable(
 ) -> Generator[ReadTuple, None, None]:
     """Read and process SSSOM from TSV in an iterable way."""
     with read_unprocessed_iterable(
-        path=path_or_url,
+        path_or_url=path_or_url,
         metadata_path=metadata_path,
         metadata=metadata,
         converter=converter,
@@ -526,7 +526,7 @@ class ReadUnprocessedStreamTuple(NamedTuple):
 
 
 def read_unprocessed(
-    path: str | Path,
+    path_or_url: str | Path | TextIO,
     *,
     metadata_path: str | Path | None = None,
     metadata: MappingSet | MappingSetRecord | Metadata | None = None,
@@ -537,7 +537,7 @@ def read_unprocessed(
 ) -> ReadUnprocessedTuple:
     """Read SSSOM TSV into unprocessed records."""
     with read_unprocessed_iterable(
-        path=path,
+        path_or_url=path_or_url,
         metadata_path=metadata_path,
         metadata=metadata,
         converter=converter,
@@ -554,7 +554,7 @@ def read_unprocessed(
 
 @contextlib.contextmanager
 def read_unprocessed_iterable(
-    path: str | Path,
+    path_or_url: str | Path | TextIO,
     *,
     metadata_path: str | Path | None = None,
     metadata: MappingSet | MappingSetRecord | Metadata | None = None,
@@ -580,7 +580,7 @@ def read_unprocessed_iterable(
     if progress_kwargs:
         _tqdm_kwargs.update(progress_kwargs)
 
-    with safe_open(path, operation="read", representation="text") as file:
+    with safe_open(path_or_url, representation="text", operation="read") as file:
         columns, inline_metadata = _chomp_frontmatter(file)
         mapping_set_record = _chain_mapping_set_record(
             first_metadata, second_metadata, inline_metadata
