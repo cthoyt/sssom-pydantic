@@ -70,7 +70,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         cypher = "MATCH (n) DETACH DELETE n;"
         self._write(cypher)
 
-    def _write(self, cypher: LiteralString, *args: P.args, **kwargs: P.kwargs) -> None:
+    def _write(self, cypher: LiteralString, *args: Any, **kwargs: Any) -> None:
         with closing(self.driver.session()) as session:
             session.execute_write(_get_worker(cypher), *args, **kwargs)
 
@@ -198,17 +198,32 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         order_by: ColumnExpressionArgument[Any] | list[ColumnExpressionArgument[Any]] | None = None,
     ) -> Sequence[SemanticMapping]:
         """Get mappings."""
+        params: dict[str, str | int] = {}
+        cypher = "MATCH (p:SemanticMapping)"
+        if where_clauses is not None:
+            if not isinstance(where_clauses, Query):
+                raise TypeError
+            if where_val := _clauses_from_query(where_clauses):
+                cypher += where_val[0]
+                params.update(where_val[1])
+        cypher += " RETURN p"
+        if order_by is not None:
+            raise NotImplementedError("ordering not implemented")
+        if offset is not None:
+            cypher += " SKIP $offset"
+            params["offset"] = offset
+        if limit is not None:
+            cypher += " LIMIT $limit"
+            params["limit"] = limit
 
-        def _get_nodes(tx: neo4j.ManagedTransaction, uids: list[str]) -> list[dict[str, Any]]:
-            result = tx.run(
-                "MATCH (p:SemanticMapping) WHERE p.id IN $uids RETURN p",
-                uids=uids,
-            )
+        def _get_nodes(tx: neo4j.ManagedTransaction) -> list[dict[str, Any]]:
+            result = tx.run(cypher, **params)
             return [record["p"] for record in result]
 
-        raise NotImplementedError("need to have a query building functionality for cypher")
         with self.driver.session(database="neo4j") as session:
-            nodes = session.execute_read(_get_nodes, ...)
+            nodes = session.execute_read(
+                _get_nodes,
+            )
             return [self._from_data(node) for node in nodes]
 
     @staticmethod
@@ -228,6 +243,46 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         if model_update:
             rv = rv.model_copy(update=model_update)
         return rv
+
+
+def _clauses_from_query(
+    query: Query,
+) -> tuple[str, dict[str, str]] | None:
+    parts = []
+    params = {}
+    for name in Query.model_fields:
+        if (value := getattr(query, name)) is not None:
+            if name == "query":
+                name = "full"
+            if name not in QUERY_TO_CLAUSE:
+                raise NotImplementedError(f"query component not implemented: {name}")
+            parts.append(QUERY_TO_CLAUSE[name])
+            params[name] = value
+    if not parts:
+        return None
+    rv = "WHERE " + " AND ".join(parts)
+    return rv, params
+
+
+QUERY_TO_CLAUSE = {
+    "full": (
+        "(toLower(p.subject) CONTAINS toLower($full) "
+        "OR toLower(p.object) CONTAINS toLower($full)"
+        "OR toLower(p.subject_label) CONTAINS toLower($full)"
+        "OR toLower(p.object_label) CONTAINS toLower($full)"
+        ")"
+        # TODO also search over mapping tool name
+    ),
+    "subject_prefix": "p.subject STARTS WITH $subject_prefix",
+    "subject_query": "(toLower(p.subject) CONTAINS toLower($subject_query) "
+    "OR toLower(p.subject_label) CONTAINS toLower($subject_query)",
+    "object_query": "(toLower(p.object) CONTAINS toLower($object_query) "
+    "OR toLower(p.object_label) CONTAINS toLower($object_query)",
+    "object_prefix": "p.object STARTS WITH $object_prefix",
+    "prefix": "(p.subject STARTS WITH prefix OR p.object STARTS WITH $prefix)",
+    # TODO strip weird characters
+    "same_text": "toLower(p.object_label) = toLower(p.subject_label)",
+}
 
 
 def _get_worker(cypher: LiteralString) -> Callable[Concatenate[neo4j.ManagedTransaction, P], None]:

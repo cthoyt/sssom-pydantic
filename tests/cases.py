@@ -165,7 +165,9 @@ class TestRepository(unittest.TestCase):
 
         self.assertEqual(4, db.count_mappings())
 
-        if isinstance(db, SemanticMappingDatabase):
+        sql_mode = isinstance(db, SemanticMappingDatabase)
+
+        if sql_mode:
             # this test isn't relevant for all databases
             mappings = db.get_mappings(
                 where_clauses=[SemanticMappingModel.justification == lexical_matching_process]
@@ -178,17 +180,19 @@ class TestRepository(unittest.TestCase):
         self.assertEqual(4, len(db.get_mappings()))
         self.assertEqual(4, len(db.get_mappings(limit=1000)))
 
-        mappings = db.get_mappings(where_clauses=[POSITIVE_MAPPING_CLAUSE])
-        self.assertEqual(1, len(mappings))
-        self.assertEqual(manual_mapping_curation, mappings[0].justification)
-        self.assertIsNone(mappings[0].predicate_modifier)
-        self.assertIsNone(mappings[0].comment)
+        if sql_mode:
+            mappings = db.get_mappings(where_clauses=[POSITIVE_MAPPING_CLAUSE])
+            self.assertEqual(1, len(mappings))
+            self.assertEqual(manual_mapping_curation, mappings[0].justification)
+            self.assertIsNone(mappings[0].predicate_modifier)
+            self.assertIsNone(mappings[0].comment)
 
-        mappings = db.get_mappings(where_clauses=[NEGATIVE_MAPPING_CLAUSE])
-        self.assertEqual(1, len(mappings))
-        self.assertEqual(manual_mapping_curation, mappings[0].justification)
-        self.assertIsNotNone(mappings[0].predicate_modifier)
-        self.assertIsNone(mappings[0].comment)
+        if sql_mode:
+            mappings = db.get_mappings(where_clauses=[NEGATIVE_MAPPING_CLAUSE])
+            self.assertEqual(1, len(mappings))
+            self.assertEqual(manual_mapping_curation, mappings[0].justification)
+            self.assertIsNotNone(mappings[0].predicate_modifier)
+            self.assertIsNone(mappings[0].comment)
 
         # test no-op query
         query = Query()
@@ -404,20 +408,22 @@ class TestRepository(unittest.TestCase):
             ),
         )
 
-        uncurated_mappings = db.get_mappings([UNCURATED_NOT_UNSURE_CLAUSE])
-        self.assert_models_equal(
-            [m1],
-            list(uncurated_mappings),
-        )
+        if isinstance(db, SemanticMappingDatabase):
+            uncurated_mappings = db.get_mappings([UNCURATED_NOT_UNSURE_CLAUSE])
+            self.assert_models_equal(
+                [m1],
+                list(uncurated_mappings),
+            )
 
-        unsure_mappings = db.get_mappings([UNCURATED_UNSURE_CLAUSE])
-        self.assert_models_equal(
-            [m2_curated],
-            list(unsure_mappings),
-        )
+            unsure_mappings = db.get_mappings([UNCURATED_UNSURE_CLAUSE])
+            self.assert_models_equal(
+                [m2_curated],
+                list(unsure_mappings),
+            )
 
     def test_query_same_text(self) -> None:
         """Test querying for same text."""
+        self.maxDiff = None
         m1 = SemanticMapping(
             subject=NamedReference.from_curie("a:1", name="example"),
             predicate="skos:exactMatch",
