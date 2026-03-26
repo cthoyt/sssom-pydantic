@@ -6,7 +6,6 @@ import importlib.util
 import tempfile
 import unittest
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import pystow
 from curies import Reference
@@ -15,6 +14,7 @@ import sssom_pydantic
 from sssom_pydantic.api import MAPPING_HASH_V1_PREFIX, mapping_hash_v1
 from sssom_pydantic.database import (
     QUERY_TO_CLAUSE,
+    Neo4jSemanticMappingRepository,
     SemanticMappingDatabase,
     clauses_from_query,
 )
@@ -22,9 +22,6 @@ from sssom_pydantic.examples import EXAMPLES
 from sssom_pydantic.query import Query
 from tests import cases
 from tests.cases import TEST_CONVERTER, TEST_METADATA
-
-if TYPE_CHECKING:
-    from sssom_pydantic.database.neo4j_database import Neo4jSemanticMappingRepository
 
 USER = Reference(prefix="orcid", identifier="1234")
 
