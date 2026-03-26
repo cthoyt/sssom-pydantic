@@ -12,7 +12,6 @@ from typing_extensions import LiteralString
 
 from sssom_pydantic.api import SemanticMapping, mapping_hash_v1
 from sssom_pydantic.database import SemanticMappingRepository
-from sssom_pydantic.examples import EXAMPLE_MAPPINGS
 from sssom_pydantic.query import Query
 
 if TYPE_CHECKING:
