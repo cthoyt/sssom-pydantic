@@ -5,19 +5,10 @@ from __future__ import annotations
 import json
 from collections.abc import Callable, Iterable, Sequence
 from contextlib import closing
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Concatenate,
-    Literal,
-    LiteralString,
-    ParamSpec,
-    TypeVar,
-    cast,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Concatenate, Literal, ParamSpec, TypeVar, cast, overload
 
 from curies import NamableReference, Reference
+from typing_extensions import LiteralString
 
 from sssom_pydantic.api import SemanticMapping, mapping_hash_v1
 from sssom_pydantic.database import SemanticMappingRepository
