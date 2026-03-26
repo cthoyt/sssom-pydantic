@@ -58,7 +58,8 @@ dependencies = [
 tests = [
     "pytest",
     "coverage[toml]",
-    "linkml_runtime<1.10.0",
+    "linkml<1.10.0",
+    "linkml-runtime<1.10.0",
     "httpx",
 ]
 docs = [
@@ -91,6 +92,7 @@ doctests = [
     "pygments",
 ]
 pyroma = [
+    "uv-build",
     "pyroma",
     "pygments",
 ]
@@ -115,6 +117,8 @@ ndex = [
 ]
 sssompy = [
     "sssom",
+    "linkml<1.10.0",
+    "linkml-runtime<1.10.0",
     "pandas",
 ]
 ontoportal = [
