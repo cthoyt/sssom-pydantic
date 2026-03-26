@@ -14,6 +14,7 @@ import sssom_pydantic
 from sssom_pydantic.api import MAPPING_HASH_V1_PREFIX, mapping_hash_v1
 from sssom_pydantic.database import (
     QUERY_TO_CLAUSE,
+    FileSystemSemanticMappingRepository,
     Neo4jSemanticMappingRepository,
     SemanticMappingDatabase,
     clauses_from_query,
@@ -47,6 +48,20 @@ class TestSQL(cases.TestRepository):
     def setUp(self) -> None:
         """Set up the test with a SQL database."""
         self.repository = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
+
+
+class TestFilesystem(cases.TestRepository):
+    """Test for a file-based database."""
+
+    def setUp(self) -> None:
+        """Set up the test with a SQL database."""
+        self.directory = tempfile.TemporaryDirectory()
+        self.path = Path(self.directory.name).joinpath("test.sssom.tsv")
+        self.repository = FileSystemSemanticMappingRepository(self.path)
+
+    def tearDown(self) -> None:
+        """Tear down the test case."""
+        self.directory.cleanup()
 
 
 @unittest.skipUnless(importlib.util.find_spec("neo4j"), "Neo4j is not installed")

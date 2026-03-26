@@ -1,5 +1,6 @@
 """Database."""
 
+from .filesystem_database import FileSystemSemanticMappingRepository
 from .neo4j_database import Neo4jSemanticMappingRepository
 from .repo import SemanticMappingRepository
 from .sql_database import (
@@ -21,6 +22,7 @@ __all__ = [
     "QUERY_TO_CLAUSE",
     "UNCURATED_NOT_UNSURE_CLAUSE",
     "UNCURATED_UNSURE_CLAUSE",
+    "FileSystemSemanticMappingRepository",
     "Neo4jSemanticMappingRepository",
     "SemanticMappingDatabase",
     "SemanticMappingModel",
