@@ -64,7 +64,7 @@ mypy:
 
 [doc("run static type checking with ty")]
 ty:
-    uv run --group typing ty check src/ tests/
+    uv run --group typing --all-extras ty check src/ tests/
 
 [doc("run the doc8 tool to check the style of the RST files in the project docs")]
 docs-lint:
