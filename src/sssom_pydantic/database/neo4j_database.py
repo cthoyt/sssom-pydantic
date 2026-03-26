@@ -247,16 +247,17 @@ def _clauses_from_query(
                 name = "full"
             if name not in QUERY_TO_CLAUSE:
                 raise NotImplementedError(f"query component not implemented: {name}")
-            parts.append(QUERY_TO_CLAUSE[name])
-            params[name] = value
+            else:
+                parts.append(QUERY_TO_CLAUSE[name](value))
+                params[name] = value
     if not parts:
         return None
     rv = "WHERE " + " AND ".join(parts)
     return rv, params
 
 
-QUERY_TO_CLAUSE = {
-    "full": (
+QUERY_TO_CLAUSE: dict[str, Callable[[str | bool], str]] = {
+    "full": lambda value: (
         "(toLower(p.subject) CONTAINS toLower($full) "
         "OR toLower(p.object) CONTAINS toLower($full)"
         "OR toLower(p.subject_label) CONTAINS toLower($full)"
@@ -264,15 +265,30 @@ QUERY_TO_CLAUSE = {
         ")"
         # TODO also search over mapping tool name
     ),
-    "subject_prefix": "p.subject STARTS WITH $subject_prefix",
-    "subject_query": "(toLower(p.subject) CONTAINS toLower($subject_query) "
-    "OR toLower(p.subject_label) CONTAINS toLower($subject_query)",
-    "object_query": "(toLower(p.object) CONTAINS toLower($object_query) "
-    "OR toLower(p.object_label) CONTAINS toLower($object_query)",
-    "object_prefix": "p.object STARTS WITH $object_prefix",
-    "prefix": "(p.subject STARTS WITH prefix OR p.object STARTS WITH $prefix)",
+    "subject_prefix": lambda value: "p.subject STARTS WITH $subject_prefix",
+    "subject_query": lambda value: (
+        "(toLower(p.subject) CONTAINS toLower($subject_query) "
+        "OR toLower(p.subject_label) CONTAINS toLower($subject_query)"
+    ),
+    "object_query": lambda value: (
+        "(toLower(p.object) CONTAINS toLower($object_query) "
+        "OR toLower(p.object_label) CONTAINS toLower($object_query)"
+    ),
+    "object_prefix": lambda value: "p.object STARTS WITH $object_prefix",
+    "prefix": lambda value: "(p.subject STARTS WITH prefix OR p.object STARTS WITH $prefix)",
     # TODO strip weird characters
-    "same_text": "toLower(p.object_label) = toLower(p.subject_label)",
+    "same_text": lambda value: (
+        "(p.predicate = 'skos:exactMatch' AND toLower(p.object_label) = toLower(p.subject_label))"
+        if value
+        else """(
+            p.predicate = 'skos:exactMatch'
+            AND (
+                p.subject_label IS NULL
+                OR p.object_label IS NULL
+                OR toLower(p.object_label) <> toLower(p.subject_label)
+            )
+        )"""
+    ),
 }
 
 
