@@ -58,7 +58,6 @@ __all__ = [
     "UNCURATED_UNSURE_CLAUSE",
     "SemanticMappingDatabase",
     "SemanticMappingModel",
-    "SemanticMappingRepository",
     "clauses_from_query",
 ]
 

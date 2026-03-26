@@ -10,9 +10,9 @@ from typing import TYPE_CHECKING, Any, Concatenate, Literal, ParamSpec, TypeVar,
 from curies import NamableReference, Reference
 from typing_extensions import LiteralString
 
-from sssom_pydantic.api import SemanticMapping, mapping_hash_v1
-from sssom_pydantic.database import SemanticMappingRepository
-from sssom_pydantic.query import Query
+from .repo import SemanticMappingRepository
+from ..api import SemanticMapping
+from ..query import Query
 
 if TYPE_CHECKING:
     import neo4j
@@ -116,10 +116,6 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
             )
         self._write(cypher, batch=batch)
         return references
-
-    def hash_mapping(self, mapping: SemanticMapping) -> Reference:
-        """Hash a mapping."""
-        return mapping_hash_v1(mapping)
 
     def count_mappings(
         self, where_clauses: Query | list[ColumnExpressionArgument[bool]] | None = None

@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, Concatenate, Literal, ParamSpec, cast, ov
 
 from curies import Reference
 
-from ..api import SemanticMapping
+from ..api import SemanticMapping, mapping_hash_v1
 from ..process import Mark, curate, publish
 from ..query import Query
 
@@ -24,9 +24,9 @@ P = ParamSpec("P")
 class SemanticMappingRepository(ABC):
     """Interact with a repository of semantic mappings."""
 
-    @abstractmethod
     def hash_mapping(self, mapping: SemanticMapping) -> Reference:
         """Get a reference for the mapping."""
+        return mapping_hash_v1(mapping)
 
     def _ensure(self, reference: Reference | SemanticMapping) -> Reference:
         if isinstance(reference, SemanticMapping):
