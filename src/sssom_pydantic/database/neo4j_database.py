@@ -207,14 +207,12 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
             cypher += " LIMIT $limit"
             params["limit"] = limit
 
-        def _get_nodes(tx: neo4j.ManagedTransaction) -> list[dict[str, Any]]:
-            result = tx.run(cypher, **params)
+        def _get_nodes(tx: neo4j.ManagedTransaction, **kwargs: Any) -> list[dict[str, Any]]:
+            result = tx.run(cypher, **kwargs)
             return [record["p"] for record in result]
 
         with self.driver.session(database="neo4j") as session:
-            nodes = session.execute_read(
-                _get_nodes,
-            )
+            nodes = session.execute_read(_get_nodes, **params)
             return [self._from_data(node) for node in nodes]
 
     @staticmethod
