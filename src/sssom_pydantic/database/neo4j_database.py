@@ -295,24 +295,3 @@ def _get_worker(cypher: LiteralString) -> Callable[Concatenate[neo4j.ManagedTran
         tx.run(cypher, *args, **kwargs)
 
     return _do_work
-
-
-def _main() -> None:
-    db = Neo4jSemanticMappingRepository(
-        uri="bolt://localhost:7687",
-        user="neo4j",
-        password="neo4jneo4j",  # noqa:S106,
-    )
-    db.drop_all()
-    if db.count_mappings():
-        raise ValueError("mappings exist!")
-
-    db.add_mapping(EXAMPLE_MAPPINGS[0])
-    if db.count_mappings() != 1:
-        raise ValueError("failed to add mapping properly")
-
-    db.add_mappings(EXAMPLE_MAPPINGS)
-
-
-if __name__ == "__main__":
-    _main()

@@ -8,6 +8,7 @@ import unittest
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import pystow
 from curies import Reference
 
 import sssom_pydantic
@@ -64,8 +65,8 @@ class TestNeo4j(cases.TestRepository):
         except ImportError:
             self.skipTest("can not import neo4j")
         self.repository = Neo4jSemanticMappingRepository(
-            user="neo4j",
-            password="neo4jneo4j",  # noqa:S106
+            user=pystow.get_config("sssom", "neo4j_username"),
+            password=pystow.get_config("sssom", "neo4j_password"),
             uri="neo4j://localhost:7687",
         )
 
