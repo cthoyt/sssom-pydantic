@@ -40,7 +40,7 @@ def get_mapping(repository: AnnotatedRepository, curie: AnnotatedCURIE) -> Seman
     mapping = repository.get_mapping(Reference.from_curie(curie))
     if mapping is None:
         raise HTTPException(status_code=404, detail="Mapping not found")
-    return mapping.to_semantic_mapping()
+    return mapping
 
 
 @router.delete("/mapping/{curie}")
