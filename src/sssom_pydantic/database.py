@@ -255,7 +255,6 @@ class SemanticMappingRepository(ABC):
     ) -> Sequence[SemanticMappingModel]:
         """Get mappings."""
 
-    @abstractmethod
     def curate(
         self,
         reference: Reference,
@@ -266,14 +265,41 @@ class SemanticMappingRepository(ABC):
         **kwargs: Any,
     ) -> Reference:
         """Curate a mapping and return the new mapping's record."""
+        if isinstance(authors, Reference):
+            authors = [authors]
+        return self._mutate(
+            reference,
+            curate,
+            authors=authors,
+            mark=mark,
+            confidence=confidence,
+            add_date=add_date,
+            **kwargs,
+        )
 
-    @abstractmethod
     def publish(
         self,
         reference: Reference,
         date: datetime.date | None = None,
     ) -> Reference:
         """Publish a mapping and return the new mapping's record."""
+        return self._mutate(reference, publish, date=date)
+
+    def _mutate(
+        self,
+        reference: Reference,
+        f: Callable[Concatenate[SemanticMapping, P], SemanticMapping],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> Reference:
+        mapping = self.get_mapping(reference)
+        if mapping is None:
+            raise KeyError
+        new_mapping = f(mapping.to_semantic_mapping(), *args, **kwargs)
+        new_mapping = new_mapping.model_copy(update={"record": self.hash_mapping(new_mapping)})
+        self.add_mapping(new_mapping)
+        self.delete_mapping(reference)
+        return cast(Reference, new_mapping.record)
 
 
 class SemanticMappingDatabase(SemanticMappingRepository):
@@ -479,52 +505,6 @@ class SemanticMappingDatabase(SemanticMappingRepository):
             converter=converter,
             exclude_columns=exclude_columns,
         )
-
-    def curate(
-        self,
-        reference: Reference,
-        authors: Reference | list[Reference],
-        mark: Mark,
-        confidence: float | None = None,
-        add_date: bool = True,
-        **kwargs: Any,
-    ) -> Reference:
-        """Curate a mapping and return the new mapping's record."""
-        if isinstance(authors, Reference):
-            authors = [authors]
-        return self._mutate(
-            reference,
-            curate,
-            authors=authors,
-            mark=mark,
-            confidence=confidence,
-            add_date=add_date,
-            **kwargs,
-        )
-
-    def publish(
-        self,
-        reference: Reference,
-        date: datetime.date | None = None,
-    ) -> Reference:
-        """Publish a mapping and return the new mapping's record."""
-        return self._mutate(reference, publish, date=date)
-
-    def _mutate(
-        self,
-        reference: Reference,
-        f: Callable[Concatenate[SemanticMapping, P], SemanticMapping],
-        *args: P.args,
-        **kwargs: P.kwargs,
-    ) -> Reference:
-        mapping = self.get_mapping(reference)
-        if mapping is None:
-            raise KeyError
-        new_mapping = f(mapping.to_semantic_mapping(), *args, **kwargs)
-        new_mapping = new_mapping.model_copy(update={"record": self.hash_mapping(new_mapping)})
-        self.add_mapping(new_mapping)
-        self.delete_mapping(reference)
-        return cast(Reference, new_mapping.record)
 
 
 POSITIVE_MAPPING_CLAUSE = and_(
