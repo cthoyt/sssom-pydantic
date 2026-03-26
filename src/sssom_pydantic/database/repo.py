@@ -9,9 +9,9 @@ from typing import TYPE_CHECKING, Any, Concatenate, Literal, ParamSpec, cast, ov
 
 from curies import Reference
 
-from sssom_pydantic.api import SemanticMapping
-from sssom_pydantic.process import Mark, curate, publish
-from sssom_pydantic.query import Query
+from ..api import SemanticMapping
+from ..process import Mark, curate, publish
+from ..query import Query
 
 if TYPE_CHECKING:
     from sqlalchemy.sql.selectable import ColumnExpressionArgument  # type:ignore[attr-defined]
