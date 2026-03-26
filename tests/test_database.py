@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import tempfile
 import unittest
 from pathlib import Path
@@ -50,6 +51,7 @@ class TestSQL(cases.TestRepository):
         self.repository = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
 
 
+@unittest.skipUnless(importlib.util.find_spec("neo4j"), "Neo4j is not installed")
 class TestNeo4j(cases.TestRepository):
     """Test for a SQL database."""
 
