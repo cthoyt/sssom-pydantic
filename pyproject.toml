@@ -92,6 +92,7 @@ doctests = [
     "pygments",
 ]
 pyroma = [
+    "uv-build",
     "pyroma",
     "pygments",
 ]
