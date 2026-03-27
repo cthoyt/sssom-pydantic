@@ -46,7 +46,6 @@ __all__ = [
     "_r",
 ]
 
-
 R1 = NamedReference(prefix="mesh", identifier="C000089", name="ammeline")
 R2 = NamedReference(prefix="chebi", identifier="28646", name="ammeline")
 P1 = NamableReference(prefix="skos", identifier="exactMatch")
@@ -165,9 +164,7 @@ class TestRepository(unittest.TestCase):
 
         self.assertEqual(4, db.count_mappings())
 
-        sql_mode = isinstance(db, SemanticMappingDatabase)
-
-        if sql_mode:
+        if isinstance(db, SemanticMappingDatabase):
             # this test isn't relevant for all databases
             mappings = db.get_mappings(
                 where_clauses=[SemanticMappingModel.justification == lexical_matching_process]
@@ -180,14 +177,14 @@ class TestRepository(unittest.TestCase):
         self.assertEqual(4, len(db.get_mappings()))
         self.assertEqual(4, len(db.get_mappings(limit=1000)))
 
-        if sql_mode:
+        if isinstance(db, SemanticMappingDatabase):
             mappings = db.get_mappings(where_clauses=[POSITIVE_MAPPING_CLAUSE])
             self.assertEqual(1, len(mappings))
             self.assertEqual(manual_mapping_curation, mappings[0].justification)
             self.assertIsNone(mappings[0].predicate_modifier)
             self.assertIsNone(mappings[0].comment)
 
-        if sql_mode:
+        if isinstance(db, SemanticMappingDatabase):
             mappings = db.get_mappings(where_clauses=[NEGATIVE_MAPPING_CLAUSE])
             self.assertEqual(1, len(mappings))
             self.assertEqual(manual_mapping_curation, mappings[0].justification)
@@ -221,8 +218,13 @@ class TestRepository(unittest.TestCase):
 
         db.delete_mapping(mapping_1)
 
+        # deleting a mapping that doesn't exist should cause nothing to happen
+        db.delete_mapping(Reference.from_curie("nope:nope"))
+
         self.assertEqual(3, db.count_mappings())
         self.assertIsNone(db.get_mapping(mapping_hash_v1(mapping_1)))
+        with self.assertRaises(ValueError):
+            db.get_mapping(mapping_hash_v1(mapping_1), strict=True)
         self.assertIsNotNone(db.get_mapping(mapping_hash_v1(mapping_2)))
         self.assertIsNotNone(db.get_mapping(mapping_hash_v1(mapping_3)))
         self.assertIsNotNone(db.get_mapping(mapping_hash_v1(mapping_4)))
@@ -342,6 +344,11 @@ class TestRepository(unittest.TestCase):
         )
         self.assertIsNotNone(db.get_mapping(db.hash_mapping(expected)))
 
+    def test_mutate_key_error(self) -> None:
+        """Test mutating on a missing reference."""
+        with self.assertRaises(KeyError):
+            self.repository.publish(Reference.from_curie("nope:nope"))
+
     def test_publish(self) -> None:
         """Test curation in the database."""
         mapping = SemanticMapping(
@@ -421,6 +428,19 @@ class TestRepository(unittest.TestCase):
                 list(unsure_mappings),
             )
 
+    def test_order_by(self) -> None:
+        """Test order by."""
+        for order_by in [
+            "confidence",
+            "date",
+            "date-published",
+            "subject",
+            "object",
+        ]:
+            with self.subTest(order_by=order_by):
+                self.repository.get_mappings(order_by=order_by)
+                # TODO add explicit values
+
     def test_query_same_text(self) -> None:
         """Test querying for same text."""
         self.maxDiff = None
@@ -432,9 +452,9 @@ class TestRepository(unittest.TestCase):
             confidence=0.95,
         )
         m2 = SemanticMapping(
-            subject=NamedReference.from_curie("a:2", name="Test"),
+            subject=NamedReference.from_curie("a:2", name="Test-a"),
             predicate="skos:exactMatch",
-            object=NamedReference.from_curie("b:2", name="test"),
+            object=NamedReference.from_curie("b:2", name="test a"),
             justification=lexical_matching_process,
             confidence=0.95,
         )

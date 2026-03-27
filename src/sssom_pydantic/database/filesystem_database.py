@@ -4,17 +4,14 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, overload
+from typing import Literal, overload
 
 from curies import Reference
 
 from .repo import SemanticMappingRepository
 from ..api import MappingSet, SemanticMapping
 from ..io import append, read, write
-from ..query import Query, filter_mappings
-
-if TYPE_CHECKING:
-    from sqlalchemy.sql.selectable import ColumnExpressionArgument  # type:ignore[attr-defined]
+from ..query import Query, filter_mappings, get_mappings
 
 __all__ = ["FileSystemSemanticMappingRepository"]
 
@@ -42,13 +39,9 @@ class FileSystemSemanticMappingRepository(SemanticMappingRepository):
         self.mappings, self.converter, self.metadata = read(self.path)
         self.write_action = write_action
 
-    def count_mappings(
-        self, where_clauses: Query | list[ColumnExpressionArgument[bool]] | None = None
-    ) -> int:
+    def count_mappings(self, where_clauses: Query | None = None) -> int:
         """Count the number of mappings."""
-        if where_clauses is not None:
-            raise NotImplementedError
-        return len(self.mappings)
+        return sum(1 for _ in filter_mappings(self.mappings, where_clauses))
 
     def add_mappings(self, mappings: Iterable[SemanticMapping]) -> list[Reference]:
         """Add mappings to the repository."""
@@ -93,28 +86,15 @@ class FileSystemSemanticMappingRepository(SemanticMappingRepository):
         if mappings:
             return mappings[0]
         if strict:
-            raise KeyError
+            raise ValueError
         return None
 
     def get_mappings(
         self,
-        where_clauses: Query | list[ColumnExpressionArgument[bool]] | None = None,
+        where_clauses: Query | None = None,
         limit: int | None = None,
         offset: int | None = None,
-        order_by: ColumnExpressionArgument[Any] | list[ColumnExpressionArgument[Any]] | None = None,
+        order_by: str | None = None,
     ) -> Sequence[SemanticMapping]:
         """Get a sequence of mappings."""
-        mappings = self.mappings
-        if where_clauses is not None:
-            if not isinstance(where_clauses, Query):
-                raise NotImplementedError
-            mappings = list(filter_mappings(mappings, where_clauses))
-        if order_by is not None:
-            raise NotImplementedError
-        if offset and limit:
-            mappings = mappings[offset : offset + limit]
-        elif offset:
-            mappings = mappings[offset:]
-        else:
-            mappings = mappings[:limit]
-        return mappings
+        return get_mappings(self.mappings, where_clauses, limit, offset, order_by)

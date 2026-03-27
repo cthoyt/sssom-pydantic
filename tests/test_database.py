@@ -37,6 +37,10 @@ class TestUtils(unittest.TestCase):
 
     def test_clause_generation(self) -> None:
         """Test clause generation."""
+        # test empty queries
+        self.assertEqual([], clauses_from_query(None))
+        self.assertEqual([], clauses_from_query(Query()))
+
         query = Query(query="hello")
         clauses = clauses_from_query(query)
         self.assertEqual(1, len(clauses))

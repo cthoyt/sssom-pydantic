@@ -5,16 +5,13 @@ from __future__ import annotations
 import datetime
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable, Sequence
-from typing import TYPE_CHECKING, Any, Concatenate, Literal, ParamSpec, cast, overload
+from typing import Any, Concatenate, Literal, ParamSpec, cast, overload
 
 from curies import Reference
 
 from ..api import SemanticMapping, mapping_hash_v1
 from ..process import Mark, curate, publish
 from ..query import Query
-
-if TYPE_CHECKING:
-    from sqlalchemy.sql.selectable import ColumnExpressionArgument  # type:ignore[attr-defined]
 
 __all__ = ["SemanticMappingRepository"]
 
@@ -34,9 +31,7 @@ class SemanticMappingRepository(ABC):
         return reference
 
     @abstractmethod
-    def count_mappings(
-        self, where_clauses: Query | list[ColumnExpressionArgument[bool]] | None = None
-    ) -> int:
+    def count_mappings(self, where_clauses: Query | None = None) -> int:
         """Count the mappings in the database."""
 
     def add_mapping(self, mapping: SemanticMapping) -> Reference:
@@ -71,10 +66,10 @@ class SemanticMappingRepository(ABC):
     @abstractmethod
     def get_mappings(
         self,
-        where_clauses: Query | list[ColumnExpressionArgument[bool]] | None = None,
+        where_clauses: Query | None = None,
         limit: int | None = None,
         offset: int | None = None,
-        order_by: ColumnExpressionArgument[Any] | list[ColumnExpressionArgument[Any]] | None = None,
+        order_by: str | None = None,
     ) -> Sequence[SemanticMapping]:
         """Get mappings."""
 

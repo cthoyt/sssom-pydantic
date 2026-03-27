@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Sequence
+from typing import Any, Literal, NamedTuple, TypeAlias
 
 from pydantic import BaseModel, Field
 
@@ -10,7 +11,10 @@ from .api import SemanticMapping
 
 __all__ = [
     "Query",
+    "Sort",
     "filter_mappings",
+    "get_mappings",
+    "sort_mappings",
 ]
 
 
@@ -76,7 +80,7 @@ def filter_mappings(
                     for mapping in mappings
                     if mapping.subject_name
                     and mapping.object_name
-                    and mapping.subject_name.casefold() == mapping.object_name.casefold()
+                    and _str_norm(mapping.subject_name) == _str_norm(mapping.object_name)
                     and mapping.predicate.curie == "skos:exactMatch"
                 )
             else:  # check that they're explicitly not the same
@@ -87,12 +91,16 @@ def filter_mappings(
                     and (
                         not mapping.subject_name
                         or not mapping.object_name
-                        or mapping.subject_name.casefold() != mapping.object_name.casefold()
+                        or _str_norm(mapping.subject_name) != _str_norm(mapping.object_name)
                     )
                 )
         else:
             raise NotImplementedError
     yield from mappings
+
+
+def _str_norm(s: str) -> str:
+    return s.replace(" ", "").replace("-", "").lower()
 
 
 def _help_filter(
@@ -121,3 +129,70 @@ QUERY_TO_FUNC: dict[str, Callable[[SemanticMapping], list[str | None]]] = {
     "prefix": lambda mapping: [mapping.subject.curie, mapping.object.curie],
     "mapping_tool": lambda mapping: [mapping.mapping_tool_name],
 }
+
+#: Sort mechanisms
+Sort: TypeAlias = Literal["asc", "desc", "subject", "object"]
+
+
+class Sorter(NamedTuple):
+    """A sorter."""
+
+    key: Callable[[SemanticMapping], Any]
+    reverse: bool
+
+    def __call__(self, mappings: Iterable[SemanticMapping]) -> list[SemanticMapping]:
+        """Sort the mappings."""
+        return sorted(mappings, key=self.key, reverse=self.reverse)
+
+
+def get_sorter(sort: str) -> Sorter:
+    """Get a sort function."""
+    if sort in {"desc", "confidence", "-confidence"}:
+        return Sorter(key=lambda m: m.confidence or 0.0, reverse=True)
+    elif sort in {"asc", "+confidence"}:
+        return Sorter(key=lambda m: m.confidence or 0.0, reverse=False)
+    elif sort in {"date", "-date"}:
+        return Sorter(key=lambda m: (m.mapping_date is not None, m.publication_date), reverse=True)
+    elif sort == "+date":
+        return Sorter(key=lambda m: (m.mapping_date is not None, m.publication_date), reverse=False)
+    elif sort in {"date-published", "-date-published"}:
+        return Sorter(
+            key=lambda m: (m.publication_date is not None, m.publication_date), reverse=True
+        )
+    elif sort == "+date-published":
+        return Sorter(
+            key=lambda m: (m.publication_date is not None, m.publication_date), reverse=False
+        )
+    elif sort == "subject":
+        return Sorter(key=lambda m: m.subject.curie, reverse=False)
+    elif sort == "object":
+        return Sorter(lambda m: m.object.curie, reverse=False)
+    else:
+        raise ValueError(f"invalid sort value: {sort}")
+
+
+def sort_mappings(mappings: Iterable[SemanticMapping], sort: str) -> list[SemanticMapping]:
+    """Sort mappings."""
+    sorter = get_sorter(sort)
+    return sorter(mappings)
+
+
+def get_mappings(
+    mappings: Sequence[SemanticMapping],
+    where_clauses: Query | None = None,
+    limit: int | None = None,
+    offset: int | None = None,
+    order_by: str | None = None,
+) -> Sequence[SemanticMapping]:
+    """Get a sequence of mappings."""
+    if where_clauses is not None:
+        mappings = list(filter_mappings(mappings, where_clauses))
+    if order_by is not None:
+        mappings = sort_mappings(mappings, order_by)
+    if offset and limit:
+        mappings = mappings[offset : offset + limit]
+    elif offset:
+        mappings = mappings[offset:]
+    else:
+        mappings = mappings[:limit]
+    return mappings

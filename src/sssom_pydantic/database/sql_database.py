@@ -15,7 +15,7 @@ import contextlib
 import datetime
 from collections.abc import Callable, Collection, Generator, Iterable, Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, ParamSpec, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, ParamSpec, TypeVar, overload
 
 import curies
 import sqlmodel
@@ -61,6 +61,7 @@ __all__ = [
     "clauses_from_query",
 ]
 
+X = TypeVar("X")
 P = ParamSpec("P")
 
 
@@ -275,18 +276,8 @@ class SemanticMappingDatabase(SemanticMappingRepository):
         """Count the mappings in the database."""
         with self.get_session() as session:
             statement = select(func.count()).select_from(SemanticMappingModel)
-            if where_clauses is None:
-                pass
-            elif isinstance(where_clauses, Query):
-                statement = statement.where(*clauses_from_query(where_clauses))
-            else:
-                statement = statement.where(*where_clauses)
+            statement = _apply_where_clauses(statement, where_clauses)
             return session.exec(statement).one()
-
-    def add_mapping(self, mapping: SemanticMapping) -> Reference:
-        """Add a mapping to the database."""
-        rv = self.add_mappings([mapping])
-        return rv[0]
 
     def add_mappings(self, mappings: Iterable[SemanticMapping]) -> list[Reference]:
         """Add mappings to the database."""
@@ -343,18 +334,15 @@ class SemanticMappingDatabase(SemanticMappingRepository):
         where_clauses: Query | list[ColumnExpressionArgument[bool]] | None = None,
         limit: int | None = None,
         offset: int | None = None,
-        order_by: ColumnExpressionArgument[Any] | list[ColumnExpressionArgument[Any]] | None = None,
+        order_by: str
+        | ColumnExpressionArgument[Any]
+        | list[ColumnExpressionArgument[Any]]
+        | None = None,
     ) -> Sequence[SemanticMapping]:
         """Get mappings."""
         with self.get_session() as session:
             statement = select(SemanticMappingModel)
-
-            if where_clauses is None:
-                pass
-            elif isinstance(where_clauses, Query):
-                statement = statement.where(*clauses_from_query(where_clauses))
-            else:
-                statement = statement.where(*where_clauses)
+            statement = _apply_where_clauses(statement, where_clauses)
 
             if limit is not None:
                 statement = statement.limit(limit)
@@ -363,6 +351,8 @@ class SemanticMappingDatabase(SemanticMappingRepository):
 
             if order_by is None:
                 pass
+            elif isinstance(order_by, str):
+                statement = statement.order_by(_get_sorter(order_by))
             elif isinstance(order_by, list):
                 statement = statement.order_by(*order_by)
             else:
@@ -488,7 +478,7 @@ QUERY_TO_CLAUSE: dict[str, Callable[[str], ColumnExpressionArgument[bool] | None
 
 
 def _str_norm(column: Any) -> Any:
-    return func.lower(func.replace(column, "-", ""))
+    return func.lower(func.replace(func.replace(column, "-", ""), " ", ""))
 
 
 def clauses_from_query(query: Query | None = None) -> list[ColumnExpressionArgument[bool]]:
@@ -501,3 +491,32 @@ def clauses_from_query(query: Query | None = None) -> list[ColumnExpressionArgum
         if (value := getattr(query, name)) is not None
         and (clause := QUERY_TO_CLAUSE[name](value)) is not None
     ]
+
+
+def _apply_where_clauses(
+    statement: SelectOfScalar[X],
+    where_clauses: Query | list[ColumnExpressionArgument[bool]] | None,
+) -> SelectOfScalar[X]:
+    if where_clauses is None:
+        return statement
+    elif isinstance(where_clauses, Query):
+        return statement.where(*clauses_from_query(where_clauses))
+    else:
+        return statement.where(*where_clauses)
+
+
+def _get_sorter(sort: str) -> ColumnExpressionArgument[Any]:
+    match sort:
+        case "confidence":
+            return col(SemanticMappingModel.confidence).desc()
+        case "date":
+            return col(SemanticMappingModel.mapping_date).desc()
+        case "date-published":
+            return col(SemanticMappingModel.publication_date).desc()
+        case "subject":
+            return col(SemanticMappingModel.subject).asc()
+        case "object":
+            return col(SemanticMappingModel.object).asc()
+        # TODO add remaining values
+        case _:
+            raise NotImplementedError(sort)

@@ -13,12 +13,14 @@ from curies.vocabulary import (
 )
 from pydantic import BaseModel
 
-from sssom_pydantic import SemanticMapping
-from sssom_pydantic.api import MappingTool, mapping_hash_v1
+from sssom_pydantic.api import MappingTool, SemanticMapping, mapping_hash_v1
 
 __all__ = [
     "EXAMPLES",
     "EXAMPLE_MAPPINGS",
+    "P1",
+    "R1",
+    "R2",
 ]
 
 R1 = NamedReference(prefix="mesh", identifier="C000089", name="ammeline")

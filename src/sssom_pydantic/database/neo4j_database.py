@@ -16,7 +16,6 @@ from ..query import Query
 
 if TYPE_CHECKING:
     import neo4j
-    from sqlalchemy.sql.selectable import ColumnExpressionArgument  # type:ignore[attr-defined]
 
 __all__ = ["Neo4jSemanticMappingRepository"]
 
@@ -117,9 +116,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         self._write(cypher, batch=batch)
         return references
 
-    def count_mappings(
-        self, where_clauses: Query | list[ColumnExpressionArgument[bool]] | None = None
-    ) -> int:
+    def count_mappings(self, where_clauses: Query | None = None) -> int:
         """Count the mappings in the database."""
 
         def _count_nodes(tx: neo4j.ManagedTransaction) -> int:
@@ -178,20 +175,17 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
 
     def get_mappings(
         self,
-        where_clauses: Query | list[ColumnExpressionArgument[bool]] | None = None,
+        where_clauses: Query | None = None,
         limit: int | None = None,
         offset: int | None = None,
-        order_by: ColumnExpressionArgument[Any] | list[ColumnExpressionArgument[Any]] | None = None,
+        order_by: str | None = None,
     ) -> Sequence[SemanticMapping]:
         """Get mappings."""
         params: dict[str, str | int] = {}
         cypher = "MATCH (p:SemanticMapping)"
-        if where_clauses is not None:
-            if not isinstance(where_clauses, Query):
-                raise TypeError
-            if where_val := _clauses_from_query(where_clauses):
-                cypher += where_val[0]
-                params.update(where_val[1])
+        if where_clauses is not None and (where_val := _clauses_from_query(where_clauses)):
+            cypher += where_val[0]
+            params.update(where_val[1])
         cypher += " RETURN p"
         if order_by is not None:
             raise NotImplementedError("ordering not implemented")
