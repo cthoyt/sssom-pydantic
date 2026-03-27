@@ -3,15 +3,17 @@
 import datetime
 from typing import Annotated, TypeAlias, cast
 
+import fastapi
 from curies import Reference
 from curies.vocabulary import charlie, exact_match, manual_mapping_curation
-from fastapi import APIRouter, Body, Depends, FastAPI, HTTPException, Path, Query, Request
+from fastapi import APIRouter, Body, Depends, FastAPI, HTTPException, Path, Request
 
 from sssom_pydantic import SemanticMapping
 from sssom_pydantic.api import SemanticMappingHash, mapping_hash_v1
 from sssom_pydantic.database import SemanticMappingRepository
 from sssom_pydantic.examples import R1, R2
 from sssom_pydantic.process import MARKS, Mark
+from sssom_pydantic.query import Query
 
 __all__ = [
     "get_app",
@@ -32,6 +34,18 @@ AnnotatedRepository: TypeAlias = Annotated[SemanticMappingRepository, Depends(ge
 
 #: A type alias for a CURIE passed via the path
 AnnotatedCURIE = Annotated[str, Path(description="The CURIE for mapping record")]
+
+
+@router.get("/mapping/")
+def get_mappings(
+    repository: AnnotatedRepository,
+    query: Annotated[Query, fastapi.Path(examples=[Query(query="ammeline")])],
+    limit: Annotated[int | None, fastapi.Path()] = None,
+    offset: Annotated[int | None, fastapi.Path()] = None,
+) -> list[SemanticMapping]:
+    """Get mappings."""
+    # TODO order by?
+    return list(repository.get_mappings(query, limit=limit, offset=offset))
 
 
 @router.get("/mapping/{curie}")
@@ -63,6 +77,7 @@ def post_mapping(
                     object=R2,
                     justification=manual_mapping_curation,
                     authors=[charlie],
+                    mapping_date=datetime.date(2025, 8, 1),
                 ),
             ]
         ),
@@ -80,7 +95,8 @@ def publish_mapping(
     repository: AnnotatedRepository,
     curie: AnnotatedCURIE,
     date: Annotated[
-        datetime.date | None, Query(..., description="The date on which the mapping was published")
+        datetime.date | None,
+        fastapi.Query(..., description="The date on which the mapping was published"),
     ] = None,
 ) -> Reference:
     """Publish a mapping with the given CURIE."""
