@@ -72,15 +72,17 @@ class TestNeo4j(cases.TestRepository):
 
     def setUp(self) -> None:
         """Set up the test with a SQL database."""
-        try:
-            from sssom_pydantic.database.neo4j_database import Neo4jSemanticMappingRepository
-        except ImportError:
-            self.skipTest("can not import neo4j")
+        import neo4j
+
         self.repository = Neo4jSemanticMappingRepository(
             user=pystow.get_config("sssom", "neo4j_username"),
             password=pystow.get_config("sssom", "neo4j_password"),
             uri="neo4j://localhost:7687",
         )
+        try:
+            self.repository.driver.verify_connectivity()
+        except neo4j.exceptions.AuthError:
+            self.skipTest("neo4j credentials are not properly configured")
 
     def tearDown(self) -> None:
         """Tear down the test case."""
