@@ -150,20 +150,20 @@ def get_sorter(sort: str) -> Sorter:
         return Sorter(key=lambda m: m.confidence or 0.0, reverse=True)
     elif sort in {"asc", "+confidence"}:
         return Sorter(key=lambda m: m.confidence or 0.0, reverse=False)
-    elif sort == "+published":
-        return Sorter(
-            key=lambda m: (m.publication_date is not None, m.publication_date), reverse=False
-        )
     elif sort in {"published", "-published"}:
         return Sorter(
             key=lambda m: (m.publication_date is not None, m.publication_date), reverse=True
+        )
+    elif sort == "+published":
+        return Sorter(
+            key=lambda m: (m.publication_date is not None, m.publication_date), reverse=False
         )
     elif sort == "subject":
         return Sorter(key=lambda m: m.subject.curie, reverse=False)
     elif sort == "object":
         return Sorter(lambda m: m.object.curie, reverse=False)
     else:
-        raise ValueError
+        raise ValueError(f"invalid sort value: {sort}")
 
 
 def sort_mappings(mappings: Iterable[SemanticMapping], sort: str) -> list[SemanticMapping]:

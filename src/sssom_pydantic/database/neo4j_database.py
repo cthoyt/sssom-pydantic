@@ -16,7 +16,6 @@ from ..query import Query
 
 if TYPE_CHECKING:
     import neo4j
-    from sqlalchemy.sql.selectable import ColumnExpressionArgument  # type:ignore[attr-defined]
 
 __all__ = ["Neo4jSemanticMappingRepository"]
 
@@ -117,9 +116,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         self._write(cypher, batch=batch)
         return references
 
-    def count_mappings(
-        self, where_clauses: Query | list[ColumnExpressionArgument[bool]] | None = None
-    ) -> int:
+    def count_mappings(self, where_clauses: Query | None = None) -> int:
         """Count the mappings in the database."""
 
         def _count_nodes(tx: neo4j.ManagedTransaction) -> int:
@@ -178,10 +175,10 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
 
     def get_mappings(
         self,
-        where_clauses: Query | list[ColumnExpressionArgument[bool]] | None = None,
+        where_clauses: Query | None = None,
         limit: int | None = None,
         offset: int | None = None,
-        order_by: ColumnExpressionArgument[Any] | list[ColumnExpressionArgument[Any]] | None = None,
+        order_by: str | None = None,
     ) -> Sequence[SemanticMapping]:
         """Get mappings."""
         params: dict[str, str | int] = {}

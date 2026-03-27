@@ -165,9 +165,7 @@ class TestRepository(unittest.TestCase):
 
         self.assertEqual(4, db.count_mappings())
 
-        sql_mode = isinstance(db, SemanticMappingDatabase)
-
-        if sql_mode:
+        if isinstance(db, SemanticMappingDatabase):
             # this test isn't relevant for all databases
             mappings = db.get_mappings(
                 where_clauses=[SemanticMappingModel.justification == lexical_matching_process]
@@ -180,14 +178,14 @@ class TestRepository(unittest.TestCase):
         self.assertEqual(4, len(db.get_mappings()))
         self.assertEqual(4, len(db.get_mappings(limit=1000)))
 
-        if sql_mode:
+        if isinstance(db, SemanticMappingDatabase):
             mappings = db.get_mappings(where_clauses=[POSITIVE_MAPPING_CLAUSE])
             self.assertEqual(1, len(mappings))
             self.assertEqual(manual_mapping_curation, mappings[0].justification)
             self.assertIsNone(mappings[0].predicate_modifier)
             self.assertIsNone(mappings[0].comment)
 
-        if sql_mode:
+        if isinstance(db, SemanticMappingDatabase):
             mappings = db.get_mappings(where_clauses=[NEGATIVE_MAPPING_CLAUSE])
             self.assertEqual(1, len(mappings))
             self.assertEqual(manual_mapping_curation, mappings[0].justification)
