@@ -15,7 +15,7 @@ import contextlib
 import datetime
 from collections.abc import Callable, Collection, Generator, Iterable, Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, ParamSpec, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, ParamSpec, TypeVar, overload
 
 import curies
 import sqlmodel
@@ -61,6 +61,7 @@ __all__ = [
     "clauses_from_query",
 ]
 
+X = TypeVar("X")
 P = ParamSpec("P")
 
 
@@ -278,11 +279,6 @@ class SemanticMappingDatabase(SemanticMappingRepository):
             statement = _apply_where_clauses(statement, where_clauses)
             return session.exec(statement).one()
 
-    def add_mapping(self, mapping: SemanticMapping) -> Reference:
-        """Add a mapping to the database."""
-        rv = self.add_mappings([mapping])
-        return rv[0]
-
     def add_mappings(self, mappings: Iterable[SemanticMapping]) -> list[Reference]:
         """Add mappings to the database."""
         rv: list[Reference] = []
@@ -493,9 +489,9 @@ def clauses_from_query(query: Query | None = None) -> list[ColumnExpressionArgum
 
 
 def _apply_where_clauses(
-    statement: Selectable,
+    statement: SelectOfScalar[X],
     where_clauses: Query | list[ColumnExpressionArgument[bool]] | None,
-) -> Selectable:
+) -> SelectOfScalar[X]:
     if where_clauses is None:
         return statement
     elif isinstance(where_clauses, Query):

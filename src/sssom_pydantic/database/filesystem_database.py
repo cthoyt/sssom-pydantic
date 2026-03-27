@@ -113,7 +113,10 @@ class FileSystemSemanticMappingRepository(SemanticMappingRepository):
                 raise NotImplementedError
             mappings = list(filter_mappings(mappings, where_clauses))
         if order_by is not None:
-            mappings = sort_mappings(mappings, order_by)
+            if isinstance(order_by, str):
+                mappings = sort_mappings(mappings, order_by)
+            else:
+                raise NotImplementedError
         if offset and limit:
             mappings = mappings[offset : offset + limit]
         elif offset:

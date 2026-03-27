@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Iterator
+from collections.abc import Callable, Iterable
 from typing import Any, Literal, NamedTuple, TypeAlias
 
 from pydantic import BaseModel, Field
@@ -166,7 +166,7 @@ def get_sorter(sort: str) -> Sorter:
         raise ValueError
 
 
-def sort_mappings(mappings: Iterator[SemanticMapping], sort: str) -> Iterator[SemanticMapping]:
+def sort_mappings(mappings: Iterable[SemanticMapping], sort: str) -> list[SemanticMapping]:
     """Sort mappings."""
     sorter = get_sorter(sort)
-    return iter(sorter(mappings))
+    return sorter(mappings)
