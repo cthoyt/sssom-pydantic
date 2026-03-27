@@ -70,14 +70,26 @@ def filter_mappings(
         if model_field.annotation == str | None:
             mappings = _help_filter(mappings, name, value)
         elif name == "same_text":
-            mappings = (
-                mapping
-                for mapping in mappings
-                if mapping.subject_name
-                and mapping.object_name
-                and mapping.subject_name.casefold() == mapping.object_name.casefold()
-                and mapping.predicate.curie == "skos:exactMatch"
-            )
+            if value:
+                mappings = (
+                    mapping
+                    for mapping in mappings
+                    if mapping.subject_name
+                    and mapping.object_name
+                    and mapping.subject_name.casefold() == mapping.object_name.casefold()
+                    and mapping.predicate.curie == "skos:exactMatch"
+                )
+            else:  # check that they're explicitly not the same
+                mappings = (
+                    mapping
+                    for mapping in mappings
+                    if mapping.predicate.curie == "skos:exactMatch"
+                    and (
+                        not mapping.subject_name
+                        or not mapping.object_name
+                        or mapping.subject_name.casefold() != mapping.object_name.casefold()
+                    )
+                )
         else:
             raise NotImplementedError
     yield from mappings

@@ -14,6 +14,7 @@ import sssom_pydantic
 from sssom_pydantic.api import MAPPING_HASH_V1_PREFIX, mapping_hash_v1
 from sssom_pydantic.database import (
     QUERY_TO_CLAUSE,
+    FileSystemSemanticMappingRepository,
     Neo4jSemanticMappingRepository,
     SemanticMappingDatabase,
     clauses_from_query,
@@ -49,6 +50,20 @@ class TestSQL(cases.TestRepository):
         self.repository = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
 
 
+class TestFilesystem(cases.TestRepository):
+    """Test for a file-based database."""
+
+    def setUp(self) -> None:
+        """Set up the test with a SQL database."""
+        self.directory = tempfile.TemporaryDirectory()
+        self.path = Path(self.directory.name).joinpath("test.sssom.tsv")
+        self.repository = FileSystemSemanticMappingRepository(self.path)
+
+    def tearDown(self) -> None:
+        """Tear down the test case."""
+        self.directory.cleanup()
+
+
 @unittest.skipUnless(importlib.util.find_spec("neo4j"), "Neo4j is not installed")
 class TestNeo4j(cases.TestRepository):
     """Test for a SQL database."""
@@ -57,15 +72,17 @@ class TestNeo4j(cases.TestRepository):
 
     def setUp(self) -> None:
         """Set up the test with a SQL database."""
-        try:
-            from sssom_pydantic.database.neo4j_database import Neo4jSemanticMappingRepository
-        except ImportError:
-            self.skipTest("can not import neo4j")
+        import neo4j
+
         self.repository = Neo4jSemanticMappingRepository(
             user=pystow.get_config("sssom", "neo4j_username"),
             password=pystow.get_config("sssom", "neo4j_password"),
             uri="neo4j://localhost:7687",
         )
+        try:
+            self.repository.driver.verify_connectivity()
+        except neo4j.exceptions.AuthError:
+            self.skipTest("neo4j credentials are not properly configured")
 
     def tearDown(self) -> None:
         """Tear down the test case."""
