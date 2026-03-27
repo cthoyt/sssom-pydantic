@@ -11,7 +11,7 @@ from fastapi import APIRouter, Body, Depends, FastAPI, HTTPException, Path, Requ
 from sssom_pydantic import SemanticMapping
 from sssom_pydantic.api import SemanticMappingHash, mapping_hash_v1
 from sssom_pydantic.database import SemanticMappingRepository
-from sssom_pydantic.examples import R1, R2
+from sssom_pydantic.examples import EXAMPLE_MAPPINGS, R1, R2
 from sssom_pydantic.process import MARKS, Mark
 from sssom_pydantic.query import Query
 
@@ -36,10 +36,10 @@ AnnotatedRepository: TypeAlias = Annotated[SemanticMappingRepository, Depends(ge
 AnnotatedCURIE = Annotated[str, Path(description="The CURIE for mapping record")]
 
 
-@router.get("/mapping/")
+@router.get("/mapping/", response_model_exclude_unset=True, response_model_exclude_defaults=True)
 def get_mappings(
     repository: AnnotatedRepository,
-    query: Annotated[Query, fastapi.Path(examples=[Query(query="ammeline")])],
+    query: Annotated[Query | None, fastapi.Path(examples=[Query(query="ammeline")])] = None,
     limit: Annotated[int | None, fastapi.Path()] = None,
     offset: Annotated[int | None, fastapi.Path()] = None,
 ) -> list[SemanticMapping]:
@@ -48,7 +48,9 @@ def get_mappings(
     return list(repository.get_mappings(query, limit=limit, offset=offset))
 
 
-@router.get("/mapping/{curie}")
+@router.get(
+    "/mapping/{curie}", response_model_exclude_unset=True, response_model_exclude_defaults=True
+)
 def get_mapping(repository: AnnotatedRepository, curie: AnnotatedCURIE) -> SemanticMapping:
     """Get a mapping by CURIE."""
     mapping = repository.get_mapping(Reference.from_curie(curie))
@@ -118,6 +120,7 @@ def get_app(
     *,
     repository: SemanticMappingRepository | None = None,
     semantic_mapping_hash: SemanticMappingHash | None = None,
+    add_examples: bool = False,
 ) -> FastAPI:
     """Get a FastAPI app.
 
@@ -126,6 +129,9 @@ def get_app(
     :param semantic_mapping_hash: A function that deterministically hashes a mapping.
         This is required until the SSSOM specification `defines a standard hashing
         procedure <https://github.com/mapping-commons/sssom/issues/436>`_.
+    :param add_examples:
+        Add example mappings from :data:`sssom_pydantic.examples.EXAMPLE_MAPPINGS`,
+        useful when debugging.
 
     :returns: A FastAPI app
 
@@ -142,7 +148,14 @@ def get_app(
         repository = SemanticMappingDatabase.memory(
             semantic_mapping_hash=semantic_mapping_hash or mapping_hash_v1
         )
-    app = FastAPI()
+
+    if add_examples:
+        repository.add_mappings(EXAMPLE_MAPPINGS)
+
+    app = FastAPI(
+        title="SSSOM Server",
+        description="A database backend for SSSOM records",
+    )
     app.state.repository = repository
     app.include_router(router)
     return app

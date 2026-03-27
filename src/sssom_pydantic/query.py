@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Iterator
+from typing import Any, Literal, NamedTuple, TypeAlias
 
 from pydantic import BaseModel, Field
 
@@ -10,7 +11,9 @@ from .api import SemanticMapping
 
 __all__ = [
     "Query",
+    "Sort",
     "filter_mappings",
+    "get_sorter",
 ]
 
 
@@ -121,3 +124,40 @@ QUERY_TO_FUNC: dict[str, Callable[[SemanticMapping], list[str | None]]] = {
     "prefix": lambda mapping: [mapping.subject.curie, mapping.object.curie],
     "mapping_tool": lambda mapping: [mapping.mapping_tool_name],
 }
+
+#: Sort mechanisms
+Sort: TypeAlias = Literal["asc", "desc", "subject", "object"]
+
+
+class Sorter(NamedTuple):
+    """A sorter."""
+
+    key: Callable[[SemanticMapping], Any]
+    reverse: bool
+
+    def __call__(self, mappings: Iterator[SemanticMapping]) -> list[SemanticMapping]:
+        """Sort the mappings."""
+        return sorted(mappings, key=self.key, reverse=self.reverse)
+
+
+def get_sorter(sort: Sort) -> Sorter:
+    """Get a sort function."""
+    if sort == "desc":
+        return Sorter(key=_get_confidence, reverse=True)
+    elif sort == "asc":
+        return Sorter(key=_get_confidence, reverse=False)
+    elif sort == "subject":
+        return Sorter(key=lambda m: m.subject.curie, reverse=False)
+    elif sort == "object":
+        return Sorter(lambda m: m.object.curie, reverse=False)
+    else:
+        raise ValueError
+
+
+def _sort(mappings: Iterator[SemanticMapping], sort: Sort) -> Iterator[SemanticMapping]:
+    sorter = get_sorter(sort)
+    return iter(sorter(mappings))
+
+
+def _get_confidence(t: SemanticMapping) -> float:
+    return t.confidence or 0.0

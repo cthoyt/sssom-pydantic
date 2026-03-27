@@ -24,13 +24,22 @@ def format_sssom_tsv(path: Path) -> None:
 
 
 @main.command()
-def web() -> None:
+@click.option("--add-examples", is_flag=True, default=False, help="Add example SSSOM records.")
+@click.option("--tab", is_flag=True)
+@click.option("--host", type=str, default="0.0.0.0", show_default=True)
+@click.option("--port", type=int, default=8876, show_default=True)
+def web(add_examples: bool, tab: bool, host: str, port: int) -> None:
     """Run the web app (with SQL backend)."""
     import uvicorn
 
     from sssom_pydantic.web import get_app
 
-    uvicorn.run(get_app(), host="0.0.0.0", port=8776)  # noqa:S104
+    if tab:
+        import webbrowser
+
+        webbrowser.open_new_tab(f"http://{host}:{port}/docs")
+
+    uvicorn.run(get_app(add_examples=add_examples), host=host, port=port)
 
 
 if __name__ == "__main__":
