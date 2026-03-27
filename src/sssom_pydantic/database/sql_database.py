@@ -334,7 +334,10 @@ class SemanticMappingDatabase(SemanticMappingRepository):
         where_clauses: Query | list[ColumnExpressionArgument[bool]] | None = None,
         limit: int | None = None,
         offset: int | None = None,
-        order_by: ColumnExpressionArgument[Any] | list[ColumnExpressionArgument[Any]] | None = None,
+        order_by: str
+        | ColumnExpressionArgument[Any]
+        | list[ColumnExpressionArgument[Any]]
+        | None = None,
     ) -> Sequence[SemanticMapping]:
         """Get mappings."""
         with self.get_session() as session:
@@ -348,6 +351,8 @@ class SemanticMappingDatabase(SemanticMappingRepository):
 
             if order_by is None:
                 pass
+            elif isinstance(order_by, str):
+                raise NotImplementedError
             elif isinstance(order_by, list):
                 statement = statement.order_by(*order_by)
             else:

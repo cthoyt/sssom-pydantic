@@ -345,6 +345,11 @@ class TestRepository(unittest.TestCase):
         )
         self.assertIsNotNone(db.get_mapping(db.hash_mapping(expected)))
 
+    def test_mutate_key_error(self) -> None:
+        """Test mutating on a missing reference."""
+        with self.assertRaises(KeyError):
+            self.repository.publish(Reference.from_curie("nope:nope"))
+
     def test_publish(self) -> None:
         """Test curation in the database."""
         mapping = SemanticMapping(
