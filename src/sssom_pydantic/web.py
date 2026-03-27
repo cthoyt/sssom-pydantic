@@ -145,8 +145,7 @@ def get_app(
     if repository is None:  # pragma: no cover
         from sssom_pydantic.database import SemanticMappingDatabase
 
-        repository = SemanticMappingDatabase.from_connection(
-            connection="sqlite:////Users/cthoyt/Desktop/sssom_pydantic.db",
+        repository = SemanticMappingDatabase.memory(
             semantic_mapping_hash=semantic_mapping_hash or mapping_hash_v1,
         )
 
