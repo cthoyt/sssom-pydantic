@@ -46,7 +46,6 @@ __all__ = [
     "_r",
 ]
 
-
 R1 = NamedReference(prefix="mesh", identifier="C000089", name="ammeline")
 R2 = NamedReference(prefix="chebi", identifier="28646", name="ammeline")
 P1 = NamableReference(prefix="skos", identifier="exactMatch")
@@ -428,6 +427,19 @@ class TestRepository(unittest.TestCase):
                 [m2_curated],
                 list(unsure_mappings),
             )
+
+    def test_order_by(self) -> None:
+        """Test order by."""
+        for order_by in [
+            "confidence",
+            "date",
+            "date-published",
+            "subject",
+            "object",
+        ]:
+            with self.subTest(order_by=order_by):
+                self.repository.get_mappings(order_by=order_by)
+                # TODO add explicit values
 
     def test_query_same_text(self) -> None:
         """Test querying for same text."""

@@ -42,10 +42,10 @@ def get_mappings(
     query: Annotated[Query | None, fastapi.Path(examples=[Query(query="ammeline")])] = None,
     limit: Annotated[int | None, fastapi.Path()] = None,
     offset: Annotated[int | None, fastapi.Path()] = None,
+    order_by: Annotated[str | None, fastapi.Path()] = None,
 ) -> list[SemanticMapping]:
     """Get mappings."""
-    # TODO order by?
-    return list(repository.get_mappings(query, limit=limit, offset=offset))
+    return list(repository.get_mappings(query, limit=limit, offset=offset, order_by=order_by))
 
 
 @router.get(
@@ -145,8 +145,9 @@ def get_app(
     if repository is None:  # pragma: no cover
         from sssom_pydantic.database import SemanticMappingDatabase
 
-        repository = SemanticMappingDatabase.memory(
-            semantic_mapping_hash=semantic_mapping_hash or mapping_hash_v1
+        repository = SemanticMappingDatabase.from_connection(
+            connection="sqlite:////Users/cthoyt/Desktop/sssom_pydantic.db",
+            semantic_mapping_hash=semantic_mapping_hash or mapping_hash_v1,
         )
 
     if add_examples:

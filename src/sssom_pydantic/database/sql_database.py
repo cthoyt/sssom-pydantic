@@ -352,7 +352,7 @@ class SemanticMappingDatabase(SemanticMappingRepository):
             if order_by is None:
                 pass
             elif isinstance(order_by, str):
-                raise NotImplementedError
+                statement = statement.order_by(_get_sorter(order_by))
             elif isinstance(order_by, list):
                 statement = statement.order_by(*order_by)
             else:
@@ -503,3 +503,20 @@ def _apply_where_clauses(
         return statement.where(*clauses_from_query(where_clauses))
     else:
         return statement.where(*where_clauses)
+
+
+def _get_sorter(sort: str) -> ColumnExpressionArgument[Any]:
+    match sort:
+        case "confidence":
+            return col(SemanticMappingModel.confidence).desc()
+        case "date":
+            return col(SemanticMappingModel.mapping_date).desc()
+        case "date-published":
+            return col(SemanticMappingModel.publication_date).desc()
+        case "subject":
+            return col(SemanticMappingModel.subject).asc()
+        case "object":
+            return col(SemanticMappingModel.object).asc()
+        # TODO add remaining values
+        case _:
+            raise NotImplementedError(sort)

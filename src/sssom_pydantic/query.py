@@ -151,11 +151,15 @@ def get_sorter(sort: str) -> Sorter:
         return Sorter(key=lambda m: m.confidence or 0.0, reverse=True)
     elif sort in {"asc", "+confidence"}:
         return Sorter(key=lambda m: m.confidence or 0.0, reverse=False)
-    elif sort in {"published", "-published"}:
+    elif sort in {"date", "-date"}:
+        return Sorter(key=lambda m: (m.mapping_date is not None, m.publication_date), reverse=True)
+    elif sort == "+date":
+        return Sorter(key=lambda m: (m.mapping_date is not None, m.publication_date), reverse=False)
+    elif sort in {"date-published", "-date-published"}:
         return Sorter(
             key=lambda m: (m.publication_date is not None, m.publication_date), reverse=True
         )
-    elif sort == "+published":
+    elif sort == "+date-published":
         return Sorter(
             key=lambda m: (m.publication_date is not None, m.publication_date), reverse=False
         )
