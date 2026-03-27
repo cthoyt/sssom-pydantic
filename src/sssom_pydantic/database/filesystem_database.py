@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, overload
+from typing import Literal, overload
 
 from curies import Reference
 
@@ -12,9 +12,6 @@ from .repo import SemanticMappingRepository
 from ..api import MappingSet, SemanticMapping
 from ..io import append, read, write
 from ..query import Query, filter_mappings, sort_mappings
-
-if TYPE_CHECKING:
-    from sqlalchemy.sql.selectable import ColumnExpressionArgument  # type:ignore[attr-defined]
 
 __all__ = ["FileSystemSemanticMappingRepository"]
 
@@ -42,9 +39,7 @@ class FileSystemSemanticMappingRepository(SemanticMappingRepository):
         self.mappings, self.converter, self.metadata = read(self.path)
         self.write_action = write_action
 
-    def count_mappings(
-        self, where_clauses: Query | list[ColumnExpressionArgument[bool]] | None = None
-    ) -> int:
+    def count_mappings(self, where_clauses: Query | None = None) -> int:
         """Count the number of mappings."""
         if where_clauses is not None:
             raise NotImplementedError
@@ -98,13 +93,10 @@ class FileSystemSemanticMappingRepository(SemanticMappingRepository):
 
     def get_mappings(
         self,
-        where_clauses: Query | list[ColumnExpressionArgument[bool]] | None = None,
+        where_clauses: Query | None = None,
         limit: int | None = None,
         offset: int | None = None,
-        order_by: str
-        | ColumnExpressionArgument[Any]
-        | list[ColumnExpressionArgument[Any]]
-        | None = None,
+        order_by: str | None = None,
     ) -> Sequence[SemanticMapping]:
         """Get a sequence of mappings."""
         mappings = self.mappings
