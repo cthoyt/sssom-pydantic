@@ -183,12 +183,9 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         """Get mappings."""
         params: dict[str, str | int] = {}
         cypher = "MATCH (p:SemanticMapping)"
-        if where_clauses is not None:
-            if not isinstance(where_clauses, Query):
-                raise TypeError
-            if where_val := _clauses_from_query(where_clauses):
-                cypher += where_val[0]
-                params.update(where_val[1])
+        if where_clauses is not None and (where_val := _clauses_from_query(where_clauses)):
+            cypher += where_val[0]
+            params.update(where_val[1])
         cypher += " RETURN p"
         if order_by is not None:
             raise NotImplementedError("ordering not implemented")
