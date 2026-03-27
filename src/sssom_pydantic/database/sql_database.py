@@ -275,12 +275,7 @@ class SemanticMappingDatabase(SemanticMappingRepository):
         """Count the mappings in the database."""
         with self.get_session() as session:
             statement = select(func.count()).select_from(SemanticMappingModel)
-            if where_clauses is None:
-                pass
-            elif isinstance(where_clauses, Query):
-                statement = statement.where(*clauses_from_query(where_clauses))
-            else:
-                statement = statement.where(*where_clauses)
+            statement = _apply_where_clauses(statement, where_clauses)
             return session.exec(statement).one()
 
     def add_mapping(self, mapping: SemanticMapping) -> Reference:
@@ -348,13 +343,7 @@ class SemanticMappingDatabase(SemanticMappingRepository):
         """Get mappings."""
         with self.get_session() as session:
             statement = select(SemanticMappingModel)
-
-            if where_clauses is None:
-                pass
-            elif isinstance(where_clauses, Query):
-                statement = statement.where(*clauses_from_query(where_clauses))
-            else:
-                statement = statement.where(*where_clauses)
+            statement = _apply_where_clauses(statement, where_clauses)
 
             if limit is not None:
                 statement = statement.limit(limit)
@@ -488,7 +477,7 @@ QUERY_TO_CLAUSE: dict[str, Callable[[str], ColumnExpressionArgument[bool] | None
 
 
 def _str_norm(column: Any) -> Any:
-    return func.lower(func.replace(column, "-", ""))
+    return func.lower(func.replace(func.replace(column, "-", ""), " ", ""))
 
 
 def clauses_from_query(query: Query | None = None) -> list[ColumnExpressionArgument[bool]]:
@@ -501,3 +490,15 @@ def clauses_from_query(query: Query | None = None) -> list[ColumnExpressionArgum
         if (value := getattr(query, name)) is not None
         and (clause := QUERY_TO_CLAUSE[name](value)) is not None
     ]
+
+
+def _apply_where_clauses(
+    statement: Selectable,
+    where_clauses: Query | list[ColumnExpressionArgument[bool]] | None,
+) -> Selectable:
+    if where_clauses is None:
+        return statement
+    elif isinstance(where_clauses, Query):
+        return statement.where(*clauses_from_query(where_clauses))
+    else:
+        return statement.where(*where_clauses)

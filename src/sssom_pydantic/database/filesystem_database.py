@@ -11,7 +11,7 @@ from curies import Reference
 from .repo import SemanticMappingRepository
 from ..api import MappingSet, SemanticMapping
 from ..io import append, read, write
-from ..query import Query, filter_mappings
+from ..query import Query, filter_mappings, sort_mappings
 
 if TYPE_CHECKING:
     from sqlalchemy.sql.selectable import ColumnExpressionArgument  # type:ignore[attr-defined]
@@ -101,7 +101,10 @@ class FileSystemSemanticMappingRepository(SemanticMappingRepository):
         where_clauses: Query | list[ColumnExpressionArgument[bool]] | None = None,
         limit: int | None = None,
         offset: int | None = None,
-        order_by: ColumnExpressionArgument[Any] | list[ColumnExpressionArgument[Any]] | None = None,
+        order_by: str
+        | ColumnExpressionArgument[Any]
+        | list[ColumnExpressionArgument[Any]]
+        | None = None,
     ) -> Sequence[SemanticMapping]:
         """Get a sequence of mappings."""
         mappings = self.mappings
@@ -110,7 +113,7 @@ class FileSystemSemanticMappingRepository(SemanticMappingRepository):
                 raise NotImplementedError
             mappings = list(filter_mappings(mappings, where_clauses))
         if order_by is not None:
-            raise NotImplementedError
+            mappings = sort_mappings(mappings, order_by)
         if offset and limit:
             mappings = mappings[offset : offset + limit]
         elif offset:

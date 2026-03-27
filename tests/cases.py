@@ -432,9 +432,9 @@ class TestRepository(unittest.TestCase):
             confidence=0.95,
         )
         m2 = SemanticMapping(
-            subject=NamedReference.from_curie("a:2", name="Test"),
+            subject=NamedReference.from_curie("a:2", name="Test-a"),
             predicate="skos:exactMatch",
-            object=NamedReference.from_curie("b:2", name="test"),
+            object=NamedReference.from_curie("b:2", name="test a"),
             justification=lexical_matching_process,
             confidence=0.95,
         )
