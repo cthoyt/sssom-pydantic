@@ -41,9 +41,7 @@ class FileSystemSemanticMappingRepository(SemanticMappingRepository):
 
     def count_mappings(self, where_clauses: Query | None = None) -> int:
         """Count the number of mappings."""
-        if where_clauses is not None:
-            raise NotImplementedError
-        return len(self.mappings)
+        return sum(1 for _ in filter_mappings(self.mappings, where_clauses))
 
     def add_mappings(self, mappings: Iterable[SemanticMapping]) -> list[Reference]:
         """Add mappings to the repository."""
@@ -101,14 +99,9 @@ class FileSystemSemanticMappingRepository(SemanticMappingRepository):
         """Get a sequence of mappings."""
         mappings = self.mappings
         if where_clauses is not None:
-            if not isinstance(where_clauses, Query):
-                raise NotImplementedError
             mappings = list(filter_mappings(mappings, where_clauses))
         if order_by is not None:
-            if isinstance(order_by, str):
-                mappings = sort_mappings(mappings, order_by)
-            else:
-                raise NotImplementedError
+            mappings = sort_mappings(mappings, order_by)
         if offset and limit:
             mappings = mappings[offset : offset + limit]
         elif offset:
