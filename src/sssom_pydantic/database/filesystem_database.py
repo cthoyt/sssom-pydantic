@@ -96,7 +96,6 @@ class FileSystemSemanticMappingRepository(SemanticMappingRepository):
             raise KeyError
         return None
 
-    # docstr-coverage:excused `inherited`
     def get_mappings(
         self,
         where_clauses: Query | list[ColumnExpressionArgument[bool]] | None = None,
