@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Sequence
 from typing import Any, Literal, NamedTuple, TypeAlias
 
 from pydantic import BaseModel, Field
@@ -13,6 +13,7 @@ __all__ = [
     "Query",
     "Sort",
     "filter_mappings",
+    "get_mappings",
     "sort_mappings",
 ]
 
@@ -170,3 +171,24 @@ def sort_mappings(mappings: Iterable[SemanticMapping], sort: str) -> list[Semant
     """Sort mappings."""
     sorter = get_sorter(sort)
     return sorter(mappings)
+
+
+def get_mappings(
+    mappings: Sequence[SemanticMapping],
+    where_clauses: Query | None = None,
+    limit: int | None = None,
+    offset: int | None = None,
+    order_by: str | None = None,
+) -> Sequence[SemanticMapping]:
+    """Get a sequence of mappings."""
+    if where_clauses is not None:
+        mappings = list(filter_mappings(mappings, where_clauses))
+    if order_by is not None:
+        mappings = sort_mappings(mappings, order_by)
+    if offset and limit:
+        mappings = mappings[offset : offset + limit]
+    elif offset:
+        mappings = mappings[offset:]
+    else:
+        mappings = mappings[:limit]
+    return mappings

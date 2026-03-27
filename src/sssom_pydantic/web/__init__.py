@@ -142,7 +142,7 @@ def get_app(
         app = get_app()
         schema = app.openapi()
     """
-    if repository is None:
+    if repository is None:  # pragma: no cover
         from sssom_pydantic.database import SemanticMappingDatabase
 
         repository = SemanticMappingDatabase.memory(

@@ -219,8 +219,13 @@ class TestRepository(unittest.TestCase):
 
         db.delete_mapping(mapping_1)
 
+        # deleting a mapping that doesn't exist should cause nothing to happen
+        db.delete_mapping(Reference.from_curie("nope:nope"))
+
         self.assertEqual(3, db.count_mappings())
         self.assertIsNone(db.get_mapping(mapping_hash_v1(mapping_1)))
+        with self.assertRaises(ValueError):
+            db.get_mapping(mapping_hash_v1(mapping_1), strict=True)
         self.assertIsNotNone(db.get_mapping(mapping_hash_v1(mapping_2)))
         self.assertIsNotNone(db.get_mapping(mapping_hash_v1(mapping_3)))
         self.assertIsNotNone(db.get_mapping(mapping_hash_v1(mapping_4)))

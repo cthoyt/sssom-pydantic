@@ -11,7 +11,7 @@ from curies import Reference
 from .repo import SemanticMappingRepository
 from ..api import MappingSet, SemanticMapping
 from ..io import append, read, write
-from ..query import Query, filter_mappings, sort_mappings
+from ..query import Query, filter_mappings, get_mappings
 
 __all__ = ["FileSystemSemanticMappingRepository"]
 
@@ -86,7 +86,7 @@ class FileSystemSemanticMappingRepository(SemanticMappingRepository):
         if mappings:
             return mappings[0]
         if strict:
-            raise KeyError
+            raise ValueError
         return None
 
     def get_mappings(
@@ -97,15 +97,4 @@ class FileSystemSemanticMappingRepository(SemanticMappingRepository):
         order_by: str | None = None,
     ) -> Sequence[SemanticMapping]:
         """Get a sequence of mappings."""
-        mappings = self.mappings
-        if where_clauses is not None:
-            mappings = list(filter_mappings(mappings, where_clauses))
-        if order_by is not None:
-            mappings = sort_mappings(mappings, order_by)
-        if offset and limit:
-            mappings = mappings[offset : offset + limit]
-        elif offset:
-            mappings = mappings[offset:]
-        else:
-            mappings = mappings[:limit]
-        return mappings
+        return get_mappings(self.mappings, where_clauses, limit, offset, order_by)
