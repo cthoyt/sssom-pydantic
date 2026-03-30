@@ -226,14 +226,10 @@ class SemanticMappingDatabase(SemanticMappingRepository):
         :param session_cls: SQLAlchemy session class. By default, this uses
             :class:`sqlmodel.Session`
         """
+        super().__init__(semantic_mapping_hash=semantic_mapping_hash)
         self.engine = engine
         self.session_cls = session_cls if session_cls is not None else Session
-        self._hsh = semantic_mapping_hash
         SQLModel.metadata.create_all(self.engine)
-
-    def hash_mapping(self, mapping: SemanticMapping) -> Reference:
-        """Hash a mapping."""
-        return self._hsh(mapping)
 
     @classmethod
     def from_connection(

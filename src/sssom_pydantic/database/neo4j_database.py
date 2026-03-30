@@ -11,7 +11,7 @@ from curies import NamableReference, Reference
 from typing_extensions import LiteralString
 
 from .repo import SemanticMappingRepository
-from ..api import SemanticMapping
+from ..api import SemanticMapping, SemanticMappingHash
 from ..query import Query
 
 if TYPE_CHECKING:
@@ -33,6 +33,8 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         uri: str | None = None,
         user: str | None = None,
         password: str | None = None,
+        *,
+        semantic_mapping_hash: SemanticMappingHash | None = None,
     ) -> None:
         """Initialize the client.
 
@@ -42,7 +44,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         """
         import neo4j
 
-        super().__init__()
+        super().__init__(semantic_mapping_hash=semantic_mapping_hash)
 
         auth: tuple[str, str] | None
         if user is not None and password is not None:

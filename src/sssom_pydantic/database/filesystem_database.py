@@ -9,7 +9,7 @@ from typing import Literal, overload
 from curies import Reference
 
 from .repo import SemanticMappingRepository
-from ..api import MappingSet, SemanticMapping
+from ..api import MappingSet, SemanticMapping, SemanticMappingHash
 from ..io import append, read, write
 from ..query import Query, filter_mappings, get_mappings
 
@@ -22,10 +22,14 @@ class FileSystemSemanticMappingRepository(SemanticMappingRepository):
     """A repository that operates on the filesystem."""
 
     def __init__(
-        self, path: str | Path, *, write_action: Literal["append", "overwrite"] = "overwrite"
+        self,
+        path: str | Path,
+        *,
+        write_action: Literal["append", "overwrite"] = "overwrite",
+        semantic_mapping_hash: SemanticMappingHash | None = None,
     ) -> None:
         """Make it."""
-        super().__init__()
+        super().__init__(semantic_mapping_hash=semantic_mapping_hash)
         self.path = Path(path).resolve()
         if not self.path.is_file():
             import bioregistry
@@ -45,7 +49,14 @@ class FileSystemSemanticMappingRepository(SemanticMappingRepository):
 
     def add_mappings(self, mappings: Iterable[SemanticMapping]) -> list[Reference]:
         """Add mappings to the repository."""
-        mm = list(mappings)
+        mm = []
+        hashes = []
+        for mapping in mappings:
+            hsh = self.hash_mapping(mapping)
+            hashes.append(hsh)
+            mapping = mapping.model_copy(update={"record": hsh})
+            mm.append(mapping)
+
         self.mappings.extend(mm)
         match self.write_action:
             case "append":
@@ -58,7 +69,7 @@ class FileSystemSemanticMappingRepository(SemanticMappingRepository):
                     metadata=self.metadata,
                     sort=True,
                 )
-        return [self.hash_mapping(m) for m in mm]
+        return hashes
 
     def delete_mapping(self, reference: Reference | SemanticMapping) -> None:
         """Delete a mapping."""

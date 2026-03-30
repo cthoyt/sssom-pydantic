@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import importlib.util
 import tempfile
 import types
 import typing
@@ -19,15 +18,11 @@ import sssom_pydantic
 import sssom_pydantic.io
 from sssom_pydantic import MappingSet, MappingSetRecord, SemanticMapping
 from sssom_pydantic.constants import MULTIVALUED
-from sssom_pydantic.database import SemanticMappingModel
 from sssom_pydantic.examples import EXAMPLES
 from sssom_pydantic.io import _chomp_frontmatter, append, append_unprocessed, write_unprocessed
 from sssom_pydantic.models import Record
 from tests.cases import (
     AUTHOR,
-    P1,
-    R1,
-    R2,
     TEST_CONVERTER,
     TEST_MAPPING_SET_ID,
     TEST_METADATA,
@@ -336,40 +331,3 @@ class TestIO(unittest.TestCase):
             """),  # noqa:E501
             path.read_text(),
         )
-
-
-@unittest.skipUnless(importlib.util.find_spec("sqlmodel"), "SQLModel is required for database test")
-class TestDatabase(unittest.TestCase):
-    """Tests for the database."""
-
-    def test_name_io(self) -> None:
-        """Test that names make it to and from database models."""
-        mapping = SemanticMapping(
-            subject=R1,
-            predicate=P1,
-            object=R2,
-            justification=manual_mapping_curation,
-        )
-        database_mapping = SemanticMappingModel.from_semantic_mapping(mapping)
-        self.assertEqual(R1.name, database_mapping.subject_name)
-        self.assertEqual(R2.name, database_mapping.object_name)
-
-    def test_round_trip_database(self) -> None:
-        """Test database roundtrip."""
-        from sqlmodel import Session, SQLModel, create_engine, select
-
-        for example in EXAMPLES:
-            with self.subTest(desc=example.description):
-                orm_model = SemanticMappingModel.from_semantic_mapping(example.semantic_mapping)
-                engine = create_engine("sqlite:///:memory:")
-                SQLModel.metadata.create_all(engine)
-
-                with Session(engine) as session:
-                    session.add(orm_model)
-                    session.commit()
-
-                with Session(engine) as session:
-                    statement = select(SemanticMappingModel)
-                    orm_models = session.exec(statement).all()
-                    self.assertEqual(1, len(orm_models))
-                    self.assertEqual(example.semantic_mapping, orm_models[0].to_semantic_mapping())
