@@ -9,7 +9,7 @@ from typing import Any, Concatenate, Literal, ParamSpec, cast, overload
 
 from curies import Reference
 
-from ..api import SemanticMapping, mapping_hash_v1
+from ..api import SemanticMapping, SemanticMappingHash, mapping_hash_v1
 from ..process import Mark, curate, publish
 from ..query import Query
 
@@ -21,9 +21,13 @@ P = ParamSpec("P")
 class SemanticMappingRepository(ABC):
     """Interact with a repository of semantic mappings."""
 
+    def __init__(self, *, semantic_mapping_hash: SemanticMappingHash | None = None) -> None:
+        """Initialize the repository."""
+        self.semantic_mapping_hash = semantic_mapping_hash or mapping_hash_v1
+
     def hash_mapping(self, mapping: SemanticMapping) -> Reference:
         """Get a reference for the mapping."""
-        return mapping_hash_v1(mapping)
+        return self.semantic_mapping_hash(mapping)
 
     def _ensure(self, reference: Reference | SemanticMapping) -> Reference:
         if isinstance(reference, SemanticMapping):
