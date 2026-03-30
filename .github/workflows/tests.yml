@@ -30,7 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: "Install uv"
-        uses: astral-sh/setup-uv@5a095e7a2014a4212f075830d4f7277575a9d098 # v7.3.1
+        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
         with:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
@@ -52,7 +52,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: "Install uv"
-        uses: astral-sh/setup-uv@5a095e7a2014a4212f075830d4f7277575a9d098 # v7.3.1
+        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
         with:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
@@ -66,7 +66,8 @@ jobs:
       - name: Check documentation build with Sphinx
         run: uvx -p ${{ matrix.python-version }} --with tox-uv tox -e docs-test
       - name: Lint markdown
-        run: uvx -p ${{ matrix.python-version }} --with tox-uv tox -e lint-markdown
+        run:
+          uvx -p ${{ matrix.python-version }} --with tox-uv tox -e lint-markdown
 
   tests:
     name: Tests
@@ -80,18 +81,16 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: "Install uv"
-        uses: astral-sh/setup-uv@5a095e7a2014a4212f075830d4f7277575a9d098 # v7.3.1
+        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
         with:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
       - name: Test with pytest and generate coverage file
-        run:
-          uvx -p ${{ matrix.python-version }} --with tox-uv tox -e py
+        run: uvx -p ${{ matrix.python-version }} --with tox-uv tox -e py
       - name: Run doctests
-        run:
-          uvx -p ${{ matrix.python-version }} --with tox-uv tox -e doctests
+        run: uvx -p ${{ matrix.python-version }} --with tox-uv tox -e doctests
       - name: Upload coverage report to codecov
-        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
+        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
         if: success()
         with:
           file: coverage.xml
