@@ -441,6 +441,7 @@ class TestRepository(unittest.TestCase):
             "confidence",
             "date",
             "date-published",
+            "date-reviewed",
             "subject",
             "object",
         ]:

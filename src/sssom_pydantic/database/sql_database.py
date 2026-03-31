@@ -510,6 +510,8 @@ def _get_sorter(sort: str) -> ColumnExpressionArgument[Any]:
             return col(SemanticMappingModel.mapping_date).desc()
         case "date-published":
             return col(SemanticMappingModel.publication_date).desc()
+        case "date-reviewed":  # TODO test
+            return col(SemanticMappingModel.review_date).desc()
         case "subject":
             return col(SemanticMappingModel.subject).asc()
         case "object":

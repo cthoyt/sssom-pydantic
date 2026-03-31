@@ -364,6 +364,7 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
             #
             publication_date=self.publication_date,
             mapping_date=self.mapping_date,
+            review_date=self.review_date,
             #
             comment=self.comment,
             confidence=self.confidence,
