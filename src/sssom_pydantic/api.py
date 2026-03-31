@@ -253,6 +253,7 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
 
     publication_date: datetime.date | None = Field(None)
     mapping_date: datetime.date | None = Field(None)
+    review_date: datetime.date | None = Field(None)
 
     comment: str | None = Field(None)
     curation_rule: list[Reference] | None = Field(None)
@@ -363,6 +364,7 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
             #
             publication_date=self.publication_date,
             mapping_date=self.mapping_date,
+            review_date=self.review_date,
             #
             comment=self.comment,
             confidence=self.confidence,

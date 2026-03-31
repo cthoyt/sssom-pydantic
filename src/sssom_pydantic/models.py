@@ -70,6 +70,7 @@ class Record(BaseModel):
 
     publication_date: datetime.date | None = Field(None)
     mapping_date: datetime.date | None = Field(None)
+    review_date: datetime.date | None = Field(None)
 
     comment: str | None = Field(None)
     confidence: float | None = Field(

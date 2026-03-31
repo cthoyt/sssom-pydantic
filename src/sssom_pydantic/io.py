@@ -168,6 +168,7 @@ def record_to_semantic_mapping(record: Record, converter: curies.Converter) -> S
         creators=_parse_curies_or_uris(record.creator_id),
         reviewers=_parse_curies_or_uris(record.reviewer_id),
         publication_date=record.publication_date,
+        review_date=record.review_date,
         mapping_date=record.mapping_date,
         comment=record.comment,
         curation_rule=_parse_curies_or_uris(record.curation_rule),

@@ -159,6 +159,10 @@ def get_sorter(sort: str) -> Sorter:
         return Sorter(
             key=lambda m: (m.publication_date is not None, m.publication_date), reverse=True
         )
+    elif sort in {"date-reviewed", "-date-reviewed"}:
+        return Sorter(key=lambda m: (m.review_date is not None, m.review_date), reverse=True)
+    elif sort == "+date-reviewed":
+        return Sorter(key=lambda m: (m.review_date is not None, m.review_date), reverse=False)
     elif sort == "+date-published":
         return Sorter(
             key=lambda m: (m.publication_date is not None, m.publication_date), reverse=False
