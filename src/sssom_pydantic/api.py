@@ -541,7 +541,7 @@ def row_to_record(row: Row, *, propagatable: dict[str, str | list[str]] | None =
     for key in MULTIVALUED:
         if (value := row.get(key)) and isinstance(value, str):
             row[key] = [
-                stripped_subvalue
+                stripped_subvalue.replace("\\|", "|").replace("\\\\", "\\")
                 for subvalue in value.split("|")
                 if (stripped_subvalue := subvalue.strip())
             ]
