@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime
 import importlib.util
 import unittest
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import curies
@@ -57,6 +58,9 @@ R1 = NamedReference(prefix="mesh", identifier="C000089", name="ammeline")
 R2 = NamedReference(prefix="chebi", identifier="28646", name="ammeline")
 P1 = NamableReference(prefix="skos", identifier="exactMatch")
 AUTHOR = charlie.pair.to_pydantic()
+
+HERE = Path(__file__).parent.resolve()
+RESOURCES = HERE.joinpath("resources")
 
 
 def _m(

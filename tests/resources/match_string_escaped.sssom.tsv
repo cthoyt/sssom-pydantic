@@ -1,0 +1,10 @@
+#curie_map:
+#  CHEBI: http://purl.obolibrary.org/obo/CHEBI_
+#  drugbank: https://go.drugbank.com/drugs/
+#  skos: http://www.w3.org/2004/02/skos/core#
+#  semapv: https://w3id.org/semapv/vocab/
+#  oboInOwl: http://www.geneontology.org/formats/oboInOwl#
+#mapping_set_id: https://example.org/example.sssom.tsv
+#comment: This mapping set demonstrates how the string normalization of greek characters to latex could result in a match string that needs to get escaped
+subject_id	subject_label	predicate_id	object_id	object_label	mapping_justification	subject_match_field	object_match_field	object_preprocessing	match_string
+CHEBI:28013	β-D-fructofuranose 1,6-bisphosphate	skos:exactMatch	drugbank:DB04551	beta-D-fructofuranose 1,6-bisphosphate	semapv:LexicalMatching	rdfs:label	oboInOwl:hasExactSynonym	semapv:RegexReplacement	\\beta-D-fructofuranose 1,6-bisphosphate

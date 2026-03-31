@@ -23,6 +23,7 @@ from sssom_pydantic.io import _chomp_frontmatter, append, append_unprocessed, wr
 from sssom_pydantic.models import Record
 from tests.cases import (
     AUTHOR,
+    RESOURCES,
     TEST_CONVERTER,
     TEST_MAPPING_SET_ID,
     TEST_METADATA,
@@ -330,4 +331,17 @@ class TestIO(unittest.TestCase):
                 mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	semapv:ManualMappingCuration	{a2.curie}
             """),  # noqa:E501
             path.read_text(),
+        )
+
+    def test_read_escaped_fields(self) -> None:
+        """Test that fields are escaped properly, based on https://github.com/mapping-commons/sssom/pull/507."""
+        path = RESOURCES.joinpath("match_string_escaped.sssom.tsv")
+        mappings, _converter, _metadata = sssom_pydantic.read(path)
+        self.assertEqual(1, len(mappings))
+        mapping = mappings[0]
+        if not mapping.match_string:
+            self.fail()
+        self.assertEqual(
+            [r"\beta-D-fructofuranose 1,6-bisphosphate"],
+            mapping.match_string,
         )
