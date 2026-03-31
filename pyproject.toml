@@ -132,6 +132,8 @@ database = [
 jskos = ["jskos>=0.0.5"]
 fastapi = [
     "fastapi",
+    "flask",
+    "bootstrap-flask",
 ]
 wikidata = [
     "wikidata-client",

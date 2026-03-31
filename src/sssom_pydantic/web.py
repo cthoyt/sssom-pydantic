@@ -5,9 +5,12 @@ from typing import Annotated, TypeAlias, cast
 
 import curies
 import fastapi
+import flask
+from a2wsgi import WSGIMiddleware
 from curies import Reference
 from curies.vocabulary import charlie, exact_match, manual_mapping_curation
 from fastapi import APIRouter, Body, Depends, FastAPI, HTTPException, Path, Request
+from flask_bootstrap import Bootstrap5
 
 from sssom_pydantic import SemanticMapping
 from sssom_pydantic.api import SemanticMappingHash
@@ -165,10 +168,40 @@ def get_app(
     )
     app.state.repository = repository
     app.include_router(router)
+
+    flask_app = flask.Flask(__name__)
+    Bootstrap5(flask_app)
+
+    @flask_app.get("/")
+    def show_home() -> str:
+        """Serve the homepage."""
+        n_mappings = repository.count_mappings()
+        n_entities = repository.count_entities()
+        mappings = repository.get_mappings(limit=10)
+        return flask.render_template(
+            "home.html",
+            mappings=mappings,
+            n_mappings=n_mappings,
+            n_entities=n_entities,
+        )
+
+    @flask_app.get("/show/mapping/<curie>")
+    def show_mapping(curie: str) -> str:
+        reference = Reference.from_curie(curie)
+        mapping = repository.get_mapping(reference)
+        if mapping is None:
+            raise flask.abort(404)
+        return flask.render_template(
+            "mapping.html",
+            mapping=mapping,
+        )
+
+    app.mount("/", WSGIMiddleware(flask_app))
+
     return app
 
 
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(get_app(), host="0.0.0.0", port=8776)  # noqa:S104
+    uvicorn.run(get_app(add_examples=True), host="0.0.0.0", port=8776)  # noqa:S104
