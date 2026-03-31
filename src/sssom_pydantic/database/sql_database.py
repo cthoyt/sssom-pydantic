@@ -160,6 +160,7 @@ class SemanticMappingModel(SQLModel, table=True):
 
     publication_date: datetime.date | None = Field(None)
     mapping_date: datetime.date | None = Field(None)
+    review_date: datetime.date | None = Field(None)
 
     comment: str | None = Field(None)
     curation_rule: list[Reference] | None = Field(None, sa_column=get_reference_list_sa_column())
