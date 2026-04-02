@@ -198,6 +198,21 @@ class TestRepository(unittest.TestCase):
             self.assertIsNotNone(mappings[0].predicate_modifier)
             self.assertIsNone(mappings[0].comment)
 
+        self.assertIn("mesh", TEST_CONVERTER.get_prefixes())
+
+        self.assertEqual(
+            4,
+            len(
+                db.get_mappings(
+                    where_clauses=Query(identifier=TEST_CONVERTER.hash_triple(mapping_1)),
+                )
+            ),
+        )
+        self.assertEqual(
+            0,
+            len(db.get_mappings(where_clauses=Query(identifier="xxxx"))),
+        )
+
         # test no-op query
         query = Query()
         mappings = db.get_mappings(where_clauses=query)
@@ -386,23 +401,23 @@ class TestRepository(unittest.TestCase):
     def test_query_unsure(self) -> None:
         """Test querying for unsure curations."""
         m1 = SemanticMapping(
-            subject="a:1",
+            subject="chebi:1",
             predicate="skos:exactMatch",
-            object="b:1",
+            object="mesh:1",
             justification=lexical_matching_process,
             confidence=0.95,
         )
         m2 = SemanticMapping(
-            subject="a:2",
+            subject="chebi:2",
             predicate="skos:exactMatch",
-            object="b:2",
+            object="mesh:2",
             justification=lexical_matching_process,
             confidence=0.95,
         )
         m2_curated = SemanticMapping(
-            subject="a:2",
+            subject="chebi:2",
             predicate="skos:exactMatch",
-            object="b:2",
+            object="mesh:2",
             justification=lexical_matching_process,
             confidence=0.95,
             comment=UNSURE,
@@ -453,23 +468,23 @@ class TestRepository(unittest.TestCase):
         """Test querying for same text."""
         self.maxDiff = None
         m1 = SemanticMapping(
-            subject=NamedReference.from_curie("a:1", name="example"),
+            subject=R1,
             predicate="skos:exactMatch",
-            object=NamedReference.from_curie("b:1", name="example"),
+            object=R2,
             justification=lexical_matching_process,
             confidence=0.95,
         )
         m2 = SemanticMapping(
-            subject=NamedReference.from_curie("a:2", name="Test-a"),
+            subject=NamedReference.from_curie("chebi:2", name="Test-a"),
             predicate="skos:exactMatch",
-            object=NamedReference.from_curie("b:2", name="test a"),
+            object=NamedReference.from_curie("mesh:2", name="test a"),
             justification=lexical_matching_process,
             confidence=0.95,
         )
         m3 = SemanticMapping(
-            subject="a:3",
+            subject="chebi:3",
             predicate="skos:exactMatch",
-            object="b:3",
+            object="mesh:3",
             justification=lexical_matching_process,
             confidence=0.95,
         )

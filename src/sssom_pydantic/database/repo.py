@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable, Sequence
 from typing import Any, Concatenate, Literal, ParamSpec, cast, overload
 
-from curies import Reference
+from curies import Converter, Reference
 
 from ..api import SemanticMapping, SemanticMappingHash, mapping_hash_v1
 from ..process import Mark, curate, publish
@@ -21,9 +21,15 @@ P = ParamSpec("P")
 class SemanticMappingRepository(ABC):
     """Interact with a repository of semantic mappings."""
 
-    def __init__(self, *, semantic_mapping_hash: SemanticMappingHash | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        semantic_mapping_hash: SemanticMappingHash | None = None,
+        converter: Converter | None = None,
+    ) -> None:
         """Initialize the repository."""
         self.semantic_mapping_hash = semantic_mapping_hash or mapping_hash_v1
+        self.converter = converter
 
     def hash_mapping(self, mapping: SemanticMapping) -> Reference:
         """Get a reference for the mapping."""
@@ -71,6 +77,7 @@ class SemanticMappingRepository(ABC):
     def get_mappings(
         self,
         where_clauses: Query | None = None,
+        *,
         limit: int | None = None,
         offset: int | None = None,
         order_by: str | None = None,

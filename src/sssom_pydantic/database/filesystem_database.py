@@ -29,7 +29,6 @@ class FileSystemSemanticMappingRepository(SemanticMappingRepository):
         semantic_mapping_hash: SemanticMappingHash | None = None,
     ) -> None:
         """Make it."""
-        super().__init__(semantic_mapping_hash=semantic_mapping_hash)
         self.path = Path(path).resolve()
         if not self.path.is_file():
             import bioregistry
@@ -40,12 +39,15 @@ class FileSystemSemanticMappingRepository(SemanticMappingRepository):
                 converter=bioregistry.get_default_converter(),
                 metadata=MappingSet(id=DEFAULT_ID),
             )
-        self.mappings, self.converter, self.metadata = read(self.path)
+        self.mappings, converter, self.metadata = read(self.path)
+        super().__init__(semantic_mapping_hash=semantic_mapping_hash, converter=converter)
         self.write_action = write_action
 
     def count_mappings(self, where_clauses: Query | None = None) -> int:
         """Count the number of mappings."""
-        return sum(1 for _ in filter_mappings(self.mappings, where_clauses))
+        return sum(
+            1 for _ in filter_mappings(self.mappings, where_clauses, converter=self.converter)
+        )
 
     def add_mappings(self, mappings: Iterable[SemanticMapping]) -> list[Reference]:
         """Add mappings to the repository."""
@@ -108,4 +110,11 @@ class FileSystemSemanticMappingRepository(SemanticMappingRepository):
         order_by: str | None = None,
     ) -> Sequence[SemanticMapping]:
         """Get a sequence of mappings."""
-        return get_mappings(self.mappings, where_clauses, limit, offset, order_by)
+        return get_mappings(
+            self.mappings,
+            where_clauses,
+            limit=limit,
+            offset=offset,
+            order_by=order_by,
+            converter=self.converter,
+        )
