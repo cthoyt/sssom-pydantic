@@ -7,6 +7,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable, Sequence
 from typing import Any, Concatenate, Literal, ParamSpec, cast, overload
 
+import curies
 from curies import Converter, Reference
 
 from ..api import SemanticMapping, SemanticMappingHash, mapping_hash_v1
@@ -21,11 +22,13 @@ P = ParamSpec("P")
 class SemanticMappingRepository(ABC):
     """Interact with a repository of semantic mappings."""
 
+    converter: curies.Converter
+
     def __init__(
         self,
         *,
         semantic_mapping_hash: SemanticMappingHash | None = None,
-        converter: Converter | None = None,
+        converter: Converter,
     ) -> None:
         """Initialize the repository."""
         self.semantic_mapping_hash = semantic_mapping_hash or mapping_hash_v1

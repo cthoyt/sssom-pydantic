@@ -223,7 +223,7 @@ class SemanticMappingDatabase(SemanticMappingRepository):
         engine: Engine,
         semantic_mapping_hash: SemanticMappingHash,
         session_cls: type[Session] | None = None,
-        converter: curies.Converter | None = None,
+        converter: curies.Converter,
     ) -> None:
         """Construct a database.
 
@@ -234,10 +234,11 @@ class SemanticMappingDatabase(SemanticMappingRepository):
         :param session_cls: SQLAlchemy session class. By default, this uses
             :class:`sqlmodel.Session`
         """
-        super().__init__(semantic_mapping_hash=semantic_mapping_hash, converter=converter)
         self.engine = engine
         self.session_cls = session_cls if session_cls is not None else Session
         SQLModel.metadata.create_all(self.engine)
+        # TODO converter inside database?
+        super().__init__(semantic_mapping_hash=semantic_mapping_hash, converter=converter)
 
     @classmethod
     def from_connection(
@@ -246,7 +247,7 @@ class SemanticMappingDatabase(SemanticMappingRepository):
         connection: str,
         semantic_mapping_hash: SemanticMappingHash,
         session_cls: type[Session] | None = None,
-        converter: curies.Converter | None = None,
+        converter: curies.Converter,
     ) -> Self:
         """Construct a database by a connection string."""
         return cls(
@@ -262,7 +263,7 @@ class SemanticMappingDatabase(SemanticMappingRepository):
         *,
         semantic_mapping_hash: SemanticMappingHash,
         session_cls: type[Session] | None = None,
-        converter: curies.Converter | None = None,
+        converter: curies.Converter,
     ) -> Self:
         """Construct an in-memory database."""
         return cls.from_connection(

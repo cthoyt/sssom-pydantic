@@ -7,6 +7,7 @@ from collections.abc import Callable, Iterable, Sequence
 from contextlib import closing
 from typing import TYPE_CHECKING, Any, Concatenate, Literal, ParamSpec, TypeVar, cast, overload
 
+import curies
 from curies import NamableReference, Reference
 from typing_extensions import LiteralString
 
@@ -35,6 +36,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         password: str | None = None,
         *,
         semantic_mapping_hash: SemanticMappingHash | None = None,
+        converter: curies.Converter,
     ) -> None:
         """Initialize the client.
 
@@ -44,7 +46,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         """
         import neo4j
 
-        super().__init__(semantic_mapping_hash=semantic_mapping_hash)
+        super().__init__(semantic_mapping_hash=semantic_mapping_hash, converter=converter)
 
         auth: tuple[str, str] | None
         if user is not None and password is not None:

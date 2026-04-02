@@ -66,8 +66,9 @@ class TestFilesystem(cases.TestRepository):
         """Set up the test with a SQL database."""
         self.directory = tempfile.TemporaryDirectory()
         self.path = Path(self.directory.name).joinpath("test.sssom.tsv")
-        sssom_pydantic.write([], self.path, converter=TEST_CONVERTER, metadata=TEST_METADATA)
         self.repository = FileSystemSemanticMappingRepository(self.path)
+        for record in TEST_CONVERTER:
+            self.repository.converter.add_record(record, merge=True)
 
     def tearDown(self) -> None:
         """Tear down the test case."""
@@ -88,6 +89,7 @@ class TestNeo4j(cases.TestRepository):
             user=pystow.get_config("sssom", "neo4j_username"),
             password=pystow.get_config("sssom", "neo4j_password"),
             uri="neo4j://localhost:7687",
+            converter=TEST_CONVERTER,
         )
         try:
             self.repository.driver.verify_connectivity()

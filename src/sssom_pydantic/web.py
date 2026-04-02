@@ -3,6 +3,7 @@
 import datetime
 from typing import Annotated, TypeAlias, cast
 
+import curies
 import fastapi
 from curies import Reference
 from curies.vocabulary import charlie, exact_match, manual_mapping_curation
@@ -120,6 +121,7 @@ def get_app(
     *,
     repository: SemanticMappingRepository | None = None,
     semantic_mapping_hash: SemanticMappingHash | None = None,
+    converter: curies.Converter | None = None,
     add_examples: bool = False,
 ) -> FastAPI:
     """Get a FastAPI app.
@@ -145,8 +147,14 @@ def get_app(
     if repository is None:  # pragma: no cover
         from sssom_pydantic.database import SemanticMappingDatabase
 
+        if converter is None:
+            import bioregistry
+
+            converter = bioregistry.get_default_converter()
+
         repository = SemanticMappingDatabase.memory(
             semantic_mapping_hash=semantic_mapping_hash or mapping_hash_v1,
+            converter=converter,
         )
 
     if add_examples:
