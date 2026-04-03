@@ -25,7 +25,7 @@ def get_app(
     semantic_mapping_hash: SemanticMappingHash | None = None,
     converter: curies.Converter | None = None,
     add_examples: Literal["builtin", "biomappings"] | None = None,
-    frontend: bool = True,
+    frontend: bool = False,
 ) -> FastAPI:
     """Get a FastAPI app.
 
@@ -91,7 +91,7 @@ def get_app(
         Bootstrap5(flask_app)
         flask_app.register_blueprint(ui_blueprint)
 
-    app.mount("/", WSGIMiddleware(flask_app))  # type:ignore
+        app.mount("/", WSGIMiddleware(flask_app))  # type:ignore
 
     return app
 
