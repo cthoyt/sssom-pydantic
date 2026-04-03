@@ -1,7 +1,13 @@
 """Mock an API."""
 
+import pathlib
+from typing import Literal
+
 import curies
+import flask
+from a2wsgi import WSGIMiddleware
 from fastapi import FastAPI
+from flask_bootstrap import Bootstrap5
 
 from sssom_pydantic.api import SemanticMappingHash
 from sssom_pydantic.database import SemanticMappingRepository
@@ -18,7 +24,8 @@ def get_app(
     repository: SemanticMappingRepository | None = None,
     semantic_mapping_hash: SemanticMappingHash | None = None,
     converter: curies.Converter | None = None,
-    add_examples: bool = False,
+    add_examples: Literal["builtin", "biomappings"] | None = None,
+    frontend: bool = False,
 ) -> FastAPI:
     """Get a FastAPI app.
 
@@ -27,6 +34,10 @@ def get_app(
     :param semantic_mapping_hash: A function that deterministically hashes a mapping.
         This is required until the SSSOM specification `defines a standard hashing
         procedure <https://github.com/mapping-commons/sssom/issues/436>`_.
+    :param converter: A converter. If not given, uses Bioregistry.
+    :param add_examples: Add example mappings from
+        :data:`sssom_pydantic.examples.EXAMPLE_MAPPINGS`, useful when debugging.
+    :param frontend: bool, whether to use a flask-based frontend or not.
     :param add_examples: Add example mappings from
         :data:`sssom_pydantic.examples.EXAMPLE_MAPPINGS`, useful when debugging.
 
@@ -52,8 +63,16 @@ def get_app(
             converter=converter,
         )
 
-    if add_examples:
-        repository.add_mappings(EXAMPLE_MAPPINGS)
+    if not repository.count_mappings():
+        if add_examples == "biomappings":
+            biomappings_dir = pathlib.Path(
+                "/Users/cthoyt/dev/biomappings/src/biomappings/resources/"
+            )
+            repository.read(biomappings_dir.joinpath("predictions.sssom.tsv"), progress=True)
+            repository.read(biomappings_dir.joinpath("positive.sssom.tsv"), progress=True)
+            repository.read(biomappings_dir.joinpath("negative.sssom.tsv"), progress=True)
+        elif add_examples == "builtin":
+            repository.add_mappings(EXAMPLE_MAPPINGS)
 
     app = FastAPI(
         title="SSSOM Server",
@@ -61,6 +80,17 @@ def get_app(
     )
     app.state.repository = repository
     app.include_router(router)
+
+    if frontend:
+        from sssom_pydantic.web.ui import ui_blueprint
+
+        flask_app = flask.Flask(__name__)
+        flask_app.config["repository"] = repository
+        Bootstrap5(flask_app)
+        flask_app.register_blueprint(ui_blueprint)
+
+        app.mount("/", WSGIMiddleware(flask_app))  # type:ignore
+
     return app
 
 
