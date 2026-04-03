@@ -10,3 +10,6 @@
 
 .. automodule:: sssom_pydantic.models
     :members:
+
+.. automodule:: sssom_pydantic.process
+    :members:

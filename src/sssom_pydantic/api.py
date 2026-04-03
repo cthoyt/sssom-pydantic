@@ -73,6 +73,11 @@ class RequiredSemanticMapping(Triple):
         return self.justification
 
     @property
+    def negated(self) -> bool:
+        """Check if the mapping record is negated."""
+        return self.predicate_modifier == "Not"
+
+    @property
     def subject_name(self) -> str | None:
         """Get the subject label, if available."""
         return _get_name(self.subject)

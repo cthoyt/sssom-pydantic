@@ -66,8 +66,9 @@ docs = [
     "sphinx>=8",
     "sphinx-rtd-theme>=3.0",
     "sphinx-click",
-    "sphinx_automodapi",
-    "autodoc_pydantic",
+    "sphinx-automodapi",
+    "autodoc-pydantic",
+    "texext",
 ]
 lint = [
     "ruff",
