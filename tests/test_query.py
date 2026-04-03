@@ -15,7 +15,7 @@ class TestQuery(unittest.TestCase):
     def test_completeness(self) -> None:
         """Test completeness of implementations."""
         for name, field in Query.model_fields.items():
-            if name == "identifier":
+            if name == "triple_id":
                 continue  # has custom implementation
             if field.annotation == str | None:
                 self.assertIn(name, QUERY_TO_FUNC)

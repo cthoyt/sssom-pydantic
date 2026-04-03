@@ -207,7 +207,7 @@ class SemanticMappingModel(SQLModel, table=True):
 
     def to_semantic_mapping(self) -> SemanticMapping:
         """Get a non-ORM mapping."""
-        d = self.model_dump(exclude={"triple_hash"})
+        d = self.model_dump()
         if subject_name := d.pop("subject_name", None):
             d["subject"]["name"] = subject_name
             d["subject"] = NamableReference.model_validate(d["subject"])
