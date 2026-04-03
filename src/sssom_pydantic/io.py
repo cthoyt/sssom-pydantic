@@ -199,6 +199,7 @@ def write(
     drop_duplicates_key: Hasher[MappingTypeVar, Y] | None = None,
     sort: bool = False,
     exclude_columns: Collection[str] | None = None,
+    exclude_prefixes: Collection[str] | None = None,
 ) -> None:
     """Write processed records."""
     if exclude_mappings is not None:
@@ -213,6 +214,8 @@ def write(
             raise NotImplementedError("when passing non-parsed metadata, need a converter")
         metadata = _get_mapping_set(metadata, converter)
         prefixes.update(metadata.get_prefixes())
+    if exclude_prefixes:
+        prefixes.difference_update(exclude_prefixes)
     write_unprocessed(
         records,
         path=path,
