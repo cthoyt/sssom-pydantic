@@ -51,8 +51,6 @@ def get_app(
         schema = app.openapi()
     """
     if repository is None:  # pragma: no cover
-        import pystow
-
         from sssom_pydantic.database import SemanticMappingDatabase
 
         if converter is None:
