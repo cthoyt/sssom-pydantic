@@ -22,7 +22,7 @@ repository = cast(SemanticMappingRepository, LocalProxy(lambda: current_app.conf
 
 @ui_blueprint.get("/")
 def show_home() -> str:
-    """Serve the homepage."""
+    """Show the homepage."""
     query = Query.model_validate(flask.request.args)
     n_mappings = repository.count_mappings(query)
     n_entities = repository.count_entities(query)
@@ -44,6 +44,7 @@ def show_home() -> str:
 
 @ui_blueprint.get("/show/triple/<triple_id>")
 def show_triple(triple_id: str) -> str:
+    """Show a page for a triple."""
     mappings = repository.get_mappings(Query(triple_id=triple_id))
     confidence = estimate_confidence(mappings)
     return flask.render_template(
@@ -58,6 +59,7 @@ def show_triple(triple_id: str) -> str:
 
 @ui_blueprint.get("/show/mapping/<curie>")
 def show_mapping(curie: str) -> str:
+    """Show a page for a mapping."""
     reference = Reference.from_curie(curie)
     mapping = repository.get_mapping(reference)
     if mapping is None:
