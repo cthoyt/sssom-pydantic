@@ -38,6 +38,8 @@ def get_app(
     :param add_examples: Add example mappings from
         :data:`sssom_pydantic.examples.EXAMPLE_MAPPINGS`, useful when debugging.
     :param frontend: bool, whether to use a flask-based frontend or not.
+    :param add_examples: Add example mappings from
+        :data:`sssom_pydantic.examples.EXAMPLE_MAPPINGS`, useful when debugging.
 
     :returns: A FastAPI app
 

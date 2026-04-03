@@ -1,4 +1,4 @@
-"""Mock an API."""
+"""Router for SSSOM Server."""
 
 import datetime
 from typing import Annotated, TypeAlias, cast
@@ -8,15 +8,13 @@ from curies import Reference
 from curies.vocabulary import charlie, exact_match, manual_mapping_curation
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Request
 
-from sssom_pydantic.api import SemanticMapping
+from sssom_pydantic import SemanticMapping
 from sssom_pydantic.database import SemanticMappingRepository
 from sssom_pydantic.examples import R1, R2
 from sssom_pydantic.process import MARKS, Mark
 from sssom_pydantic.query import Query
 
-__all__ = [
-    "router",
-]
+__all__ = ["router"]
 
 router = APIRouter()
 
