@@ -9,18 +9,22 @@
             <dd>{{ mapping.record.curie }}</dd>
             <dt>Subject</dt>
             <dd>{{ mapping.subject.curie }}</dd>
-            <dt>Subject</dt>
+            <dt>Predicate</dt>
             <dd>{{ mapping.predicate.curie }}</dd>
-            <dt>Subject</dt>
+            <dt>Object</dt>
             <dd>{{ mapping.object.curie }}</dd>
-            <dt>Subject</dt>
+            <dt>Justification</dt>
             <dd>{{ mapping.justification.curie }}</dd>
-            <dt>Subject</dt>
+            {%- if mapping.confidence %}
+            <dt>Confidence</dt>
             <dd>{{ mapping.confidence }}</dd>
-            <dt>Subject</dt>
-            <dd>{{ mapping.author }}</dd>
-            <dt>Subject</dt>
-            <dd>{{ mapping.author }}</dd>
+            {%- endif %}
+            {%- if mapping.authors %}
+            <dt>Authors</dt>
+            {% for author in mapping.authors  %}
+            <dd>{{ author }}</dd>
+            {%- endfor %}
+            {%- endif %}
         </dl>
     </div>
 </div>

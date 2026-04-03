@@ -1,6 +1,7 @@
 """Mock an API."""
 
 import datetime
+import pathlib
 from typing import Annotated, TypeAlias, cast
 
 import curies
@@ -14,7 +15,7 @@ from flask_bootstrap import Bootstrap5
 
 from sssom_pydantic.api import SemanticMapping, SemanticMappingHash
 from sssom_pydantic.database import SemanticMappingRepository
-from sssom_pydantic.examples import EXAMPLE_MAPPINGS, R1, R2
+from sssom_pydantic.examples import R1, R2
 from sssom_pydantic.process import MARKS, Mark, estimate_confidence
 from sssom_pydantic.query import Query
 
@@ -162,7 +163,10 @@ def get_app(
         )
 
     if add_examples:
-        repository.add_mappings(EXAMPLE_MAPPINGS)
+        biomappings_dir = pathlib.Path("/Users/cthoyt/dev/biomappings/src/biomappings/resources/")
+        repository.read(biomappings_dir.joinpath("predictions.sssom.tsv"), progress=True)
+        repository.read(biomappings_dir.joinpath("positive.sssom.tsv"), progress=True)
+        repository.read(biomappings_dir.joinpath("negative.sssom.tsv"), progress=True)
 
     app = FastAPI(
         title="SSSOM Server",
@@ -177,14 +181,19 @@ def get_app(
     @flask_app.get("/")
     def show_home() -> str:
         """Serve the homepage."""
-        n_mappings = repository.count_mappings()
-        n_entities = repository.count_entities()
-        mappings = repository.get_mappings(limit=10)
+        query = Query.model_validate(flask.request.args)
+        n_mappings = repository.count_mappings(query)
+        n_entities = repository.count_entities(query)
+        mappings = repository.get_mappings(
+            limit=10,
+            order_by=flask.request.args.get("order_by"),
+        )
         return flask.render_template(
             "home.html",
             repository=repository,
             converter=repository.converter,
             mappings=mappings,
+            query=query,
             n_mappings=n_mappings,
             n_entities=n_entities,
         )
