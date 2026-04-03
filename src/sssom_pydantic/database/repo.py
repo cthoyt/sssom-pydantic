@@ -11,8 +11,7 @@ import curies
 from curies import Converter, Reference
 
 from ..api import SemanticMapping, SemanticMappingHash, mapping_hash_v1
-from ..confidence import get_mapping_confidence
-from ..process import Mark, curate, publish
+from ..process import Mark, curate, estimate_confidence, publish
 from ..query import Query
 
 __all__ = ["SemanticMappingRepository"]
@@ -138,5 +137,5 @@ class SemanticMappingRepository(ABC):
         """Calculate confidence for a triple across all mappings."""
         query = Query(triple_id=triple_id)
         mappings = self.get_mappings(query)
-        confidence = get_mapping_confidence(mappings, check=False)
+        confidence = estimate_confidence(mappings, check=False)
         return confidence
