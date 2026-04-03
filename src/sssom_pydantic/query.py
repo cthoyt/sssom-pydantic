@@ -24,7 +24,10 @@ __all__ = [
 class Query(BaseModel):
     """A query over semantic mappings."""
 
-    identifier: str | None = Field(None, description="The S-P-O identifier")
+    triple_id: str | None = Field(
+        None,
+        description="The subject-predicate-object identifier, see https://curies.readthedocs.io/en/latest/api/curies.Converter.html#curies.Converter.hash_triple",
+    )
     query: str | None = Field(
         None,
         description="If given, show only mappings that have it appearing as a substring "
@@ -114,7 +117,7 @@ def _help_filter(
     *,
     converter: Converter | None = None,
 ) -> Iterable[SemanticMapping]:
-    if name == "identifier":
+    if name == "triple_id":
         if converter is None:
             raise ValueError("filtering by identifier (i.e., mapping hash) requires a converter")
         for mapping in mappings:

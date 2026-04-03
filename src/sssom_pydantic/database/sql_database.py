@@ -112,9 +112,12 @@ class AnyURLTypeDecorator(TypeDecorator[AnyUrl]):
 class SemanticMappingModel(SQLModel, table=True):
     """A model."""
 
-    id: int | None = Field(default=None, primary_key=True)
-
-    triple_hash: str = Field(..., index=True)
+    id: int | None = Field(
+        default=None, primary_key=True, description="The identifier for the SSSOM record"
+    )
+    triple_id: str = Field(
+        ..., index=True, description="The identifier for the subject-predicate-object triple"
+    )
 
     # required
     subject: Reference = Field(sa_column=get_reference_sa_column())
@@ -199,7 +202,7 @@ class SemanticMappingModel(SQLModel, table=True):
         if object_name := mapping.object_name:
             d["object_name"] = object_name
         if converter is not None:
-            d["triple_hash"] = converter.hash_triple(mapping)
+            d["triple_id"] = converter.hash_triple(mapping)
         return cls.model_validate(d)
 
     def to_semantic_mapping(self) -> SemanticMapping:
@@ -440,7 +443,7 @@ DEFAULT_SORT = [
 #: A mapping from :class:`Query` fields to functions that produce appropriate
 #: clauses for database querying
 QUERY_TO_CLAUSE: dict[str, Callable[[str], ColumnExpressionArgument[bool] | None]] = {
-    "identifier": lambda value: col(SemanticMappingModel.triple_hash) == value,
+    "triple_id": lambda value: col(SemanticMappingModel.triple_id) == value,
     "query": lambda value: or_(
         col(SemanticMappingModel.subject).icontains(value.lower()),
         col(SemanticMappingModel.subject_name).icontains(value.lower()),

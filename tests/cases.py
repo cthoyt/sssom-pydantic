@@ -204,13 +204,13 @@ class TestRepository(unittest.TestCase):
             4,
             len(
                 db.get_mappings(
-                    where_clauses=Query(identifier=TEST_CONVERTER.hash_triple(mapping_1)),
+                    where_clauses=Query(triple_id=TEST_CONVERTER.hash_triple(mapping_1)),
                 )
             ),
         )
         self.assertEqual(
             0,
-            len(db.get_mappings(where_clauses=Query(identifier="xxxx"))),
+            len(db.get_mappings(where_clauses=Query(triple_id="xxxx"))),
         )
 
         # test no-op query
