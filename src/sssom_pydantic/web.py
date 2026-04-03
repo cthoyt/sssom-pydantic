@@ -10,7 +10,7 @@ from curies.vocabulary import charlie, exact_match, manual_mapping_curation
 from fastapi import APIRouter, Body, Depends, FastAPI, HTTPException, Path, Request
 
 from sssom_pydantic import SemanticMapping
-from sssom_pydantic.api import SemanticMappingHash, mapping_hash_v1
+from sssom_pydantic.api import SemanticMappingHash
 from sssom_pydantic.database import SemanticMappingRepository
 from sssom_pydantic.examples import EXAMPLE_MAPPINGS, R1, R2
 from sssom_pydantic.process import MARKS, Mark
@@ -152,7 +152,7 @@ def get_app(
             converter = bioregistry.get_default_converter()
 
         repository = SemanticMappingDatabase.memory(
-            semantic_mapping_hash=semantic_mapping_hash or mapping_hash_v1,
+            semantic_mapping_hash=semantic_mapping_hash,
             converter=converter,
         )
 
