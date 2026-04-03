@@ -13,10 +13,13 @@ ConfidenceModel: TypeAlias = Literal["binomial", "mean"]
 
 
 def get_mapping_confidence(
-    mappings: Iterable[SemanticMapping], confidence_model: ConfidenceModel = "mean"
+    mappings: Iterable[SemanticMapping],
+    *,
+    confidence_model: ConfidenceModel | None = None,
+    check: bool = True,
 ) -> float:
     """Get a confidence score for the mapping."""
-    if _not_all_same_triple(mappings):
+    if check and _not_all_same_triple(mappings):
         raise ValueError
     creator_confidences = []
     reviewer_agreements = []
@@ -50,10 +53,11 @@ def get_mapping_confidence(
 def _aggregate_confidences(
     creator_confidences: list[float],
     reviewer_agreements: list[float],
-    confidence_model: ConfidenceModel = "mean",
+    *,
+    confidence_model: ConfidenceModel | None = None,
 ) -> float:
     match confidence_model:
-        case "mean":
+        case "mean" | None:
             c = statistics.mean(creator_confidences)
         case "binomial":
             c = 1.0 - math.prod(1.0 - x for x in creator_confidences)
