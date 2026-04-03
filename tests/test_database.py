@@ -129,7 +129,6 @@ class TestIO(unittest.TestCase):
                 written_path = Path(tmpdir).joinpath("test2.sssom.tsv")
                 db.write(
                     written_path,
-                    converter=converter,
                     metadata=TEST_METADATA,
                     exclude_columns=["record_id"],
                 )
