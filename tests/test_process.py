@@ -12,6 +12,12 @@ from curies.vocabulary import (
     narrow_match,
     semantic_mapping_scopes,
 )
+from curies.vocabulary import (
+    lexical_matching_process as lexical,
+)
+from curies.vocabulary import (
+    manual_mapping_curation as manual,
+)
 from pydantic import BaseModel
 
 from sssom_pydantic import SemanticMapping
@@ -342,3 +348,19 @@ class TestProcess(unittest.TestCase):
         l6 = [_m(confidence=0.99), _m(confidence=0.64)]
         self.assertAlmostEqual(0.815, estimate_confidence(l6, confidence_model="mean"))
         self.assertAlmostEqual(0.9964, estimate_confidence(l6, confidence_model="binomial"))
+
+    def test_confidence(self) -> None:
+        """Test confidence."""
+        _m(justification=lexical, confidence=0.6)
+        _m(justification=manual, confidence=0.8)
+        _m(justification=manual, confidence=0.9, reviewer_agreement=0.9)
+        _m(justification=manual, confidence=0.9, reviewer_agreement=0.5)
+
+        for x in range(0, 100):
+            i = x / 10
+            v1 = _m(justification=manual, confidence=i, reviewer_agreement=0.4)
+            v2 = _m(justification=manual, confidence=i, reviewer_agreement=0.5)
+            v3 = _m(justification=manual, confidence=i, reviewer_agreement=0.6)
+            self.assertLessEqual(estimate_confidence([v1]), estimate_confidence([v2]))
+            self.assertAlmostEqual(i, estimate_confidence([v2]), places=4)
+            self.assertLessEqual(estimate_confidence([v2]), estimate_confidence([v3]))
