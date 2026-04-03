@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Collection, Iterable, Sequence
 from pathlib import Path
 from typing import Any, Concatenate, Literal, ParamSpec, cast, overload
 
@@ -18,7 +18,7 @@ from ..api import (
     SemanticMappingHash,
     mapping_hash_v1,
 )
-from ..io import Metadata, read
+from ..io import Metadata, read, write
 from ..process import Mark, curate, estimate_confidence, publish
 from ..query import Query
 
@@ -70,19 +70,53 @@ class SemanticMappingRepository(ABC):
 
     def read(
         self,
-        path: str | Path,
+        path_or_url: str | Path,
         *,
         metadata: MappingSet | MappingSetRecord | Metadata | None = None,
         progress: bool = False,
         **kwargs: Any,
     ) -> list[Reference]:
-        """Read mappings from a file into the database."""
+        """Read mappings from a file into the database.
+
+        :param path_or_url: The path or URL of the SSSOM TSV file to read
+        :param metadata: Additional metadata, in case it's not embedded in the TSV
+        :param progress: Show a progress bar on read and indexing?
+        :param kwargs: Additional keyword arguments to pass to
+            :func:`sssom_pydantic.read`
+
+        :returns: The references for the mappings after they've been added to the
+            database.
+        """
         mappings, _converter, _metadata = read(
-            path, metadata=metadata, converter=self.converter, progress=progress, **kwargs
+            path_or_url, metadata=metadata, converter=self.converter, progress=progress, **kwargs
         )
         # TODO check converter conflicts
         # TODO add progress to add_mappings?
         return self.add_mappings(mappings)
+
+    def write(
+        self,
+        path: str | Path,
+        *,
+        metadata: MappingSet | Metadata | MappingSetRecord | None = None,
+        exclude_columns: Collection[str] | None = None,
+        where_clauses: Query | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """Write the database to a file."""
+        # order_by is explicitly skipped since the writing function does this
+        # in a canonical way
+        mappings = self.get_mappings(where_clauses=where_clauses, limit=limit, offset=offset)
+        write(
+            mappings,
+            path,
+            metadata=metadata,
+            converter=self.converter,
+            exclude_columns=exclude_columns,
+            **kwargs,
+        )
 
     @abstractmethod
     def delete_mapping(self, reference: Reference | SemanticMapping) -> None:
