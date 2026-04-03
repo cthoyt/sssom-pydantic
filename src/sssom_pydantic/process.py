@@ -295,9 +295,16 @@ def estimate_confidence(
         subject-predicate-object triple, where 1.0 is highly confident and 0.0 is not
         confident. To get the confidence for the negated subject-predicate-object
         triple, subtract this return value from 1.0.
+
+    .. note::
+
+        We define the confidence in an empty list to be 1.0
     """
     if check and _not_all_same_triple(mappings):
         raise ValueError
+
+    if not mappings:
+        return 1.0
 
     creator_confidences = []
     for mapping in mappings:

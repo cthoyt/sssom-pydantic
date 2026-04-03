@@ -16,8 +16,8 @@ from pydantic import BaseModel
 
 from sssom_pydantic import SemanticMapping
 from sssom_pydantic.api import NOT
-from sssom_pydantic.process import UNSURE, Mark, curate, publish
-from tests.cases import R1, R2
+from sssom_pydantic.process import UNSURE, Mark, curate, estimate_confidence, publish
+from tests.cases import R1, R2, _m
 
 today = datetime.date.today()
 author = charlie.pair.to_pydantic()
@@ -314,3 +314,31 @@ class TestProcess(unittest.TestCase):
                 ),
                 exists_action="blahblah",  # type:ignore
             )
+
+    def test_estimate_confidence(self) -> None:
+        """Test estimating confidence."""
+        self.assertEqual(1.0, estimate_confidence([]))
+
+        # sanity checks for fully confident
+        l1 = [_m(confidence=1.0)]
+        l2 = [_m(confidence=1.0), _m(confidence=1.0)]
+        self.assertEqual(1.0, estimate_confidence(l1, confidence_model="binomial"))
+        self.assertEqual(1.0, estimate_confidence(l1, confidence_model="mean"))
+        self.assertEqual(1.0, estimate_confidence(l2, confidence_model="binomial"))
+        self.assertEqual(1.0, estimate_confidence(l2, confidence_model="mean"))
+
+        # sanity checks for fully non-confident
+        l3 = [_m(confidence=0.0)]
+        l4 = [_m(confidence=0.0), _m(confidence=0.0)]
+        self.assertEqual(0.0, estimate_confidence(l3, confidence_model="binomial"))
+        self.assertEqual(0.0, estimate_confidence(l3, confidence_model="mean"))
+        self.assertEqual(0.0, estimate_confidence(l4, confidence_model="binomial"))
+        self.assertEqual(0.0, estimate_confidence(l4, confidence_model="mean"))
+
+        l5 = [_m(confidence=1.0), _m(confidence=0.64)]
+        self.assertAlmostEqual(0.82, estimate_confidence(l5, confidence_model="mean"))
+        self.assertAlmostEqual(1.0, estimate_confidence(l5, confidence_model="binomial"))
+
+        l6 = [_m(confidence=0.99), _m(confidence=0.64)]
+        self.assertAlmostEqual(0.815, estimate_confidence(l6, confidence_model="mean"))
+        self.assertAlmostEqual(0.9964, estimate_confidence(l6, confidence_model="binomial"))
