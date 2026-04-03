@@ -12,11 +12,10 @@ from curies.vocabulary import charlie, exact_match, manual_mapping_curation
 from fastapi import APIRouter, Body, Depends, FastAPI, HTTPException, Path, Request
 from flask_bootstrap import Bootstrap5
 
-from sssom_pydantic import SemanticMapping
-from sssom_pydantic.api import SemanticMappingHash
+from sssom_pydantic.api import SemanticMapping, SemanticMappingHash
 from sssom_pydantic.database import SemanticMappingRepository
 from sssom_pydantic.examples import EXAMPLE_MAPPINGS, R1, R2
-from sssom_pydantic.process import MARKS, Mark
+from sssom_pydantic.process import MARKS, Mark, estimate_confidence
 from sssom_pydantic.query import Query
 
 __all__ = [
@@ -147,6 +146,8 @@ def get_app(
         schema = app.openapi()
     """
     if repository is None:  # pragma: no cover
+        import pystow
+
         from sssom_pydantic.database import SemanticMappingDatabase
 
         if converter is None:
@@ -154,7 +155,8 @@ def get_app(
 
             converter = bioregistry.get_default_converter()
 
-        repository = SemanticMappingDatabase.memory(
+        repository = SemanticMappingDatabase.from_connection(
+            connection=pystow.joinpath_sqlite("sssom", name="test.db"),
             semantic_mapping_hash=semantic_mapping_hash,
             converter=converter,
         )
@@ -180,9 +182,24 @@ def get_app(
         mappings = repository.get_mappings(limit=10)
         return flask.render_template(
             "home.html",
+            repository=repository,
+            converter=repository.converter,
             mappings=mappings,
             n_mappings=n_mappings,
             n_entities=n_entities,
+        )
+
+    @flask_app.get("/show/triple/<triple_id>")
+    def show_triple(triple_id: str) -> str:
+        mappings = repository.get_mappings(Query(triple_id=triple_id))
+        confidence = estimate_confidence(mappings)
+        return flask.render_template(
+            "triple.html",
+            repository=repository,
+            converter=repository.converter,
+            triple_id=triple_id,
+            mappings=mappings,
+            confidence=confidence,
         )
 
     @flask_app.get("/show/mapping/<curie>")
@@ -193,6 +210,8 @@ def get_app(
             raise flask.abort(404)
         return flask.render_template(
             "mapping.html",
+            repository=repository,
+            converter=repository.converter,
             mapping=mapping,
         )
 

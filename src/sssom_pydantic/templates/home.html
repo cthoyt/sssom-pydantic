@@ -1,23 +1,11 @@
-{% extends "base.html" %}
+{%- extends "base.html" %}
+{%- import "macros.html" as macros %}
+
 {%- block body %}
-<div>
-    <p>There are {{n_mappings}} mappings over {{n_entities}} entities.</p>
+<div class="card mt-3">
+    <div class="card-body">
+        <p>There are {{n_mappings}} mappings over {{n_entities}} entities.</p>
+    </div>
+    {{ macros.mapping_table(converter, mappings) }}
 </div>
-<table class="table table-striped">
-    <thead></thead>
-    <tbody>
-    {%- for mapping in mappings %}
-    <tr>
-        <td><a href="{{ url_for('show_mapping', curie=mapping.record.curie) }}">{{ mapping.record.curie }}</a></td>
-        <td>{{ mapping.subject.curie }}</td>
-        <td>{{ mapping.predicate.curie }}</td>
-        <td>{{ mapping.object.curie }}</td>
-        <td>{{ mapping.justification.curie }}</td>
-        <td>{{ mapping.confidence }}</td>
-        <td>{{ mapping.author }}</td>
-        <td>{{ mapping.author }}</td>
-    </tr>
-    {%- endfor %}
-    </tbody>
-</table>
 {%- endblock %}

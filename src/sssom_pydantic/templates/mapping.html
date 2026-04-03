@@ -1,23 +1,27 @@
-{% extends "base.html" %}
+{%- extends "base.html" %}
 
 {%- block body %}
-<a type="button" class="btn btn-primary">Review</a>
-<dl>
-    <dt>Record</dt>
-    <dd>{{ mapping.record.curie }}</dd>
-    <dt>Subject</dt>
-    <dd>{{ mapping.subject.curie }}</dd>
-    <dt>Subject</dt>
-    <dd>{{ mapping.predicate.curie }}</dd>
-    <dt>Subject</dt>
-    <dd>{{ mapping.object.curie }}</dd>
-    <dt>Subject</dt>
-    <dd>{{ mapping.justification.curie }}</dd>
-    <dt>Subject</dt>
-    <dd>{{ mapping.confidence }}</dd>
-    <dt>Subject</dt>
-    <dd>{{ mapping.author }}</dd>
-    <dt>Subject</dt>
-    <dd>{{ mapping.author }}</dd>
-</dl>
+<div class="card mt-3">
+    <div class="card-body">
+        <a type="button" class="btn btn-primary">Review</a>
+        <dl>
+            <dt>Record</dt>
+            <dd>{{ mapping.record.curie }}</dd>
+            <dt>Subject</dt>
+            <dd>{{ mapping.subject.curie }}</dd>
+            <dt>Subject</dt>
+            <dd>{{ mapping.predicate.curie }}</dd>
+            <dt>Subject</dt>
+            <dd>{{ mapping.object.curie }}</dd>
+            <dt>Subject</dt>
+            <dd>{{ mapping.justification.curie }}</dd>
+            <dt>Subject</dt>
+            <dd>{{ mapping.confidence }}</dd>
+            <dt>Subject</dt>
+            <dd>{{ mapping.author }}</dd>
+            <dt>Subject</dt>
+            <dd>{{ mapping.author }}</dd>
+        </dl>
+    </div>
+</div>
 {%- endblock %}

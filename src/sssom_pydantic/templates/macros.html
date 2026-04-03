@@ -1,0 +1,34 @@
+{% macro mapping_table(converter, mappings, show_record=True, show_triple=True) %}
+<table class="table table-striped table-hover">
+    <thead>
+    <tr>
+        {% if show_record %}<th>Record</th>{% endif %}
+        {% if show_triple %}<th>Triple</th>{% endif %}
+        <th>Subject</th>
+        <th>Predicate</th>
+        <th>Object</th>
+        <th>Justification</th>
+        <th>Confidence</th>
+        <th>Author</th>
+    </tr>
+    </thead>
+    <tbody>
+    {%- for mapping in mappings %}
+    <tr>
+        {%- if show_record %}
+        <td><a href="{{ url_for('show_mapping', curie=mapping.record.curie) }}">Record</a></td>
+        {%- endif %}
+        {%- if show_triple %}
+        <td><a href="{{ url_for('show_triple', triple_id=converter.hash_triple(mapping)) }}">Triple</a></td>
+        {%- endif %}
+        <td>{{ mapping.subject.curie }}</td>
+        <td>{{ mapping.predicate.curie }}</td>
+        <td>{{ mapping.object.curie }}</td>
+        <td>{{ mapping.justification.identifier }}</td>
+        <td>{% if mapping.confidence %}{{ mapping.confidence }}{% endif %}</td>
+        <td>{% if mapping.author %}{{ mapping.author.curie }}{% endif %}</td>
+    </tr>
+    {%- endfor %}
+    </tbody>
+</table>
+{% endmacro %}

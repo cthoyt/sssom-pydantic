@@ -1,0 +1,14 @@
+{%- extends "base.html" %}
+{%- import "macros.html" as macros %}
+
+{%- block body %}
+<div class="card mt-3">
+    <div class="card-body">
+        <p>
+            Triple ID: <code>{{ triple_id[:8] }}</code> for {{ mappings | length }}
+            mappings w/ aggregate confidence: {{ confidence | round(2) }}
+        </p>
+    </div>
+    {{ macros.mapping_table(converter, mappings, show_triple=false) }}
+</div>
+{%- endblock %}
