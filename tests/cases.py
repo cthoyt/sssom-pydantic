@@ -165,11 +165,13 @@ class TestRepository(unittest.TestCase):
         db = self.repository
 
         self.assertEqual(0, db.count_mappings())
+        self.assertEqual(0, db.count_entities())
 
         db.add_mapping(mapping_1)
         db.add_mappings([mapping_2, mapping_3, mapping_4])
 
         self.assertEqual(4, db.count_mappings())
+        self.assertEqual(2, db.count_entities())
 
         if isinstance(db, SemanticMappingDatabase):
             # this test isn't relevant for all databases
@@ -260,6 +262,8 @@ class TestRepository(unittest.TestCase):
             for query in queries:
                 results = db.get_mappings(query)
                 self.assertNotEqual(0, len(results))
+
+                self.assertNotEqual(0, db.count_entities(query))
 
     def test_curate_correct(self) -> None:
         """Test curation in the database."""

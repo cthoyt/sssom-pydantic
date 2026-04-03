@@ -291,10 +291,22 @@ class SemanticMappingDatabase(SemanticMappingRepository):
             statement = _apply_where_clauses(statement, where_clauses)
             return session.exec(statement).one()
 
+    def count_entities(
+        self, where_clauses: Query | list[ColumnExpressionArgument[bool]] | None = None
+    ) -> int:
+        """Count the mappings in the database."""
+        with self.get_session() as session:
+            sources = _apply_where_clauses(  # type:ignore[var-annotated]
+                select(col(SemanticMappingModel.source).label("entity_id")), where_clauses
+            )
+            targets = _apply_where_clauses(  # type:ignore[var-annotated]
+                select(col(SemanticMappingModel.object).label("entity_id")), where_clauses
+            )
+            all_entities = sqlmodel.union(sources, targets).subquery()
+            return session.exec(select(func.count()).select_from(all_entities)).one()
+
     def add_mappings(self, mappings: Iterable[SemanticMapping]) -> list[Reference]:
         """Add mappings to the database."""
-        if self.converter is None:
-            raise ValueError
         rv: list[Reference] = []
         with self.get_session() as session:
             for mapping in mappings:
@@ -340,7 +352,7 @@ class SemanticMappingDatabase(SemanticMappingRepository):
             if rv is not None:
                 return rv.to_semantic_mapping()
             elif strict:
-                raise ValueError
+                raise ValueError(f"could not find mapping with CURIE {reference.curie}")
             else:
                 return None
 
@@ -540,4 +552,4 @@ def _get_sorter(sort: str) -> ColumnExpressionArgument[Any]:
             return col(SemanticMappingModel.object).asc()
         # TODO add remaining values
         case _:
-            raise NotImplementedError(sort)
+            raise ValueError(sort)

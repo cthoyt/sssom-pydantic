@@ -49,6 +49,14 @@ class FileSystemSemanticMappingRepository(SemanticMappingRepository):
             1 for _ in filter_mappings(self.mappings, where_clauses, converter=self.converter)
         )
 
+    def count_entities(self, where_clauses: Query | None = None) -> int:
+        """Count the number of mappings."""
+        rr: set[Reference] = set()
+        for mapping in filter_mappings(self.mappings, where_clauses):
+            rr.add(mapping.subject)
+            rr.add(mapping.object)
+        return len(rr)
+
     def add_mappings(self, mappings: Iterable[SemanticMapping]) -> list[Reference]:
         """Add mappings to the repository."""
         mm = []
