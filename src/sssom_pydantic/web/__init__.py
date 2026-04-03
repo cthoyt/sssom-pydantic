@@ -1,6 +1,7 @@
 """Mock an API."""
 
 import pathlib
+from typing import Literal
 
 import curies
 import flask
@@ -10,6 +11,7 @@ from flask_bootstrap import Bootstrap5
 
 from sssom_pydantic.api import SemanticMappingHash
 from sssom_pydantic.database import SemanticMappingRepository
+from sssom_pydantic.examples import EXAMPLE_MAPPINGS
 from sssom_pydantic.web.router import router
 
 __all__ = [
@@ -22,7 +24,7 @@ def get_app(
     repository: SemanticMappingRepository | None = None,
     semantic_mapping_hash: SemanticMappingHash | None = None,
     converter: curies.Converter | None = None,
-    add_examples: bool = False,
+    add_examples: Literal["builtin", "biomappings"] | None = None,
     frontend: bool = True,
 ) -> FastAPI:
     """Get a FastAPI app.
@@ -62,11 +64,16 @@ def get_app(
             converter=converter,
         )
 
-    if add_examples or not repository.count_mappings():
-        biomappings_dir = pathlib.Path("/Users/cthoyt/dev/biomappings/src/biomappings/resources/")
-        repository.read(biomappings_dir.joinpath("predictions.sssom.tsv"), progress=True)
-        repository.read(biomappings_dir.joinpath("positive.sssom.tsv"), progress=True)
-        repository.read(biomappings_dir.joinpath("negative.sssom.tsv"), progress=True)
+    if not repository.count_mappings():
+        if add_examples == "biomappings":
+            biomappings_dir = pathlib.Path(
+                "/Users/cthoyt/dev/biomappings/src/biomappings/resources/"
+            )
+            repository.read(biomappings_dir.joinpath("predictions.sssom.tsv"), progress=True)
+            repository.read(biomappings_dir.joinpath("positive.sssom.tsv"), progress=True)
+            repository.read(biomappings_dir.joinpath("negative.sssom.tsv"), progress=True)
+        elif add_examples == "builtin":
+            repository.add_mappings(EXAMPLE_MAPPINGS)
 
     app = FastAPI(
         title="SSSOM Server",
