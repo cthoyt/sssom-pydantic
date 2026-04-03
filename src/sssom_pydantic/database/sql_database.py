@@ -19,10 +19,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, ParamSpec, TypeVar, ov
 import curies
 import sqlmodel
 from curies import NamableReference, Reference
-from curies.database import (
-    get_reference_list_sa_column,
-    get_reference_sa_column,
-)
+from curies.database import get_reference_list_sa_column, get_reference_sa_column
 from curies.vocabulary import manual_mapping_curation
 from pydantic import AnyUrl
 from sqlalchemy import Dialect, TypeDecorator
@@ -33,11 +30,7 @@ from sqlmodel.sql._expression_select_cls import SelectOfScalar
 from tqdm import tqdm
 from typing_extensions import Self
 
-from sssom_pydantic.api import (
-    MappingTool,
-    SemanticMapping,
-    SemanticMappingHash,
-)
+from sssom_pydantic.api import MappingTool, SemanticMapping, SemanticMappingHash
 from sssom_pydantic.database.repo import SemanticMappingRepository
 from sssom_pydantic.models import Cardinality
 from sssom_pydantic.process import UNSURE
