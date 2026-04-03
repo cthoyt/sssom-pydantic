@@ -224,7 +224,7 @@ class SemanticMappingDatabase(SemanticMappingRepository):
         self,
         *,
         engine: Engine,
-        semantic_mapping_hash: SemanticMappingHash,
+        semantic_mapping_hash: SemanticMappingHash | None = None,
         session_cls: type[Session] | None = None,
         converter: curies.Converter,
     ) -> None:
@@ -248,7 +248,7 @@ class SemanticMappingDatabase(SemanticMappingRepository):
         cls,
         *,
         connection: str,
-        semantic_mapping_hash: SemanticMappingHash,
+        semantic_mapping_hash: SemanticMappingHash | None = None,
         session_cls: type[Session] | None = None,
         converter: curies.Converter,
     ) -> Self:
@@ -264,7 +264,7 @@ class SemanticMappingDatabase(SemanticMappingRepository):
     def memory(
         cls,
         *,
-        semantic_mapping_hash: SemanticMappingHash,
+        semantic_mapping_hash: SemanticMappingHash | None = None,
         session_cls: type[Session] | None = None,
         converter: curies.Converter,
     ) -> Self:
