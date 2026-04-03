@@ -124,15 +124,14 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
 
     def count_mappings(self, where_clauses: Query | None = None) -> int:
         """Count the mappings in the database."""
-        if where_clauses is not None:
-            raise NotImplementedError
+        cypher, params = self._construct(where_clauses, count=True)
 
-        def _count_nodes(tx: neo4j.ManagedTransaction) -> int:
-            result = tx.run("MATCH (n:SemanticMapping) RETURN count(n) AS total")
+        def _count_nodes(tx: neo4j.ManagedTransaction, **kwargs: Any) -> int:
+            result = tx.run(cypher, **kwargs)
             return cast(int, result.single()["total"])
 
         with closing(self.driver.session()) as session:
-            return cast(int, session.execute_read(_count_nodes))
+            return cast(int, session.execute_read(_count_nodes, **params))
 
     def count_entities(self, where_clauses: Query | None = None) -> int:
         """Count the entities in the database."""
@@ -201,11 +200,37 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         order_by: str | None = None,
     ) -> Sequence[SemanticMapping]:
         """Get mappings."""
+        cypher, params = self._construct(
+            where_clauses, limit=limit, offset=offset, order_by=order_by, count=False
+        )
+
+        def _get_nodes(tx: neo4j.ManagedTransaction, **kwargs: Any) -> list[dict[str, Any]]:
+            result = tx.run(cypher, **kwargs)
+            return [record["p"] for record in result]
+
+        with self.driver.session(database="neo4j") as session:
+            nodes = session.execute_read(_get_nodes, **params)
+            return [self._from_data(node) for node in nodes]
+
+    @staticmethod
+    def _construct(
+        where_clauses: Query | None = None,
+        *,
+        limit: int | None = None,
+        offset: int | None = None,
+        order_by: str | None = None,
+        count: bool,
+    ) -> tuple[str, dict[str, str | int]]:
         params: dict[str, str | int] = {}
         cypher = "MATCH (p:SemanticMapping)"
         if where_clauses is not None and (where_val := _clauses_from_query(where_clauses)):
             cypher += where_val[0]
             params.update(where_val[1])
+
+        if count:
+            cypher += " RETURN count(p) AS total"
+            return cypher, params
+
         cypher += " RETURN p"
         if order_by is not None and (order_val := _get_order_by(order_by)):
             cypher += order_val
@@ -215,14 +240,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         if limit is not None:
             cypher += " LIMIT $limit"
             params["limit"] = limit
-
-        def _get_nodes(tx: neo4j.ManagedTransaction, **kwargs: Any) -> list[dict[str, Any]]:
-            result = tx.run(cypher, **kwargs)
-            return [record["p"] for record in result]
-
-        with self.driver.session(database="neo4j") as session:
-            nodes = session.execute_read(_get_nodes, **params)
-            return [self._from_data(node) for node in nodes]
+        return cypher, params
 
     @staticmethod
     def _from_data(node: neo4j.Node) -> SemanticMapping:
