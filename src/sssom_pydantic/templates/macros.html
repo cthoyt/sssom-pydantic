@@ -5,8 +5,10 @@
         {% if show_record %}<th>Record</th>{% endif %}
         {% if show_triple %}<th>Triple</th>{% endif %}
         <th>Subject</th>
+        <th>Subject ID</th>
         <th>Predicate</th>
         <th>Object</th>
+        <th>Object ID</th>
         <th>Justification</th>
         <th>Confidence</th>
         <th>Author</th>
@@ -21,11 +23,13 @@
         {%- if show_triple %}
         <td><a href="{{ url_for('show_triple', triple_id=converter.hash_triple(mapping)) }}">Triple</a></td>
         {%- endif %}
+        <td>{{ mapping.subject_name }}</td>
         <td>{{ mapping.subject.curie }}</td>
         <td>{{ mapping.predicate.curie }}</td>
+        <td>{{ mapping.object_name }}</td>
         <td>{{ mapping.object.curie }}</td>
         <td>{{ mapping.justification.identifier }}</td>
-        <td>{% if mapping.confidence %}{{ mapping.confidence }}{% endif %}</td>
+        <td>{% if mapping.confidence %}{{ mapping.confidence | round(3) }}{% endif %}</td>
         <td>{% if mapping.author %}{{ mapping.author.curie }}{% endif %}</td>
     </tr>
     {%- endfor %}

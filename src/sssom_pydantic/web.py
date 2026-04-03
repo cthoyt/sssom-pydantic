@@ -162,7 +162,7 @@ def get_app(
             converter=converter,
         )
 
-    if add_examples:
+    if add_examples or not repository.count_mappings():
         biomappings_dir = pathlib.Path("/Users/cthoyt/dev/biomappings/src/biomappings/resources/")
         repository.read(biomappings_dir.joinpath("predictions.sssom.tsv"), progress=True)
         repository.read(biomappings_dir.joinpath("positive.sssom.tsv"), progress=True)
@@ -185,6 +185,7 @@ def get_app(
         n_mappings = repository.count_mappings(query)
         n_entities = repository.count_entities(query)
         mappings = repository.get_mappings(
+            query,
             limit=10,
             order_by=flask.request.args.get("order_by"),
         )
@@ -232,4 +233,4 @@ def get_app(
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(get_app(add_examples=True), host="0.0.0.0", port=8776)  # noqa:S104
+    uvicorn.run(get_app(), host="0.0.0.0", port=8776)  # noqa:S104
