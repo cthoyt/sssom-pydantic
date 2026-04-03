@@ -149,6 +149,7 @@ def record_to_semantic_mapping(record: Record, converter: curies.Converter) -> S
         record=_parse_curie_or_uri(record.record_id),
         authors=_parse_curies_or_uris(record.author_id),
         confidence=record.confidence,
+        reviewer_agreement=record.reviewer_agreement,
         mapping_tool=mapping_tool,
         license=record.license,
         # remaining

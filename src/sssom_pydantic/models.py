@@ -99,6 +99,7 @@ class Record(BaseModel):
         function if a knowledge graph embedding model was used ot generate a mapping prediction.
         """,
     )
+    reviewer_agreement: float | None = Field(None)
     curation_rule: list[str] | None = Field(None)
     curation_rule_text: list[str] | None = Field(None)
     issue_tracker_item: str | None = Field(None)

@@ -73,6 +73,11 @@ class RequiredSemanticMapping(Triple):
         return self.justification
 
     @property
+    def negated(self) -> bool:
+        """Check if the mapping record is negated."""
+        return self.predicate_modifier == "Not"
+
+    @property
     def subject_name(self) -> str | None:
         """Get the subject label, if available."""
         return _get_name(self.subject)
@@ -254,6 +259,7 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
     publication_date: datetime.date | None = Field(None)
     mapping_date: datetime.date | None = Field(None)
     review_date: datetime.date | None = Field(None)
+    reviewer_agreement: float | None = Field(None)
 
     comment: str | None = Field(None)
     curation_rule: list[Reference] | None = Field(None)
@@ -365,6 +371,7 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
             publication_date=self.publication_date,
             mapping_date=self.mapping_date,
             review_date=self.review_date,
+            reviewer_agreement=self.reviewer_agreement,
             #
             comment=self.comment,
             confidence=self.confidence,
