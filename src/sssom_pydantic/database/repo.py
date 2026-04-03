@@ -47,6 +47,10 @@ class SemanticMappingRepository(ABC):
     def count_mappings(self, where_clauses: Query | None = None) -> int:
         """Count the mappings in the database."""
 
+    @abstractmethod
+    def count_entities(self, where_clauses: Query | None = None) -> int:
+        """Count the number of entities appearing as subjects/objects in the database."""
+
     def add_mapping(self, mapping: SemanticMapping) -> Reference:
         """Add a mapping to the database."""
         rv = self.add_mappings([mapping])

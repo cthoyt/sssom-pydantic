@@ -291,6 +291,20 @@ class SemanticMappingDatabase(SemanticMappingRepository):
             statement = _apply_where_clauses(statement, where_clauses)
             return session.exec(statement).one()
 
+    def count_entities(
+        self, where_clauses: Query | list[ColumnExpressionArgument[bool]] | None = None
+    ) -> int:
+        """Count the mappings in the database."""
+        with self.get_session() as session:
+            sources = _apply_where_clauses(  # type:ignore[var-annotated]
+                select(col(SemanticMappingModel.source).label("entity_id")), where_clauses
+            )
+            targets = _apply_where_clauses(  # type:ignore[var-annotated]
+                select(col(SemanticMappingModel.object).label("entity_id")), where_clauses
+            )
+            all_entities = sqlmodel.union(sources, targets).subquery()
+            return session.exec(select(func.count()).select_from(all_entities)).one()
+
     def add_mappings(self, mappings: Iterable[SemanticMapping]) -> list[Reference]:
         """Add mappings to the database."""
         if self.converter is None:

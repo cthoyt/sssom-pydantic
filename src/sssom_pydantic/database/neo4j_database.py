@@ -124,9 +124,23 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
 
     def count_mappings(self, where_clauses: Query | None = None) -> int:
         """Count the mappings in the database."""
+        if where_clauses is not None:
+            raise NotImplementedError
 
         def _count_nodes(tx: neo4j.ManagedTransaction) -> int:
             result = tx.run("MATCH (n:SemanticMapping) RETURN count(n) AS total")
+            return cast(int, result.single()["total"])
+
+        with closing(self.driver.session()) as session:
+            return cast(int, session.execute_read(_count_nodes))
+
+    def count_entities(self, where_clauses: Query | None = None) -> int:
+        """Count the entities in the database."""
+        if where_clauses is not None:
+            raise NotImplementedError
+
+        def _count_nodes(tx: neo4j.ManagedTransaction) -> int:
+            result = tx.run("MATCH (n:Entity) RETURN count(n) AS total")
             return cast(int, result.single()["total"])
 
         with closing(self.driver.session()) as session:
