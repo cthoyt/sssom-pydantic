@@ -13,17 +13,13 @@ from __future__ import annotations
 
 import contextlib
 import datetime
-from collections.abc import Callable, Collection, Generator, Iterable, Sequence
-from pathlib import Path
+from collections.abc import Callable, Generator, Iterable, Sequence
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, ParamSpec, TypeVar, overload
 
 import curies
 import sqlmodel
 from curies import NamableReference, Reference
-from curies.database import (
-    get_reference_list_sa_column,
-    get_reference_sa_column,
-)
+from curies.database import get_reference_list_sa_column, get_reference_sa_column
 from curies.vocabulary import manual_mapping_curation
 from pydantic import AnyUrl
 from sqlalchemy import Dialect, TypeDecorator
@@ -31,17 +27,11 @@ from sqlalchemy.engine.base import Engine
 from sqlalchemy.sql.type_api import TypeEngine
 from sqlmodel import JSON, Column, Field, Session, SQLModel, String, and_, col, func, or_, select
 from sqlmodel.sql._expression_select_cls import SelectOfScalar
+from tqdm import tqdm
 from typing_extensions import Self
 
-from sssom_pydantic.api import (
-    MappingSet,
-    MappingSetRecord,
-    MappingTool,
-    SemanticMapping,
-    SemanticMappingHash,
-)
+from sssom_pydantic.api import MappingTool, SemanticMapping, SemanticMappingHash
 from sssom_pydantic.database.repo import SemanticMappingRepository
-from sssom_pydantic.io import Metadata, read, write
 from sssom_pydantic.models import Cardinality
 from sssom_pydantic.process import UNSURE
 from sssom_pydantic.query import Query
@@ -309,7 +299,7 @@ class SemanticMappingDatabase(SemanticMappingRepository):
         """Add mappings to the database."""
         rv: list[Reference] = []
         with self.get_session() as session:
-            for mapping in mappings:
+            for mapping in tqdm(mappings, unit_scale=True, desc="Adding SSSOM records"):
                 reference = self.hash_mapping(mapping)
                 session.add(
                     SemanticMappingModel.from_semantic_mapping(
@@ -387,39 +377,6 @@ class SemanticMappingDatabase(SemanticMappingRepository):
                 statement = statement.order_by(order_by)
 
             return [mapping.to_semantic_mapping() for mapping in session.exec(statement).all()]
-
-    def read(
-        self,
-        path: str | Path,
-        metadata: MappingSet | MappingSetRecord | Metadata | None = None,
-        **kwargs: Any,
-    ) -> list[Reference]:
-        """Read mappings from a file into the database."""
-        mappings, _converter, _metadata = read(
-            path, metadata=metadata, converter=self.converter, **kwargs
-        )
-        return self.add_mappings(mappings)
-
-    def write(
-        self,
-        path: str | Path,
-        *,
-        metadata: MappingSet | Metadata | MappingSetRecord | None = None,
-        converter: curies.Converter | None = None,
-        exclude_columns: Collection[str] | None = None,
-        where_clauses: Query | list[ColumnExpressionArgument[bool]] | None = None,
-        limit: int | None = None,
-        offset: int | None = None,
-    ) -> None:
-        """Write the database to a file."""
-        mappings = self.get_mappings(where_clauses=where_clauses, limit=limit, offset=offset)
-        write(
-            mappings,
-            path,
-            metadata=metadata,
-            converter=converter,
-            exclude_columns=exclude_columns,
-        )
 
 
 POSITIVE_MAPPING_CLAUSE = and_(
