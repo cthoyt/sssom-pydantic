@@ -18,10 +18,10 @@
     {%- for mapping in mappings %}
     <tr>
         {%- if show_record %}
-        <td><a href="{{ url_for('show_mapping', curie=mapping.record.curie) }}">Record</a></td>
+        <td><a href="{{ url_for('.show_mapping', curie=mapping.record.curie) }}">Record</a></td>
         {%- endif %}
         {%- if show_triple %}
-        <td><a href="{{ url_for('show_triple', triple_id=converter.hash_triple(mapping)) }}">Triple</a></td>
+        <td><a href="{{ url_for('.show_triple', triple_id=converter.hash_triple(mapping)) }}">Triple</a></td>
         {%- endif %}
         <td>{{ mapping.subject_name }}</td>
         <td>{{ mapping.subject.curie }}</td>
