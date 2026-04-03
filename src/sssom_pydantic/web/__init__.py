@@ -83,7 +83,7 @@ def get_app(
         Bootstrap5(flask_app)
         flask_app.register_blueprint(ui_blueprint)
 
-    app.mount("/", WSGIMiddleware(flask_app))
+    app.mount("/", WSGIMiddleware(flask_app))  # type:ignore
 
     return app
 

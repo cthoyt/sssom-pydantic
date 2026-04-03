@@ -134,6 +134,7 @@ fastapi = [
     "fastapi",
     "flask",
     "bootstrap-flask",
+    "a2wsgi",
 ]
 wikidata = [
     "wikidata-client",
