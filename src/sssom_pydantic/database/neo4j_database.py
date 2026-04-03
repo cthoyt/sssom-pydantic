@@ -193,8 +193,8 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
             cypher += where_val[0]
             params.update(where_val[1])
         cypher += " RETURN p"
-        if order_by is not None:
-            raise NotImplementedError("ordering not implemented")
+        if order_by is not None and (order_val := _get_order_by(order_by)):
+            cypher += order_val
         if offset is not None:
             cypher += " SKIP $offset"
             params["offset"] = offset
@@ -227,6 +227,26 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         if model_update:
             rv = rv.model_copy(update=model_update)
         return rv
+
+
+def _get_order_by(key: str | None) -> str | None:
+    match key:
+        case None:
+            return None
+        case "confidence":
+            return " ORDER BY p.confidence"
+        case "date":
+            return " ORDER BY p.mapping_date"
+        case "date-published":
+            return " ORDER BY p.published_date"
+        case "date-reviewed":
+            return " ORDER BY p.review_date"
+        case "subject":
+            return " ORDER BY p.subject_id"
+        case "object":
+            return " ORDER BY p.object_id"
+        case _ as e:
+            raise ValueError(f"invalid ordering: {e}")
 
 
 def _clauses_from_query(
@@ -272,14 +292,17 @@ QUERY_TO_CLAUSE: dict[str, Callable[[str | bool], str]] = {
     "prefix": lambda value: "(p.subject STARTS WITH prefix OR p.object STARTS WITH $prefix)",
     # TODO strip weird characters
     "same_text": lambda value: (
-        "(p.predicate = 'skos:exactMatch' AND toLower(p.object_label) = toLower(p.subject_label))"
+        "(p.predicate = 'skos:exactMatch' "
+        "AND replace(replace(toLower(p.object_label), '-', ''), ' ', '') "
+        "  = replace(replace(toLower(p.subject_label), '-', ''), ' ', ''))"
         if value
         else """(
             p.predicate = 'skos:exactMatch'
             AND (
                 p.subject_label IS NULL
                 OR p.object_label IS NULL
-                OR toLower(p.object_label) <> toLower(p.subject_label)
+                OR replace(replace(toLower(p.object_label), '-', ''), ' ', '') <>
+                   replace(replace(toLower(p.subject_label), '-', ''), ' ', '')
             )
         )"""
     ),
