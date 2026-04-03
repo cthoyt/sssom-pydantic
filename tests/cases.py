@@ -263,6 +263,8 @@ class TestRepository(unittest.TestCase):
                 results = db.get_mappings(query)
                 self.assertNotEqual(0, len(results))
 
+                self.assertNotEqual(0, db.count_entities(query))
+
     def test_curate_correct(self) -> None:
         """Test curation in the database."""
         mapping = SemanticMapping(

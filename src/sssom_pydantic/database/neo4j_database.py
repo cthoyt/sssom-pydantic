@@ -136,7 +136,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
     def count_entities(self, where_clauses: Query | None = None) -> int:
         """Count the entities in the database."""
         if where_clauses is not None:
-            raise NotImplementedError
+            raise NotImplementedError("need to implement filtering on entity counts for neo4j")
 
         def _count_nodes(tx: neo4j.ManagedTransaction) -> int:
             result = tx.run("MATCH (n:Entity) RETURN count(n) AS total")
