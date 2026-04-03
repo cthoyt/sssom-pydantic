@@ -165,11 +165,13 @@ class TestRepository(unittest.TestCase):
         db = self.repository
 
         self.assertEqual(0, db.count_mappings())
+        self.assertEqual(0, db.count_entities())
 
         db.add_mapping(mapping_1)
         db.add_mappings([mapping_2, mapping_3, mapping_4])
 
         self.assertEqual(4, db.count_mappings())
+        self.assertEqual(2, db.count_entities())
 
         if isinstance(db, SemanticMappingDatabase):
             # this test isn't relevant for all databases
