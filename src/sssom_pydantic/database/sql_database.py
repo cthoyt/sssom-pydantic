@@ -112,7 +112,12 @@ class AnyURLTypeDecorator(TypeDecorator[AnyUrl]):
 class SemanticMappingModel(SQLModel, table=True):
     """A model."""
 
-    id: int | None = Field(default=None, primary_key=True)
+    id: int | None = Field(
+        default=None, primary_key=True, description="The identifier for the SSSOM record"
+    )
+    triple_id: str = Field(
+        ..., index=True, description="The identifier for the subject-predicate-object triple"
+    )
 
     # required
     subject: Reference = Field(sa_column=get_reference_sa_column())
@@ -184,7 +189,9 @@ class SemanticMappingModel(SQLModel, table=True):
     similarity_score: float | None = Field(None)
 
     @classmethod
-    def from_semantic_mapping(cls, mapping: SemanticMapping) -> Self:
+    def from_semantic_mapping(
+        cls, mapping: SemanticMapping, *, converter: curies.Converter
+    ) -> Self:
         """Get from a non-ORM mapping."""
         d = mapping.model_dump()
         # do this explicitly since the model might not be smart enough
@@ -194,6 +201,8 @@ class SemanticMappingModel(SQLModel, table=True):
             d["subject_name"] = subject_name
         if object_name := mapping.object_name:
             d["object_name"] = object_name
+        if converter is not None:
+            d["triple_id"] = converter.hash_triple(mapping)
         return cls.model_validate(d)
 
     def to_semantic_mapping(self) -> SemanticMapping:
@@ -217,6 +226,7 @@ class SemanticMappingDatabase(SemanticMappingRepository):
         engine: Engine,
         semantic_mapping_hash: SemanticMappingHash,
         session_cls: type[Session] | None = None,
+        converter: curies.Converter,
     ) -> None:
         """Construct a database.
 
@@ -227,10 +237,11 @@ class SemanticMappingDatabase(SemanticMappingRepository):
         :param session_cls: SQLAlchemy session class. By default, this uses
             :class:`sqlmodel.Session`
         """
-        super().__init__(semantic_mapping_hash=semantic_mapping_hash)
         self.engine = engine
         self.session_cls = session_cls if session_cls is not None else Session
         SQLModel.metadata.create_all(self.engine)
+        # TODO converter inside database?
+        super().__init__(semantic_mapping_hash=semantic_mapping_hash, converter=converter)
 
     @classmethod
     def from_connection(
@@ -239,12 +250,14 @@ class SemanticMappingDatabase(SemanticMappingRepository):
         connection: str,
         semantic_mapping_hash: SemanticMappingHash,
         session_cls: type[Session] | None = None,
+        converter: curies.Converter,
     ) -> Self:
         """Construct a database by a connection string."""
         return cls(
             engine=sqlmodel.create_engine(connection),
             semantic_mapping_hash=semantic_mapping_hash,
             session_cls=session_cls,
+            converter=converter,
         )
 
     @classmethod
@@ -253,12 +266,14 @@ class SemanticMappingDatabase(SemanticMappingRepository):
         *,
         semantic_mapping_hash: SemanticMappingHash,
         session_cls: type[Session] | None = None,
+        converter: curies.Converter,
     ) -> Self:
         """Construct an in-memory database."""
         return cls.from_connection(
             connection="sqlite:///:memory:",
             semantic_mapping_hash=semantic_mapping_hash,
             session_cls=session_cls,
+            converter=converter,
         )
 
     @contextlib.contextmanager
@@ -278,13 +293,16 @@ class SemanticMappingDatabase(SemanticMappingRepository):
 
     def add_mappings(self, mappings: Iterable[SemanticMapping]) -> list[Reference]:
         """Add mappings to the database."""
+        if self.converter is None:
+            raise ValueError
         rv: list[Reference] = []
         with self.get_session() as session:
             for mapping in mappings:
                 reference = self.hash_mapping(mapping)
                 session.add(
                     SemanticMappingModel.from_semantic_mapping(
-                        mapping.model_copy(update={"record": reference})
+                        mapping.model_copy(update={"record": reference}),
+                        converter=self.converter,
                     )
                 )
                 rv.append(reference)
@@ -329,6 +347,7 @@ class SemanticMappingDatabase(SemanticMappingRepository):
     def get_mappings(
         self,
         where_clauses: Query | list[ColumnExpressionArgument[bool]] | None = None,
+        *,
         limit: int | None = None,
         offset: int | None = None,
         order_by: str
@@ -339,7 +358,7 @@ class SemanticMappingDatabase(SemanticMappingRepository):
         """Get mappings."""
         with self.get_session() as session:
             statement = select(SemanticMappingModel)
-            statement = _apply_where_clauses(statement, where_clauses)
+            statement = _apply_where_clauses(statement, where_clauses, converter=self.converter)
 
             if limit is not None:
                 statement = statement.limit(limit)
@@ -361,12 +380,11 @@ class SemanticMappingDatabase(SemanticMappingRepository):
         self,
         path: str | Path,
         metadata: MappingSet | MappingSetRecord | Metadata | None = None,
-        converter: curies.Converter | None = None,
         **kwargs: Any,
     ) -> list[Reference]:
         """Read mappings from a file into the database."""
         mappings, _converter, _metadata = read(
-            path, metadata=metadata, converter=converter, **kwargs
+            path, metadata=metadata, converter=self.converter, **kwargs
         )
         return self.add_mappings(mappings)
 
@@ -425,6 +443,7 @@ DEFAULT_SORT = [
 #: A mapping from :class:`Query` fields to functions that produce appropriate
 #: clauses for database querying
 QUERY_TO_CLAUSE: dict[str, Callable[[str], ColumnExpressionArgument[bool] | None]] = {
+    "triple_id": lambda value: col(SemanticMappingModel.triple_id) == value,
     "query": lambda value: or_(
         col(SemanticMappingModel.subject).icontains(value.lower()),
         col(SemanticMappingModel.subject_name).icontains(value.lower()),
@@ -478,7 +497,9 @@ def _str_norm(column: Any) -> Any:
     return func.lower(func.replace(func.replace(column, "-", ""), " ", ""))
 
 
-def clauses_from_query(query: Query | None = None) -> list[ColumnExpressionArgument[bool]]:
+def clauses_from_query(
+    query: Query | None = None, *, converter: curies.Converter | None = None
+) -> list[ColumnExpressionArgument[bool]]:
     """Get clauses from the query."""
     if query is None:
         return []
@@ -493,11 +514,12 @@ def clauses_from_query(query: Query | None = None) -> list[ColumnExpressionArgum
 def _apply_where_clauses(
     statement: SelectOfScalar[X],
     where_clauses: Query | list[ColumnExpressionArgument[bool]] | None,
+    converter: curies.Converter | None = None,
 ) -> SelectOfScalar[X]:
     if where_clauses is None:
         return statement
     elif isinstance(where_clauses, Query):
-        return statement.where(*clauses_from_query(where_clauses))
+        return statement.where(*clauses_from_query(where_clauses, converter=converter))
     else:
         return statement.where(*where_clauses)
 

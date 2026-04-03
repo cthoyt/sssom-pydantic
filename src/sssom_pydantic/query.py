@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Sequence
-from typing import Any, Literal, NamedTuple, TypeAlias
+from typing import TYPE_CHECKING, Any, Literal, NamedTuple, TypeAlias
 
 from pydantic import BaseModel, Field
 
 from .api import SemanticMapping
+
+if TYPE_CHECKING:
+    from curies import Converter
 
 __all__ = [
     "Query",
@@ -21,6 +24,10 @@ __all__ = [
 class Query(BaseModel):
     """A query over semantic mappings."""
 
+    triple_id: str | None = Field(
+        None,
+        description="The subject-predicate-object identifier, see https://curies.readthedocs.io/en/latest/api/curies.Converter.html#curies.Converter.hash_triple",
+    )
     query: str | None = Field(
         None,
         description="If given, show only mappings that have it appearing as a substring "
@@ -60,7 +67,7 @@ class Query(BaseModel):
 
 
 def filter_mappings(
-    mappings: Iterable[SemanticMapping], query: Query | None
+    mappings: Iterable[SemanticMapping], query: Query | None, *, converter: Converter | None = None
 ) -> Iterable[SemanticMapping]:
     """Filter mappings based on a query."""
     if query is None:
@@ -72,7 +79,7 @@ def filter_mappings(
         if value is None:
             continue
         if model_field.annotation == str | None:
-            mappings = _help_filter(mappings, name, value)
+            mappings = _help_filter(mappings, name, value, converter=converter)
         elif name == "same_text":
             if value:
                 mappings = (
@@ -104,13 +111,24 @@ def _str_norm(s: str) -> str:
 
 
 def _help_filter(
-    mappings: Iterable[SemanticMapping], name: str, value: str
+    mappings: Iterable[SemanticMapping],
+    name: str,
+    value: str,
+    *,
+    converter: Converter | None = None,
 ) -> Iterable[SemanticMapping]:
-    value = value.casefold()
-    get_strings = QUERY_TO_FUNC[name]
-    for mapping in mappings:
-        if any(value in string.casefold() for string in get_strings(mapping) if string):
-            yield mapping
+    if name == "triple_id":
+        if converter is None:
+            raise ValueError("filtering by identifier (i.e., mapping hash) requires a converter")
+        for mapping in mappings:
+            if converter.hash_triple(mapping) == value:
+                yield mapping
+    else:
+        value = value.casefold()
+        get_strings = QUERY_TO_FUNC[name]
+        for mapping in mappings:
+            if any(value in string.casefold() for string in get_strings(mapping) if string):
+                yield mapping
 
 
 #: A mapping from :class:`Query` fields to functions producing strings for checking
@@ -184,13 +202,15 @@ def sort_mappings(mappings: Iterable[SemanticMapping], sort: str) -> list[Semant
 def get_mappings(
     mappings: Sequence[SemanticMapping],
     where_clauses: Query | None = None,
+    *,
     limit: int | None = None,
     offset: int | None = None,
     order_by: str | None = None,
+    converter: Converter | None = None,
 ) -> Sequence[SemanticMapping]:
     """Get a sequence of mappings."""
     if where_clauses is not None:
-        mappings = list(filter_mappings(mappings, where_clauses))
+        mappings = list(filter_mappings(mappings, where_clauses, converter=converter))
     if order_by is not None:
         mappings = sort_mappings(mappings, order_by)
     if offset and limit:

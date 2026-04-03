@@ -54,7 +54,9 @@ class TestSQL(cases.TestRepository):
 
     def setUp(self) -> None:
         """Set up the test with a SQL database."""
-        self.repository = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
+        self.repository = SemanticMappingDatabase.memory(
+            semantic_mapping_hash=mapping_hash_v1, converter=TEST_CONVERTER
+        )
 
 
 class TestFilesystem(cases.TestRepository):
@@ -65,6 +67,8 @@ class TestFilesystem(cases.TestRepository):
         self.directory = tempfile.TemporaryDirectory()
         self.path = Path(self.directory.name).joinpath("test.sssom.tsv")
         self.repository = FileSystemSemanticMappingRepository(self.path)
+        for record in TEST_CONVERTER:
+            self.repository.converter.add_record(record, merge=True)
 
     def tearDown(self) -> None:
         """Tear down the test case."""
@@ -85,6 +89,7 @@ class TestNeo4j(cases.TestRepository):
             user=pystow.get_config("sssom", "neo4j_username"),
             password=pystow.get_config("sssom", "neo4j_password"),
             uri="neo4j://localhost:7687",
+            converter=TEST_CONVERTER,
         )
         try:
             self.repository.driver.verify_connectivity()
@@ -97,6 +102,7 @@ class TestNeo4j(cases.TestRepository):
         self.repository.driver.close()
 
 
+@unittest.skipUnless(importlib.util.find_spec("sqlmodel"), "SQLModel is required for database test")
 class TestIO(unittest.TestCase):
     """Test I/O operations."""
 
@@ -115,8 +121,10 @@ class TestIO(unittest.TestCase):
                 mappings = [example.semantic_mapping]
                 path = Path(tmpdir).joinpath("test.sssom.tsv")
                 sssom_pydantic.write(mappings, path, converter=converter, metadata=TEST_METADATA)
-                db = SemanticMappingDatabase.memory(semantic_mapping_hash=mapping_hash_v1)
-                db.read(path, converter=converter, metadata=TEST_METADATA)
+                db = SemanticMappingDatabase.memory(
+                    semantic_mapping_hash=mapping_hash_v1, converter=converter
+                )
+                db.read(path, metadata=TEST_METADATA)
 
                 written_path = Path(tmpdir).joinpath("test2.sssom.tsv")
                 db.write(
@@ -140,7 +148,9 @@ class TestDatabase(unittest.TestCase):
             object=R2,
             justification=manual_mapping_curation,
         )
-        database_mapping = SemanticMappingModel.from_semantic_mapping(mapping)
+        database_mapping = SemanticMappingModel.from_semantic_mapping(
+            mapping, converter=TEST_CONVERTER
+        )
         self.assertEqual(R1.name, database_mapping.subject_name)
         self.assertEqual(R2.name, database_mapping.object_name)
 
@@ -150,7 +160,9 @@ class TestDatabase(unittest.TestCase):
 
         for example in EXAMPLES:
             with self.subTest(desc=example.description):
-                orm_model = SemanticMappingModel.from_semantic_mapping(example.semantic_mapping)
+                orm_model = SemanticMappingModel.from_semantic_mapping(
+                    example.semantic_mapping, converter=TEST_CONVERTER
+                )
                 engine = create_engine("sqlite:///:memory:")
                 SQLModel.metadata.create_all(engine)
 

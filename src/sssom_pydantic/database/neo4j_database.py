@@ -7,6 +7,7 @@ from collections.abc import Callable, Iterable, Sequence
 from contextlib import closing
 from typing import TYPE_CHECKING, Any, Concatenate, Literal, ParamSpec, TypeVar, cast, overload
 
+import curies
 from curies import NamableReference, Reference
 from typing_extensions import LiteralString
 
@@ -35,6 +36,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         password: str | None = None,
         *,
         semantic_mapping_hash: SemanticMappingHash | None = None,
+        converter: curies.Converter,
     ) -> None:
         """Initialize the client.
 
@@ -44,7 +46,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         """
         import neo4j
 
-        super().__init__(semantic_mapping_hash=semantic_mapping_hash)
+        super().__init__(semantic_mapping_hash=semantic_mapping_hash, converter=converter)
 
         auth: tuple[str, str] | None
         if user is not None and password is not None:
@@ -75,6 +77,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
               SET object.name = row.object_label
             WITH subject, object, row
             MERGE (m:SemanticMapping {id: row.id})
+              SET m.triple_id = row.triple_id
               SET m.predicate = row.predicate
               SET m.subject = row.subject
               SET m.subject_label = row.subject_label
@@ -101,6 +104,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
             batch.append(
                 {
                     "id": reference.identifier,
+                    "triple_id": self.converter.hash_triple(mapping),
                     "subject": mapping.subject.curie,
                     "subject_label": mapping.subject_name,
                     "predicate": mapping.predicate.curie,
@@ -274,6 +278,7 @@ QUERY_TO_CLAUSE: dict[str, Callable[[str | bool], str]] = {
         ")"
         # TODO also search over mapping tool name
     ),
+    "triple_id": lambda value: "p.triple_id = $triple_id",
     "subject_prefix": lambda value: "p.subject STARTS WITH $subject_prefix",
     "subject_query": lambda value: (
         "(toLower(p.subject) CONTAINS toLower($subject_query) "
