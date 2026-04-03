@@ -307,8 +307,6 @@ class SemanticMappingDatabase(SemanticMappingRepository):
 
     def add_mappings(self, mappings: Iterable[SemanticMapping]) -> list[Reference]:
         """Add mappings to the database."""
-        if self.converter is None:
-            raise ValueError
         rv: list[Reference] = []
         with self.get_session() as session:
             for mapping in mappings:
@@ -354,7 +352,7 @@ class SemanticMappingDatabase(SemanticMappingRepository):
             if rv is not None:
                 return rv.to_semantic_mapping()
             elif strict:
-                raise ValueError
+                raise ValueError(f'could not find mapping with CURIE {reference.curie}')
             else:
                 return None
 
@@ -554,4 +552,4 @@ def _get_sorter(sort: str) -> ColumnExpressionArgument[Any]:
             return col(SemanticMappingModel.object).asc()
         # TODO add remaining values
         case _:
-            raise NotImplementedError(sort)
+            raise ValueError(sort)
