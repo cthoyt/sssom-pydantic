@@ -39,7 +39,7 @@ def web(add_examples: bool, tab: bool, host: str, port: int) -> None:
 
         webbrowser.open_new_tab(f"http://{host}:{port}/docs")
 
-    uvicorn.run(get_app(add_examples=add_examples), host=host, port=port)
+    uvicorn.run(get_app(add_examples="builtin" if add_examples else None), host=host, port=port)
 
 
 if __name__ == "__main__":
