@@ -219,7 +219,7 @@ def curate(
             )
 
     if mark in semantic_mapping_scopes:
-        update["predicate"] = semantic_mapping_scopes[cast(SemanticMappingScope, mark)]
+        update["predicate"] = semantic_mapping_scopes[mark]
     elif mark == "incorrect":
         update["predicate_modifier"] = "Not"
     elif mark == "correct":
