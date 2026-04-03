@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import curies
-import sssom_pydantic
 from curies import NamableReference, NamedReference, Reference
 from curies.vocabulary import (
     charlie,
@@ -20,6 +19,7 @@ from curies.vocabulary import (
 )
 from pydantic import BaseModel
 
+import sssom_pydantic
 from sssom_pydantic import MappingSetRecord
 from sssom_pydantic.api import MAPPING_HASH_V1_PREFIX, SemanticMapping, mapping_hash_v1
 from sssom_pydantic.database import (
@@ -508,34 +508,34 @@ class TestRepository(unittest.TestCase):
 
     def test_read(self) -> None:
         """Test reading mappings from a file."""
-        self.maxDiff = None
-        # FIXME when excluding columns while writing, should also exclude
-        #  them from building up the prefix list
-        converter = TEST_CONVERTER.get_subconverter(
-            TEST_CONVERTER.get_prefixes() - {MAPPING_HASH_V1_PREFIX}
-        )
         db = self.repository
 
         for example in EXAMPLES:
             if example.description == "reference for the mapping itself in the `record` field":
                 continue
             with self.subTest(desc=example.description), tempfile.TemporaryDirectory() as tmpdir:
+                self.assertEqual(0, db.count_mappings())
+
                 mappings = [example.semantic_mapping]
                 path = Path(tmpdir).joinpath("test.sssom.tsv")
-                sssom_pydantic.write(mappings, path, converter=converter, metadata=TEST_METADATA)
+                sssom_pydantic.write(mappings, path, converter=db.converter, metadata=TEST_METADATA)
 
-                db.read(path, metadata=TEST_METADATA)
+                db.read(path)
+                self.assertEqual(1, db.count_mappings())
 
                 written_path = Path(tmpdir).joinpath("test2.sssom.tsv")
                 db.write(
                     written_path,
                     metadata=TEST_METADATA,
                     exclude_columns=["record_id"],
+                    exclude_prefixes=[MAPPING_HASH_V1_PREFIX],
                 )
-                self.assertEqual(path.read_text(), written_path.read_text())
-
+                # clean up before actual test
                 db.delete_mapping(example.semantic_mapping)
                 self.assertEqual(0, db.count_mappings())
+
+                self.assertEqual(path.read_text(), written_path.read_text())
+
 
 @unittest.skipUnless(importlib.util.find_spec("fastapi"), "fastapi not installed")
 class TestFastAPI(unittest.TestCase):
