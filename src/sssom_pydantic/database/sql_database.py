@@ -352,7 +352,7 @@ class SemanticMappingDatabase(SemanticMappingRepository):
             if rv is not None:
                 return rv.to_semantic_mapping()
             elif strict:
-                raise ValueError(f'could not find mapping with CURIE {reference.curie}')
+                raise ValueError(f"could not find mapping with CURIE {reference.curie}")
             else:
                 return None
 
