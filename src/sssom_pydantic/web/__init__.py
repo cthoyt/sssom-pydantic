@@ -60,8 +60,7 @@ def get_app(
 
             converter = bioregistry.get_default_converter()
 
-        repository = SemanticMappingDatabase.from_connection(
-            connection=pystow.joinpath_sqlite("sssom", name="test.db"),
+        repository = SemanticMappingDatabase.memory(
             semantic_mapping_hash=semantic_mapping_hash,
             converter=converter,
         )
