@@ -131,9 +131,8 @@ def get_app(
     :param semantic_mapping_hash: A function that deterministically hashes a mapping.
         This is required until the SSSOM specification `defines a standard hashing
         procedure <https://github.com/mapping-commons/sssom/issues/436>`_.
-    :param add_examples:
-        Add example mappings from :data:`sssom_pydantic.examples.EXAMPLE_MAPPINGS`,
-        useful when debugging.
+    :param add_examples: Add example mappings from
+        :data:`sssom_pydantic.examples.EXAMPLE_MAPPINGS`, useful when debugging.
 
     :returns: A FastAPI app
 

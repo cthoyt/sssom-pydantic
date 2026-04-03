@@ -11,8 +11,7 @@ import curies
 from curies import Converter, Reference
 
 from ..api import SemanticMapping, SemanticMappingHash, mapping_hash_v1
-from ..confidence import estimate_confidence
-from ..process import Mark, curate, publish
+from ..process import Mark, curate, estimate_confidence, publish
 from ..query import Query
 
 __all__ = ["SemanticMappingRepository"]

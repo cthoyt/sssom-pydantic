@@ -4,9 +4,20 @@ from __future__ import annotations
 
 import datetime
 import itertools as itt
+import math
+import statistics
+import typing
 from collections import defaultdict
-from collections.abc import Callable, Iterable
-from typing import TYPE_CHECKING, Any, Literal, TypeAlias, TypeVar, cast, get_args
+from collections.abc import Callable, Collection, Iterable
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Literal,
+    TypeAlias,
+    TypeVar,
+    cast,
+    get_args,
+)
 
 from curies import Reference
 from curies.vocabulary import (
@@ -26,9 +37,11 @@ __all__ = [
     "UNSURE",
     "Call",
     "CanonicalMappingTuple",
+    "ConfidenceModel",
     "Hasher",
     "Mark",
     "curate",
+    "estimate_confidence",
     "get_canonical_tuple",
     "publish",
     "remove_redundant_external",
@@ -252,3 +265,73 @@ def publish(
         update={"publication_date": date if date is not None else datetime.date.today()}
     )
     return rv
+
+
+#: Models for aggregating mapping confidences
+ConfidenceModel: TypeAlias = Literal["binomial", "mean"]
+
+
+def estimate_confidence(
+    mappings: Collection[SemanticMapping],
+    *,
+    confidence_model: ConfidenceModel | None = None,
+    check: bool = True,
+) -> float:
+    r"""Estimate the confidence using multiple mappings.
+
+    :param mappings: A collection of mappings that all have the same
+        subject-predicate-object triple. This algorithm explicitly handles when there is
+        a negative predicate modifier.
+    :param confidence_model: Which confidence model to use when aggregating mapping
+        confidences.
+
+        - mean aggregation is $\frac{1}{n} \sum_{i=1}^n c_i$
+        - binomial aggregation is $1 - \prod_{i=1}^n (1 - c_i)$
+    :param check: Should mappings be checked to all have the same
+        subject-predicate-object triple? This can be disabled if you're sure they
+        already match
+
+    :returns: A single floating point confidence estimate of the positive
+        subject-predicate-object triple, where 1.0 is highly confident and 0.0 is not
+        confident. To get the confidence for the negated subject-predicate-object
+        triple, subtract this return value from 1.0.
+    """
+    if check and _not_all_same_triple(mappings):
+        raise ValueError
+
+    creator_confidences = []
+    for mapping in mappings:
+        if mapping.confidence is not None:
+            if mapping.negated:
+                creator_confidences.append(1.0 - mapping.confidence)
+            else:
+                creator_confidences.append(mapping.confidence)
+        else:
+            if mapping.negated:
+                creator_confidences.append(0.0)
+            else:
+                creator_confidences.append(1.0)
+
+    return _aggregate_confidences(creator_confidences, confidence_model=confidence_model)
+
+
+def _aggregate_confidences(
+    creator_confidences: list[float],
+    *,
+    confidence_model: ConfidenceModel | None = None,
+) -> float:
+    match confidence_model:
+        case "mean" | None:
+            c = statistics.mean(creator_confidences)
+        case "binomial":
+            c = 1.0 - math.prod(1.0 - x for x in creator_confidences)
+        case _:
+            raise ValueError(
+                f"unknown confidence model. use one of {typing.get_args(ConfidenceModel)}"
+            )
+
+    return c
+
+
+def _not_all_same_triple(mappings: Iterable[SemanticMapping]) -> bool:
+    return len({(m.subject, m.predicate, m.object) for m in mappings}) > 1
