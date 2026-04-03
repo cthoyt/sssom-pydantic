@@ -277,7 +277,7 @@ def estimate_confidence(
     confidence_model: ConfidenceModel | None = None,
     check: bool = True,
 ) -> float:
-    r"""Estimate the confidence using multiple mappings.
+    r"""Estimate the confidence of a subject-predicate-triple based on multiple evidences.
 
     :param mappings: A collection of mappings that all have the same
         subject-predicate-object triple. This algorithm explicitly handles when there is
