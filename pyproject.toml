@@ -51,6 +51,7 @@ dependencies = [
     "curies>=0.13.1",
     "pyyaml",
     "pystow>=0.8.2",
+    "tqdm",
 ]
 
 # see https://peps.python.org/pep-0735/ and https://docs.astral.sh/uv/concepts/dependencies/#dependency-groups

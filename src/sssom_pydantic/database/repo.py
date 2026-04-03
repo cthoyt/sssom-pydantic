@@ -5,12 +5,20 @@ from __future__ import annotations
 import datetime
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable, Sequence
+from pathlib import Path
 from typing import Any, Concatenate, Literal, ParamSpec, cast, overload
 
 import curies
 from curies import Converter, Reference
 
-from ..api import SemanticMapping, SemanticMappingHash, mapping_hash_v1
+from ..api import (
+    MappingSet,
+    MappingSetRecord,
+    SemanticMapping,
+    SemanticMappingHash,
+    mapping_hash_v1,
+)
+from ..io import Metadata, read
 from ..process import Mark, curate, estimate_confidence, publish
 from ..query import Query
 
@@ -59,6 +67,22 @@ class SemanticMappingRepository(ABC):
     @abstractmethod
     def add_mappings(self, mappings: Iterable[SemanticMapping]) -> list[Reference]:
         """Add mappings to the database."""
+
+    def read(
+        self,
+        path: str | Path,
+        *,
+        metadata: MappingSet | MappingSetRecord | Metadata | None = None,
+        progress: bool = False,
+        **kwargs: Any,
+    ) -> list[Reference]:
+        """Read mappings from a file into the database."""
+        mappings, _converter, _metadata = read(
+            path, metadata=metadata, converter=self.converter, progress=progress, **kwargs
+        )
+        # TODO check converter conflicts
+        # TODO add progress to add_mappings?
+        return self.add_mappings(mappings)
 
     @abstractmethod
     def delete_mapping(self, reference: Reference | SemanticMapping) -> None:

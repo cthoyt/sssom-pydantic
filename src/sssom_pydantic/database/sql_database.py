@@ -31,6 +31,7 @@ from sqlalchemy.engine.base import Engine
 from sqlalchemy.sql.type_api import TypeEngine
 from sqlmodel import JSON, Column, Field, Session, SQLModel, String, and_, col, func, or_, select
 from sqlmodel.sql._expression_select_cls import SelectOfScalar
+from tqdm import tqdm
 from typing_extensions import Self
 
 from sssom_pydantic.api import (
@@ -41,7 +42,7 @@ from sssom_pydantic.api import (
     SemanticMappingHash,
 )
 from sssom_pydantic.database.repo import SemanticMappingRepository
-from sssom_pydantic.io import Metadata, read, write
+from sssom_pydantic.io import Metadata, write
 from sssom_pydantic.models import Cardinality
 from sssom_pydantic.process import UNSURE
 from sssom_pydantic.query import Query
@@ -309,7 +310,7 @@ class SemanticMappingDatabase(SemanticMappingRepository):
         """Add mappings to the database."""
         rv: list[Reference] = []
         with self.get_session() as session:
-            for mapping in mappings:
+            for mapping in tqdm(mappings, unit_scale=True, desc="Adding SSSOM records"):
                 reference = self.hash_mapping(mapping)
                 session.add(
                     SemanticMappingModel.from_semantic_mapping(
@@ -387,18 +388,6 @@ class SemanticMappingDatabase(SemanticMappingRepository):
                 statement = statement.order_by(order_by)
 
             return [mapping.to_semantic_mapping() for mapping in session.exec(statement).all()]
-
-    def read(
-        self,
-        path: str | Path,
-        metadata: MappingSet | MappingSetRecord | Metadata | None = None,
-        **kwargs: Any,
-    ) -> list[Reference]:
-        """Read mappings from a file into the database."""
-        mappings, _converter, _metadata = read(
-            path, metadata=metadata, converter=self.converter, **kwargs
-        )
-        return self.add_mappings(mappings)
 
     def write(
         self,
