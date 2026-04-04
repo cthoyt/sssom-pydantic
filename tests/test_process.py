@@ -356,8 +356,8 @@ class TestProcess(unittest.TestCase):
         _m(justification=manual, confidence=0.9, reviewer_agreement=0.9)
         _m(justification=manual, confidence=0.9, reviewer_agreement=0.5)
 
-        for x in range(0, 100):
-            i = x / 10
+        for x in range(100):
+            i = x / 100
             v1 = _m(justification=manual, confidence=i, reviewer_agreement=0.4)
             v2 = _m(justification=manual, confidence=i, reviewer_agreement=0.5)
             v3 = _m(justification=manual, confidence=i, reviewer_agreement=0.6)
