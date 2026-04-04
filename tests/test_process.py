@@ -22,7 +22,14 @@ from pydantic import BaseModel
 
 from sssom_pydantic import SemanticMapping
 from sssom_pydantic.api import NOT
-from sssom_pydantic.process import Mark, curate, estimate_confidence, publish
+from sssom_pydantic.process import (
+    InvalidExistsActionError,
+    Mark,
+    curate,
+    estimate_confidence,
+    publish,
+    review,
+)
 from tests.cases import R1, R2, _m
 
 today = datetime.date.today()
@@ -311,7 +318,7 @@ class TestProcess(unittest.TestCase):
                 exists_action="error",
             )
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(InvalidExistsActionError):
             publish(
                 SemanticMapping(
                     subject=R1,
@@ -322,6 +329,73 @@ class TestProcess(unittest.TestCase):
                 ),
                 exists_action="blahblah",  # type:ignore
             )
+
+    def test_review(self) -> None:
+        """Test review workflow."""
+        self.assert_model_equal(
+            _m(
+                reviewers=[author],
+                review_date=today,
+                reviewer_agreement=1.0,
+            ),
+            review(
+                _m(),
+                reviewers=author,
+                score=1.0,
+            ),
+        )
+
+        # test bad ranges
+        with self.assertRaises(ValueError):
+            review(_m(), reviewers=author, score=2.0)
+        with self.assertRaises(ValueError):
+            review(_m(), reviewers=author, score=-2.0)
+        # test bad exist action
+        with self.assertRaises(InvalidExistsActionError):
+            review(_m(reviewers=[charlie]), reviewers=author, exists_action="nope")  # type:ignore
+
+        # test no overwriting (default)
+        with self.assertRaises(ValueError):
+            review(_m(reviewers=[charlie]), reviewers=author)
+        # test no overwriting (explicit)
+        with self.assertRaises(ValueError):
+            review(_m(reviewers=[charlie]), reviewers=author, exists_action="error")
+
+        # test no-overwrite
+        self.assert_model_equal(
+            _m(reviewers=[charlie]),
+            review(
+                _m(reviewers=[charlie]),
+                reviewers=author,
+                exists_action="keep",
+            ),
+        )
+
+        # test overwrite
+        self.assert_model_equal(
+            _m(reviewers=[author], reviewer_agreement=1.0, review_date=today),
+            review(
+                _m(reviewers=[charlie]),
+                reviewers=[author],
+                exists_action="overwrite",
+            ),
+        )
+
+        # test passing a custom date
+        custom_date = datetime.date(2021, 1, 1)
+        self.assert_model_equal(
+            _m(
+                reviewers=[author],
+                review_date=custom_date,
+                reviewer_agreement=1.0,
+            ),
+            review(
+                _m(),
+                reviewers=author,
+                date=custom_date,
+                score=1.0,
+            ),
+        )
 
     def test_estimate_confidence(self) -> None:
         """Test estimating confidence."""
@@ -359,7 +433,7 @@ class TestProcess(unittest.TestCase):
         _m(justification=manual, confidence=0.9, reviewer_agreement=0.5)
 
         for x in range(100):
-            i = x / 10
+            i = x / 100
             v1 = _m(justification=manual, confidence=i, reviewer_agreement=0.4)
             v2 = _m(justification=manual, confidence=i, reviewer_agreement=0.5)
             v3 = _m(justification=manual, confidence=i, reviewer_agreement=0.6)

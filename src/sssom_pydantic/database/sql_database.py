@@ -295,11 +295,19 @@ class SemanticMappingDatabase(SemanticMappingRepository):
             all_entities = sqlmodel.union(sources, targets).subquery()
             return session.exec(select(func.count()).select_from(all_entities)).one()
 
-    def add_mappings(self, mappings: Iterable[SemanticMapping]) -> list[Reference]:
+    def add_mappings(
+        self, mappings: Iterable[SemanticMapping], *, progress: bool = False
+    ) -> list[Reference]:
         """Add mappings to the database."""
         rv: list[Reference] = []
         with self.get_session() as session:
-            for mapping in tqdm(mappings, unit_scale=True, desc="Adding SSSOM records"):
+            for mapping in tqdm(
+                mappings,
+                unit_scale=True,
+                desc="Adding SSSOM records to session",
+                disable=not progress,
+                leave=False,
+            ):
                 reference = self.hash_mapping(mapping)
                 session.add(
                     SemanticMappingModel.from_semantic_mapping(
