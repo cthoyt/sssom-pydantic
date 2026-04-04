@@ -205,10 +205,11 @@ def curate(
     **kwargs: Any,
 ) -> SemanticMapping:
     """Curate a mapping."""
+    if mapping.justification == manual_mapping_curation:
+        raise ValueError("should use review workflow on previously manually curated mappings")
+
     if mark == "unsure":
-        if mapping.reviewer_agreement is not None:
-            raise NotImplementedError("this mapping has already been marked as not unsure")
-        return mapping.model_copy(update={"reviewer_agreement": 0.0})
+        return review(mapping, reviewers=authors, score=0)
 
     if isinstance(authors, Reference):
         authors = [authors]
@@ -228,11 +229,6 @@ def curate(
     # with workflows that don't track this
     if add_date:
         update["mapping_date"] = datetime.date.today()
-
-    if mapping.reviewer_agreement == 0.0:
-        raise NotImplementedError(
-            f"not sure how to automatically remove annotation in comment: {mapping.comment}"
-        )
 
     if mark in semantic_mapping_scopes:
         update["predicate"] = semantic_mapping_scopes[mark]
