@@ -186,7 +186,17 @@ class SemanticMappingRepository(ABC):
         score: float | None = None,
         date: datetime.date | None = None,
     ) -> Reference:
-        """Review a mapping and return the new mapping's record."""
+        """Review a mapping and return the new mapping's record.
+
+        :param reference: A reference for a mapping record in the repository
+        :param reviewers: A reviewer or list of reviewers
+        :param score: The agreement score, where 1.0 means agree, 0.0 means unsure,
+            and -1.0 means disagree
+        :param date: The date of the review. Defaults to today.
+
+        :return: A new mapping record with new reviewer information. If there was already
+            reviewer information, this will get overwritten.
+        """
         return self._mutate(reference, review, reviewers=reviewers, score=score, date=date)
 
     def _mutate(
