@@ -33,7 +33,6 @@ from sssom_pydantic.database import (
 )
 from sssom_pydantic.examples import EXAMPLE_MAPPINGS, EXAMPLES
 from sssom_pydantic.models import Record
-from sssom_pydantic.process import UNSURE
 from sssom_pydantic.query import Query
 
 if TYPE_CHECKING:
@@ -163,7 +162,7 @@ class TestRepository(unittest.TestCase):
         mapping_1 = _m()
         mapping_2 = _m(justification=lexical_matching_process)
         mapping_3 = _m(predicate_modifier="Not")
-        mapping_4 = _m(justification=lexical_matching_process, comment=UNSURE)
+        mapping_4 = _m(justification=lexical_matching_process, reviewer_agreement=0.0)
 
         db = self.repository
 
@@ -369,7 +368,7 @@ class TestRepository(unittest.TestCase):
             object=R2,
             justification=lexical_matching_process,
             confidence=0.95,
-            comment=UNSURE,
+            reviewer_agreement=0.0,
         )
         self.assertIsNotNone(db.get_mapping(db.hash_mapping(expected)))
 
@@ -427,7 +426,7 @@ class TestRepository(unittest.TestCase):
             object="mesh:2",
             justification=lexical_matching_process,
             confidence=0.95,
-            comment=UNSURE,
+            reviewer_agreement=0.0,
         )
 
         db = self.repository

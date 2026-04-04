@@ -33,7 +33,6 @@ from typing_extensions import Self
 from sssom_pydantic.api import MappingTool, SemanticMapping, SemanticMappingHash
 from sssom_pydantic.database.repo import SemanticMappingRepository
 from sssom_pydantic.models import Cardinality
-from sssom_pydantic.process import UNSURE
 from sssom_pydantic.query import Query
 
 if TYPE_CHECKING:
@@ -382,23 +381,16 @@ class SemanticMappingDatabase(SemanticMappingRepository):
 
 POSITIVE_MAPPING_CLAUSE = and_(
     SemanticMappingModel.justification == manual_mapping_curation,
-    SemanticMappingModel.predicate_modifier.is_(None),  # type:ignore[union-attr]
+    col(SemanticMappingModel.predicate_modifier).is_(None),
 )
 NEGATIVE_MAPPING_CLAUSE = and_(
     SemanticMappingModel.justification == manual_mapping_curation,
     SemanticMappingModel.predicate_modifier == "Not",
 )
-UNCURATED_NOT_UNSURE_CLAUSE = and_(
-    SemanticMappingModel.justification != manual_mapping_curation,
-    or_(
-        col(SemanticMappingModel.comment).is_(None),
-        ~col(SemanticMappingModel.comment).contains(UNSURE),
-    ),
-)
+UNCURATED_NOT_UNSURE_CLAUSE = and_(SemanticMappingModel.reviewer_agreement != 0.0)
 UNCURATED_UNSURE_CLAUSE = and_(
     SemanticMappingModel.justification != manual_mapping_curation,
-    col(SemanticMappingModel.comment).is_not(None),
-    col(SemanticMappingModel.comment).contains(UNSURE),
+    SemanticMappingModel.reviewer_agreement == 0.0,
 )
 
 #: The default sort order by subject, predicate, and object CURIEs

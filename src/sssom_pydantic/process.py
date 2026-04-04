@@ -34,7 +34,6 @@ if TYPE_CHECKING:
 __all__ = [
     "MARKS",
     "MARK_TO_CALL",
-    "UNSURE",
     "Call",
     "CanonicalMappingTuple",
     "ConfidenceModel",
@@ -179,10 +178,6 @@ def _get_predicate_helper(
     return _keep_mapping
 
 
-UNSURE = "sssom-curator-unsure"
-UNSURE_SUFFIX = f" ({UNSURE})"
-
-
 def curate(
     mapping: SemanticMapping,
     /,
@@ -194,13 +189,9 @@ def curate(
 ) -> SemanticMapping:
     """Curate a mapping."""
     if mark == "unsure":
-        if mapping.comment is None:
-            comment = UNSURE
-        elif UNSURE in mapping.comment:
-            raise ValueError("this mapping has already been marked as unsure")
-        else:
-            comment = mapping.comment.rstrip() + UNSURE_SUFFIX
-        return mapping.model_copy(update={"comment": comment})
+        if mapping.reviewer_agreement is not None:
+            raise NotImplementedError("this mapping has already been marked as not unsure")
+        return mapping.model_copy(update={"reviewer_agreement": 0.0})
 
     if isinstance(authors, Reference):
         authors = [authors]
@@ -221,15 +212,10 @@ def curate(
     if add_date:
         update["mapping_date"] = datetime.date.today()
 
-    if mapping.comment is not None and UNSURE in mapping.comment:
-        if mapping.comment == UNSURE:
-            update["comment"] = None
-        elif mapping.comment.endswith(UNSURE_SUFFIX):
-            update["comment"] = mapping.comment.removesuffix(UNSURE_SUFFIX)
-        else:
-            raise NotImplementedError(
-                f"not sure how to automatically remove annotation in comment: {mapping.comment}"
-            )
+    if mapping.reviewer_agreement == 0.0:
+        raise NotImplementedError(
+            f"not sure how to automatically remove annotation in comment: {mapping.comment}"
+        )
 
     if mark in semantic_mapping_scopes:
         update["predicate"] = semantic_mapping_scopes[mark]

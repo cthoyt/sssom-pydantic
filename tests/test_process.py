@@ -22,7 +22,7 @@ from pydantic import BaseModel
 
 from sssom_pydantic import SemanticMapping
 from sssom_pydantic.api import NOT
-from sssom_pydantic.process import UNSURE, Mark, curate, estimate_confidence, publish
+from sssom_pydantic.process import Mark, curate, estimate_confidence, publish
 from tests.cases import R1, R2, _m
 
 today = datetime.date.today()
@@ -82,7 +82,7 @@ class TestProcess(unittest.TestCase):
                         predicate=predicate,
                         object=R2,
                         justification=lexical_matching_process,
-                        comment=UNSURE,
+                        reviewer_agreement=0.0,
                     ),
                 ),
                 (
@@ -165,7 +165,7 @@ class TestProcess(unittest.TestCase):
                         predicate=predicate,
                         object=R2,
                         justification=lexical_matching_process,
-                        comment=UNSURE,
+                        reviewer_agreement=0.0,
                     ),
                     author,
                     "correct",
@@ -191,7 +191,8 @@ class TestProcess(unittest.TestCase):
                         predicate=predicate,
                         object=R2,
                         justification=lexical_matching_process,
-                        comment=f"some text before. ({UNSURE})",
+                        comment="some text before.",
+                        reviewer_agreement=0.0,
                     ),
                     author,
                     "correct",
@@ -208,7 +209,7 @@ class TestProcess(unittest.TestCase):
                         predicate=predicate,
                         object=R2,
                         justification=lexical_matching_process,
-                        comment=UNSURE,
+                        reviewer_agreement=0.0,
                     ),
                     author,
                     "unsure",
@@ -223,7 +224,8 @@ class TestProcess(unittest.TestCase):
                     predicate=predicate,
                     object=R2,
                     justification=lexical_matching_process,
-                    comment=f"something ({UNSURE})",
+                    comment="something",
+                    reviewer_agreement=0.0,
                 ),
                 curate(
                     SemanticMapping(
@@ -356,7 +358,7 @@ class TestProcess(unittest.TestCase):
         _m(justification=manual, confidence=0.9, reviewer_agreement=0.9)
         _m(justification=manual, confidence=0.9, reviewer_agreement=0.5)
 
-        for x in range(0, 100):
+        for x in range(100):
             i = x / 10
             v1 = _m(justification=manual, confidence=i, reviewer_agreement=0.4)
             v2 = _m(justification=manual, confidence=i, reviewer_agreement=0.5)
