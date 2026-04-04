@@ -210,7 +210,7 @@ def curate(
         raise ValueError("should use review workflow on previously manually curated mappings")
 
     if mark == "unsure":
-        return review(mapping, reviewers=authors, date=date, score=0)
+        return review(mapping, reviewers=authors, date=date, score=0.0)
 
     if isinstance(authors, Reference):
         authors = [authors]
@@ -228,7 +228,7 @@ def curate(
 
     # if this mapping was previously reviewed as
     # unsure, clear it
-    if mapping.reviewer_agreement == 0:
+    if mapping.reviewer_agreement == 0.0:
         update["reviewers"] = None
         update["reviewer_agreement"] = None
         update["review_date"] = None
