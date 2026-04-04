@@ -33,7 +33,6 @@ from typing_extensions import Self
 from sssom_pydantic.api import MappingTool, SemanticMapping, SemanticMappingHash
 from sssom_pydantic.database.repo import SemanticMappingRepository
 from sssom_pydantic.models import Cardinality
-from sssom_pydantic.process import UNSURE
 from sssom_pydantic.query import Query
 
 if TYPE_CHECKING:
@@ -156,6 +155,7 @@ class SemanticMappingModel(SQLModel, table=True):
     publication_date: datetime.date | None = Field(None)
     mapping_date: datetime.date | None = Field(None)
     review_date: datetime.date | None = Field(None)
+    reviewer_agreement: float | None = Field(None)
 
     comment: str | None = Field(None)
     curation_rule: list[Reference] | None = Field(None, sa_column=get_reference_list_sa_column())
@@ -295,11 +295,19 @@ class SemanticMappingDatabase(SemanticMappingRepository):
             all_entities = sqlmodel.union(sources, targets).subquery()
             return session.exec(select(func.count()).select_from(all_entities)).one()
 
-    def add_mappings(self, mappings: Iterable[SemanticMapping]) -> list[Reference]:
+    def add_mappings(
+        self, mappings: Iterable[SemanticMapping], *, progress: bool = False
+    ) -> list[Reference]:
         """Add mappings to the database."""
         rv: list[Reference] = []
         with self.get_session() as session:
-            for mapping in tqdm(mappings, unit_scale=True, desc="Adding SSSOM records"):
+            for mapping in tqdm(
+                mappings,
+                unit_scale=True,
+                desc="Adding SSSOM records to session",
+                disable=not progress,
+                leave=False,
+            ):
                 reference = self.hash_mapping(mapping)
                 session.add(
                     SemanticMappingModel.from_semantic_mapping(
@@ -379,26 +387,42 @@ class SemanticMappingDatabase(SemanticMappingRepository):
             return [mapping.to_semantic_mapping() for mapping in session.exec(statement).all()]
 
 
-POSITIVE_MAPPING_CLAUSE = and_(
-    SemanticMappingModel.justification == manual_mapping_curation,
-    SemanticMappingModel.predicate_modifier.is_(None),  # type:ignore[union-attr]
+POSITIVE_MAPPING_CLAUSE = or_(
+    # Option 1: the mapping is manually curated
+    and_(
+        SemanticMappingModel.justification == manual_mapping_curation,
+        col(SemanticMappingModel.predicate_modifier).is_(None),
+    ),
+    # Option 2: the mapping has been reviewed in a positive way
+    and_(
+        SemanticMappingModel.justification != manual_mapping_curation,
+        # implicit: col(SemanticMappingModel.reviewers).is_not(None),
+        col(SemanticMappingModel.reviewer_agreement) > 0.0,
+    ),
 )
-NEGATIVE_MAPPING_CLAUSE = and_(
-    SemanticMappingModel.justification == manual_mapping_curation,
-    SemanticMappingModel.predicate_modifier == "Not",
-)
-UNCURATED_NOT_UNSURE_CLAUSE = and_(
-    SemanticMappingModel.justification != manual_mapping_curation,
-    or_(
-        col(SemanticMappingModel.comment).is_(None),
-        ~col(SemanticMappingModel.comment).contains(UNSURE),
+NEGATIVE_MAPPING_CLAUSE = or_(
+    # Option 1: the mapping is manually curated
+    and_(
+        SemanticMappingModel.justification == manual_mapping_curation,
+        SemanticMappingModel.predicate_modifier == "Not",
+    ),
+    # Option 2: the mapping has been reviewed in a positive way
+    and_(
+        SemanticMappingModel.justification != manual_mapping_curation,
+        # implicit: col(SemanticMappingModel.reviewers).is_not(None),
+        col(SemanticMappingModel.reviewer_agreement) < 0.0,
     ),
 )
 UNCURATED_UNSURE_CLAUSE = and_(
     SemanticMappingModel.justification != manual_mapping_curation,
-    col(SemanticMappingModel.comment).is_not(None),
-    col(SemanticMappingModel.comment).contains(UNSURE),
+    # implicit: col(SemanticMappingModel.reviewers).is_not(None),
+    SemanticMappingModel.reviewer_agreement == 0.0,
 )
+UNCURATED_NOT_UNSURE_CLAUSE = and_(
+    SemanticMappingModel.justification != manual_mapping_curation,
+    col(SemanticMappingModel.reviewer_agreement).is_(None),
+)
+
 
 #: The default sort order by subject, predicate, and object CURIEs
 #: that can be passed to :meth:`SemanticMappingDatabase.get_mappings`

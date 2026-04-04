@@ -34,11 +34,12 @@ if TYPE_CHECKING:
 __all__ = [
     "MARKS",
     "MARK_TO_CALL",
-    "UNSURE",
     "Call",
     "CanonicalMappingTuple",
     "ConfidenceModel",
+    "ExistsAction",
     "Hasher",
+    "InvalidExistsActionError",
     "Mark",
     "curate",
     "estimate_confidence",
@@ -46,6 +47,7 @@ __all__ = [
     "publish",
     "remove_redundant_external",
     "remove_redundant_internal",
+    "review",
 ]
 
 #: A canonical mapping tuple
@@ -179,8 +181,18 @@ def _get_predicate_helper(
     return _keep_mapping
 
 
-UNSURE = "sssom-curator-unsure"
-UNSURE_SUFFIX = f" ({UNSURE})"
+ExistsAction: TypeAlias = Literal["error", "overwrite", "keep"]
+
+
+class InvalidExistsActionError(ValueError):
+    """An error for an invalid exists action."""
+
+    def __init__(self, value: str) -> None:
+        """Initialize the exception."""
+        self.value = value
+
+    def __str__(self) -> str:
+        return f"invalid exists_action: {self.value}. Use one of {typing.get_args(ExistsAction)}"
 
 
 def curate(
@@ -189,18 +201,16 @@ def curate(
     authors: Reference | list[Reference],
     mark: Mark,
     confidence: float | None = None,
+    date: datetime.date | None = None,
     add_date: bool = True,
     **kwargs: Any,
 ) -> SemanticMapping:
     """Curate a mapping."""
+    if mapping.justification == manual_mapping_curation:
+        raise ValueError("should use review workflow on previously manually curated mappings")
+
     if mark == "unsure":
-        if mapping.comment is None:
-            comment = UNSURE
-        elif UNSURE in mapping.comment:
-            raise ValueError("this mapping has already been marked as unsure")
-        else:
-            comment = mapping.comment.rstrip() + UNSURE_SUFFIX
-        return mapping.model_copy(update={"comment": comment})
+        return review(mapping, reviewers=authors, date=date, score=0.0)
 
     if isinstance(authors, Reference):
         authors = [authors]
@@ -216,20 +226,19 @@ def curate(
         **kwargs,
     }
 
+    # if this mapping was previously reviewed as
+    # unsure, clear it
+    if mapping.reviewer_agreement == 0.0:
+        update["reviewers"] = None
+        update["reviewer_agreement"] = None
+        update["review_date"] = None
+
     # Add a flag for maintaining backwards compatibility
     # with workflows that don't track this
     if add_date:
-        update["mapping_date"] = datetime.date.today()
-
-    if mapping.comment is not None and UNSURE in mapping.comment:
-        if mapping.comment == UNSURE:
-            update["comment"] = None
-        elif mapping.comment.endswith(UNSURE_SUFFIX):
-            update["comment"] = mapping.comment.removesuffix(UNSURE_SUFFIX)
-        else:
-            raise NotImplementedError(
-                f"not sure how to automatically remove annotation in comment: {mapping.comment}"
-            )
+        if date is None:
+            date = datetime.date.today()
+        update["mapping_date"] = date
 
     if mark in semantic_mapping_scopes:
         update["predicate"] = semantic_mapping_scopes[mark]
@@ -244,11 +253,68 @@ def curate(
     return new_mapping
 
 
+def review(
+    mapping: SemanticMapping,
+    reviewers: Reference | list[Reference],
+    *,
+    score: float | None = None,
+    date: datetime.date | None = None,
+    exists_action: ExistsAction | None = None,
+) -> SemanticMapping:
+    """Review a mapping and produce a new record.
+
+    :param mapping: A semantic mapping record
+    :param reviewers: A reviewer or list of reviewers
+    :param score: The agreement score, where 1.0 means agree, 0.0 means unsure, and -1.0
+        means disagree
+    :param date: The date of the review. Defaults to today.
+    :param exists_action: The action to take if a reviewer already exists. By default,
+        will raise a value error.
+
+    :returns: A new mapping record with new reviewer information. If there was already
+        reviewer information, this will get overwritten.
+
+    :raises ValueError: If the mapping already has reviewer information, and
+        ``exists_action`` is either set to "error" or is unset (since error is the
+        default action)
+    :raises InvalidExistsActionError: if an invalid value is passed to ``exists_action``
+    """
+    if score is None:
+        score = 1.0
+    elif score < -1.0:
+        raise ValueError(
+            f"reviewer agreement score should be from [-1.0, 1.0], got too low {score}"
+        )
+    elif score > 1.0:
+        raise ValueError(
+            f"reviewer agreement score should be from [-1.0, 1.0], got too high {score}"
+        )
+    if date is None:
+        date = datetime.date.today()
+    if mapping.reviewers:
+        if exists_action == "error" or exists_action is None:
+            raise ValueError("trying to overwrite existing reviewers")
+        elif exists_action == "keep":
+            return mapping
+        elif exists_action == "overwrite":
+            pass  # just use the implementation below to update the publication date
+        else:
+            raise InvalidExistsActionError(exists_action)
+    if isinstance(reviewers, Reference):
+        reviewers = [reviewers]
+    update = {
+        "reviewers": reviewers,
+        "review_date": date,
+        "reviewer_agreement": score,
+    }
+    return mapping.model_copy(update=update)
+
+
 def publish(
     mapping: SemanticMapping,
     /,
     *,
-    exists_action: Literal["error", "overwrite", "keep"] | None = None,
+    exists_action: ExistsAction | None = None,
     date: datetime.date | None = None,
 ) -> SemanticMapping:
     """Add a publication date to the mapping."""
@@ -260,7 +326,7 @@ def publish(
         elif exists_action == "overwrite":
             pass  # just use the implementation below to update the publication date
         else:
-            raise ValueError(f"invalid exists_action: {exists_action}")
+            raise InvalidExistsActionError(exists_action)
     rv = mapping.model_copy(
         update={"publication_date": date if date is not None else datetime.date.today()}
     )
@@ -307,6 +373,7 @@ def estimate_confidence(
         return 1.0
 
     creator_confidences = []
+    reviewer_agreements = []
     for mapping in mappings:
         if mapping.confidence is not None:
             if mapping.negated:
@@ -318,12 +385,26 @@ def estimate_confidence(
                 creator_confidences.append(0.0)
             else:
                 creator_confidences.append(1.0)
+        if mapping.reviewers is not None:
+            if mapping.reviewer_agreement:
+                if mapping.negated:
+                    reviewer_agreements.append(1.0 - mapping.reviewer_agreement)
+                else:
+                    reviewer_agreements.append(mapping.reviewer_agreement)
+            else:
+                if mapping.negated:
+                    reviewer_agreements.append(-1.0)
+                else:
+                    reviewer_agreements.append(1.0)
 
-    return _aggregate_confidences(creator_confidences, confidence_model=confidence_model)
+    return _aggregate_confidences(
+        creator_confidences, reviewer_agreements, confidence_model=confidence_model
+    )
 
 
 def _aggregate_confidences(
     creator_confidences: list[float],
+    reviewer_agreements: list[float],
     *,
     confidence_model: ConfidenceModel | None = None,
 ) -> float:
@@ -337,8 +418,46 @@ def _aggregate_confidences(
                 f"unknown confidence model. use one of {typing.get_args(ConfidenceModel)}"
             )
 
-    return c
+    if not reviewer_agreements:
+        return c
+
+    direction = statistics.mean(reviewer_agreements)  # R
+    strength = statistics.mean(abs(a) for a in reviewer_agreements)  # W
+    rv = (1 - strength) * c + strength * (1 + direction) / 2
+    return rv
 
 
 def _not_all_same_triple(mappings: Iterable[SemanticMapping]) -> bool:
     return len({(m.subject, m.predicate, m.object) for m in mappings}) > 1
+
+
+def plot2d() -> None:
+    """Plot the confidence model in 2D."""
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    creator_linspace = np.linspace(0, 1, 100)
+    reviewer_linspace = np.linspace(-1, 1, 100)
+
+    reviewer, creator = np.meshgrid(reviewer_linspace, creator_linspace)
+
+    z = np.array(
+        [
+            _aggregate_confidences([c], [r])
+            for c, r in zip(creator.reshape(-1), reviewer.reshape(-1), strict=False)
+        ]
+    ).reshape((100, 100))
+
+    fig, ax = plt.subplots()
+    mesh = ax.pcolormesh(creator, reviewer, z, cmap="RdBu")
+    ax.set_xlabel("Creator Confidence")
+    ax.set_ylabel("Reviewer Agreement")
+    ax.set_title("Aggregation of Creator Confidence\nand Reviewer Agreement")
+    ax.axis([0, 1, -1, 1])
+    fig.colorbar(mesh, ax=ax)
+    plt.show()
+    plt.savefig("images/reviewer-agreement-aggregation.svg")
+
+
+if __name__ == "__main__":
+    plot2d()

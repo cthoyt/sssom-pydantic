@@ -75,6 +75,8 @@ class Record(BaseModel):
     comment: str | None = Field(None)
     confidence: float | None = Field(
         None,
+        ge=0.0,
+        le=1.0,
         description="""\
         An assessment of the confidence of the mapping, reported by the method used to generate it.
 
@@ -99,6 +101,7 @@ class Record(BaseModel):
         function if a knowledge graph embedding model was used ot generate a mapping prediction.
         """,
     )
+    reviewer_agreement: float | None = Field(None, ge=-1.0, le=1.0)
     curation_rule: list[str] | None = Field(None)
     curation_rule_text: list[str] | None = Field(None)
     issue_tracker_item: str | None = Field(None)
@@ -117,7 +120,7 @@ class Record(BaseModel):
     other: str | None = Field(None)
     see_also: list[str] | None = Field(None)
     similarity_measure: str | None = Field(None)
-    similarity_score: float | None = Field(None)
+    similarity_score: float | None = Field(None, ge=0.0, le=1.0)
 
 
 #: A predicate for a record

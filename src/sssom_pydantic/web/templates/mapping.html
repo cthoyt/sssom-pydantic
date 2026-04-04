@@ -1,0 +1,31 @@
+{%- extends "base.html" %}
+
+{%- block body %}
+<div class="card mt-3">
+    <div class="card-body">
+        <a type="button" class="btn btn-primary">Review</a>
+        <dl>
+            <dt>Record</dt>
+            <dd>{{ mapping.record.curie }}</dd>
+            <dt>Subject</dt>
+            <dd>{{ mapping.subject.curie }}</dd>
+            <dt>Predicate</dt>
+            <dd>{{ mapping.predicate.curie }}</dd>
+            <dt>Object</dt>
+            <dd>{{ mapping.object.curie }}</dd>
+            <dt>Justification</dt>
+            <dd>{{ mapping.justification.curie }}</dd>
+            {%- if mapping.confidence %}
+            <dt>Confidence</dt>
+            <dd>{{ mapping.confidence }}</dd>
+            {%- endif %}
+            {%- if mapping.authors %}
+            <dt>Authors</dt>
+            {% for author in mapping.authors  %}
+            <dd>{{ author }}</dd>
+            {%- endfor %}
+            {%- endif %}
+        </dl>
+    </div>
+</div>
+{%- endblock %}

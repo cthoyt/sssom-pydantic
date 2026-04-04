@@ -62,6 +62,10 @@ simple_with_reviewer_and_date = ExampleMapping(
         update={"reviewers": [charlie], "review_date": datetime.date(2021, 1, 1)}
     ),
 )
+simple_with_reviewer_and_score = ExampleMapping(
+    description="reviewer and confidence",
+    semantic_mapping=simple.model_copy(update={"reviewers": [charlie], "reviewer_agreement": 0.99}),
+)
 simple_with_creator = ExampleMapping(
     description="creator",
     semantic_mapping=simple.model_copy(update={"creators": [charlie]}),

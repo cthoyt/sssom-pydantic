@@ -19,7 +19,7 @@ from ..api import (
     mapping_hash_v1,
 )
 from ..io import Metadata, read, write
-from ..process import Mark, curate, estimate_confidence, publish
+from ..process import Mark, curate, estimate_confidence, publish, review
 from ..query import Query
 
 __all__ = ["SemanticMappingRepository"]
@@ -65,7 +65,9 @@ class SemanticMappingRepository(ABC):
         return rv[0]
 
     @abstractmethod
-    def add_mappings(self, mappings: Iterable[SemanticMapping]) -> list[Reference]:
+    def add_mappings(
+        self, mappings: Iterable[SemanticMapping], *, progress: bool = False
+    ) -> list[Reference]:
         """Add mappings to the database."""
 
     def read(
@@ -178,6 +180,26 @@ class SemanticMappingRepository(ABC):
     ) -> Reference:
         """Publish a mapping and return the new mapping's record."""
         return self._mutate(reference, publish, date=date)
+
+    def review(
+        self,
+        reference: Reference,
+        reviewers: Reference | list[Reference],
+        score: float | None = None,
+        date: datetime.date | None = None,
+    ) -> Reference:
+        """Review a mapping and return the new mapping's record.
+
+        :param reference: A reference for a mapping record in the repository
+        :param reviewers: A reviewer or list of reviewers
+        :param score: The agreement score, where 1.0 means agree, 0.0 means unsure, and
+            -1.0 means disagree
+        :param date: The date of the review. Defaults to today.
+
+        :returns: A new mapping record with new reviewer information. If there was
+            already reviewer information, this will get overwritten.
+        """
+        return self._mutate(reference, review, reviewers=reviewers, score=score, date=date)
 
     def _mutate(
         self,
