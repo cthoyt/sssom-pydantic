@@ -225,6 +225,13 @@ def curate(
         **kwargs,
     }
 
+    # if this mapping was previously reviewed as
+    # unsure, clear it
+    if mapping.reviewer_agreement == 0:
+        update["reviewers"] = None
+        update["reviewer_agreement"] = None
+        update["review_date"] = None
+
     # Add a flag for maintaining backwards compatibility
     # with workflows that don't track this
     if add_date:
