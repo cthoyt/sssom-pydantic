@@ -7,6 +7,7 @@ import fastapi
 from curies import Reference
 from curies.vocabulary import charlie, exact_match, manual_mapping_curation
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Request
+from pydantic import BaseModel, Field
 
 from sssom_pydantic import SemanticMapping
 from sssom_pydantic.database import SemanticMappingRepository
@@ -110,3 +111,22 @@ def curate_mapping(
 ) -> Reference:
     """Publish a mapping with the given CURIE."""
     return repository.curate(Reference.from_curie(curie), authors=authors, mark=mark)
+
+
+class ReviewPayload(BaseModel):
+    """A review."""
+
+    reviewers: list[Reference] = Field(..., examples=[[charlie]])
+    score: float = Field(..., ge=-1.0, le=1.0)
+
+
+@router.post("/action/review/{curie}")
+def review_mapping(
+    repository: AnnotatedRepository,
+    curie: AnnotatedCURIE,
+    review_payload: ReviewPayload,
+) -> Reference:
+    """Review a mapping with the given CURIE."""
+    return repository.review(
+        Reference.from_curie(curie), reviewers=review_payload.reviewers, score=review_payload.score
+    )
