@@ -57,7 +57,9 @@ class FileSystemSemanticMappingRepository(SemanticMappingRepository):
             rr.add(mapping.object)
         return len(rr)
 
-    def add_mappings(self, mappings: Iterable[SemanticMapping]) -> list[Reference]:
+    def add_mappings(
+        self, mappings: Iterable[SemanticMapping], *, progress: bool = False
+    ) -> list[Reference]:
         """Add mappings to the repository."""
         mm = []
         hashes = []
