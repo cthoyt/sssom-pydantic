@@ -130,7 +130,7 @@ class CoreSemanticMapping(RequiredSemanticMapping):
 
     record: Reference | None = Field(None)
     authors: list[Reference] | None = Field(None)
-    confidence: float | None = Field(None)
+    confidence: float | None = Field(None, ge=0.0)
     mapping_tool: MappingTool | None = Field(None)
     license: str | None = Field(None)
 
@@ -259,7 +259,7 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
     publication_date: datetime.date | None = Field(None)
     mapping_date: datetime.date | None = Field(None)
     review_date: datetime.date | None = Field(None)
-    reviewer_agreement: float | None = Field(None)
+    reviewer_agreement: float | None = Field(None, ge=-1.0, le=1.0)
 
     comment: str | None = Field(None)
     curation_rule: list[Reference] | None = Field(None)
@@ -280,7 +280,7 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
     other: dict[str, str] | None = Field(None)
     see_also: list[str] | None = Field(None)
     similarity_measure: str | None = Field(None)
-    similarity_score: float | None = Field(None)
+    similarity_score: float | None = Field(None, ge=0.0, le=1.0)
 
     def get_prefixes(self) -> set[str]:
         """Get prefixes used in this mapping."""
@@ -457,7 +457,7 @@ class MappingSetRecord(BaseModel):
     curie_map: dict[str, str] | None = None
 
     mapping_set_id: AnyUrl = Field(...)
-    mapping_set_confidence: float | None = Field(None)
+    mapping_set_confidence: float | None = Field(None, ge=0.0, le=1.0)
     mapping_set_description: str | None = Field(None)
     mapping_set_source: list[AnyUrl] | None = Field(None)
     mapping_set_title: str | None = Field(None)
@@ -565,7 +565,7 @@ class MappingSet(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     id: AnyUrl = Field(...)
-    confidence: float | None = Field(None)
+    confidence: float | None = Field(None, ge=0.0, le=1.0)
     description: str | None = Field(None)
     source: list[str] | None = Field(None)
     title: str | None = Field(None)
