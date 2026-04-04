@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Concatenate, Literal, ParamSpec, TypeVar,
 
 import curies
 from curies import NamableReference, Reference
+from tqdm import tqdm
 from typing_extensions import LiteralString
 
 from .repo import SemanticMappingRepository
@@ -67,7 +68,9 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         with closing(self.driver.session()) as session:
             session.execute_write(_get_worker(cypher), *args, **kwargs)
 
-    def add_mappings(self, mappings: Iterable[SemanticMapping]) -> list[Reference]:
+    def add_mappings(
+        self, mappings: Iterable[SemanticMapping], *, progress: bool = False
+    ) -> list[Reference]:
         """Add mappings to the database."""
         cypher: LiteralString = """
             UNWIND $batch AS row
@@ -98,7 +101,9 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
             "justification",
             "subject_label",
         }
-        for mapping in mappings:
+        for mapping in tqdm(
+            mappings, disable=not progress, leave=False, desc="Preparing mappings for Neo4j"
+        ):
             reference = self.hash_mapping(mapping)
             references.append(reference)
             batch.append(
