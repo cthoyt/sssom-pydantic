@@ -22,7 +22,7 @@ from pydantic import BaseModel
 
 from sssom_pydantic import SemanticMapping
 from sssom_pydantic.api import NOT
-from sssom_pydantic.process import UNSURE, Mark, curate, estimate_confidence, publish
+from sssom_pydantic.process import UNSURE, Mark, curate, estimate_confidence, publish, review
 from tests.cases import R1, R2, _m
 
 today = datetime.date.today()
@@ -320,6 +320,31 @@ class TestProcess(unittest.TestCase):
                 ),
                 exists_action="blahblah",  # type:ignore
             )
+
+
+    def test_review(self) -> None:
+        """Test review workflow."""
+        self.assert_model_equal(
+            SemanticMapping(
+                subject=R1,
+                predicate=exact_match,
+                object=R2,
+                justification=manual_mapping_curation,
+                reviewers=[author],
+                reviewer_agreement=1.0,
+            ),
+            review(
+                SemanticMapping(
+                    subject=R1,
+                    predicate=exact_match,
+                    object=R2,
+                    justification=manual_mapping_curation,
+                ),
+                reviewers=author,
+                score=1.0,
+            )
+        )
+
 
     def test_estimate_confidence(self) -> None:
         """Test estimating confidence."""
