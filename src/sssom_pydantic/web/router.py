@@ -110,3 +110,14 @@ def curate_mapping(
 ) -> Reference:
     """Publish a mapping with the given CURIE."""
     return repository.curate(Reference.from_curie(curie), authors=authors, mark=mark)
+
+
+@router.post("/action/review/{curie}")
+def curate_mapping(
+    repository: AnnotatedRepository,
+    curie: AnnotatedCURIE,
+    reviewers: Annotated[list[Reference], Body(..., examples=[charlie])],
+    score: Annotated[float, Body(..., ge=-1.0, le=1.0)],
+) -> Reference:
+    """Publish a mapping with the given CURIE."""
+    return repository.review(Reference.from_curie(curie), reviewers=reviewers, score=score)
