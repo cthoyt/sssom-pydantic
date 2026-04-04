@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 from sssom_pydantic import SemanticMapping
 from sssom_pydantic.database import SemanticMappingRepository
 from sssom_pydantic.examples import R1, R2
-from sssom_pydantic.process import MARKS, Mark
+from sssom_pydantic.process import MARKS, Mark, estimate_confidence
 from sssom_pydantic.query import Query
 
 __all__ = ["router"]
@@ -87,6 +87,25 @@ def post_mapping(
 
 
 # TODO bulk posting mappings (test on scale up to 10k or 100k at a time)
+
+
+class TripleResponse(BaseModel):
+    """A response for triples."""
+
+    triple_id: str
+    confidence: float
+    mappings: list[SemanticMapping]
+
+
+@router.get("/triple/{triple_id}")
+def get_triple(repository: AnnotatedRepository, triple_id: str) -> TripleResponse:
+    """Get a triple by CURIE."""
+    mappings = repository.get_mappings(Query(triple_id=triple_id))
+    return TripleResponse(
+        triple_id=triple_id,
+        mappings=list(mappings),
+        confidence=estimate_confidence(mappings),
+    )
 
 
 @router.post("/action/publish/{curie}")
