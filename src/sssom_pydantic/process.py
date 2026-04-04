@@ -190,7 +190,7 @@ class InvalidExistsActionError(ValueError):
         """Initialize the exception."""
         self.value = value
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"invalid exists_action: {self.value}. Use one of {typing.get_args(ExistsAction)}"
 
 

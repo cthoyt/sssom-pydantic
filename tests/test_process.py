@@ -341,6 +341,36 @@ class TestProcess(unittest.TestCase):
             review(_m(), reviewers=author, score=2.0)
         with self.assertRaises(ValueError):
             review(_m(), reviewers=author, score=-2.0)
+        # test bad exist action
+        with self.assertRaises(ValueError):
+            review(_m(reviewers=[charlie]), reviewers=author, score=-2.0, exists_action="nope")  # type:ignore
+
+        # test no overwriting (default)
+        with self.assertRaises(ValueError):
+            review(_m(reviewers=[charlie]), reviewers=author, score=-2.0)
+        # test no overwriting (explicit)
+        with self.assertRaises(ValueError):
+            review(_m(reviewers=[charlie]), reviewers=author, score=-2.0, exists_action="error")
+
+        # test no-overwrite
+        self.assert_model_equal(
+            _m(reviewers=[charlie]),
+            review(
+                _m(reviewers=[charlie]),
+                reviewers=author,
+                exists_action="keep",
+            ),
+        )
+
+        # test overwrite
+        self.assert_model_equal(
+            _m(reviewers=[author], reviewer_agreement=1.0, review_date=today),
+            review(
+                _m(reviewers=[charlie]),
+                reviewers=author,
+                exists_action="overwrite",
+            ),
+        )
 
         # test passing a custom date
         custom_date = datetime.date(2021, 1, 1)
