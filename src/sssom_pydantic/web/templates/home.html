@@ -1,0 +1,11 @@
+{%- extends "base.html" %}
+{%- import "macros.html" as macros %}
+
+{%- block body %}
+<div class="card mt-3">
+    <div class="card-body">
+        <p>There are {{n_mappings}} mappings over {{n_entities}} entities.</p>
+    </div>
+    {{ macros.mapping_table(converter, mappings) }}
+</div>
+{%- endblock %}
