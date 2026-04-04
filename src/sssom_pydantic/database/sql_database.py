@@ -33,7 +33,6 @@ from typing_extensions import Self
 from sssom_pydantic.api import MappingTool, SemanticMapping, SemanticMappingHash
 from sssom_pydantic.database.repo import SemanticMappingRepository
 from sssom_pydantic.models import Cardinality
-from sssom_pydantic.process import UNSURE
 from sssom_pydantic.query import Query
 
 if TYPE_CHECKING:
@@ -388,26 +387,42 @@ class SemanticMappingDatabase(SemanticMappingRepository):
             return [mapping.to_semantic_mapping() for mapping in session.exec(statement).all()]
 
 
-POSITIVE_MAPPING_CLAUSE = and_(
-    SemanticMappingModel.justification == manual_mapping_curation,
-    SemanticMappingModel.predicate_modifier.is_(None),  # type:ignore[union-attr]
+POSITIVE_MAPPING_CLAUSE = or_(
+    # Option 1: the mapping is manually curated
+    and_(
+        SemanticMappingModel.justification == manual_mapping_curation,
+        col(SemanticMappingModel.predicate_modifier).is_(None),
+    ),
+    # Option 2: the mapping has been reviewed in a positive way
+    and_(
+        SemanticMappingModel.justification != manual_mapping_curation,
+        # implicit: col(SemanticMappingModel.reviewers).is_not(None),
+        col(SemanticMappingModel.reviewer_agreement) > 0.0,
+    ),
 )
-NEGATIVE_MAPPING_CLAUSE = and_(
-    SemanticMappingModel.justification == manual_mapping_curation,
-    SemanticMappingModel.predicate_modifier == "Not",
-)
-UNCURATED_NOT_UNSURE_CLAUSE = and_(
-    SemanticMappingModel.justification != manual_mapping_curation,
-    or_(
-        col(SemanticMappingModel.comment).is_(None),
-        ~col(SemanticMappingModel.comment).contains(UNSURE),
+NEGATIVE_MAPPING_CLAUSE = or_(
+    # Option 1: the mapping is manually curated
+    and_(
+        SemanticMappingModel.justification == manual_mapping_curation,
+        SemanticMappingModel.predicate_modifier == "Not",
+    ),
+    # Option 2: the mapping has been reviewed in a positive way
+    and_(
+        SemanticMappingModel.justification != manual_mapping_curation,
+        # implicit: col(SemanticMappingModel.reviewers).is_not(None),
+        col(SemanticMappingModel.reviewer_agreement) < 0.0,
     ),
 )
 UNCURATED_UNSURE_CLAUSE = and_(
     SemanticMappingModel.justification != manual_mapping_curation,
-    col(SemanticMappingModel.comment).is_not(None),
-    col(SemanticMappingModel.comment).contains(UNSURE),
+    # implicit: col(SemanticMappingModel.reviewers).is_not(None),
+    SemanticMappingModel.reviewer_agreement == 0.0,
 )
+UNCURATED_NOT_UNSURE_CLAUSE = and_(
+    SemanticMappingModel.justification != manual_mapping_curation,
+    col(SemanticMappingModel.reviewer_agreement).is_(None),
+)
+
 
 #: The default sort order by subject, predicate, and object CURIEs
 #: that can be passed to :meth:`SemanticMappingDatabase.get_mappings`

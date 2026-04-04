@@ -23,7 +23,6 @@ from pydantic import BaseModel
 from sssom_pydantic import SemanticMapping
 from sssom_pydantic.api import NOT
 from sssom_pydantic.process import (
-    UNSURE,
     InvalidExistsActionError,
     Mark,
     curate,
@@ -90,7 +89,9 @@ class TestProcess(unittest.TestCase):
                         predicate=predicate,
                         object=R2,
                         justification=lexical_matching_process,
-                        comment=UNSURE,
+                        reviewers=[author],
+                        review_date=today,
+                        reviewer_agreement=0.0,
                     ),
                 ),
                 (
@@ -173,7 +174,7 @@ class TestProcess(unittest.TestCase):
                         predicate=predicate,
                         object=R2,
                         justification=lexical_matching_process,
-                        comment=UNSURE,
+                        reviewer_agreement=0.0,
                     ),
                     author,
                     "correct",
@@ -199,7 +200,8 @@ class TestProcess(unittest.TestCase):
                         predicate=predicate,
                         object=R2,
                         justification=lexical_matching_process,
-                        comment=f"some text before. ({UNSURE})",
+                        comment="some text before.",
+                        reviewer_agreement=0.0,
                     ),
                     author,
                     "correct",
@@ -216,7 +218,8 @@ class TestProcess(unittest.TestCase):
                         predicate=predicate,
                         object=R2,
                         justification=lexical_matching_process,
-                        comment=UNSURE,
+                        reviewers=[charlie],
+                        reviewer_agreement=0.0,
                     ),
                     author,
                     "unsure",
@@ -231,7 +234,9 @@ class TestProcess(unittest.TestCase):
                     predicate=predicate,
                     object=R2,
                     justification=lexical_matching_process,
-                    comment=f"something ({UNSURE})",
+                    reviewers=[author],
+                    review_date=today,
+                    reviewer_agreement=0.0,
                 ),
                 curate(
                     SemanticMapping(
@@ -239,7 +244,6 @@ class TestProcess(unittest.TestCase):
                         predicate=predicate,
                         object=R2,
                         justification=lexical_matching_process,
-                        comment="something",
                     ),
                     author,
                     "unsure",

@@ -34,7 +34,6 @@ if TYPE_CHECKING:
 __all__ = [
     "MARKS",
     "MARK_TO_CALL",
-    "UNSURE",
     "Call",
     "CanonicalMappingTuple",
     "ConfidenceModel",
@@ -196,28 +195,22 @@ class InvalidExistsActionError(ValueError):
         return f"invalid exists_action: {self.value}. Use one of {typing.get_args(ExistsAction)}"
 
 
-UNSURE = "sssom-curator-unsure"
-UNSURE_SUFFIX = f" ({UNSURE})"
-
-
 def curate(
     mapping: SemanticMapping,
     /,
     authors: Reference | list[Reference],
     mark: Mark,
     confidence: float | None = None,
+    date: datetime.date | None = None,
     add_date: bool = True,
     **kwargs: Any,
 ) -> SemanticMapping:
     """Curate a mapping."""
+    if mapping.justification == manual_mapping_curation:
+        raise ValueError("should use review workflow on previously manually curated mappings")
+
     if mark == "unsure":
-        if mapping.comment is None:
-            comment = UNSURE
-        elif UNSURE in mapping.comment:
-            raise ValueError("this mapping has already been marked as unsure")
-        else:
-            comment = mapping.comment.rstrip() + UNSURE_SUFFIX
-        return mapping.model_copy(update={"comment": comment})
+        return review(mapping, reviewers=authors, date=date, score=0.0)
 
     if isinstance(authors, Reference):
         authors = [authors]
@@ -233,20 +226,19 @@ def curate(
         **kwargs,
     }
 
+    # if this mapping was previously reviewed as
+    # unsure, clear it
+    if mapping.reviewer_agreement == 0.0:
+        update["reviewers"] = None
+        update["reviewer_agreement"] = None
+        update["review_date"] = None
+
     # Add a flag for maintaining backwards compatibility
     # with workflows that don't track this
     if add_date:
-        update["mapping_date"] = datetime.date.today()
-
-    if mapping.comment is not None and UNSURE in mapping.comment:
-        if mapping.comment == UNSURE:
-            update["comment"] = None
-        elif mapping.comment.endswith(UNSURE_SUFFIX):
-            update["comment"] = mapping.comment.removesuffix(UNSURE_SUFFIX)
-        else:
-            raise NotImplementedError(
-                f"not sure how to automatically remove annotation in comment: {mapping.comment}"
-            )
+        if date is None:
+            date = datetime.date.today()
+        update["mapping_date"] = date
 
     if mark in semantic_mapping_scopes:
         update["predicate"] = semantic_mapping_scopes[mark]
