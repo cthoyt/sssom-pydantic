@@ -35,6 +35,7 @@ from sssom_pydantic.examples import EXAMPLE_MAPPINGS, EXAMPLES
 from sssom_pydantic.models import Record
 from sssom_pydantic.process import UNSURE
 from sssom_pydantic.query import Query
+from sssom_pydantic.web.router import ReviewPayload
 
 if TYPE_CHECKING:
     from starlette.testclient import TestClient
@@ -551,6 +552,25 @@ class TestFastAPI(unittest.TestCase):
             actual.model_dump(exclude_unset=True, exclude_none=True),
         )
 
+    def post_mapping(self, mapping: SemanticMapping) -> Reference:
+        """Post a mapping and parse the response."""
+        response = self.client.post("/mapping", json=mapping.model_dump())
+        return Reference.model_validate(response.json())
+
+    def get_mapping(self, reference: Reference) -> SemanticMapping:
+        """Get a mapping."""
+        response = self.client.get(f"/mapping/{reference.curie}")
+        response.raise_for_status()
+        return SemanticMapping.model_validate(response.json())
+
+    def assert_missing(self, post_reference: Reference) -> None:
+        """Assert a mapping is not in the database."""
+        self.assertEqual(
+            404,
+            self.client.get(f"/mapping/{post_reference.curie}").status_code,
+            msg="the old mapping should be deleted",
+        )
+
     def test_get_missing_mapping(self) -> None:
         """Test getting a missing mapping from the API."""
         response = self.client.get("/mapping/nope:nope")
@@ -592,8 +612,7 @@ class TestFastAPI(unittest.TestCase):
         """Test curating a mapping through the API."""
         mapping_predicted = _m(justification=lexical_matching_process, confidence=1)
 
-        response = self.client.post("/mapping", json=mapping_predicted.model_dump())
-        post_reference = Reference.model_validate(response.json())
+        post_reference = self.post_mapping(mapping_predicted)
 
         curation_response = self.client.post(
             f"/action/curate/{post_reference.curie}",
@@ -602,9 +621,9 @@ class TestFastAPI(unittest.TestCase):
         curation_response.raise_for_status()
         curation_reference = Reference.model_validate(curation_response.json())
 
-        get_response = self.client.get(f"/mapping/{curation_reference.curie}")
-        get_response.raise_for_status()
-        actual = SemanticMapping.model_validate(get_response.json())
+        self.assert_missing(post_reference)
+
+        actual = self.get_mapping(curation_reference)
 
         expected = _m(
             justification=manual_mapping_curation,
@@ -632,3 +651,35 @@ class TestFastAPI(unittest.TestCase):
             update={"record": self.repository.hash_mapping(expected_2)}
         )
         self.assert_model_equal(expected_2, published_mapping)
+
+    def test_review_mapping(self) -> None:
+        """Test reviewing a mapping."""
+        mapping_predicted = _m(justification=lexical_matching_process)
+
+        post_reference = self.post_mapping(mapping_predicted)
+
+        score = 0.99
+
+        payload = ReviewPayload(
+            reviewers=[charlie],
+            score=score,
+        )
+        review_response = self.client.post(
+            f"/action/review/{post_reference.curie}",
+            json=payload.model_dump(),
+        )
+        review_response.raise_for_status()
+        review_reference = Reference.model_validate(review_response.json())
+
+        self.assert_missing(post_reference)
+
+        actual = self.get_mapping(review_reference)
+
+        expected = _m(
+            justification=lexical_matching_process,
+            reviewers=[charlie],
+            review_date=datetime.date.today(),
+            reviewer_agreement=score,
+        )
+        expected = expected.model_copy(update={"record": self.repository.hash_mapping(expected)})
+        self.assert_model_equal(expected, actual)
