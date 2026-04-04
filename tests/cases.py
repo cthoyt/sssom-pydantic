@@ -369,6 +369,8 @@ class TestRepository(unittest.TestCase):
             object=R2,
             justification=lexical_matching_process,
             confidence=0.95,
+            reviewers=[charlie],
+            review_date=datetime.date.today(),
             reviewer_agreement=0.0,
         )
         self.assertIsNotNone(db.get_mapping(db.hash_mapping(expected)))
@@ -427,6 +429,8 @@ class TestRepository(unittest.TestCase):
             object="mesh:2",
             justification=lexical_matching_process,
             confidence=0.95,
+            reviewers=[charlie],
+            review_date=datetime.date.today(),
             reviewer_agreement=0.0,
         )
 
