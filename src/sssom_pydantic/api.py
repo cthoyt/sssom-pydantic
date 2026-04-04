@@ -130,7 +130,7 @@ class CoreSemanticMapping(RequiredSemanticMapping):
 
     record: Reference | None = Field(None)
     authors: list[Reference] | None = Field(None)
-    confidence: float | None = Field(None, ge=0.0)
+    confidence: float | None = Field(None, ge=0.0, le=1.0)
     mapping_tool: MappingTool | None = Field(None)
     license: str | None = Field(None)
 
