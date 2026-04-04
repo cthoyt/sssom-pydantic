@@ -65,7 +65,9 @@ class SemanticMappingRepository(ABC):
         return rv[0]
 
     @abstractmethod
-    def add_mappings(self, mappings: Iterable[SemanticMapping]) -> list[Reference]:
+    def add_mappings(
+        self, mappings: Iterable[SemanticMapping], *, progress: bool = False
+    ) -> list[Reference]:
         """Add mappings to the database."""
 
     def read(
