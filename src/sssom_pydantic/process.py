@@ -180,6 +180,20 @@ def _get_predicate_helper(
     return _keep_mapping
 
 
+ExistsAction: TypeAlias = Literal["error", "overwrite", "keep"]
+
+
+class InvalidExistsActionError(ValueError):
+    """An error for an invalid exists action."""
+
+    def __init__(self, value: str) -> None:
+        """Initialize the exception."""
+        self.value = value
+
+    def __str__(self):
+        return f"invalid exists_action: {self.value}. Use one of {typing.get_args(ExistsAction)}"
+
+
 UNSURE = "sssom-curator-unsure"
 UNSURE_SUFFIX = f" ({UNSURE})"
 
@@ -251,24 +265,41 @@ def review(
     *,
     score: float | None = None,
     date: datetime.date | None = None,
+    exists_action: ExistsAction | None = None,
 ) -> SemanticMapping:
     """Review a mapping and produce a new record.
 
-    :param mapping: A mapping dictionary
+    :param mapping: A semantic mapping record
     :param reviewers: A reviewer or list of reviewers
-    :param score: The agreement score, where 1.0 means agree, 0.0 means unsure,
-        and -1.0 means disagree
+    :param score: The agreement score, where 1.0 means agree, 0.0 means unsure, and -1.0
+        means disagree
     :param date: The date of the review. Defaults to today.
+    :param exists_action: The action to take if a reviewer already exists. By default,
+        will raise a value error.
 
-    :return: A new mapping record with new reviewer information. If there was already
+    :returns: A new mapping record with new reviewer information. If there was already
         reviewer information, this will get overwritten.
+
+    :raises ValueError: If the mapping already has reviewer information, and
+        ``exists_action`` is either set to "error" or is unset (since error is the
+        default action)
+    :raises InvalidExistsActionError: if an invalid value is passed to ``exists_action``
     """
     if score is None:
         score = 1.0
     if date is None:
         date = datetime.date.today()
     if score < -1.0 or score > 1.0:
-        raise ValueError
+        raise ValueError("reviewer agreement score should be from [-1.0, 1.0]")
+    if mapping.reviewers:
+        if exists_action == "error" or exists_action is None:
+            raise ValueError("trying to overwrite existing reviewers")
+        elif exists_action == "keep":
+            return mapping
+        elif exists_action == "overwrite":
+            pass  # just use the implementation below to update the publication date
+        else:
+            raise InvalidExistsActionError(exists_action)
     if isinstance(reviewers, Reference):
         reviewers = [reviewers]
     update = {
@@ -283,7 +314,7 @@ def publish(
     mapping: SemanticMapping,
     /,
     *,
-    exists_action: Literal["error", "overwrite", "keep"] | None = None,
+    exists_action: ExistsAction | None = None,
     date: datetime.date | None = None,
 ) -> SemanticMapping:
     """Add a publication date to the mapping."""
@@ -295,7 +326,7 @@ def publish(
         elif exists_action == "overwrite":
             pass  # just use the implementation below to update the publication date
         else:
-            raise ValueError(f"invalid exists_action: {exists_action}")
+            raise InvalidExistsActionError(exists_action)
     rv = mapping.model_copy(
         update={"publication_date": date if date is not None else datetime.date.today()}
     )

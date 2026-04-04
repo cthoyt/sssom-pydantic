@@ -321,30 +321,42 @@ class TestProcess(unittest.TestCase):
                 exists_action="blahblah",  # type:ignore
             )
 
-
     def test_review(self) -> None:
         """Test review workflow."""
         self.assert_model_equal(
-            SemanticMapping(
-                subject=R1,
-                predicate=exact_match,
-                object=R2,
-                justification=manual_mapping_curation,
+            _m(
                 reviewers=[author],
+                review_date=today,
                 reviewer_agreement=1.0,
             ),
             review(
-                SemanticMapping(
-                    subject=R1,
-                    predicate=exact_match,
-                    object=R2,
-                    justification=manual_mapping_curation,
-                ),
+                _m(),
                 reviewers=author,
                 score=1.0,
-            )
+            ),
         )
 
+        # test bad ranges
+        with self.assertRaises(ValueError):
+            review(_m(), reviewers=author, score=2.0)
+        with self.assertRaises(ValueError):
+            review(_m(), reviewers=author, score=-2.0)
+
+        # test passing a custom date
+        custom_date = datetime.date(2021, 1, 1)
+        self.assert_model_equal(
+            _m(
+                reviewers=[author],
+                review_date=custom_date,
+                reviewer_agreement=1.0,
+            ),
+            review(
+                _m(),
+                reviewers=author,
+                date=custom_date,
+                score=1.0,
+            ),
+        )
 
     def test_estimate_confidence(self) -> None:
         """Test estimating confidence."""
