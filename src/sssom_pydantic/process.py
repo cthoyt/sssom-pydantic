@@ -289,10 +289,16 @@ def review(
     """
     if score is None:
         score = 1.0
+    elif score < -1.0:
+        raise ValueError(
+            f"reviewer agreement score should be from [-1.0, 1.0], got too low {score}"
+        )
+    elif score > 1.0:
+        raise ValueError(
+            f"reviewer agreement score should be from [-1.0, 1.0], got too high {score}"
+        )
     if date is None:
         date = datetime.date.today()
-    if score < -1.0 or score > 1.0:
-        raise ValueError("reviewer agreement score should be from [-1.0, 1.0]")
     if mapping.reviewers:
         if exists_action == "error" or exists_action is None:
             raise ValueError("trying to overwrite existing reviewers")

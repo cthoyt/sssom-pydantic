@@ -22,7 +22,15 @@ from pydantic import BaseModel
 
 from sssom_pydantic import SemanticMapping
 from sssom_pydantic.api import NOT
-from sssom_pydantic.process import UNSURE, Mark, curate, estimate_confidence, publish, review
+from sssom_pydantic.process import (
+    UNSURE,
+    InvalidExistsActionError,
+    Mark,
+    curate,
+    estimate_confidence,
+    publish,
+    review,
+)
 from tests.cases import R1, R2, _m
 
 today = datetime.date.today()
@@ -309,7 +317,7 @@ class TestProcess(unittest.TestCase):
                 exists_action="error",
             )
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(InvalidExistsActionError):
             publish(
                 SemanticMapping(
                     subject=R1,
@@ -342,15 +350,15 @@ class TestProcess(unittest.TestCase):
         with self.assertRaises(ValueError):
             review(_m(), reviewers=author, score=-2.0)
         # test bad exist action
-        with self.assertRaises(ValueError):
-            review(_m(reviewers=[charlie]), reviewers=author, score=-2.0, exists_action="nope")  # type:ignore
+        with self.assertRaises(InvalidExistsActionError):
+            review(_m(reviewers=[charlie]), reviewers=author, exists_action="nope")  # type:ignore
 
         # test no overwriting (default)
         with self.assertRaises(ValueError):
-            review(_m(reviewers=[charlie]), reviewers=author, score=-2.0)
+            review(_m(reviewers=[charlie]), reviewers=author)
         # test no overwriting (explicit)
         with self.assertRaises(ValueError):
-            review(_m(reviewers=[charlie]), reviewers=author, score=-2.0, exists_action="error")
+            review(_m(reviewers=[charlie]), reviewers=author, exists_action="error")
 
         # test no-overwrite
         self.assert_model_equal(
@@ -367,7 +375,7 @@ class TestProcess(unittest.TestCase):
             _m(reviewers=[author], reviewer_agreement=1.0, review_date=today),
             review(
                 _m(reviewers=[charlie]),
-                reviewers=author,
+                reviewers=[author],
                 exists_action="overwrite",
             ),
         )
