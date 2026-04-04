@@ -201,6 +201,7 @@ def curate(
     authors: Reference | list[Reference],
     mark: Mark,
     confidence: float | None = None,
+    date: datetime.date | None = None,
     add_date: bool = True,
     **kwargs: Any,
 ) -> SemanticMapping:
@@ -209,7 +210,7 @@ def curate(
         raise ValueError("should use review workflow on previously manually curated mappings")
 
     if mark == "unsure":
-        return review(mapping, reviewers=authors, score=0)
+        return review(mapping, reviewers=authors, date=date, score=0)
 
     if isinstance(authors, Reference):
         authors = [authors]
@@ -235,7 +236,9 @@ def curate(
     # Add a flag for maintaining backwards compatibility
     # with workflows that don't track this
     if add_date:
-        update["mapping_date"] = datetime.date.today()
+        if date is None:
+            date = datetime.date.today()
+        update["mapping_date"] = date
 
     if mark in semantic_mapping_scopes:
         update["predicate"] = semantic_mapping_scopes[mark]
