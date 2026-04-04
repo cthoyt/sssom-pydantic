@@ -19,7 +19,7 @@ from ..api import (
     mapping_hash_v1,
 )
 from ..io import Metadata, read, write
-from ..process import Mark, curate, estimate_confidence, publish
+from ..process import Mark, curate, estimate_confidence, publish, review
 from ..query import Query
 
 __all__ = ["SemanticMappingRepository"]
@@ -178,6 +178,16 @@ class SemanticMappingRepository(ABC):
     ) -> Reference:
         """Publish a mapping and return the new mapping's record."""
         return self._mutate(reference, publish, date=date)
+
+    def review(
+        self,
+        reference: Reference,
+        reviewers: Reference | list[Reference],
+        score: float | None = None,
+        date: datetime.date | None = None,
+    ) -> Reference:
+        """Review a mapping and return the new mapping's record."""
+        return self._mutate(reference, review, reviewers=reviewers, score=score, date=date)
 
     def _mutate(
         self,

@@ -46,6 +46,7 @@ __all__ = [
     "publish",
     "remove_redundant_external",
     "remove_redundant_internal",
+    "review",
 ]
 
 #: A canonical mapping tuple
@@ -242,6 +243,40 @@ def curate(
 
     new_mapping = mapping.model_copy(update=update)
     return new_mapping
+
+
+def review(
+    mapping: SemanticMapping,
+    reviewers: Reference | list[Reference],
+    *,
+    score: float | None = None,
+    date: datetime.date | None = None,
+) -> SemanticMapping:
+    """Review a mapping and produce a new record.
+
+    :param mapping: A mapping dictionary
+    :param reviewers: A reviewer or list of reviewers
+    :param score: The agreement score, where 1.0 means agree, 0.0 means unsure,
+        and -1.0 means disagree
+    :param date: The date of the review. Defaults to today.
+
+    :return: A new mapping record with new reviewer information. If there was already
+        reviewer information, this will get overwritten.
+    """
+    if score is None:
+        score = 1.0
+    if date is None:
+        date = datetime.date.today()
+    if score < -1.0 or score > 1.0:
+        raise ValueError
+    if isinstance(reviewers, Reference):
+        reviewers = [reviewers]
+    update = {
+        "reviewers": reviewers,
+        "review_date": date,
+        "reviewer_agreement": score,
+    }
+    return mapping.model_copy(update=update)
 
 
 def publish(
