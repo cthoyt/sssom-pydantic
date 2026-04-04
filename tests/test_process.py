@@ -89,6 +89,8 @@ class TestProcess(unittest.TestCase):
                         predicate=predicate,
                         object=R2,
                         justification=lexical_matching_process,
+                        reviewers=[author],
+                        review_date=today,
                         reviewer_agreement=0.0,
                     ),
                 ),
