@@ -17,6 +17,8 @@ __all__ = [
     "RecordPredicate",
 ]
 
+#: Cardinality annotations, which are valid within the scope of a mapping set
+#: but should not be saved as part of a mapping
 Cardinality: TypeAlias = Literal["1:1", "1:n", "n:1", "1:0", "0:1", "n:n", "0:0"]
 
 
@@ -33,46 +35,44 @@ class Record(BaseModel):
     subject_id: str = Field(...)
     subject_label: str | None = Field(None)
     subject_category: str | None = Field(None)
-    subject_match_field: list[str] | None = Field(None)
-    subject_preprocessing: list[str] | None = Field(None)
-    subject_source: str | None = Field(None)
-    subject_source_version: str | None = Field(None)
-    subject_type: EntityTypeLiteral | None = Field(
-        None, description="See https://mapping-commons.github.io/sssom/subject_type"
-    )
-
     predicate_id: str = Field(...)
     predicate_label: str | None = Field(None)
     predicate_modifier: Literal["Not"] | None = Field(None)
-    predicate_type: EntityTypeLiteral | None = Field(
-        None, description="See https://mapping-commons.github.io/sssom/predicate_type"
-    )
-
     object_id: str = Field(...)
     object_label: str | None = Field(None)
     object_category: str | None = Field(None)
-    object_match_field: list[str] | None = Field(None)
-    object_preprocessing: list[str] | None = Field(None)
-    object_source: str | None = Field(None)
-    object_source_version: str | None = Field(None)
+    mapping_justification: str = Field(..., examples=[p.curie for p in matching_processes])
+    author_id: list[str] | None = Field(None)
+    author_label: list[str] | None = Field(None)
+    reviewer_id: list[str] | None = Field(None)
+    reviewer_label: list[str] | None = Field(None)
+    creator_id: list[str] | None = Field(None)
+    creator_label: list[str] | None = Field(None)
+    license: str | None = Field(None)
+    subject_type: EntityTypeLiteral | None = Field(
+        None, description="See https://mapping-commons.github.io/sssom/subject_type"
+    )
+    subject_source: str | None = Field(None)
+    subject_source_version: str | None = Field(None)
     object_type: EntityTypeLiteral | None = Field(
         None, description="See https://mapping-commons.github.io/sssom/object_type"
     )
-
-    mapping_justification: str = Field(..., examples=[p.curie for p in matching_processes])
-
-    author_id: list[str] | None = Field(None)
-    author_label: list[str] | None = Field(None)
-    creator_id: list[str] | None = Field(None)
-    creator_label: list[str] | None = Field(None)
-    reviewer_id: list[str] | None = Field(None)
-    reviewer_label: list[str] | None = Field(None)
-
-    publication_date: datetime.date | None = Field(None)
+    object_source: str | None = Field(None)
+    object_source_version: str | None = Field(None)
+    predicate_type: EntityTypeLiteral | None = Field(
+        None, description="See https://mapping-commons.github.io/sssom/predicate_type"
+    )
+    mapping_provider: AnyUrl | None = Field(None)
+    mapping_source: str | None = Field(None)
+    #: see https://mapping-commons.github.io/sssom/MappingCardinalityEnum/
+    mapping_cardinality: Cardinality | None = Field(None)
+    cardinality_scope: list[str] | None = Field(None)
+    mapping_tool: str | None = Field(None)
+    mapping_tool_id: str | None = Field(None)
+    mapping_tool_version: str | None = Field(None)
     mapping_date: datetime.date | None = Field(None)
+    publication_date: datetime.date | None = Field(None)
     review_date: datetime.date | None = Field(None)
-
-    comment: str | None = Field(None)
     confidence: float | None = Field(
         None,
         ge=0.0,
@@ -101,26 +101,20 @@ class Record(BaseModel):
         function if a knowledge graph embedding model was used ot generate a mapping prediction.
         """,
     )
-    reviewer_agreement: float | None = Field(None, ge=-1.0, le=1.0)
+    reviewer_agreement: float | None = Field(None, ge=-1.0, le=1.0, examples=[-1.0, 0.0, 1.0])
     curation_rule: list[str] | None = Field(None)
     curation_rule_text: list[str] | None = Field(None)
-    issue_tracker_item: str | None = Field(None)
-    license: str | None = Field(None)
-
-    #: see https://mapping-commons.github.io/sssom/MappingCardinalityEnum/
-    mapping_cardinality: Cardinality | None = Field(None)
-    cardinality_scope: list[str] | None = Field(None)
-    mapping_provider: AnyUrl | None = Field(None)
-    mapping_source: str | None = Field(None)
-    mapping_tool: str | None = Field(None)
-    mapping_tool_id: str | None = Field(None)
-    mapping_tool_version: str | None = Field(None)
+    subject_match_field: list[str] | None = Field(None)
+    object_match_field: list[str] | None = Field(None)
     match_string: list[str] | None = Field(None)
-
-    other: str | None = Field(None)
-    see_also: list[str] | None = Field(None)
-    similarity_measure: str | None = Field(None)
+    subject_preprocessing: list[str] | None = Field(None)
+    object_preprocessing: list[str] | None = Field(None)
     similarity_score: float | None = Field(None, ge=0.0, le=1.0)
+    similarity_measure: str | None = Field(None)
+    see_also: list[str] | None = Field(None)
+    issue_tracker_item: str | None = Field(None)
+    other: str | None = Field(None)
+    comment: str | None = Field(None)
 
 
 #: A predicate for a record

@@ -16,7 +16,7 @@ import pystow
 from curies import Reference
 from pydantic import AnyUrl
 
-from sssom_pydantic import MappingSetRecord, Record, SemanticMapping
+from sssom_pydantic.api import BACKWARDS_MAPS, FORWARDS_MAPS, MappingSetRecord, SemanticMapping
 from sssom_pydantic.constants import (
     MAPPING_SET_SLOTS,
     MAPPING_SET_SLOTS_SKIP,
@@ -24,7 +24,7 @@ from sssom_pydantic.constants import (
     PROPAGATABLE,
 )
 from sssom_pydantic.examples import EXAMPLES
-from sssom_pydantic.models import Cardinality
+from sssom_pydantic.models import Cardinality, Record
 
 if TYPE_CHECKING:
     import linkml_runtime
@@ -114,21 +114,6 @@ class TestSchema(unittest.TestCase):
 
     def test_value_types(self) -> None:
         """Test that values with entity references are type annotated as references."""
-        maps = {
-            # get rid of the redundant suffix `_id`
-            "record_id": "record",
-            "subject_id": "subject",
-            "predicate_id": "predicate",
-            "object_id": "object",
-            "reviewer_id": "reviewers",
-            "author_id": "authors",
-            "creator_id": "creators",
-            # get rid of the redundant prefix `mapping_`
-            "mapping_justification": "justification",
-            "mapping_cardinality": "cardinality",
-            "mapping_source": "source",
-            "mapping_provider": "provider",
-        }
         skips = {
             # skip these because they're mapped in a custom way
             "mapping_tool_id",
@@ -152,7 +137,7 @@ class TestSchema(unittest.TestCase):
             if slot in skips:
                 continue
             with self.subTest(slot=slot):
-                annotation = SemanticMapping.model_fields[maps.get(slot, slot)].annotation
+                annotation = SemanticMapping.model_fields[FORWARDS_MAPS.get(slot, slot)].annotation
                 multivalued = slot in MULTIVALUED
                 match self.view.get_slot(slot).range:
                     case "EntityReference":
@@ -284,6 +269,18 @@ class TestSchema(unittest.TestCase):
                             f"missing handling for slot {slot} with range "
                             f"{self.view.get_slot(slot).range}"
                         )
+
+    def test_order(self) -> None:
+        """Test the slots are in the order specified by the SSSOM schema."""
+        self.assertEqual(
+            self.view.get_class("mapping").slots,
+            list(Record.model_fields),
+        )
+
+    def test_model_mapping(self) -> None:
+        """Test processed models can be mapped back into the other."""
+        for field in SemanticMapping.model_fields:
+            self.assertIn(BACKWARDS_MAPS.get(field, field), Record.model_fields)
 
 
 class TestExampleCompleteness(unittest.TestCase):
