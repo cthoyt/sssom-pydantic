@@ -213,6 +213,25 @@ def _join(references: list[Reference] | None) -> list[str] | None:
     return [r.curie for r in references]
 
 
+FORWARDS_MAPS = {
+    # get rid of the redundant suffix `_id`
+    "record_id": "record",
+    "subject_id": "subject",
+    "predicate_id": "predicate",
+    "object_id": "object",
+    "reviewer_id": "reviewers",
+    "author_id": "authors",
+    "creator_id": "creators",
+    # get rid of the redundant prefix `mapping_`
+    "mapping_justification": "justification",
+    "mapping_cardinality": "cardinality",
+    "mapping_source": "source",
+    "mapping_provider": "provider",
+}
+
+BACKWARDS_MAPS = {v: k for k, v in FORWARDS_MAPS.items()}
+
+
 class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
     """Represents all fields for SSSOM.."""
 
