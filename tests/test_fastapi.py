@@ -53,7 +53,7 @@ class TestFileSystemRepository(cases.TestFastAPI):
 
         self.td = tempfile.TemporaryDirectory()
         path = Path(self.td.name).joinpath("test.sssom.tsv")
-        self.repository = FileSystemSemanticMappingRepository(path=path)
+        self.repository = FileSystemSemanticMappingRepository(path=path, converter=TEST_CONVERTER)
         self.app = get_app(repository=self.repository)
         self.client = TestClient(self.app)
 

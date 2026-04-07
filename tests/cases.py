@@ -188,13 +188,13 @@ class TestRepository(unittest.TestCase):
             self.assertIsNotNone(mappings[0].predicate_modifier)
             self.assertIsNone(mappings[0].comment)
 
-        self.assertIn("mesh", TEST_CONVERTER.get_prefixes())
+        self.assertIn("mesh", db.converter.get_prefixes())
 
         self.assertEqual(
             4,
             len(
                 db.get_mappings(
-                    where_clauses=Query(triple_id=TEST_CONVERTER.hash_triple(mapping_1)),
+                    where_clauses=Query(triple_id=db.converter.hash_triple(mapping_1)),
                 )
             ),
         )
@@ -599,6 +599,10 @@ class TestFastAPI(unittest.TestCase):
             self.client.get(f"/mapping/{post_reference.curie}").status_code,
             msg="the old mapping should be deleted",
         )
+
+    def test_converter(self) -> None:
+        """Test the converter is ready."""
+        self.assertIn("chebi", self.repository.converter.get_prefixes())
 
     def test_get_missing_mapping(self) -> None:
         """Test getting a missing mapping from the API."""
