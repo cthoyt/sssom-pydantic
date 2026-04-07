@@ -8,13 +8,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import curies
-from curies import NamableReference
+from curies import NamableReference, Reference
 
 import sssom_pydantic
 from sssom_pydantic import SemanticMapping
 
 if TYPE_CHECKING:
     import jskos
+    from jskos.api import ProcessedJSKOSSet
 
     from sssom_pydantic import MappingSet, MappingSetRecord, Metadata
 
@@ -114,10 +115,16 @@ def _process_jskos_mapping(
     )
 
 
-def _extract_references(contributors):
+def _extract_references(
+    contributors: ProcessedJSKOSSet | None,
+) -> list[Reference] | None:
     if contributors is None:
         return None
-    return [contributor.reference for contributor in contributors]
+    return [
+        contributor.reference
+        for contributor in contributors
+        if contributor and contributor.reference
+    ]
 
 
 def _from_set(member_set: list[jskos.ProcessedConcept]) -> NamableReference:
