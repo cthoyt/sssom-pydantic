@@ -117,6 +117,8 @@ class MappingTestCaseMixin(unittest.TestCase):
         expected: SemanticMapping,
         actual: SemanticMapping | None,
         msg: str | None = None,
+        *,
+        names: bool = True,
     ) -> None:
         """Assert two models are equal."""
         if actual is None:
@@ -129,6 +131,11 @@ class MappingTestCaseMixin(unittest.TestCase):
         self.assertEqual(
             expected.model_dump(**parameters), actual.model_dump(**parameters), msg=msg
         )
+        if names:
+            # FIXME this shouldn't be optional
+            self.assertEqual(expected.subject_name, actual.subject_name)
+            self.assertEqual(expected.predicate_name, actual.predicate_name)
+            self.assertEqual(expected.object_name, actual.object_name)
 
     def assert_base_model_equal(self, expected: BaseModel, actual: BaseModel) -> None:
         """Check two models are equal by serializing to dict."""
@@ -688,7 +695,7 @@ class TestFastAPI(MappingTestCaseMixin):
             mapping_date=datetime.date.today(),
         )
         expected = expected.model_copy(update={"record": self.repository.hash_mapping(expected)})
-        self.assert_model_equal(expected, actual)
+        self.assert_model_equal(expected, actual, names=False)
 
         publish_response = self.client.post(f"/action/publish/{curation_reference.curie}")
         publish_response.raise_for_status()
