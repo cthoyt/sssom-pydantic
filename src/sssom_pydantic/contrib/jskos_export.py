@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 
 import curies
 import jskos
+from curies import NamableReference, Reference
 
 import sssom_pydantic
 from sssom_pydantic import SemanticMapping
@@ -90,9 +91,10 @@ def _process_jskos_mapping(
     if not subject_member_set or not object_member_set or not processed_mapping.type:
         return None
 
-    subject = subject_member_set[0].reference  # TODO where to find subject's label?
+    subject = _from_set(subject_member_set)
     predicate = processed_mapping.type[0]
-    obj = object_member_set[0].reference  # TODO where to find object's label?
+    obj = _from_set(object_member_set)
+
     justification = processed_mapping.justification
 
     # `und` means undefined language
@@ -108,6 +110,17 @@ def _process_jskos_mapping(
         justification=justification,
         comment=comment,
     )
+
+
+def _from_set(member_set: list[jskos.ProcessedConcept]) -> Reference:
+    processed_concept = member_set[0]
+    reference = processed_concept.reference
+    if reference is None:
+        raise ValueError
+    if processed_concept.preferred_label is None or "und" not in processed_concept.preferred_label:
+        return reference
+    label = processed_concept.preferred_label["und"]
+    return NamableReference(prefix=reference.prefix, identifier=reference.identifier, name=label)
 
 
 def from_jskos_path(path: Path, converter: curies.Converter) -> list[SemanticMapping]:
