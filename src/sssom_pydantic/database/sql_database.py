@@ -109,11 +109,11 @@ class SemanticMappingModel(SQLModel, table=True):
     )
 
     # required
-    subject: Reference = Field(sa_column=get_reference_sa_column())
+    subject: Reference = Field(..., sa_column=get_reference_sa_column())
     subject_name: str | None = Field(None)
-    predicate: Reference = Field(sa_column=get_reference_sa_column())
+    predicate: Reference = Field(..., sa_column=get_reference_sa_column())
     predicate_name: str | None = Field(None)
-    object: Reference = Field(sa_column=get_reference_sa_column())
+    object: Reference = Field(..., sa_column=get_reference_sa_column())
     object_name: str | None = Field(None)
     justification: Reference = Field(..., sa_column=get_reference_sa_column())
     predicate_modifier: Literal["Not"] | None = Field(None, sa_type=String)
