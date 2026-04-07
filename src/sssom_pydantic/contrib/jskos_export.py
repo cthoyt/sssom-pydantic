@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import curies
-import jskos
 from curies import NamableReference
 
 import sssom_pydantic
