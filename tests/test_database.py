@@ -146,4 +146,4 @@ class TestNeo4j(cases.TestRepository):
 
     def test_queries(self) -> None:
         """Skip query tests."""
-        raise self.skipTest("not implemented")
+        raise self.skipTest("queries test is implemented for neo4j")
