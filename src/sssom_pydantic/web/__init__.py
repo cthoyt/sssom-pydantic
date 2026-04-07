@@ -11,7 +11,6 @@ from flask_bootstrap import Bootstrap5
 
 from sssom_pydantic.api import SemanticMappingHash
 from sssom_pydantic.database import SemanticMappingRepository
-from sssom_pydantic.examples import EXAMPLE_MAPPINGS
 from sssom_pydantic.web.router import router
 
 __all__ = [
@@ -72,6 +71,8 @@ def get_app(
             repository.read(biomappings_dir.joinpath("positive.sssom.tsv"), progress=True)
             repository.read(biomappings_dir.joinpath("negative.sssom.tsv"), progress=True)
         elif add_examples == "builtin":
+            from sssom_pydantic.examples import EXAMPLE_MAPPINGS
+
             repository.add_mappings(EXAMPLE_MAPPINGS)
 
     app = FastAPI(

@@ -30,6 +30,7 @@ __all__ = [
     "TEST_CONVERTER",
     "TEST_PREFIX_MAP",
 ]
+
 TEST_PREFIX_MAP = {
     "mesh": "http://id.nlm.nih.gov/mesh/",
     "chebi": "http://purl.obolibrary.org/obo/CHEBI_",
