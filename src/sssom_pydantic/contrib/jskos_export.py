@@ -108,7 +108,16 @@ def _process_jskos_mapping(
         object=obj,
         justification=justification,
         comment=comment,
+        authors=_extract_references(processed_mapping.contributor),
+        creators=_extract_references(processed_mapping.creator),
+        mapping_date=processed_mapping.created,
     )
+
+
+def _extract_references(contributors):
+    if contributors is None:
+        return None
+    return [contributor.reference for contributor in contributors]
 
 
 def _from_set(member_set: list[jskos.ProcessedConcept]) -> NamableReference:
