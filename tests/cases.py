@@ -123,6 +123,9 @@ class TestRepository(unittest.TestCase):
                 exclude_none=True, exclude_unset=True, exclude_defaults=True, exclude={"record"}
             ),
         )
+        self.assertEqual(expected.subject_name, actual.subject_name)
+        self.assertEqual(expected.predicate_name, actual.predicate_name)
+        self.assertEqual(expected.object_name, actual.object_name)
 
     def assert_models_equal(
         self, expected: list[SemanticMapping], actual: list[SemanticMapping]
@@ -578,6 +581,9 @@ class TestFastAPI(unittest.TestCase):
             expected.model_dump(exclude_unset=True, exclude_none=True),
             actual.model_dump(exclude_unset=True, exclude_none=True),
         )
+        self.assertEqual(expected.subject_name, actual.subject_name)
+        self.assertEqual(expected.predicate_name, actual.predicate_name)
+        self.assertEqual(expected.object_name, actual.object_name)
 
     def post_mapping(self, mapping: SemanticMapping) -> Reference:
         """Post a mapping and parse the response."""
