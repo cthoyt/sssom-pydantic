@@ -114,11 +114,11 @@ class SemanticMappingModel(SQLModel, table=True):
     )
 
     # required
-    subject: Reference = Field(sa_column=get_reference_sa_column())
+    subject: Reference = Field(..., sa_column=get_reference_sa_column())
     subject_name: str | None = Field(None)
-    predicate: Reference = Field(sa_column=get_reference_sa_column())
+    predicate: Reference = Field(..., sa_column=get_reference_sa_column())
     predicate_name: str | None = Field(None)
-    object: Reference = Field(sa_column=get_reference_sa_column())
+    object: Reference = Field(..., sa_column=get_reference_sa_column())
     object_name: str | None = Field(None)
     justification: Reference = Field(..., sa_column=get_reference_sa_column())
     predicate_modifier: Literal["Not"] | None = Field(None, sa_type=String)
@@ -207,7 +207,8 @@ class SemanticMappingModel(SQLModel, table=True):
 
     def to_semantic_mapping(self) -> SemanticMapping:
         """Get a non-ORM mapping."""
-        d = self.model_dump(exclude_none=True, exclude_unset=True, exclude_defaults=True)
+        # exclude_unset=True breaks it
+        d = self.model_dump(exclude_none=True, exclude_defaults=True)
         if subject_name := d.pop("subject_name", None):
             d["subject"]["name"] = subject_name
             d["subject"] = NamableReference.model_validate(d["subject"])
