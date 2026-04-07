@@ -129,7 +129,7 @@ class MappingTestCaseMixin(unittest.TestCase):
             "exclude_unset": True,
             "exclude_defaults": True,
         }
-        if exclude_record is not None and not exclude_record:
+        if exclude_record is not None and exclude_record:
             # FIXME this shouldn't be necessary
             parameters["exclude"] = {"record"}
         self.assertEqual(
