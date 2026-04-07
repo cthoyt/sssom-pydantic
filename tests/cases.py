@@ -118,7 +118,8 @@ class MappingTestCaseMixin(unittest.TestCase):
         actual: SemanticMapping | None,
         msg: str | None = None,
         *,
-        names: bool = True,
+        names: bool | None = None,
+        exclude_record: bool | None = None,
     ) -> None:
         """Assert two models are equal."""
         if actual is None:
@@ -128,10 +129,13 @@ class MappingTestCaseMixin(unittest.TestCase):
             "exclude_unset": True,
             "exclude_defaults": True,
         }
+        if exclude_record is not None and not exclude_record:
+            # FIXME this shouldn't be necessary
+            parameters["exclude"] = {"record"}
         self.assertEqual(
             expected.model_dump(**parameters), actual.model_dump(**parameters), msg=msg
         )
-        if names:
+        if names is None or names:
             # FIXME this shouldn't be optional
             self.assertEqual(expected.subject_name, actual.subject_name)
             self.assertEqual(expected.predicate_name, actual.predicate_name)
@@ -148,25 +152,6 @@ class TestRepository(MappingTestCaseMixin):
     """Test the database."""
 
     repository: SemanticMappingRepository
-
-    def assert_model_equal(
-        self,
-        expected: SemanticMapping,
-        actual: SemanticMapping | None,
-        msg: str | None = None,
-    ) -> None:
-        """Assert two models are equal."""
-        if actual is None:
-            raise self.fail()
-        parameters: dict[str, Any] = {
-            "exclude_none": True,
-            "exclude_unset": True,
-            "exclude_defaults": True,
-            "exclude": {"record"},  # FIXME this shouldn't be necessary
-        }
-        self.assertEqual(
-            expected.model_dump(**parameters), actual.model_dump(**parameters), msg=msg
-        )
 
     def assert_models_equal(
         self, expected: list[SemanticMapping], actual: list[SemanticMapping]
@@ -376,7 +361,7 @@ class TestRepository(MappingTestCaseMixin):
             authors=[charlie],
             mapping_date=datetime.date.today(),
         )
-        self.assert_model_equal(expected_mapping, actual_mapping)
+        self.assert_model_equal(expected_mapping, actual_mapping, exclude_record=True)
         self.assertEqual(
             db.hash_mapping(expected_mapping),
             actual_reference,
@@ -409,7 +394,7 @@ class TestRepository(MappingTestCaseMixin):
             authors=[charlie],
             mapping_date=datetime.date.today(),
         )
-        self.assert_model_equal(expected_mapping, actual_mapping)
+        self.assert_model_equal(expected_mapping, actual_mapping, exclude_record=True)
         self.assertEqual(
             db.hash_mapping(expected_mapping),
             actual_reference,
@@ -655,7 +640,7 @@ class TestFastAPI(MappingTestCaseMixin):
         self.assertIsNotNone(self.repository.get_mapping(reference))
 
         actual = self.get_mapping(reference)
-        self.assert_model_equal(_m(record=reference), actual)
+        self.assert_model_equal(_m(record=reference), actual, names=False)
 
         self.client.delete(f"/mapping/{reference.curie}")
         self.assertEqual(0, self.repository.count_mappings())
@@ -714,7 +699,7 @@ class TestFastAPI(MappingTestCaseMixin):
         expected_2 = expected_2.model_copy(
             update={"record": self.repository.hash_mapping(expected_2)}
         )
-        self.assert_model_equal(expected_2, published_mapping)
+        self.assert_model_equal(expected_2, published_mapping, names=False)
 
     def test_review_mapping(self) -> None:
         """Test reviewing a mapping."""
@@ -746,4 +731,4 @@ class TestFastAPI(MappingTestCaseMixin):
             reviewer_agreement=score,
         )
         expected = expected.model_copy(update={"record": self.repository.hash_mapping(expected)})
-        self.assert_model_equal(expected, actual)
+        self.assert_model_equal(expected, actual, names=False)

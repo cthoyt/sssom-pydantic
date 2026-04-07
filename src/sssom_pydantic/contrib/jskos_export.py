@@ -90,9 +90,9 @@ def _process_jskos_mapping(
     if not subject_member_set or not object_member_set or not processed_mapping.type:
         return None
 
-    subject = subject_member_set[0].reference
+    subject = subject_member_set[0].reference  # TODO where to find subject's label?
     predicate = processed_mapping.type[0]
-    obj = object_member_set[0].reference
+    obj = object_member_set[0].reference  # TODO where to find object's label?
     justification = processed_mapping.justification
 
     # `und` means undefined language
