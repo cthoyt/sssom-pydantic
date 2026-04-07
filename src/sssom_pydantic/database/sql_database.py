@@ -118,7 +118,9 @@ class SemanticMappingModel(SQLModel, table=True):
     predicate_modifier: Literal["Not"] | None = Field(None, sa_type=String)
 
     # core
-    record: Reference | None = Field(None, sa_column=get_reference_sa_column())
+    record: Reference | None = Field(
+        None, sa_column=get_reference_sa_column(unique=True, index=True)
+    )
     authors: list[Reference] | None = Field(None, sa_column=get_reference_list_sa_column())
     confidence: float | None = Field(None)
     mapping_tool: MappingTool | None = Field(None, sa_column=Column(MappingToolTypeDecorator()))

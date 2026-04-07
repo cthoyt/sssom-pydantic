@@ -7,7 +7,7 @@ import importlib.util
 import tempfile
 import typing
 import unittest
-from collections import Counter
+from collections import Counter, defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.request import urlretrieve
@@ -15,15 +15,22 @@ from urllib.request import urlretrieve
 import pystow
 from curies import Reference
 from pydantic import AnyUrl
+from tabulate import tabulate
 
-from sssom_pydantic.api import BACKWARDS_MAPS, FORWARDS_MAPS, MappingSetRecord, SemanticMapping
+from sssom_pydantic.api import (
+    BACKWARDS_MAPS,
+    FORWARDS_MAPS,
+    MappingSetRecord,
+    SemanticMapping,
+    mapping_hash_v1,
+)
 from sssom_pydantic.constants import (
     MAPPING_SET_SLOTS,
     MAPPING_SET_SLOTS_SKIP,
     MULTIVALUED,
     PROPAGATABLE,
 )
-from sssom_pydantic.examples import EXAMPLES
+from sssom_pydantic.examples import EXAMPLES, TEST_CONVERTER
 from sssom_pydantic.models import Cardinality, Record
 
 if TYPE_CHECKING:
@@ -296,3 +303,17 @@ class TestExampleCompleteness(unittest.TestCase):
         for field in SemanticMapping.model_fields:
             with self.subTest(field=field):
                 self.assertIn(field, set(counter), msg=f"\n\nthere's no example that uses {field}")
+
+    def test_uniqueness(self) -> None:
+        """Test that examples have unique hashes."""
+        dd = defaultdict(list)
+        for example in EXAMPLES:
+            dd[mapping_hash_v1(example.semantic_mapping, TEST_CONVERTER)].append(example)
+
+        duplicates = {k: v for k, v in dd.items() if len(v) > 1}
+        if duplicates:
+            rows = []
+            for k, examples in duplicates.items():
+                for example in examples:
+                    rows.append((k.identifier, example.description, str(example.semantic_mapping)))
+            self.fail(f"some examples have duplicate hashes:\n\n{tabulate(rows)}")
