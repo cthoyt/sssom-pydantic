@@ -7,13 +7,13 @@ import functools
 import hashlib
 import warnings
 from collections.abc import Callable
-from typing import Any, Literal, TypeAlias
+from typing import Annotated, Any, Literal, TypeAlias
 
 import curies
 from curies import NamableReference, Reference, Triple
 from curies.mixins import SemanticallyStandardizable
 from curies.vocabulary import matching_processes
-from pydantic import AnyUrl, BaseModel, ConfigDict, Field
+from pydantic import AnyUrl, BaseModel, BeforeValidator, ConfigDict, Field
 from typing_extensions import Self
 
 from .constants import (
@@ -55,14 +55,25 @@ class MappingTool(BaseModel):
     version: str | None = Field(None)
 
 
+def _ensure_namable(x: str | Reference | NamableReference):
+    if isinstance(x, NamableReference):
+        return x
+    elif isinstance(x, Reference):
+        return NamableReference.from_reference(x)
+    elif isinstance(x, str):
+        return NamableReference.from_curie(x)
+    else:
+        return x
+
+
 class RequiredSemanticMapping(Triple):
     """Represents the required fields for SSSOM."""
 
     model_config = ConfigDict(frozen=True)
 
-    subject: NamableReference
-    predicate: NamableReference
-    object: NamableReference
+    subject: Annotated[NamableReference, BeforeValidator(_ensure_namable)] = Field(...)
+    predicate: Annotated[NamableReference, BeforeValidator(_ensure_namable)] = Field(...)
+    object: Annotated[NamableReference, BeforeValidator(_ensure_namable)] = Field(...)
     justification: Reference = Field(
         ...,
         description="""\
