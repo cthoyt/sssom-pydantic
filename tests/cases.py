@@ -16,7 +16,6 @@ from curies.vocabulary import (
     lexical_matching_process,
     manual_mapping_curation,
 )
-from pydantic import BaseModel
 
 import sssom_pydantic
 from sssom_pydantic import MappingSetRecord
