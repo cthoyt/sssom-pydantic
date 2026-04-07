@@ -266,6 +266,8 @@ e4 = ExampleMapping(
         object=R2,
         justification=manual_mapping_curation.curie,
         cardinality="1:1",
+        comment="this record has 1:1 cardinality added, but this itself isn't enough to "
+        "change the hash so a comment is included",
     ),
 )
 e4b = ExampleMapping(
@@ -276,6 +278,8 @@ e4b = ExampleMapping(
         object=R2,
         justification=manual_mapping_curation.curie,
         cardinality="1:n",
+        comment="this record has 1:n cardinality added, but this itself isn't enough to "
+        "change the hash so a comment is included",
     ),
 )
 e4c = ExampleMapping(
@@ -286,6 +290,8 @@ e4c = ExampleMapping(
         object=R2,
         justification=manual_mapping_curation.curie,
         cardinality="n:1",
+        comment="this record has n:1 cardinality added, but this itself isn't enough to "
+        "change the hash so a comment is included",
     ),
 )
 e4d = ExampleMapping(
@@ -296,6 +302,8 @@ e4d = ExampleMapping(
         object=R2,
         justification=manual_mapping_curation.curie,
         cardinality="n:n",
+        comment="this record has n:n cardinality added, but this itself isn't enough to "
+        "change the hash so a comment is included",
     ),
 )
 e4d_scoped = ExampleMapping(
