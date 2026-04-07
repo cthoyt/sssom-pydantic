@@ -451,7 +451,7 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
             value = getattr(self, name)
             if value is None:
                 continue
-            if field_info.annotation in {Reference, Reference | None}:
+            if field_info.annotation in {NamableReference, Reference, Reference | None}:
                 update[name] = converter.standardize_reference(value, strict=True)
             elif field_info.annotation in {list[Reference], list[Reference] | None}:
                 update[name] = [converter.standardize_reference(r, strict=True) for r in value]

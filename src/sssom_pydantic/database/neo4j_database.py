@@ -254,7 +254,6 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         data["record"] = data.pop("curie")
         rv = SemanticMapping.model_validate(data)
         model_update = {}
-        # FIXME add in record
         if subject_label := data.get("subject_label"):
             model_update["subject"] = NamableReference(
                 prefix=rv.subject.prefix, identifier=rv.subject.identifier, name=subject_label
