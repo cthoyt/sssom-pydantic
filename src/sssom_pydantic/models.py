@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import datetime
-from collections.abc import Callable, Sequence
-from typing import TYPE_CHECKING, Literal, NamedTuple, TypeAlias
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Literal, TypeAlias
 
 from curies.vocabulary import matching_processes
 from pydantic import AnyUrl, BaseModel, ConfigDict, Field
