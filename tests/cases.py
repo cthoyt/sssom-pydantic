@@ -361,6 +361,11 @@ class TestRepository(MappingTestCaseMixin):
             authors=[charlie],
             mapping_date=datetime.date.today(),
         )
+        expected_mapping = expected_mapping.model_copy(
+            update={
+                "record": db.hash_mapping(expected_mapping),
+            }
+        )
         self.assertEqual("ammeline", expected_mapping.subject_name)
         self.assertEqual("ammeline", actual_mapping.subject_name)
         self.assert_model_equal(expected_mapping, actual_mapping, exclude_record=True)
@@ -395,6 +400,11 @@ class TestRepository(MappingTestCaseMixin):
             justification=manual_mapping_curation,
             authors=[charlie],
             mapping_date=datetime.date.today(),
+        )
+        expected_mapping = expected_mapping.model_copy(
+            update={
+                "record": db.hash_mapping(expected_mapping),
+            }
         )
         self.assert_model_equal(expected_mapping, actual_mapping, exclude_record=True)
         self.assertEqual(

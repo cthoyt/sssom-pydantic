@@ -701,6 +701,13 @@ MAPPING_HASH_V1_URI_PREFIX = f"https://w3id.org/sssom/{MAPPING_HASH_V1_PREFIX}/"
 def mapping_hash_v1(m: SemanticMapping, converter: curies.Converter) -> Reference:
     """Hash a mapping into a reference."""
     h = hashlib.md5(usedforsecurity=False)
-    h.update(m.model_dump_json(exclude=MAPPING_HASH_V1_EXCLUDE).encode("utf8"))
+    h.update(
+        m.model_dump_json(
+            exclude=MAPPING_HASH_V1_EXCLUDE,
+            exclude_none=True,
+            exclude_unset=True,
+            exclude_defaults=True,
+        ).encode("utf8")
+    )
     identifier = h.hexdigest()
     return Reference(prefix=MAPPING_HASH_V1_PREFIX, identifier=identifier)
