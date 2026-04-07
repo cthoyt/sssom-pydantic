@@ -318,18 +318,58 @@ class TestRepository(unittest.TestCase):
         db = self.repository
         db.add_mapping(mapping)
         original_hash = db.hash_mapping(mapping)
-        db.curate(original_hash, authors=charlie, mark="BROAD")
-        self.assertIsNone(db.get_mapping(original_hash))
+        actual_reference = db.curate(original_hash, authors=charlie, mark="BROAD")
+        self.assertIsNone(db.get_mapping(original_hash), msg="old mapping shouldn't still be in db")
+        actual_mapping = db.get_mapping(actual_reference)
+        self.assertIsNotNone(actual_mapping, msg="new mapping isn't added properly")
 
-        expected = SemanticMapping(
+        expected_mapping = SemanticMapping(
             subject=R1,
-            predicate="skos:broadMatch",
+            predicate=Reference.from_curie("skos:broadMatch"),
             object=R2,
             justification=manual_mapping_curation,
             authors=[charlie],
             mapping_date=datetime.date.today(),
         )
-        self.assertIsNotNone(db.get_mapping(db.hash_mapping(expected)))
+        self.assert_model_equal(expected_mapping, actual_mapping)
+        self.assertEqual(
+            db.hash_mapping(expected_mapping),
+            actual_reference,
+            msg="hashing isn't working right",
+        )
+
+    def test_curate_narrow(self) -> None:
+        """Test curation in the database."""
+        mapping = SemanticMapping(
+            subject=R1,
+            predicate=P1,
+            object=R2,
+            justification=lexical_matching_process,
+            confidence=0.95,
+        )
+
+        db = self.repository
+        db.add_mapping(mapping)
+        original_hash = db.hash_mapping(mapping)
+        actual_reference = db.curate(original_hash, authors=charlie, mark="NARROW")
+        self.assertIsNone(db.get_mapping(original_hash), msg="old mapping shouldn't still be in db")
+        actual_mapping = db.get_mapping(actual_reference)
+        self.assertIsNotNone(actual_mapping, msg="new mapping isn't added properly")
+
+        expected_mapping = SemanticMapping(
+            subject=R1,
+            predicate=Reference.from_curie("skos:narrowMatch"),
+            object=R2,
+            justification=manual_mapping_curation,
+            authors=[charlie],
+            mapping_date=datetime.date.today(),
+        )
+        self.assert_model_equal(expected_mapping, actual_mapping)
+        self.assertEqual(
+            db.hash_mapping(expected_mapping),
+            actual_reference,
+            msg="hashing isn't working right",
+        )
 
     def test_curate_unsure(self) -> None:
         """Test curating a mapping as unsure in the database."""
@@ -461,24 +501,23 @@ class TestRepository(unittest.TestCase):
 
     def test_query_same_text(self) -> None:
         """Test querying for same text."""
-        self.maxDiff = None
         m1 = SemanticMapping(
             subject=R1,
-            predicate="skos:exactMatch",
+            predicate=P1,
             object=R2,
             justification=lexical_matching_process,
             confidence=0.95,
         )
         m2 = SemanticMapping(
             subject=NamedReference.from_curie("chebi:2", name="Test-a"),
-            predicate="skos:exactMatch",
+            predicate=P1,
             object=NamedReference.from_curie("mesh:2", name="test a"),
             justification=lexical_matching_process,
             confidence=0.95,
         )
         m3 = SemanticMapping(
             subject="chebi:3",
-            predicate="skos:exactMatch",
+            predicate=P1,
             object="mesh:3",
             justification=lexical_matching_process,
             confidence=0.95,

@@ -50,9 +50,20 @@ class TestUtils(unittest.TestCase):
 class TestSQL(cases.TestRepository):
     """Test for a SQL database."""
 
+    repository: SemanticMappingDatabase
+
     def setUp(self) -> None:
         """Set up the test with a SQL database."""
-        self.repository = SemanticMappingDatabase.memory(converter=TEST_CONVERTER)
+        self.directory = tempfile.TemporaryDirectory()
+        path = Path(self.directory.name).joinpath("test.db")
+        self.repository = SemanticMappingDatabase.from_connection(
+            connection=f"sqlite:///{path}",
+            converter=TEST_CONVERTER,
+        )
+
+    def tearDown(self) -> None:
+        """Tear down the test case."""
+        self.directory.cleanup()
 
     def test_name_io(self) -> None:
         """Test that names make it to and from database models."""
