@@ -597,6 +597,10 @@ class TestFastAPI(unittest.TestCase):
             msg="the old mapping should be deleted",
         )
 
+    def test_converter(self) -> None:
+        """Test the converter is ready."""
+        self.assertIn("chebi", self.repository.converter.get_prefixes())
+
     def test_get_missing_mapping(self) -> None:
         """Test getting a missing mapping from the API."""
         response = self.client.get("/mapping/nope:nope")
