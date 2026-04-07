@@ -112,6 +112,7 @@ class SemanticMappingModel(SQLModel, table=True):
     subject: Reference = Field(sa_column=get_reference_sa_column())
     subject_name: str | None = Field(None)
     predicate: Reference = Field(sa_column=get_reference_sa_column())
+    predicate_name: str | None = Field(None)
     object: Reference = Field(sa_column=get_reference_sa_column())
     object_name: str | None = Field(None)
     justification: Reference = Field(..., sa_column=get_reference_sa_column())
@@ -191,6 +192,8 @@ class SemanticMappingModel(SQLModel, table=True):
         # as a regular Reference
         if subject_name := mapping.subject_name:
             d["subject_name"] = subject_name
+        if predicate_name := mapping.predicate_name:
+            d["predicate_name"] = predicate_name
         if object_name := mapping.object_name:
             d["object_name"] = object_name
         if converter is not None:
@@ -203,6 +206,9 @@ class SemanticMappingModel(SQLModel, table=True):
         if subject_name := d.pop("subject_name", None):
             d["subject"]["name"] = subject_name
             d["subject"] = NamableReference.model_validate(d["subject"])
+        if predicate_name := d.pop("predicate_name", None):
+            d["predicate"]["name"] = predicate_name
+            d["predicate"] = NamableReference.model_validate(d["predicate"])
         if object_name := d.pop("object_name", None):
             d["object"]["name"] = object_name
             d["object"] = NamableReference.model_validate(d["object"])
