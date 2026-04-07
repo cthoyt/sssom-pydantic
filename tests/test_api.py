@@ -5,14 +5,12 @@ from __future__ import annotations
 import tempfile
 import types
 import typing
-import unittest
 from pathlib import Path
 from textwrap import dedent
 
 import curies
 from curies import Reference
 from curies.vocabulary import exact_match, manual_mapping_curation
-from pydantic import BaseModel
 
 import sssom_pydantic
 import sssom_pydantic.io
@@ -21,6 +19,7 @@ from sssom_pydantic.constants import MULTIVALUED
 from sssom_pydantic.examples import EXAMPLES
 from sssom_pydantic.io import _chomp_frontmatter, append, append_unprocessed, write_unprocessed
 from sssom_pydantic.models import Record
+from tests import cases
 from tests.cases import (
     AUTHOR,
     TEST_CONVERTER,
@@ -33,7 +32,7 @@ from tests.cases import (
 )
 
 
-class TestIO(unittest.TestCase):
+class TestIO(cases.MappingTestCaseMixin):
     """Test reading SSSOM."""
 
     def setUp(self) -> None:
@@ -44,12 +43,6 @@ class TestIO(unittest.TestCase):
     def tearDown(self) -> None:
         """Tear down the test case."""
         self._tmp_directory.cleanup()
-
-    def assert_model_equal(self, expected: BaseModel, actual: BaseModel) -> None:
-        """Check two models are equal by serializing to dict."""
-        self.assertEqual(
-            expected.model_dump(exclude_none=True), actual.model_dump(exclude_none=True)
-        )
 
     def test_multivalued_record(self) -> None:
         """Test the Record class is properly type-annotated."""
@@ -82,12 +75,12 @@ class TestIO(unittest.TestCase):
 
         unprocessed, _converter, _mapping_set = sssom_pydantic.io.read_unprocessed(path)
         self.assertEqual(1, len(unprocessed))
-        self.assert_model_equal(record, unprocessed[0])
+        self.assert_base_model_equal(record, unprocessed[0])
 
         semantic_mapping = _m()
         processed, _converter, _mapping_set = sssom_pydantic.io.read(path)
         self.assertEqual(1, len(processed))
-        self.assert_model_equal(semantic_mapping, processed[0])
+        self.assert_base_model_equal(semantic_mapping, processed[0])
 
     def test_read_2(self) -> None:
         """Test reading from a file."""
@@ -133,18 +126,12 @@ class TestIO(unittest.TestCase):
 
         unprocessed_records, _, _mapping_set = sssom_pydantic.io.read_unprocessed(path)
         self.assertEqual(1, len(unprocessed_records))
-        self.assert_model_equal(
-            _r(author_id=[AUTHOR.curie]),
-            unprocessed_records[0],
-        )
+        self.assert_base_model_equal(_r(author_id=[AUTHOR.curie]), unprocessed_records[0])
 
         processed_records, _converter, _mapping_set = sssom_pydantic.io.read(path)
 
         self.assertEqual(1, len(processed_records))
-        self.assert_model_equal(
-            _m(authors=[AUTHOR]),
-            processed_records[0],
-        )
+        self.assert_model_equal(_m(authors=[AUTHOR]), processed_records[0])
 
     def test_round_trip(self) -> None:
         """Test that mappings can be written and read."""
@@ -160,10 +147,7 @@ class TestIO(unittest.TestCase):
                 self.assertEqual(
                     1, len(mappings), msg=f"Failed, file contents:\n\n{path.read_text()}"
                 )
-                self.assertEqual(
-                    example.semantic_mapping.model_dump(exclude_none=True, exclude_unset=True),
-                    mappings[0].model_dump(exclude_none=True, exclude_unset=True),
-                )
+                self.assert_model_equal(example.semantic_mapping, mappings[0])
 
     def test_read_metadata_empty_line(self) -> None:
         """Test reading from a file whose metadata has a blank line in it."""
@@ -182,10 +166,7 @@ class TestIO(unittest.TestCase):
         processed_records, _converter, _mapping_set = sssom_pydantic.io.read(path)
 
         self.assertEqual(1, len(processed_records))
-        self.assert_model_equal(
-            _m(authors=[AUTHOR]),
-            processed_records[0],
-        )
+        self.assert_model_equal(_m(authors=[AUTHOR]), processed_records[0])
 
     def test_append(self) -> None:
         """Test appending to the end of a file."""

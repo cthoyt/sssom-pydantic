@@ -16,6 +16,7 @@ from curies.vocabulary import (
     lexical_matching_process,
     manual_mapping_curation,
 )
+from pydantic import BaseModel
 
 import sssom_pydantic
 from sssom_pydantic import MappingSetRecord
@@ -108,24 +109,49 @@ TEST_METADATA_W_PREFIX_MAP = MappingSetRecord(
 )
 
 
-class TestRepository(unittest.TestCase):
+class MappingTestCaseMixin(unittest.TestCase):
+    """A mixin for model testing."""
+
+    def assert_model_equal(
+        self,
+        expected: SemanticMapping,
+        actual: SemanticMapping | None,
+        msg: str | None = None,
+        *,
+        skip_name_check: bool | None = None,
+        exclude_record: bool | None = None,
+    ) -> None:
+        """Assert two models are equal."""
+        if actual is None:
+            raise self.fail()
+        parameters: dict[str, Any] = {
+            "exclude_none": True,
+            "exclude_unset": True,
+            "exclude_defaults": True,
+        }
+        if exclude_record:
+            # FIXME this shouldn't be necessary
+            parameters["exclude"] = {"record"}
+        self.assertEqual(
+            expected.model_dump(**parameters), actual.model_dump(**parameters), msg=msg
+        )
+        if not skip_name_check:
+            # FIXME this shouldn't be optional
+            self.assertEqual(expected.subject_name, actual.subject_name)
+            self.assertEqual(expected.predicate_name, actual.predicate_name)
+            self.assertEqual(expected.object_name, actual.object_name)
+
+    def assert_base_model_equal(self, expected: BaseModel, actual: BaseModel) -> None:
+        """Check two models are equal by serializing to dict."""
+        self.assertEqual(
+            expected.model_dump(exclude_none=True), actual.model_dump(exclude_none=True)
+        )
+
+
+class TestRepository(MappingTestCaseMixin):
     """Test the database."""
 
     repository: SemanticMappingRepository
-
-    def assert_model_equal(self, expected: SemanticMapping, actual: SemanticMapping) -> None:
-        """Assert two models are equal."""
-        return self.assertEqual(
-            expected.model_dump(
-                exclude_none=True, exclude_unset=True, exclude_defaults=True, exclude={"record"}
-            ),
-            actual.model_dump(
-                exclude_none=True, exclude_unset=True, exclude_defaults=True, exclude={"record"}
-            ),
-        )
-        self.assertEqual(expected.subject_name, actual.subject_name)
-        self.assertEqual(expected.predicate_name, actual.predicate_name)
-        self.assertEqual(expected.object_name, actual.object_name)
 
     def assert_models_equal(
         self, expected: list[SemanticMapping], actual: list[SemanticMapping]
@@ -335,7 +361,7 @@ class TestRepository(unittest.TestCase):
             authors=[charlie],
             mapping_date=datetime.date.today(),
         )
-        self.assert_model_equal(expected_mapping, actual_mapping)
+        self.assert_model_equal(expected_mapping, actual_mapping, exclude_record=True)
         self.assertEqual(
             db.hash_mapping(expected_mapping),
             actual_reference,
@@ -368,7 +394,7 @@ class TestRepository(unittest.TestCase):
             authors=[charlie],
             mapping_date=datetime.date.today(),
         )
-        self.assert_model_equal(expected_mapping, actual_mapping)
+        self.assert_model_equal(expected_mapping, actual_mapping, exclude_record=True)
         self.assertEqual(
             db.hash_mapping(expected_mapping),
             actual_reference,
@@ -569,21 +595,11 @@ class TestRepository(unittest.TestCase):
 
 
 @unittest.skipUnless(importlib.util.find_spec("fastapi"), "fastapi not installed")
-class TestFastAPI(unittest.TestCase):
+class TestFastAPI(MappingTestCaseMixin):
     """Test API."""
 
     repository: SemanticMappingRepository
     client: TestClient
-
-    def assert_model_equal(self, expected: SemanticMapping, actual: SemanticMapping) -> None:
-        """Assert that two models are equal."""
-        self.assertEqual(
-            expected.model_dump(exclude_unset=True, exclude_none=True),
-            actual.model_dump(exclude_unset=True, exclude_none=True),
-        )
-        self.assertEqual(expected.subject_name, actual.subject_name)
-        self.assertEqual(expected.predicate_name, actual.predicate_name)
-        self.assertEqual(expected.object_name, actual.object_name)
 
     def post_mapping(self, mapping: SemanticMapping) -> Reference:
         """Post a mapping and parse the response."""
@@ -624,7 +640,7 @@ class TestFastAPI(unittest.TestCase):
         self.assertIsNotNone(self.repository.get_mapping(reference))
 
         actual = self.get_mapping(reference)
-        self.assert_model_equal(_m(record=reference), actual)
+        self.assert_model_equal(_m(record=reference), actual, skip_name_check=True)
 
         self.client.delete(f"/mapping/{reference.curie}")
         self.assertEqual(0, self.repository.count_mappings())
@@ -664,7 +680,7 @@ class TestFastAPI(unittest.TestCase):
             mapping_date=datetime.date.today(),
         )
         expected = expected.model_copy(update={"record": self.repository.hash_mapping(expected)})
-        self.assert_model_equal(expected, actual)
+        self.assert_model_equal(expected, actual, skip_name_check=True)
 
         publish_response = self.client.post(f"/action/publish/{curation_reference.curie}")
         publish_response.raise_for_status()
@@ -683,7 +699,7 @@ class TestFastAPI(unittest.TestCase):
         expected_2 = expected_2.model_copy(
             update={"record": self.repository.hash_mapping(expected_2)}
         )
-        self.assert_model_equal(expected_2, published_mapping)
+        self.assert_model_equal(expected_2, published_mapping, skip_name_check=True)
 
     def test_review_mapping(self) -> None:
         """Test reviewing a mapping."""
@@ -715,4 +731,4 @@ class TestFastAPI(unittest.TestCase):
             reviewer_agreement=score,
         )
         expected = expected.model_copy(update={"record": self.repository.hash_mapping(expected)})
-        self.assert_model_equal(expected, actual)
+        self.assert_model_equal(expected, actual, skip_name_check=True)
