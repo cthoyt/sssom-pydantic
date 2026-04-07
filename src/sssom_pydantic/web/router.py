@@ -4,18 +4,17 @@ import datetime
 from typing import Annotated, TypeAlias, cast
 
 import fastapi
-from curies import Reference
+from curies import NamedReference, Reference
 from curies.vocabulary import charlie, exact_match, manual_mapping_curation
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Request
 from pydantic import BaseModel, Field
 
 from sssom_pydantic import SemanticMapping
 from sssom_pydantic.database import SemanticMappingRepository
-from sssom_pydantic.examples import R1, R2
 from sssom_pydantic.process import MARKS, Mark, estimate_confidence
 from sssom_pydantic.query import Query
 
-__all__ = ["router"]
+__all__ = ["ReviewPayload", "router"]
 
 router = APIRouter()
 
@@ -71,9 +70,9 @@ def post_mapping(
         Body(
             examples=[
                 SemanticMapping(
-                    subject=R1,
+                    subject=NamedReference(prefix="mesh", identifier="C000089", name="ammeline"),
                     predicate=exact_match,
-                    object=R2,
+                    object=NamedReference(prefix="chebi", identifier="28646", name="ammeline"),
                     justification=manual_mapping_curation,
                     authors=[charlie],
                     mapping_date=datetime.date(2025, 8, 1),

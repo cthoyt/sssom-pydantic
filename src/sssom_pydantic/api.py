@@ -455,7 +455,7 @@ def _xx(s: str) -> tuple[str, str]:
 SemanticMappingPredicate: TypeAlias = Callable[[SemanticMapping], bool]
 
 #: A function that hashes a semantic mapping into a reference
-SemanticMappingHash: TypeAlias = Callable[[SemanticMapping], Reference]
+SemanticMappingHash: TypeAlias = Callable[[SemanticMapping, curies.Converter], Reference]
 
 
 class MappingTool(BaseModel):
@@ -681,9 +681,10 @@ class ExtensionDefinition(BaseModel):
 
 MAPPING_HASH_V1_PREFIX = "sssom-pydantic-mapping-hash-v2"
 MAPPING_HASH_V1_EXCLUDE: set[str] = {"record", "cardinality", "cardinality_scope"}
+MAPPING_HASH_V1_URI_PREFIX = f"https://w3id.org/sssom/{MAPPING_HASH_V1_PREFIX}/"
 
 
-def mapping_hash_v1(m: SemanticMapping) -> Reference:
+def mapping_hash_v1(m: SemanticMapping, converter: curies.Converter) -> Reference:
     """Hash a mapping into a reference."""
     h = hashlib.md5(usedforsecurity=False)
     h.update(m.model_dump_json(exclude=MAPPING_HASH_V1_EXCLUDE).encode("utf8"))

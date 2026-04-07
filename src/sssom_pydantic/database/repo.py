@@ -44,7 +44,7 @@ class SemanticMappingRepository(ABC):
 
     def hash_mapping(self, mapping: SemanticMapping) -> Reference:
         """Get a reference for the mapping."""
-        return self.semantic_mapping_hash(mapping)
+        return self.semantic_mapping_hash(mapping, self.converter)
 
     def _ensure(self, reference: Reference | SemanticMapping) -> Reference:
         if isinstance(reference, SemanticMapping):
