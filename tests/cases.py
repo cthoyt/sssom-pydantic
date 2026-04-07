@@ -191,13 +191,13 @@ class TestRepository(unittest.TestCase):
             self.assertIsNotNone(mappings[0].predicate_modifier)
             self.assertIsNone(mappings[0].comment)
 
-        self.assertIn("mesh", TEST_CONVERTER.get_prefixes())
+        self.assertIn("mesh", db.converter.get_prefixes())
 
         self.assertEqual(
             4,
             len(
                 db.get_mappings(
-                    where_clauses=Query(triple_id=TEST_CONVERTER.hash_triple(mapping_1)),
+                    where_clauses=Query(triple_id=db.converter.hash_triple(mapping_1)),
                 )
             ),
         )

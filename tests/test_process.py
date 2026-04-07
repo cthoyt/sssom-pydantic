@@ -18,7 +18,6 @@ from curies.vocabulary import (
 from curies.vocabulary import (
     manual_mapping_curation as manual,
 )
-from pydantic import BaseModel
 
 from sssom_pydantic import SemanticMapping
 from sssom_pydantic.api import NOT
@@ -40,7 +39,7 @@ class TestProcess(unittest.TestCase):
     """Test processing."""
 
     def assert_model_equal(
-        self, expected: BaseModel, actual: BaseModel, msg: str | None = None
+        self, expected: SemanticMapping, actual: SemanticMapping, msg: str | None = None
     ) -> None:
         """Assert two models are equal."""
         self.assertEqual(
@@ -48,6 +47,9 @@ class TestProcess(unittest.TestCase):
             actual.model_dump(exclude_none=True, exclude_unset=True),
             msg=msg,
         )
+        self.assertEqual(expected.subject_name, actual.subject_name)
+        self.assertEqual(expected.predicate_name, actual.predicate_name)
+        self.assertEqual(expected.object_name, actual.object_name)
 
     def test_curate(self) -> None:
         """Test curation."""
@@ -98,7 +100,7 @@ class TestProcess(unittest.TestCase):
                     "EXACT",
                     SemanticMapping(
                         subject=R1,
-                        predicate=exact_match,
+                        predicate=exact_match.pair.to_pydantic(),
                         object=R2,
                         justification=manual_mapping_curation,
                         authors=[author],
@@ -109,7 +111,7 @@ class TestProcess(unittest.TestCase):
                     "BROAD",
                     SemanticMapping(
                         subject=R1,
-                        predicate=broad_match,
+                        predicate=broad_match.pair.to_pydantic(),
                         object=R2,
                         justification=manual_mapping_curation,
                         authors=[author],
@@ -120,7 +122,7 @@ class TestProcess(unittest.TestCase):
                     "NARROW",
                     SemanticMapping(
                         subject=R1,
-                        predicate=narrow_match,
+                        predicate=narrow_match.pair.to_pydantic(),
                         object=R2,
                         justification=manual_mapping_curation,
                         authors=[author],
