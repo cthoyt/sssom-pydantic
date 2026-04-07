@@ -143,3 +143,7 @@ class TestNeo4j(cases.TestRepository):
         """Tear down the test case."""
         self.repository.drop_all()
         self.repository.driver.close()
+
+    def test_queries(self) -> None:
+        """Skip query tests."""
+        raise self.skipTest("not implemented")

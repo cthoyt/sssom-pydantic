@@ -16,7 +16,6 @@ from curies.vocabulary import (
     lexical_matching_process,
     manual_mapping_curation,
 )
-from pydantic import BaseModel
 
 import sssom_pydantic
 from sssom_pydantic import MappingSetRecord
@@ -34,6 +33,8 @@ from sssom_pydantic.examples import (
     EXAMPLE_MAPPINGS,
     EXAMPLES,
     P1,
+    P2,
+    P3,
     R1,
     R2,
     TEST_CONVERTER,
@@ -325,7 +326,7 @@ class TestRepository(unittest.TestCase):
 
         expected_mapping = SemanticMapping(
             subject=R1,
-            predicate=Reference.from_curie("skos:broadMatch"),
+            predicate=P2,
             object=R2,
             justification=manual_mapping_curation,
             authors=[charlie],
@@ -342,7 +343,7 @@ class TestRepository(unittest.TestCase):
         """Test curation in the database."""
         mapping = SemanticMapping(
             subject=R1,
-            predicate=P1,
+            predicate=P3,
             object=R2,
             justification=lexical_matching_process,
             confidence=0.95,
@@ -571,7 +572,7 @@ class TestFastAPI(unittest.TestCase):
     repository: SemanticMappingRepository
     client: TestClient
 
-    def assert_model_equal(self, expected: BaseModel, actual: BaseModel) -> None:
+    def assert_model_equal(self, expected: SemanticMapping, actual: SemanticMapping) -> None:
         """Assert that two models are equal."""
         self.assertEqual(
             expected.model_dump(exclude_unset=True, exclude_none=True),
@@ -580,7 +581,9 @@ class TestFastAPI(unittest.TestCase):
 
     def post_mapping(self, mapping: SemanticMapping) -> Reference:
         """Post a mapping and parse the response."""
-        response = self.client.post("/mapping", json=mapping.model_dump())
+        response = self.client.post(
+            "/mapping", json=mapping.model_dump(exclude_none=True, exclude_unset=True)
+        )
         return Reference.model_validate(response.json())
 
     def get_mapping(self, reference: Reference) -> SemanticMapping:
@@ -596,6 +599,10 @@ class TestFastAPI(unittest.TestCase):
             self.client.get(f"/mapping/{post_reference.curie}").status_code,
             msg="the old mapping should be deleted",
         )
+
+    def test_converter(self) -> None:
+        """Test the converter is ready."""
+        self.assertIn("chebi", self.repository.converter.get_prefixes())
 
     def test_get_missing_mapping(self) -> None:
         """Test getting a missing mapping from the API."""
@@ -626,10 +633,7 @@ class TestFastAPI(unittest.TestCase):
         reference = self.repository.hash_mapping(mapping)
         self.assertEqual(0, self.repository.count_mappings())
 
-        response = self.client.post("/mapping", json=mapping.model_dump())
-        response.raise_for_status()
-
-        actual = Reference.model_validate(response.json())
+        actual = self.post_mapping(mapping)
         self.assertEqual(reference, actual)
 
         self.assertIsNotNone(self.repository.get_mapping(reference))

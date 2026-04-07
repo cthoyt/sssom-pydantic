@@ -6,10 +6,15 @@ from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import Literal, overload
 
+import curies
 from curies import Reference
 
 from .repo import CURIENotFoundError, SemanticMappingRepository
-from ..api import MappingSet, SemanticMapping, SemanticMappingHash
+from ..api import (
+    MappingSet,
+    SemanticMapping,
+    SemanticMappingHash,
+)
 from ..io import append, read, write
 from ..query import Query, filter_mappings, get_mappings
 
@@ -27,19 +32,26 @@ class FileSystemSemanticMappingRepository(SemanticMappingRepository):
         *,
         write_action: Literal["append", "overwrite"] = "overwrite",
         semantic_mapping_hash: SemanticMappingHash | None = None,
+        converter: curies.Converter | None = None,
     ) -> None:
         """Make it."""
         self.path = Path(path).resolve()
         if not self.path.is_file():
-            import bioregistry
+            if converter is None:
+                import bioregistry
 
+                converter: curies.Converter = bioregistry.get_default_converter()
+
+            self.mappings = []
+            self.metadata = MappingSet(id=DEFAULT_ID)
             write(
                 [],
                 path,
-                converter=bioregistry.get_default_converter(),
-                metadata=MappingSet(id=DEFAULT_ID),
+                converter=converter,
+                metadata=self.metadata,
             )
-        self.mappings, converter, self.metadata = read(self.path)
+        else:
+            self.mappings, converter, self.metadata = read(self.path)
         super().__init__(semantic_mapping_hash=semantic_mapping_hash, converter=converter)
         self.write_action = write_action
 

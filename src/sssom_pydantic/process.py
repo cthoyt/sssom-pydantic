@@ -241,7 +241,7 @@ def curate(
         update["mapping_date"] = date
 
     if mark in semantic_mapping_scopes:
-        update["predicate"] = semantic_mapping_scopes[mark]
+        update["predicate"] = semantic_mapping_scopes[mark].pair.to_pydantic()
     elif mark == "incorrect":
         update["predicate_modifier"] = "Not"
     elif mark == "correct":
