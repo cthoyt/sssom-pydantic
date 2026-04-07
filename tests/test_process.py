@@ -48,6 +48,9 @@ class TestProcess(unittest.TestCase):
             actual.model_dump(exclude_none=True, exclude_unset=True),
             msg=msg,
         )
+        self.assertEqual(expected.subject_name, actual.subject_name)
+        self.assertEqual(expected.predicate_name, actual.predicate_name)
+        self.assertEqual(expected.object_name, actual.object_name)
 
     def test_curate(self) -> None:
         """Test curation."""
@@ -98,7 +101,7 @@ class TestProcess(unittest.TestCase):
                     "EXACT",
                     SemanticMapping(
                         subject=R1,
-                        predicate=exact_match,
+                        predicate=exact_match.pair.to_pydantic(),
                         object=R2,
                         justification=manual_mapping_curation,
                         authors=[author],
@@ -109,7 +112,7 @@ class TestProcess(unittest.TestCase):
                     "BROAD",
                     SemanticMapping(
                         subject=R1,
-                        predicate=broad_match,
+                        predicate=broad_match.pair.to_pydantic(),
                         object=R2,
                         justification=manual_mapping_curation,
                         authors=[author],
@@ -120,7 +123,7 @@ class TestProcess(unittest.TestCase):
                     "NARROW",
                     SemanticMapping(
                         subject=R1,
-                        predicate=narrow_match,
+                        predicate=narrow_match.pair.to_pydantic(),
                         object=R2,
                         justification=manual_mapping_curation,
                         authors=[author],
