@@ -55,7 +55,7 @@ class MappingTool(BaseModel):
     version: str | None = Field(None)
 
 
-def _ensure_namable(x: str | Reference | NamableReference):
+def _ensure_namable(x: str | Reference | NamableReference) -> NamableReference:
     if isinstance(x, NamableReference):
         return x
     elif isinstance(x, Reference):
