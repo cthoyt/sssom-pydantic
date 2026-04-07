@@ -19,7 +19,7 @@ from curies.vocabulary import (
 
 import sssom_pydantic
 from sssom_pydantic import MappingSetRecord
-from sssom_pydantic.api import MAPPING_HASH_V1_PREFIX, SemanticMapping
+from sssom_pydantic.api import MAPPING_HASH_V1_PREFIX, NamableSemanticMapping, SemanticMapping
 from sssom_pydantic.database import (
     NEGATIVE_MAPPING_CLAUSE,
     POSITIVE_MAPPING_CLAUSE,
@@ -596,7 +596,7 @@ class TestFastAPI(unittest.TestCase):
         """Get a mapping."""
         response = self.client.get(f"/mapping/{reference.curie}")
         response.raise_for_status()
-        return SemanticMapping.model_validate(response.json())
+        return NamableSemanticMapping.model_validate(response.json())
 
     def assert_missing(self, post_reference: Reference) -> None:
         """Assert a mapping is not in the database."""
@@ -623,10 +623,7 @@ class TestFastAPI(unittest.TestCase):
         reference = self.repository.hash_mapping(expected)
         self.assertIsNotNone(self.repository.get_mapping(reference))
 
-        response = self.client.get(f"/mapping/{reference.curie}")
-        response.raise_for_status()
-        response_json = response.json()
-        actual = SemanticMapping.model_validate(response_json)
+        actual = self.get_mapping(reference)
         self.assert_model_equal(_m(record=reference), actual)
 
         self.client.delete(f"/mapping/{reference.curie}")

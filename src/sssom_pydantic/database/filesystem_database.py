@@ -26,6 +26,8 @@ DEFAULT_ID = "https://example.org/test.sssom.tsv"
 class FileSystemSemanticMappingRepository(SemanticMappingRepository):
     """A repository that operates on the filesystem."""
 
+    mappings: list[SemanticMapping]
+
     def __init__(
         self,
         path: str | Path,
@@ -40,7 +42,7 @@ class FileSystemSemanticMappingRepository(SemanticMappingRepository):
             if converter is None:
                 import bioregistry
 
-                converter: curies.Converter = bioregistry.get_default_converter()
+                converter = bioregistry.get_default_converter()
 
             self.mappings = []
             self.metadata = MappingSet(id=DEFAULT_ID)

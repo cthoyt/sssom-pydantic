@@ -30,7 +30,12 @@ from sqlmodel.sql._expression_select_cls import SelectOfScalar
 from tqdm import tqdm
 from typing_extensions import Self
 
-from sssom_pydantic.api import MappingTool, SemanticMapping, SemanticMappingHash
+from sssom_pydantic.api import (
+    MappingTool,
+    NamableSemanticMapping,
+    SemanticMapping,
+    SemanticMappingHash,
+)
 from sssom_pydantic.database.repo import CURIENotFoundError, SemanticMappingRepository
 from sssom_pydantic.models import Cardinality
 from sssom_pydantic.query import Query
@@ -185,12 +190,14 @@ class SemanticMappingModel(SQLModel, table=True):
         cls, mapping: SemanticMapping, *, converter: curies.Converter
     ) -> Self:
         """Get from a non-ORM mapping."""
-        d = mapping.model_dump()
+        d = mapping.model_dump(exclude_none=True, exclude_unset=True, exclude_defaults=True)
         # do this explicitly since the model might not be smart enough
         # to fully dump a NamableReference, since it's only annotated
         # as a regular Reference
         if subject_name := mapping.subject_name:
             d["subject_name"] = subject_name
+        if predicate_name := mapping.predicate_name:
+            d["predicate_name"] = predicate_name
         if object_name := mapping.object_name:
             d["object_name"] = object_name
         if converter is not None:
@@ -199,14 +206,17 @@ class SemanticMappingModel(SQLModel, table=True):
 
     def to_semantic_mapping(self) -> SemanticMapping:
         """Get a non-ORM mapping."""
-        d = self.model_dump()
+        d = self.model_dump(exclude_none=True, exclude_unset=True, exclude_defaults=True)
         if subject_name := d.pop("subject_name", None):
             d["subject"]["name"] = subject_name
             d["subject"] = NamableReference.model_validate(d["subject"])
+        if predicate_name := d.pop("predicate_name", None):
+            d["predicate"]["name"] = predicate_name
+            d["predicate"] = NamableReference.model_validate(d["predicate"])
         if object_name := d.pop("object_name", None):
             d["object"]["name"] = object_name
             d["object"] = NamableReference.model_validate(d["object"])
-        return SemanticMapping.model_validate(d)
+        return NamableSemanticMapping.model_validate(d)
 
 
 class SemanticMappingDatabase(SemanticMappingRepository):
