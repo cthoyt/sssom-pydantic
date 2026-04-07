@@ -186,7 +186,7 @@ class SemanticMappingModel(SQLModel, table=True):
         cls, mapping: SemanticMapping, *, converter: curies.Converter
     ) -> Self:
         """Get from a non-ORM mapping."""
-        d = mapping.model_dump()
+        d = mapping.model_dump(exclude_none=True, exclude_unset=True, exclude_defaults=True)
         # do this explicitly since the model might not be smart enough
         # to fully dump a NamableReference, since it's only annotated
         # as a regular Reference
@@ -202,7 +202,7 @@ class SemanticMappingModel(SQLModel, table=True):
 
     def to_semantic_mapping(self) -> SemanticMapping:
         """Get a non-ORM mapping."""
-        d = self.model_dump()
+        d = self.model_dump(exclude_none=True, exclude_unset=True, exclude_defaults=True)
         if subject_name := d.pop("subject_name", None):
             d["subject"]["name"] = subject_name
             d["subject"] = NamableReference.model_validate(d["subject"])
