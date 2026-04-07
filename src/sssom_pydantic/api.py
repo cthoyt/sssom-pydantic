@@ -680,7 +680,7 @@ class ExtensionDefinition(BaseModel):
 
 
 MAPPING_HASH_V1_PREFIX = "sssom-pydantic-mapping-hash-v2"
-MAPPING_HASH_V1_EXCLUDE: set[str] = {"record", "cardinality", "cardinality_scope"}
+MAPPING_HASH_V1_EXCLUDE: set[str] = {"record", "cardinality"}
 MAPPING_HASH_V1_URI_PREFIX = f"https://w3id.org/sssom/{MAPPING_HASH_V1_PREFIX}/"
 
 
