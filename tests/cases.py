@@ -119,7 +119,6 @@ class MappingTestCaseMixin(unittest.TestCase):
         msg: str | None = None,
         *,
         skip_name_check: bool | None = None,
-        exclude_record: bool | None = None,
     ) -> None:
         """Assert two models are equal."""
         if actual is None:
@@ -129,9 +128,6 @@ class MappingTestCaseMixin(unittest.TestCase):
             "exclude_unset": True,
             "exclude_defaults": True,
         }
-        if exclude_record:
-            # FIXME this shouldn't be necessary
-            parameters["exclude"] = {"record"}
         self.assertEqual(
             expected.model_dump(**parameters), actual.model_dump(**parameters), msg=msg
         )
@@ -368,7 +364,7 @@ class TestRepository(MappingTestCaseMixin):
         )
         self.assertEqual("ammeline", expected_mapping.subject_name)
         self.assertEqual("ammeline", actual_mapping.subject_name)
-        self.assert_model_equal(expected_mapping, actual_mapping, exclude_record=True)
+        self.assert_model_equal(expected_mapping, actual_mapping)
         self.assertEqual(
             db.hash_mapping(expected_mapping),
             actual_reference,
@@ -406,7 +402,7 @@ class TestRepository(MappingTestCaseMixin):
                 "record": db.hash_mapping(expected_mapping),
             }
         )
-        self.assert_model_equal(expected_mapping, actual_mapping, exclude_record=True)
+        self.assert_model_equal(expected_mapping, actual_mapping)
         self.assertEqual(
             db.hash_mapping(expected_mapping),
             actual_reference,
