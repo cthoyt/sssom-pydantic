@@ -9,7 +9,6 @@ import unittest
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-import curies
 from curies import NamableReference, NamedReference, Reference
 from curies.vocabulary import (
     charlie,
@@ -21,7 +20,7 @@ from pydantic import BaseModel
 
 import sssom_pydantic
 from sssom_pydantic import MappingSetRecord
-from sssom_pydantic.api import MAPPING_HASH_V1_PREFIX, SemanticMapping, mapping_hash_v1
+from sssom_pydantic.api import MAPPING_HASH_V1_PREFIX, SemanticMapping
 from sssom_pydantic.database import (
     NEGATIVE_MAPPING_CLAUSE,
     POSITIVE_MAPPING_CLAUSE,
@@ -31,7 +30,7 @@ from sssom_pydantic.database import (
     SemanticMappingModel,
     SemanticMappingRepository,
 )
-from sssom_pydantic.examples import EXAMPLE_MAPPINGS, EXAMPLES
+from sssom_pydantic.examples import EXAMPLE_MAPPINGS, EXAMPLES, TEST_CONVERTER, TEST_PREFIX_MAP
 from sssom_pydantic.models import Record
 from sssom_pydantic.query import Query
 from sssom_pydantic.web.router import ReviewPayload
@@ -91,26 +90,6 @@ def _r(**kwargs: Any) -> Record:
 
 
 TEST_MAPPING_SET_ID = "https://example.org/sssom.mappingset/1.sssom.tsv"
-TEST_PREFIX_MAP = {
-    "mesh": "http://id.nlm.nih.gov/mesh/",
-    "chebi": "http://purl.obolibrary.org/obo/CHEBI_",
-    # the following are the default ones
-    "owl": "http://www.w3.org/2002/07/owl#",
-    "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
-    "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
-    "semapv": "https://w3id.org/semapv/vocab/",
-    "skos": "http://www.w3.org/2004/02/skos/core#",
-    "sssom": "https://w3id.org/sssom/",
-    "spdx": "https://spdx.org/licenses/",
-    "w3id": "https://w3id.org/",
-    MAPPING_HASH_V1_PREFIX: f"https://w3id.org/sssom/{MAPPING_HASH_V1_PREFIX}/",
-    "issue": "https://github.com/cthoyt/sssom-pydantic/issues/",
-    "biolink": "https://w3id.org/biolink/vocab/",
-    "rule": "https://example.org/disease-rule/",
-    "bioregistry": "https://bioregistry.io/",
-    "orcid": "https://orcid.org/",
-}
-TEST_CONVERTER = curies.Converter.from_prefix_map(TEST_PREFIX_MAP)
 TEST_METADATA = MappingSetRecord(
     mapping_set_id=TEST_MAPPING_SET_ID,
     license="https://spdx.org/licenses/CC0-1.0",
@@ -249,12 +228,12 @@ class TestRepository(unittest.TestCase):
         db.delete_mapping(Reference.from_curie("nope:nope"))
 
         self.assertEqual(3, db.count_mappings())
-        self.assertIsNone(db.get_mapping(mapping_hash_v1(mapping_1)))
+        self.assertIsNone(db.get_mapping(db.hash_mapping(mapping_1)))
         with self.assertRaises(ValueError):
-            db.get_mapping(mapping_hash_v1(mapping_1), strict=True)
-        self.assertIsNotNone(db.get_mapping(mapping_hash_v1(mapping_2)))
-        self.assertIsNotNone(db.get_mapping(mapping_hash_v1(mapping_3)))
-        self.assertIsNotNone(db.get_mapping(mapping_hash_v1(mapping_4)))
+            db.get_mapping(db.hash_mapping(mapping_1), strict=True)
+        self.assertIsNotNone(db.get_mapping(db.hash_mapping(mapping_2)))
+        self.assertIsNotNone(db.get_mapping(db.hash_mapping(mapping_3)))
+        self.assertIsNotNone(db.get_mapping(db.hash_mapping(mapping_4)))
 
     def test_queries(self) -> None:
         """Generate and execute variety of queries."""
@@ -436,8 +415,8 @@ class TestRepository(unittest.TestCase):
 
         db = self.repository
         db.add_mappings([m1, m2])
-        m2_curated_reference = db.curate(mapping_hash_v1(m2), authors=charlie, mark="unsure")
-        self.assertEqual(mapping_hash_v1(m2_curated), m2_curated_reference)
+        m2_curated_reference = db.curate(db.hash_mapping(m2), authors=charlie, mark="unsure")
+        self.assertEqual(db.hash_mapping(m2_curated), m2_curated_reference)
         self.assertEqual(2, db.count_mappings())
 
         self.assert_models_equal(

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime
 
-from curies import NamableReference, NamedReference, Reference
+from curies import Converter, NamableReference, NamedReference, Reference
 from curies.vocabulary import (
     charlie,
     lexical_matching_process,
@@ -13,7 +13,13 @@ from curies.vocabulary import (
 )
 from pydantic import BaseModel
 
-from sssom_pydantic.api import MappingTool, SemanticMapping, mapping_hash_v1
+from sssom_pydantic.api import (
+    MAPPING_HASH_V1_PREFIX,
+    MAPPING_HASH_V1_URI_PREFIX,
+    MappingTool,
+    SemanticMapping,
+    mapping_hash_v1,
+)
 
 __all__ = [
     "EXAMPLES",
@@ -22,7 +28,27 @@ __all__ = [
     "R1",
     "R2",
 ]
-
+TEST_PREFIX_MAP = {
+    "mesh": "http://id.nlm.nih.gov/mesh/",
+    "chebi": "http://purl.obolibrary.org/obo/CHEBI_",
+    # the following are the default ones
+    "owl": "http://www.w3.org/2002/07/owl#",
+    "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+    "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+    "semapv": "https://w3id.org/semapv/vocab/",
+    "skos": "http://www.w3.org/2004/02/skos/core#",
+    "sssom": "https://w3id.org/sssom/",
+    #
+    "spdx": "https://spdx.org/licenses/",
+    "w3id": "https://w3id.org/",
+    MAPPING_HASH_V1_PREFIX: MAPPING_HASH_V1_URI_PREFIX,
+    "issue": "https://github.com/cthoyt/sssom-pydantic/issues/",
+    "biolink": "https://w3id.org/biolink/vocab/",
+    "rule": "https://example.org/disease-rule/",
+    "bioregistry": "https://bioregistry.io/",
+    "orcid": "https://orcid.org/",
+}
+TEST_CONVERTER = Converter.from_prefix_map(TEST_PREFIX_MAP)
 R1 = NamedReference(prefix="mesh", identifier="C000089", name="ammeline")
 R2 = NamedReference(prefix="chebi", identifier="28646", name="ammeline")
 P1 = NamableReference(prefix="skos", identifier="exactMatch")
@@ -45,7 +71,7 @@ simple = SemanticMapping(
 
 e1_with_hash = ExampleMapping(
     description="reference for the mapping itself in the `record` field",
-    semantic_mapping=simple.model_copy(update={"record": mapping_hash_v1(simple)}),
+    semantic_mapping=simple.model_copy(update={"record": mapping_hash_v1(simple, TEST_CONVERTER)}),
 )
 
 simple_with_author = ExampleMapping(
