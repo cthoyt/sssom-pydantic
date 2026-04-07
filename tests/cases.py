@@ -640,7 +640,7 @@ class TestFastAPI(MappingTestCaseMixin):
         self.assertIsNotNone(self.repository.get_mapping(reference))
 
         actual = self.get_mapping(reference)
-        self.assert_model_equal(_m(record=reference), actual, skip_name_check=True)
+        self.assert_model_equal(_m(record=reference), actual)
 
         self.client.delete(f"/mapping/{reference.curie}")
         self.assertEqual(0, self.repository.count_mappings())
@@ -680,7 +680,7 @@ class TestFastAPI(MappingTestCaseMixin):
             mapping_date=datetime.date.today(),
         )
         expected = expected.model_copy(update={"record": self.repository.hash_mapping(expected)})
-        self.assert_model_equal(expected, actual, skip_name_check=True)
+        self.assert_model_equal(expected, actual)
 
         publish_response = self.client.post(f"/action/publish/{curation_reference.curie}")
         publish_response.raise_for_status()
@@ -699,7 +699,7 @@ class TestFastAPI(MappingTestCaseMixin):
         expected_2 = expected_2.model_copy(
             update={"record": self.repository.hash_mapping(expected_2)}
         )
-        self.assert_model_equal(expected_2, published_mapping, skip_name_check=True)
+        self.assert_model_equal(expected_2, published_mapping)
 
     def test_review_mapping(self) -> None:
         """Test reviewing a mapping."""
@@ -731,4 +731,4 @@ class TestFastAPI(MappingTestCaseMixin):
             reviewer_agreement=score,
         )
         expected = expected.model_copy(update={"record": self.repository.hash_mapping(expected)})
-        self.assert_model_equal(expected, actual, skip_name_check=True)
+        self.assert_model_equal(expected, actual)
