@@ -16,6 +16,7 @@ from curies.vocabulary import (
     lexical_matching_process,
     manual_mapping_curation,
 )
+from pydantic import BaseModel
 
 import sssom_pydantic
 from sssom_pydantic import MappingSetRecord
@@ -108,20 +109,56 @@ TEST_METADATA_W_PREFIX_MAP = MappingSetRecord(
 )
 
 
-class TestRepository(unittest.TestCase):
+class MappingTestCaseMixin(unittest.TestCase):
+    """A mixin for model testing."""
+
+    def assert_model_equal(
+        self,
+        expected: SemanticMapping,
+        actual: SemanticMapping | None,
+        msg: str | None = None,
+    ) -> None:
+        """Assert two models are equal."""
+        if actual is None:
+            raise self.fail()
+        parameters: dict[str, Any] = {
+            "exclude_none": True,
+            "exclude_unset": True,
+            "exclude_defaults": True,
+        }
+        self.assertEqual(
+            expected.model_dump(**parameters), actual.model_dump(**parameters), msg=msg
+        )
+
+    def assert_base_model_equal(self, expected: BaseModel, actual: BaseModel) -> None:
+        """Check two models are equal by serializing to dict."""
+        self.assertEqual(
+            expected.model_dump(exclude_none=True), actual.model_dump(exclude_none=True)
+        )
+
+
+class TestRepository(MappingTestCaseMixin):
     """Test the database."""
 
     repository: SemanticMappingRepository
 
-    def assert_model_equal(self, expected: SemanticMapping, actual: SemanticMapping) -> None:
+    def assert_model_equal(
+        self,
+        expected: SemanticMapping,
+        actual: SemanticMapping | None,
+        msg: str | None = None,
+    ) -> None:
         """Assert two models are equal."""
-        return self.assertEqual(
-            expected.model_dump(
-                exclude_none=True, exclude_unset=True, exclude_defaults=True, exclude={"record"}
-            ),
-            actual.model_dump(
-                exclude_none=True, exclude_unset=True, exclude_defaults=True, exclude={"record"}
-            ),
+        if actual is None:
+            raise self.fail()
+        parameters: dict[str, Any] = {
+            "exclude_none": True,
+            "exclude_unset": True,
+            "exclude_defaults": True,
+            "exclude": {"record"},  # FIXME this shouldn't be necessary
+        }
+        self.assertEqual(
+            expected.model_dump(**parameters), actual.model_dump(**parameters), msg=msg
         )
 
     def assert_models_equal(
@@ -566,18 +603,11 @@ class TestRepository(unittest.TestCase):
 
 
 @unittest.skipUnless(importlib.util.find_spec("fastapi"), "fastapi not installed")
-class TestFastAPI(unittest.TestCase):
+class TestFastAPI(MappingTestCaseMixin):
     """Test API."""
 
     repository: SemanticMappingRepository
     client: TestClient
-
-    def assert_model_equal(self, expected: SemanticMapping, actual: SemanticMapping) -> None:
-        """Assert that two models are equal."""
-        self.assertEqual(
-            expected.model_dump(exclude_unset=True, exclude_none=True),
-            actual.model_dump(exclude_unset=True, exclude_none=True),
-        )
 
     def post_mapping(self, mapping: SemanticMapping) -> Reference:
         """Post a mapping and parse the response."""
