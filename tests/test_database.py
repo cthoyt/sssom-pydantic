@@ -99,7 +99,9 @@ class TestSQL(cases.TestRepository):
                     statement = select(SemanticMappingModel)
                     orm_models = session.exec(statement).all()
                     self.assertEqual(1, len(orm_models))
-                    self.assertEqual(example.semantic_mapping, orm_models[0].to_semantic_mapping())
+                    self.assert_model_equal(
+                        example.semantic_mapping, orm_models[0].to_semantic_mapping()
+                    )
 
 
 class TestFilesystem(cases.TestRepository):

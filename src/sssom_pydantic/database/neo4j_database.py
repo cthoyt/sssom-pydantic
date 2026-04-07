@@ -79,7 +79,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
             MERGE (object:Entity {curie: row.object})
               SET object.name = row.object_label
             WITH subject, object, row
-            MERGE (m:SemanticMapping {id: row.id})
+            MERGE (m:SemanticMapping {curie: row.curie})
               SET m.triple_id = row.triple_id
               SET m.predicate = row.predicate
               SET m.subject = row.subject
@@ -108,7 +108,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
             references.append(reference)
             batch.append(
                 {
-                    "id": reference.identifier,
+                    "curie": reference.curie,
                     "triple_id": self.converter.hash_triple(mapping),
                     "subject": mapping.subject.curie,
                     "subject_label": mapping.subject_name,
@@ -153,20 +153,20 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
     def delete_mapping(self, reference: Reference | SemanticMapping) -> None:
         """Delete a mapping from the database."""
 
-        def _delete_node(tx: neo4j.ManagedTransaction, identifier: str) -> int:
+        def _delete_node(tx: neo4j.ManagedTransaction, curie: str) -> int:
             result = tx.run(
                 """
-                MATCH (p:SemanticMapping {id: $id})
+                MATCH (p:SemanticMapping {curie: $curie})
                 DETACH DELETE p
                 RETURN count(p) AS deleted
                 """,
-                id=identifier,
+                curie=curie,
             )
             # 1 if found and deleted, 0 if not found
             return result.single()["deleted"]  # type:ignore
 
         with self.driver.session() as session:
-            session.execute_write(_delete_node, self._ensure(reference).identifier)
+            session.execute_write(_delete_node, self._ensure(reference).curie)
 
     # docstr-coverage:excused `overload`
     @overload
@@ -184,12 +184,12 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         """Get a mapping."""
 
         def _get_node(tx: neo4j.ManagedTransaction, uid: str) -> dict[str, Any] | None:
-            result = tx.run("MATCH (p:SemanticMapping {id: $uid}) RETURN p", uid=uid)
+            result = tx.run("MATCH (p:SemanticMapping {curie: $uid}) RETURN p", uid=uid)
             record = result.single()
             return record["p"] if record else None
 
         with self.driver.session() as session:
-            node = session.execute_read(_get_node, reference.identifier)
+            node = session.execute_read(_get_node, reference.curie)
         if node is not None:
             return self._from_data(node)
         elif strict:
@@ -251,6 +251,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
     def _from_data(node: neo4j.Node) -> SemanticMapping:
         data = dict(node)
         data.update(json.loads(data.pop("rest")))
+        data["record"] = data.pop("curie")
         rv = SemanticMapping.model_validate(data)
         model_update = {}
         if subject_label := data.get("subject_label"):

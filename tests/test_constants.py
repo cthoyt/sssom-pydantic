@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 from urllib.request import urlretrieve
 
 import pystow
-from curies import Reference
+from curies import NamableReference, Reference
 from pydantic import AnyUrl
 from tabulate import tabulate
 
@@ -158,7 +158,7 @@ class TestSchema(unittest.TestCase):
                         else:
                             self.assertIn(
                                 annotation,
-                                {Reference, Reference | None},
+                                {NamableReference, Reference, Reference | None},
                                 msg=f"{slot} should be annotated as a reference",
                             )
                     case "string" | "NonRelativeURI":

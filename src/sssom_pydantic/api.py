@@ -7,13 +7,13 @@ import functools
 import hashlib
 import warnings
 from collections.abc import Callable
-from typing import Any, Literal, TypeAlias
+from typing import Annotated, Any, Literal, TypeAlias
 
 import curies
 from curies import NamableReference, Reference, Triple
 from curies.mixins import SemanticallyStandardizable
 from curies.vocabulary import matching_processes
-from pydantic import AnyUrl, BaseModel, ConfigDict, Field
+from pydantic import AnyUrl, BaseModel, BeforeValidator, ConfigDict, Field
 from typing_extensions import Self
 
 from .constants import (
@@ -55,11 +55,25 @@ class MappingTool(BaseModel):
     version: str | None = Field(None)
 
 
+def _ensure_namable(x: str | Reference | NamableReference) -> NamableReference:
+    if isinstance(x, NamableReference):
+        return x
+    elif isinstance(x, Reference):
+        return NamableReference.from_reference(x)
+    elif isinstance(x, str):
+        return NamableReference.from_curie(x)
+    else:
+        return x
+
+
 class RequiredSemanticMapping(Triple):
     """Represents the required fields for SSSOM."""
 
     model_config = ConfigDict(frozen=True)
 
+    subject: Annotated[NamableReference, BeforeValidator(_ensure_namable)] = Field(...)
+    predicate: Annotated[NamableReference, BeforeValidator(_ensure_namable)] = Field(...)
+    object: Annotated[NamableReference, BeforeValidator(_ensure_namable)] = Field(...)
     justification: Reference = Field(
         ...,
         description="""\
@@ -437,7 +451,7 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
             value = getattr(self, name)
             if value is None:
                 continue
-            if field_info.annotation in {Reference, Reference | None}:
+            if field_info.annotation in {NamableReference, Reference, Reference | None}:
                 update[name] = converter.standardize_reference(value, strict=True)
             elif field_info.annotation in {list[Reference], list[Reference] | None}:
                 update[name] = [converter.standardize_reference(r, strict=True) for r in value]
@@ -687,6 +701,13 @@ MAPPING_HASH_V1_URI_PREFIX = f"https://w3id.org/sssom/{MAPPING_HASH_V1_PREFIX}/"
 def mapping_hash_v1(m: SemanticMapping, converter: curies.Converter) -> Reference:
     """Hash a mapping into a reference."""
     h = hashlib.md5(usedforsecurity=False)
-    h.update(m.model_dump_json(exclude=MAPPING_HASH_V1_EXCLUDE).encode("utf8"))
+    h.update(
+        m.model_dump_json(
+            exclude=MAPPING_HASH_V1_EXCLUDE,
+            exclude_none=True,
+            exclude_unset=True,
+            exclude_defaults=True,
+        ).encode("utf8")
+    )
     identifier = h.hexdigest()
     return Reference(prefix=MAPPING_HASH_V1_PREFIX, identifier=identifier)
