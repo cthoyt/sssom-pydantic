@@ -8,13 +8,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import curies
-import jskos
+from curies import NamableReference, Reference
 
 import sssom_pydantic
 from sssom_pydantic import SemanticMapping
 
 if TYPE_CHECKING:
     import jskos
+    from jskos.api import ProcessedJSKOSSet
 
     from sssom_pydantic import MappingSet, MappingSetRecord, Metadata
 
@@ -90,9 +91,10 @@ def _process_jskos_mapping(
     if not subject_member_set or not object_member_set or not processed_mapping.type:
         return None
 
-    subject = subject_member_set[0].reference  # TODO where to find subject's label?
+    subject = _from_set(subject_member_set)
     predicate = processed_mapping.type[0]
-    obj = object_member_set[0].reference  # TODO where to find object's label?
+    obj = _from_set(object_member_set)
+
     justification = processed_mapping.justification
 
     # `und` means undefined language
@@ -107,7 +109,34 @@ def _process_jskos_mapping(
         object=obj,
         justification=justification,
         comment=comment,
+        authors=_extract_references(processed_mapping.contributor),
+        creators=_extract_references(processed_mapping.creator),
+        mapping_date=processed_mapping.created,
     )
+
+
+def _extract_references(
+    contributors: ProcessedJSKOSSet | None,
+) -> list[Reference] | None:
+    if contributors is None:
+        return None
+    return [
+        contributor.reference
+        for contributor in contributors
+        if contributor and contributor.reference
+    ]
+
+
+def _from_set(member_set: list[jskos.ProcessedConcept]) -> NamableReference:
+    processed_concept = member_set[0]
+    reference = processed_concept.reference
+    if reference is None:
+        raise ValueError
+    if processed_concept.preferred_label is None or "und" not in processed_concept.preferred_label:
+        label = None
+    else:
+        label = processed_concept.preferred_label["und"]
+    return NamableReference(prefix=reference.prefix, identifier=reference.identifier, name=label)
 
 
 def from_jskos_path(path: Path, converter: curies.Converter) -> list[SemanticMapping]:
