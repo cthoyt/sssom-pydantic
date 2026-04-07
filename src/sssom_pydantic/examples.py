@@ -27,6 +27,8 @@ __all__ = [
     "P1",
     "R1",
     "R2",
+    "TEST_CONVERTER",
+    "TEST_PREFIX_MAP",
 ]
 TEST_PREFIX_MAP = {
     "mesh": "http://id.nlm.nih.gov/mesh/",

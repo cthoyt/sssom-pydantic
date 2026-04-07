@@ -15,7 +15,7 @@ from sssom_pydantic.examples import R1, R2
 from sssom_pydantic.process import MARKS, Mark, estimate_confidence
 from sssom_pydantic.query import Query
 
-__all__ = ["router"]
+__all__ = ["ReviewPayload", "router"]
 
 router = APIRouter()
 

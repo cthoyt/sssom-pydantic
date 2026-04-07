@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from curies import NamableReference, NamedReference, Reference
+from curies import NamedReference, Reference
 from curies.vocabulary import (
     charlie,
     exact_match,
@@ -30,7 +30,15 @@ from sssom_pydantic.database import (
     SemanticMappingModel,
     SemanticMappingRepository,
 )
-from sssom_pydantic.examples import EXAMPLE_MAPPINGS, EXAMPLES, TEST_CONVERTER, TEST_PREFIX_MAP
+from sssom_pydantic.examples import (
+    EXAMPLE_MAPPINGS,
+    EXAMPLES,
+    P1,
+    R1,
+    R2,
+    TEST_CONVERTER,
+    TEST_PREFIX_MAP,
+)
 from sssom_pydantic.models import Record
 from sssom_pydantic.query import Query
 from sssom_pydantic.web.router import ReviewPayload
@@ -55,9 +63,6 @@ __all__ = [
 ]
 
 
-R1 = NamedReference(prefix="mesh", identifier="C000089", name="ammeline")
-R2 = NamedReference(prefix="chebi", identifier="28646", name="ammeline")
-P1 = NamableReference(prefix="skos", identifier="exactMatch")
 AUTHOR = charlie.pair.to_pydantic()
 
 
