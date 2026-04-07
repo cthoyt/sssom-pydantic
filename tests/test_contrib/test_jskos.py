@@ -37,5 +37,5 @@ class TestJSKOSExport(cases.MappingTestCaseMixin):
                     mappings[0],
                     msg=f"reconstitution failed\n\n"
                     f"{concept.model_dump_json(indent=2, exclude_none=True, exclude_unset=True)}",
-                    names=False,
+                    skip_name_check=True,
                 )
