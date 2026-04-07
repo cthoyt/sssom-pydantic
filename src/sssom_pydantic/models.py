@@ -4,15 +4,19 @@ from __future__ import annotations
 
 import datetime
 from collections.abc import Callable
-from typing import Literal, TypeAlias
+from typing import TYPE_CHECKING, Literal, TypeAlias
 
 from curies.vocabulary import matching_processes
 from pydantic import AnyUrl, BaseModel, ConfigDict, Field
 
 from .constants import EntityTypeLiteral
 
+if TYPE_CHECKING:
+    import curies
+
 __all__ = [
     "Cardinality",
+    "ExpandedRecord",
     "Record",
     "RecordPredicate",
 ]
@@ -116,6 +120,118 @@ class Record(BaseModel):
     other: str | None = Field(None)
     comment: str | None = Field(None)
 
+    def expand(self, converter: curies.Converter) -> ExpandedRecord:
+        """Expand CURIEs to URIs in the record."""
+        data = self.model_dump(exclude_none=True, exclude_unset=True)
+        for key in SINGLE_REFERENCE_FIELDS:
+            if curie := data.get(key):
+                data[key] = converter.expand(curie, strict=True)
+        for key in MULTIPLE_REFERENCE_FIELDS:
+            if curies_ := data.get(key):
+                data[key] = [converter.expand(curie, strict=True) for curie in curies_]
+        return ExpandedRecord.model_validate(data)
+
+
+#: field names that contain a reference or optional reference
+SINGLE_REFERENCE_FIELDS = {
+    "record_id",
+    "subject_id",
+    "predicate_id",
+    "object_id",
+    "mapping_justification",
+    # non-core
+    "subject_source",
+    "object_source",
+    "subject_category",
+    "object_category",
+    "mapping_source",
+}
+#: field names that contain reference lists
+MULTIPLE_REFERENCE_FIELDS = {
+    "subject_match_field",
+    "subject_preprocessing",
+    "object_match_field",
+    "object_preprocessing",
+    "author_id",
+    "creator_id",
+    "reviewer_id",
+    "curation_rule",
+}
 
 #: A predicate for a record
 RecordPredicate: TypeAlias = Callable[[Record], bool]
+
+
+class ExpandedRecord(BaseModel):
+    """Represents an SSSOM record (i.e., a row in a SSSOM TSV file) expanded with URIs."""
+
+    model_config = ConfigDict(frozen=True)
+
+    record_id: AnyUrl | None = Field(None)
+    subject_id: AnyUrl = Field(...)
+    subject_label: str | None = Field(None)
+    subject_category: str | None = Field(None)
+    predicate_id: AnyUrl = Field(...)
+    predicate_label: str | None = Field(None)
+    predicate_modifier: Literal["Not"] | None = Field(None)
+    object_id: str = Field(...)
+    object_label: str | None = Field(None)
+    object_category: str | None = Field(None)
+    mapping_justification: str = Field(..., examples=[p.curie for p in matching_processes])
+    author_id: list[str] | None = Field(None)
+    author_label: list[str] | None = Field(None)
+    reviewer_id: list[AnyUrl] | None = Field(None)
+    reviewer_label: list[str] | None = Field(None)
+    creator_id: list[AnyUrl] | None = Field(None)
+    creator_label: list[str] | None = Field(None)
+    license: str | None = Field(None)
+    subject_type: EntityTypeLiteral | None = Field(
+        None, description="See https://mapping-commons.github.io/sssom/subject_type"
+    )
+    subject_source: AnyUrl | None = Field(None)
+    subject_source_version: str | None = Field(None)
+    object_type: EntityTypeLiteral | None = Field(
+        None, description="See https://mapping-commons.github.io/sssom/object_type"
+    )
+    object_source: AnyUrl | None = Field(None)
+    object_source_version: str | None = Field(None)
+    predicate_type: EntityTypeLiteral | None = Field(
+        None, description="See https://mapping-commons.github.io/sssom/predicate_type"
+    )
+    mapping_provider: AnyUrl | None = Field(None)
+    mapping_source: AnyUrl | None = Field(None)
+    #: see https://mapping-commons.github.io/sssom/MappingCardinalityEnum/
+    mapping_cardinality: Cardinality | None = Field(None)
+    cardinality_scope: list[str] | None = Field(None)
+    mapping_tool: str | None = Field(None)
+    mapping_tool_id: AnyUrl | None = Field(None)
+    mapping_tool_version: str | None = Field(None)
+    mapping_date: datetime.date | None = Field(None)
+    publication_date: datetime.date | None = Field(None)
+    review_date: datetime.date | None = Field(None)
+    confidence: float | None = Field(None, ge=0.0, le=1.0)
+    reviewer_agreement: float | None = Field(None, ge=-1.0, le=1.0, examples=[-1.0, 0.0, 1.0])
+    curation_rule: list[AnyUrl] | None = Field(None)
+    curation_rule_text: list[str] | None = Field(None)
+    subject_match_field: list[AnyUrl] | None = Field(None)
+    object_match_field: list[AnyUrl] | None = Field(None)
+    match_string: list[str] | None = Field(None)
+    subject_preprocessing: list[AnyUrl] | None = Field(None)
+    object_preprocessing: list[AnyUrl] | None = Field(None)
+    similarity_score: float | None = Field(None, ge=0.0, le=1.0)
+    similarity_measure: str | None = Field(None)
+    see_also: list[str] | None = Field(None)
+    issue_tracker_item: str | None = Field(None)
+    other: str | None = Field(None)
+    comment: str | None = Field(None)
+
+    def compress(self, converter: curies.Converter) -> Record:
+        """Compress expanded URIs into CURIEs."""
+        data = self.model_dump(exclude_none=True, exclude_unset=True)
+        for key in SINGLE_REFERENCE_FIELDS:
+            if uri := data.get(key):
+                data[key] = converter.compress(str(uri), strict=True)
+        for key in MULTIPLE_REFERENCE_FIELDS:
+            if uris := data.get(key):
+                data[key] = [converter.compress(str(uri), strict=True) for uri in uris]
+        return Record.model_validate(data)

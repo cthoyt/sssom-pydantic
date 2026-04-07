@@ -31,7 +31,7 @@ from sssom_pydantic.constants import (
     PROPAGATABLE,
 )
 from sssom_pydantic.examples import EXAMPLES, TEST_CONVERTER
-from sssom_pydantic.models import Cardinality, Record
+from sssom_pydantic.models import Cardinality, ExpandedRecord, Record
 
 if TYPE_CHECKING:
     import linkml_runtime
@@ -279,15 +279,23 @@ class TestSchema(unittest.TestCase):
 
     def test_order(self) -> None:
         """Test the slots are in the order specified by the SSSOM schema."""
-        self.assertEqual(
-            self.view.get_class("mapping").slots,
-            list(Record.model_fields),
-        )
+        slots: list[str] = self.view.get_class("mapping").slots
+        self.assertEqual(slots, list(Record.model_fields))
+        self.assertEqual(slots, list(ExpandedRecord.model_fields))
 
     def test_model_mapping(self) -> None:
         """Test processed models can be mapped back into the other."""
         for field in SemanticMapping.model_fields:
             self.assertIn(BACKWARDS_MAPS.get(field, field), Record.model_fields)
+
+    def test_expansion(self) -> None:
+        """Test expansion/compression are inverse operations for all examples."""
+        for example in EXAMPLES:
+            with self.subTest(example=example.description):
+                record = example.semantic_mapping.to_record()
+                expanded = record.expand(TEST_CONVERTER)
+                compressed = expanded.compress(TEST_CONVERTER)
+                self.assertEqual(record, compressed)
 
 
 class TestExampleCompleteness(unittest.TestCase):
