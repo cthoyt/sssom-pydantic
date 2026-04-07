@@ -688,4 +688,5 @@ def mapping_hash_v1(m: SemanticMapping, converter: curies.Converter) -> Referenc
     """Hash a mapping into a reference."""
     h = hashlib.md5(usedforsecurity=False)
     h.update(m.model_dump_json(exclude=MAPPING_HASH_V1_EXCLUDE).encode("utf8"))
-    return Reference(prefix=MAPPING_HASH_V1_PREFIX, identifier=h.hexdigest())
+    identifier = h.hexdigest()
+    return Reference(prefix=MAPPING_HASH_V1_PREFIX, identifier=identifier)
