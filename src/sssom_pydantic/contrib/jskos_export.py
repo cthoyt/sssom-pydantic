@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 import curies
 import jskos
-from curies import NamableReference, Reference
+from curies import NamableReference
 
 import sssom_pydantic
 from sssom_pydantic import SemanticMapping
@@ -112,14 +112,15 @@ def _process_jskos_mapping(
     )
 
 
-def _from_set(member_set: list[jskos.ProcessedConcept]) -> Reference:
+def _from_set(member_set: list[jskos.ProcessedConcept]) -> NamableReference:
     processed_concept = member_set[0]
     reference = processed_concept.reference
     if reference is None:
         raise ValueError
     if processed_concept.preferred_label is None or "und" not in processed_concept.preferred_label:
-        return reference
-    label = processed_concept.preferred_label["und"]
+        label = None
+    else:
+        label = processed_concept.preferred_label["und"]
     return NamableReference(prefix=reference.prefix, identifier=reference.identifier, name=label)
 
 
