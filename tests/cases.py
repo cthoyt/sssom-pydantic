@@ -20,7 +20,7 @@ from pydantic import BaseModel
 
 import sssom_pydantic
 from sssom_pydantic import MappingSetRecord
-from sssom_pydantic.api import MAPPING_HASH_V1_PREFIX, NamableSemanticMapping, SemanticMapping
+from sssom_pydantic.api import MAPPING_HASH_V1_PREFIX, SemanticMapping
 from sssom_pydantic.database import (
     NEGATIVE_MAPPING_CLAUSE,
     POSITIVE_MAPPING_CLAUSE,
@@ -361,6 +361,8 @@ class TestRepository(MappingTestCaseMixin):
             authors=[charlie],
             mapping_date=datetime.date.today(),
         )
+        self.assertEqual("ammeline", expected_mapping.subject_name)
+        self.assertEqual("ammeline", actual_mapping.subject_name)
         self.assert_model_equal(expected_mapping, actual_mapping, exclude_record=True)
         self.assertEqual(
             db.hash_mapping(expected_mapping),
@@ -612,7 +614,7 @@ class TestFastAPI(MappingTestCaseMixin):
         """Get a mapping."""
         response = self.client.get(f"/mapping/{reference.curie}")
         response.raise_for_status()
-        return NamableSemanticMapping.model_validate(response.json())
+        return SemanticMapping.model_validate(response.json())
 
     def assert_missing(self, post_reference: Reference) -> None:
         """Assert a mapping is not in the database."""

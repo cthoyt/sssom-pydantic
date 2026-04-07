@@ -60,6 +60,9 @@ class RequiredSemanticMapping(Triple):
 
     model_config = ConfigDict(frozen=True)
 
+    subject: NamableReference
+    predicate: NamableReference
+    object: NamableReference
     justification: Reference = Field(
         ...,
         description="""\

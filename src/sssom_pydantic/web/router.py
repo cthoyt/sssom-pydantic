@@ -9,7 +9,7 @@ from curies.vocabulary import charlie, exact_match, manual_mapping_curation
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Request
 from pydantic import BaseModel, Field
 
-from sssom_pydantic.api import NamableSemanticMapping, SemanticMapping
+from sssom_pydantic import SemanticMapping
 from sssom_pydantic.database import SemanticMappingRepository
 from sssom_pydantic.process import MARKS, Mark, estimate_confidence
 from sssom_pydantic.query import Query
@@ -39,7 +39,7 @@ def get_mappings(
     limit: Annotated[int | None, fastapi.Path()] = None,
     offset: Annotated[int | None, fastapi.Path()] = None,
     order_by: Annotated[str | None, fastapi.Path()] = None,
-) -> list[NamableSemanticMapping]:
+) -> list[SemanticMapping]:
     """Get mappings."""
     return list(repository.get_mappings(query, limit=limit, offset=offset, order_by=order_by))
 
@@ -66,10 +66,10 @@ def delete_mapping(repository: AnnotatedRepository, curie: AnnotatedCURIE) -> st
 def post_mapping(
     repository: AnnotatedRepository,
     mapping: Annotated[
-        NamableSemanticMapping,
+        SemanticMapping,
         Body(
             examples=[
-                NamableSemanticMapping(
+                SemanticMapping(
                     subject=NamedReference(prefix="mesh", identifier="C000089", name="ammeline"),
                     predicate=exact_match,
                     object=NamedReference(prefix="chebi", identifier="28646", name="ammeline"),

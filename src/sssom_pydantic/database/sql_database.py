@@ -30,12 +30,7 @@ from sqlmodel.sql._expression_select_cls import SelectOfScalar
 from tqdm import tqdm
 from typing_extensions import Self
 
-from sssom_pydantic.api import (
-    MappingTool,
-    NamableSemanticMapping,
-    SemanticMapping,
-    SemanticMappingHash,
-)
+from sssom_pydantic.api import MappingTool, SemanticMapping, SemanticMappingHash
 from sssom_pydantic.database.repo import CURIENotFoundError, SemanticMappingRepository
 from sssom_pydantic.models import Cardinality
 from sssom_pydantic.query import Query
@@ -218,7 +213,7 @@ class SemanticMappingModel(SQLModel, table=True):
         if object_name := d.pop("object_name", None):
             d["object"]["name"] = object_name
             d["object"] = NamableReference.model_validate(d["object"])
-        return NamableSemanticMapping.model_validate(d)
+        return SemanticMapping.model_validate(d)
 
 
 class SemanticMappingDatabase(SemanticMappingRepository):
