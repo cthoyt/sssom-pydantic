@@ -18,7 +18,6 @@ from curies.vocabulary import (
 from curies.vocabulary import (
     manual_mapping_curation as manual,
 )
-from pydantic import BaseModel
 
 from sssom_pydantic import SemanticMapping
 from sssom_pydantic.api import NOT
@@ -40,7 +39,7 @@ class TestProcess(unittest.TestCase):
     """Test processing."""
 
     def assert_model_equal(
-        self, expected: BaseModel, actual: BaseModel, msg: str | None = None
+        self, expected: SemanticMapping, actual: SemanticMapping, msg: str | None = None
     ) -> None:
         """Assert two models are equal."""
         self.assertEqual(
