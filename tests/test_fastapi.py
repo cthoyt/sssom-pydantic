@@ -5,7 +5,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from sssom_pydantic.api import mapping_hash_v1
 from sssom_pydantic.database import FileSystemSemanticMappingRepository, SemanticMappingDatabase
 from sssom_pydantic.web import get_app
 from tests import cases
@@ -35,7 +34,6 @@ class TestSQLRepository(cases.TestFastAPI):
         self.path = Path(self.td.name).joinpath("test.db")
         self.repository = SemanticMappingDatabase.from_connection(
             connection=f"sqlite:///{self.path}",
-            semantic_mapping_hash=mapping_hash_v1,
             converter=TEST_CONVERTER,
         )
         self.app = get_app(repository=self.repository)

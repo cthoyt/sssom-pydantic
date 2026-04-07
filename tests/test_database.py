@@ -12,7 +12,6 @@ from curies import Reference
 from curies.vocabulary import manual_mapping_curation
 
 from sssom_pydantic import SemanticMapping
-from sssom_pydantic.api import mapping_hash_v1
 from sssom_pydantic.database import (
     QUERY_TO_CLAUSE,
     FileSystemSemanticMappingRepository,
@@ -53,9 +52,7 @@ class TestSQL(cases.TestRepository):
 
     def setUp(self) -> None:
         """Set up the test with a SQL database."""
-        self.repository = SemanticMappingDatabase.memory(
-            semantic_mapping_hash=mapping_hash_v1, converter=TEST_CONVERTER
-        )
+        self.repository = SemanticMappingDatabase.memory(converter=TEST_CONVERTER)
 
     def test_name_io(self) -> None:
         """Test that names make it to and from database models."""
