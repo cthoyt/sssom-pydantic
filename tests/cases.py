@@ -20,7 +20,7 @@ from pydantic import BaseModel
 
 import sssom_pydantic
 from sssom_pydantic import MappingSetRecord
-from sssom_pydantic.api import MAPPING_HASH_V1_PREFIX, SemanticMapping
+from sssom_pydantic.api import MAPPING_HASH_V2_PREFIX, SemanticMapping, mapping_to_sexpr_str
 from sssom_pydantic.database import (
     NEGATIVE_MAPPING_CLAUSE,
     POSITIVE_MAPPING_CLAUSE,
@@ -117,12 +117,17 @@ class MappingTestCaseMixin(unittest.TestCase):
         expected: SemanticMapping,
         actual: SemanticMapping | None,
         msg: str | None = None,
-        *,
-        skip_name_check: bool | None = None,
     ) -> None:
         """Assert two models are equal."""
         if actual is None:
             raise self.fail()
+
+        if hasattr(self, "repository"):
+            self.assertEqual(
+                mapping_to_sexpr_str(expected, self.repository.converter, _debug=True),
+                mapping_to_sexpr_str(actual, self.repository.converter, _debug=True),
+            )
+
         parameters: dict[str, Any] = {
             "exclude_none": True,
             "exclude_unset": True,
@@ -131,11 +136,9 @@ class MappingTestCaseMixin(unittest.TestCase):
         self.assertEqual(
             expected.model_dump(**parameters), actual.model_dump(**parameters), msg=msg
         )
-        if not skip_name_check:
-            # FIXME this shouldn't be optional
-            self.assertEqual(expected.subject_name, actual.subject_name)
-            self.assertEqual(expected.predicate_name, actual.predicate_name)
-            self.assertEqual(expected.object_name, actual.object_name)
+        self.assertEqual(expected.subject_name, actual.subject_name)
+        self.assertEqual(expected.predicate_name, actual.predicate_name)
+        self.assertEqual(expected.object_name, actual.object_name)
 
     def assert_base_model_equal(self, expected: BaseModel, actual: BaseModel) -> None:
         """Check two models are equal by serializing to dict."""
@@ -593,7 +596,7 @@ class TestRepository(MappingTestCaseMixin):
                     written_path,
                     metadata=TEST_METADATA,
                     exclude_columns=["record_id"],
-                    exclude_prefixes=[MAPPING_HASH_V1_PREFIX],
+                    exclude_prefixes=[MAPPING_HASH_V2_PREFIX],
                 )
                 # clean up before actual test
                 db.delete_mapping(example.semantic_mapping)
