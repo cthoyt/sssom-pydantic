@@ -55,6 +55,8 @@ TEST_CONVERTER = Converter.from_prefix_map(TEST_PREFIX_MAP)
 R1 = NamedReference(prefix="mesh", identifier="C000089", name="ammeline")
 R2 = NamedReference(prefix="chebi", identifier="28646", name="ammeline")
 P1 = NamableReference(prefix="skos", identifier="exactMatch")
+P2 = NamableReference(prefix="skos", identifier="broadMatch")
+P3 = NamableReference(prefix="skos", identifier="narrowMatch")
 
 
 class ExampleMapping(BaseModel):
