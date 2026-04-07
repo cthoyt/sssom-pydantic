@@ -7,9 +7,10 @@ import functools
 import hashlib
 import warnings
 from collections.abc import Callable
-from typing import Annotated, Any, Literal, TypeAlias
+from typing import Annotated, Any, Literal, TypeAlias, cast
 
 import curies
+import zbase32
 from curies import NamableReference, Reference, Triple
 from curies.mixins import SemanticallyStandardizable
 from curies.vocabulary import matching_processes
@@ -23,7 +24,7 @@ from .constants import (
     EntityTypeLiteral,
     Row,
 )
-from .models import Cardinality, Record
+from .models import Cardinality, Record, expanded_record_to_str
 
 __all__ = [
     "NOT",
@@ -39,6 +40,7 @@ __all__ = [
     "SemanticMappingHash",
     "SemanticMappingPredicate",
     "mapping_hash_v1",
+    "mapping_hash_v2",
 ]
 
 PredicateModifier: TypeAlias = Literal["Not"]
@@ -711,3 +713,29 @@ def mapping_hash_v1(m: SemanticMapping, converter: curies.Converter) -> Referenc
     )
     identifier = h.hexdigest()
     return Reference(prefix=MAPPING_HASH_V1_PREFIX, identifier=identifier)
+
+
+MAPPING_HASH_V2_PREFIX = "sssom.record"
+MAPPING_HASH_V2_URI_PREFIX = "https://w3id.org/sssom/record/"
+
+
+def mapping_hash_v2(m: SemanticMapping, converter: curies.Converter) -> Reference:
+    """Hash a mapping into a reference."""
+    identifier = get_mapping_hash(m, converter)
+    return Reference(prefix=MAPPING_HASH_V2_PREFIX, identifier=identifier)
+
+
+def get_mapping_hash(mapping: SemanticMapping, converter: curies.Converter) -> str:
+    """Hash the mapping."""
+    s = hashlib.sha256()
+    s.update(mapping_to_sexpr_str(mapping, converter).encode("utf-8"))
+    digest = s.digest()
+    return cast(str, zbase32.encode(digest))
+
+
+def mapping_to_sexpr_str(
+    mapping: SemanticMapping, converter: curies.Converter, *, _debug: bool = False
+) -> str:
+    """Convert a mapping to a S-expression string."""
+    expanded_record = mapping.to_record().expand(converter)
+    return expanded_record_to_str(expanded_record, _debug=_debug)
