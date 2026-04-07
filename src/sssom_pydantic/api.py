@@ -45,6 +45,16 @@ PredicateModifier: TypeAlias = Literal["Not"]
 NOT: PredicateModifier = "Not"
 
 
+class MappingTool(BaseModel):
+    """Represents metadata about a mapping tool."""
+
+    model_config = ConfigDict(frozen=True)
+
+    reference: Reference | None = None
+    name: str | None = None
+    version: str | None = Field(None)
+
+
 class RequiredSemanticMapping(Triple):
     """Represents the required fields for SSSOM."""
 
@@ -456,16 +466,6 @@ SemanticMappingPredicate: TypeAlias = Callable[[SemanticMapping], bool]
 
 #: A function that hashes a semantic mapping into a reference
 SemanticMappingHash: TypeAlias = Callable[[SemanticMapping, curies.Converter], Reference]
-
-
-class MappingTool(BaseModel):
-    """Represents metadata about a mapping tool."""
-
-    model_config = ConfigDict(frozen=True)
-
-    reference: Reference | None = None
-    name: str | None = None
-    version: str | None = Field(None)
 
 
 class MappingSetRecord(BaseModel):
