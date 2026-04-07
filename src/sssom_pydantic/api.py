@@ -471,12 +471,6 @@ SemanticMappingPredicate: TypeAlias = Callable[[SemanticMapping], bool]
 SemanticMappingHash: TypeAlias = Callable[[SemanticMapping, curies.Converter], Reference]
 
 
-class NamableSemanticMapping(SemanticMapping):
-    subject: NamableReference
-    predicate: NamableReference
-    object: NamableReference
-
-
 class MappingSetRecord(BaseModel):
     """Represents a mapping set, readily serializable for usage in SSSOM TSV."""
 
