@@ -81,6 +81,7 @@ typing = [
     "types-PyYAML",
     "types-click",
     "types-requests",
+    "types-tabulate",
 ]
 docs-lint = [
     { include-group = "docs" },
