@@ -4,6 +4,7 @@ import importlib.util
 import unittest
 
 from sssom_pydantic.examples import EXAMPLES
+from tests import cases
 from tests.cases import TEST_CONVERTER, TEST_METADATA
 
 JSKOS_IMPLEMENTED = {
@@ -12,7 +13,7 @@ JSKOS_IMPLEMENTED = {
 
 
 @unittest.skipUnless(importlib.util.find_spec("jskos"), reason="requires JSKOS")
-class TestJSKOSExport(unittest.TestCase):
+class TestJSKOSExport(cases.MappingTestCaseMixin):
     """Test JSKOS export."""
 
     def test_examples(self) -> None:
@@ -31,9 +32,10 @@ class TestJSKOSExport(unittest.TestCase):
                     continue
                 mappings = from_jskos(concept, TEST_CONVERTER)
                 self.assertEqual(1, len(mappings))
-                self.assertEqual(
-                    example.semantic_mapping.model_dump(exclude_none=True, exclude_unset=True),
-                    mappings[0].model_dump(exclude_none=True, exclude_unset=True),
+                self.assert_model_equal(
+                    example.semantic_mapping,
+                    mappings[0],
                     msg=f"reconstitution failed\n\n"
                     f"{concept.model_dump_json(indent=2, exclude_none=True, exclude_unset=True)}",
+                    skip_name_check=True,
                 )

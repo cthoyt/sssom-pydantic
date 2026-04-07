@@ -1,7 +1,6 @@
 """Test processing functions."""
 
 import datetime
-import unittest
 
 from curies.vocabulary import (
     broad_match,
@@ -29,27 +28,15 @@ from sssom_pydantic.process import (
     publish,
     review,
 )
+from tests import cases
 from tests.cases import R1, R2, _m
 
 today = datetime.date.today()
 author = charlie.pair.to_pydantic()
 
 
-class TestProcess(unittest.TestCase):
+class TestProcess(cases.MappingTestCaseMixin):
     """Test processing."""
-
-    def assert_model_equal(
-        self, expected: SemanticMapping, actual: SemanticMapping, msg: str | None = None
-    ) -> None:
-        """Assert two models are equal."""
-        self.assertEqual(
-            expected.model_dump(exclude_none=True, exclude_unset=True),
-            actual.model_dump(exclude_none=True, exclude_unset=True),
-            msg=msg,
-        )
-        self.assertEqual(expected.subject_name, actual.subject_name)
-        self.assertEqual(expected.predicate_name, actual.predicate_name)
-        self.assertEqual(expected.object_name, actual.object_name)
 
     def test_curate(self) -> None:
         """Test curation."""

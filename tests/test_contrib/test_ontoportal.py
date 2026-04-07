@@ -1,7 +1,6 @@
 """Tests for consuming OntoPortal mappings."""
 
 import json
-import unittest
 from pathlib import Path
 
 import curies
@@ -10,6 +9,7 @@ from curies.vocabulary import exact_match, lexical_matching_process, mapping_cha
 
 from sssom_pydantic import MappingTool, SemanticMapping
 from sssom_pydantic.contrib.ontoportal import _process
+from tests import cases
 
 HERE = Path(__file__).parent.resolve()
 LOOM_EXAMPLE_PATH = HERE.joinpath("ontoportal_loom_example.json")
@@ -17,7 +17,7 @@ CUI_EXAMPLE_PATH = HERE.joinpath("ontoportal_cui_example.json")
 SAME_URI_EXAMPLE_PATH = HERE.joinpath("ontoportal_same_uri_example.json")
 
 
-class TestBioportal(unittest.TestCase):
+class TestBioportal(cases.MappingTestCaseMixin):
     """Test processing OntoPortal mappings."""
 
     def test_process_loom(self) -> None:
@@ -33,12 +33,12 @@ class TestBioportal(unittest.TestCase):
         self.assertIsNotNone(mapping)
         expected = SemanticMapping(
             subject=Reference(prefix="OMRE", identifier="0000023"),
-            predicate=exact_match,
+            predicate=exact_match.pair.to_pydantic(),
             object=Reference(prefix="SNOMEDCT", identifier="3415004"),
             justification=lexical_matching_process,
             mapping_tool=MappingTool(name="LOOM"),
         )
-        self.assertEqual(expected, mapping)
+        self.assert_model_equal(expected, mapping)
 
     def test_process_cui(self) -> None:
         """Test processing OntoPortal mappings."""
@@ -53,12 +53,12 @@ class TestBioportal(unittest.TestCase):
         self.assertIsNotNone(mapping)
         expected = SemanticMapping(
             object=Reference(prefix="ATC", identifier="N05AX15"),
-            predicate=exact_match,
+            predicate=exact_match.pair.to_pydantic(),
             subject=Reference(prefix="SNOMEDCT", identifier="715295006"),
             justification=mapping_chaining,
             mapping_tool=None,
         )
-        self.assertEqual(expected, mapping)
+        self.assert_model_equal(expected, mapping)
 
     def test_process_same_uri(self) -> None:
         """Test processing OntoPortal mappings."""
