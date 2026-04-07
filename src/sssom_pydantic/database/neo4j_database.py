@@ -12,7 +12,7 @@ from curies import NamableReference, Reference
 from tqdm import tqdm
 from typing_extensions import LiteralString
 
-from .repo import SemanticMappingRepository
+from .repo import CURIENotFoundError, SemanticMappingRepository
 from ..api import SemanticMapping, SemanticMappingHash
 from ..query import Query
 
@@ -193,7 +193,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         if node is not None:
             return self._from_data(node)
         elif strict:
-            raise ValueError
+            raise CURIENotFoundError(reference)
         else:
             return None
 

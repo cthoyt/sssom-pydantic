@@ -22,7 +22,7 @@ from ..io import Metadata, read, write
 from ..process import Mark, curate, estimate_confidence, publish, review
 from ..query import Query
 
-__all__ = ["SemanticMappingRepository"]
+__all__ = ["CURIENotFoundError", "SemanticMappingRepository"]
 
 P = ParamSpec("P")
 
@@ -223,3 +223,15 @@ class SemanticMappingRepository(ABC):
         mappings = self.get_mappings(query)
         confidence = estimate_confidence(mappings, check=False)
         return confidence
+
+
+class CURIENotFoundError(ValueError):
+    """Raise when a reference can't be found."""
+
+    def __init__(self, reference: Reference) -> None:
+        """Initialize the exception."""
+        self.reference = reference
+
+    def __str__(self) -> str:
+        """Return a human-readable error message."""
+        return f"could not find mapping with CURIE {self.reference.curie}"

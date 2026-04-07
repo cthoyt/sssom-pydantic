@@ -8,7 +8,7 @@ from typing import Literal, overload
 
 from curies import Reference
 
-from .repo import SemanticMappingRepository
+from .repo import CURIENotFoundError, SemanticMappingRepository
 from ..api import MappingSet, SemanticMapping, SemanticMappingHash
 from ..io import append, read, write
 from ..query import Query, filter_mappings, get_mappings
@@ -109,7 +109,7 @@ class FileSystemSemanticMappingRepository(SemanticMappingRepository):
         if mappings:
             return mappings[0]
         if strict:
-            raise ValueError
+            raise CURIENotFoundError(reference)
         return None
 
     def get_mappings(

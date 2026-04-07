@@ -31,7 +31,7 @@ from tqdm import tqdm
 from typing_extensions import Self
 
 from sssom_pydantic.api import MappingTool, SemanticMapping, SemanticMappingHash
-from sssom_pydantic.database.repo import SemanticMappingRepository
+from sssom_pydantic.database.repo import CURIENotFoundError, SemanticMappingRepository
 from sssom_pydantic.models import Cardinality
 from sssom_pydantic.query import Query
 
@@ -350,7 +350,7 @@ class SemanticMappingDatabase(SemanticMappingRepository):
             if rv is not None:
                 return rv.to_semantic_mapping()
             elif strict:
-                raise ValueError(f"could not find mapping with CURIE {reference.curie}")
+                raise CURIENotFoundError(reference)
             else:
                 return None
 
