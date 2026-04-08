@@ -32,7 +32,7 @@ from tests import cases
 from tests.cases import R1, R2, _m
 
 today = datetime.date.today()
-author = charlie.pair.to_pydantic()
+author = charlie.without_name()
 
 
 class TestProcess(cases.MappingTestCaseMixin):
@@ -87,7 +87,7 @@ class TestProcess(cases.MappingTestCaseMixin):
                     "EXACT",
                     SemanticMapping(
                         subject=R1,
-                        predicate=exact_match.pair.to_pydantic(),
+                        predicate=exact_match.without_name(),
                         object=R2,
                         justification=manual_mapping_curation,
                         authors=[author],
@@ -98,7 +98,7 @@ class TestProcess(cases.MappingTestCaseMixin):
                     "BROAD",
                     SemanticMapping(
                         subject=R1,
-                        predicate=broad_match.pair.to_pydantic(),
+                        predicate=broad_match.without_name(),
                         object=R2,
                         justification=manual_mapping_curation,
                         authors=[author],
@@ -109,7 +109,7 @@ class TestProcess(cases.MappingTestCaseMixin):
                     "NARROW",
                     SemanticMapping(
                         subject=R1,
-                        predicate=narrow_match.pair.to_pydantic(),
+                        predicate=narrow_match.without_name(),
                         object=R2,
                         justification=manual_mapping_curation,
                         authors=[author],

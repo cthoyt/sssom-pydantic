@@ -65,7 +65,7 @@ __all__ = [
 ]
 
 
-AUTHOR = charlie.pair.to_pydantic()
+AUTHOR = charlie.without_name()
 
 
 def _m(

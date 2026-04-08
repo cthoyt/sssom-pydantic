@@ -48,7 +48,7 @@ license = { file = "LICENSE" }
 requires-python = ">=3.10"
 dependencies = [
     "pydantic",
-    "curies>=0.13.1",
+    "curies>=0.13.3",
     "pyyaml",
     "pystow>=0.8.2",
     "tqdm",
@@ -120,7 +120,7 @@ ndex = [
     "ndex2",
 ]
 sssompy = [
-    "sssom",
+    "sssom>=0.4.19",
     "linkml>=1.10.0",
     "linkml-runtime>=1.10.0",
     "pandas",
