@@ -20,7 +20,7 @@ from ..api import (
 )
 from ..io import Metadata, read, write
 from ..process import Mark, curate, estimate_confidence, publish, review
-from ..query import Query
+from ..query import Query, Sort
 
 __all__ = ["CURIENotFoundError", "SemanticMappingRepository"]
 
@@ -147,7 +147,7 @@ class SemanticMappingRepository(ABC):
         *,
         limit: int | None = None,
         offset: int | None = None,
-        order_by: str | None = None,
+        order_by: Sort | None = None,
     ) -> Sequence[SemanticMapping]:
         """Get mappings."""
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import typing
 from collections import Counter
 from collections.abc import Callable, Collection, Iterable, Sequence
 from typing import TYPE_CHECKING, Any, Literal, NamedTuple, TypeAlias
@@ -12,7 +13,7 @@ from pydantic import BaseModel, Field
 from .api import SemanticMapping
 
 if TYPE_CHECKING:
-    from curies import Converter, Reference
+    from curies import Converter, NamableReference, Reference
 
 __all__ = [
     "Query",
@@ -166,9 +167,6 @@ QUERY_TO_FUNC: dict[str, Callable[[SemanticMapping], list[str | None]]] = {
     "mapping_tool": lambda mapping: [mapping.mapping_tool_name],
 }
 
-#: Sort mechanisms
-Sort: TypeAlias = Literal["asc", "desc", "subject", "object"]
-
 
 class Sorter(NamedTuple):
     """A sorter."""
@@ -181,37 +179,65 @@ class Sorter(NamedTuple):
         return sorted(mappings, key=self.key, reverse=self.reverse)
 
 
-def get_sorter(sort: str) -> Sorter:
+#: Sort mechanisms
+Sort: TypeAlias = Literal[
+    "asc",
+    "desc",
+    "confidence",
+    "+confidence",
+    "-confidence",
+    "date",
+    "+date",
+    "-date",
+    "date-published",
+    "-date-published",
+    "+date-published",
+    "date-reviewed",
+    "+date-reviewed",
+    "-date-reviewed",
+    "subject",
+    "object",
+]
+
+
+def get_sorter(sort: Sort) -> Sorter:
     """Get a sort function."""
-    if sort in {"desc", "confidence", "-confidence"}:
-        return Sorter(key=lambda m: m.confidence or 0.0, reverse=True)
-    elif sort in {"asc", "+confidence"}:
-        return Sorter(key=lambda m: m.confidence or 0.0, reverse=False)
-    elif sort in {"date", "-date"}:
-        return Sorter(key=lambda m: (m.mapping_date is not None, m.publication_date), reverse=True)
-    elif sort == "+date":
-        return Sorter(key=lambda m: (m.mapping_date is not None, m.publication_date), reverse=False)
-    elif sort in {"date-published", "-date-published"}:
-        return Sorter(
-            key=lambda m: (m.publication_date is not None, m.publication_date), reverse=True
-        )
-    elif sort in {"date-reviewed", "-date-reviewed"}:
-        return Sorter(key=lambda m: (m.review_date is not None, m.review_date), reverse=True)
-    elif sort == "+date-reviewed":
-        return Sorter(key=lambda m: (m.review_date is not None, m.review_date), reverse=False)
-    elif sort == "+date-published":
-        return Sorter(
-            key=lambda m: (m.publication_date is not None, m.publication_date), reverse=False
-        )
-    elif sort == "subject":
-        return Sorter(key=lambda m: m.subject.curie, reverse=False)
-    elif sort == "object":
-        return Sorter(lambda m: m.object.curie, reverse=False)
-    else:
-        raise ValueError(f"invalid sort value: {sort}")
+    match sort:
+        case "desc" | "confidence" | "-confidence":
+            return Sorter(key=lambda m: m.confidence or 0.0, reverse=True)
+        case "asc" | "+confidence":
+            return Sorter(key=lambda m: m.confidence or 0.0, reverse=False)
+        case "date" | "-date":
+            return Sorter(
+                key=lambda m: (m.mapping_date is not None, m.publication_date), reverse=True
+            )
+        case "+date":
+            return Sorter(
+                key=lambda m: (m.mapping_date is not None, m.publication_date), reverse=False
+            )
+        case "date-published" | "-date-published":
+            return Sorter(
+                key=lambda m: (m.publication_date is not None, m.publication_date), reverse=True
+            )
+        case "date-reviewed" | "-date-reviewed":
+            return Sorter(key=lambda m: (m.review_date is not None, m.review_date), reverse=True)
+        case "+date-reviewed":
+            return Sorter(key=lambda m: (m.review_date is not None, m.review_date), reverse=False)
+        case "+date-published":
+            return Sorter(
+                key=lambda m: (m.publication_date is not None, m.publication_date), reverse=False
+            )
+        case "subject":
+            return Sorter(key=lambda m: m.subject.curie, reverse=False)
+        case "object":
+            return Sorter(lambda m: m.object.curie, reverse=False)
+        case _:
+            if sort in typing.get_args(Sort):
+                raise NotImplementedError(f"sort key not implemented: {sort}")
+            raise ValueError(f"invalid sort value: {sort}")
 
 
-def sort_mappings(mappings: Iterable[SemanticMapping], sort: str) -> list[SemanticMapping]:
+def sort_mappings(mappings: Iterable[SemanticMapping], sort: Sort) -> list[SemanticMapping]:
     """Sort mappings."""
     sorter = get_sorter(sort)
     return sorter(mappings)
@@ -223,7 +249,7 @@ def get_mappings(
     *,
     limit: int | None = None,
     offset: int | None = None,
-    order_by: str | None = None,
+    order_by: Sort | None = None,
     converter: Converter | None = None,
 ) -> Sequence[SemanticMapping]:
     """Get a sequence of mappings."""
@@ -231,6 +257,10 @@ def get_mappings(
         mappings = list(filter_mappings(mappings, where_clauses, converter=converter))
     if order_by is not None:
         mappings = sort_mappings(mappings, order_by)
+    if offset and offset < 0:
+        raise ValueError("offset cannot be negative")
+    if limit and limit < 0:
+        raise ValueError("limit cannot be negative")
     if offset and limit:
         mappings = mappings[offset : offset + limit]
     elif offset:
@@ -247,22 +277,23 @@ def get_prefix_pair_counter(mappings: Iterable[SemanticMapping]) -> Counter[tupl
 
 def get_entity_counter(mappings: Iterable[SemanticMapping]) -> Counter[Reference]:
     """Count appearances of subjects and objects."""
-    cc: Counter[Reference] = Counter()
-    for mapping in mappings:
-        cc[mapping.subject] += 1
-        cc[mapping.object] += 1
-    return cc
+    return Counter(_subject_object_iterator(mappings))
 
 
 def get_total_entities(mappings: Iterable[SemanticMapping]) -> int:
     """Count the unique references appearing as subjects and objects."""
-    cc = get_entity_counter(mappings)
-    return len(cc)
+    return len(set(_subject_object_iterator(mappings)))
+
+
+def _subject_object_iterator(mappings: Iterable[SemanticMapping]) -> Iterable[NamableReference]:
+    for mapping in mappings:
+        yield mapping.subject
+        yield mapping.object
 
 
 def postprocess(
     mappings: Iterable[SemanticMapping],
-    sort: str | None = None,
+    sort: Sort | None = None,
     offset: int | None = None,
     limit: int | None = None,
 ) -> Iterable[SemanticMapping]:

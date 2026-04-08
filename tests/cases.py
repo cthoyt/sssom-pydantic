@@ -42,7 +42,7 @@ from sssom_pydantic.examples import (
     TEST_PREFIX_MAP,
 )
 from sssom_pydantic.models import Record
-from sssom_pydantic.query import Query
+from sssom_pydantic.query import Query, Sort
 from sssom_pydantic.web.router import ReviewPayload
 
 if TYPE_CHECKING:
@@ -525,14 +525,15 @@ class TestRepository(MappingTestCaseMixin):
 
     def test_order_by(self) -> None:
         """Test order by."""
-        for order_by in [
+        sorts: list[Sort] = [
             "confidence",
             "date",
             "date-published",
             "date-reviewed",
             "subject",
             "object",
-        ]:
+        ]
+        for order_by in sorts:
             with self.subTest(order_by=order_by):
                 self.repository.get_mappings(order_by=order_by)
                 # TODO add explicit values

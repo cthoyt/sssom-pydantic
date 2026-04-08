@@ -16,7 +16,7 @@ from ..api import (
     SemanticMappingHash,
 )
 from ..io import append, read, write
-from ..query import Query, filter_mappings, get_mappings, get_total_entities
+from ..query import Query, Sort, filter_mappings, get_mappings, get_total_entities
 
 __all__ = ["FileSystemSemanticMappingRepository"]
 
@@ -125,7 +125,7 @@ class FileSystemSemanticMappingRepository(SemanticMappingRepository):
         query: Query | None = None,
         limit: int | None = None,
         offset: int | None = None,
-        order_by: str | None = None,
+        order_by: Sort | None = None,
     ) -> Sequence[SemanticMapping]:
         """Get a sequence of mappings."""
         return get_mappings(
