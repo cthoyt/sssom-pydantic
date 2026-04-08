@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from collections.abc import Callable, Collection, Iterable, Sequence
 from typing import TYPE_CHECKING, Any, Literal, NamedTuple, TypeAlias
 
@@ -17,7 +18,9 @@ __all__ = [
     "Query",
     "Sort",
     "filter_mappings",
+    "get_entity_counter",
     "get_mappings",
+    "get_total_entities",
     "sort_mappings",
 ]
 
@@ -233,3 +236,18 @@ def get_mappings(
     else:
         mappings = mappings[:limit]
     return mappings
+
+
+def get_entity_counter(mappings: Iterable[SemanticMapping]) -> Counter[Reference]:
+    """Count appearances of subjects and objects."""
+    cc: Counter[Reference] = Counter()
+    for mapping in mappings:
+        cc[mapping.subject] += 1
+        cc[mapping.object] += 1
+    return cc
+
+
+def get_total_entities(mappings: Iterable[SemanticMapping]) -> int:
+    """Count the unique references appearing as subjects and objects."""
+    cc = get_entity_counter(mappings)
+    return len(cc)
