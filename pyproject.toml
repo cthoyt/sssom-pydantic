@@ -48,7 +48,7 @@ license = { file = "LICENSE" }
 requires-python = ">=3.10"
 dependencies = [
     "pydantic",
-    "curies>=0.13.1",
+    "curies>=0.13.3",
     "pyyaml",
     "pystow>=0.8.2",
     "tqdm",

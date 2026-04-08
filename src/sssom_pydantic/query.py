@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Collection, Iterable, Sequence
 from typing import TYPE_CHECKING, Any, Literal, NamedTuple, TypeAlias
 
+from curies.triples import keep_references_either, keep_triples_by_hash
 from pydantic import BaseModel, Field
 
 from .api import SemanticMapping
 
 if TYPE_CHECKING:
-    from curies import Converter
+    from curies import Converter, Reference
 
 __all__ = [
     "Query",
@@ -67,13 +68,23 @@ class Query(BaseModel):
 
 
 def filter_mappings(
-    mappings: Iterable[SemanticMapping], query: Query | None, *, converter: Converter | None = None
+    mappings: Iterable[SemanticMapping],
+    query: Query | None,
+    *,
+    target_references: Collection[Reference] | None = None,
+    converter: Converter | None = None,
 ) -> Iterable[SemanticMapping]:
     """Filter mappings based on a query."""
-    if query is None:
-        yield from mappings
-        return
+    if target_references is not None:
+        mappings = keep_references_either(mappings, target_references)
+    if query is not None:
+        mappings = _query_helper(mappings, query, converter)
+    yield from mappings
 
+
+def _query_helper(
+    mappings: Iterable[SemanticMapping], query: Query, converter: Converter | None
+) -> Iterable[SemanticMapping]:
     for name, model_field in Query.model_fields.items():
         value = getattr(query, name)
         if value is None:
@@ -81,29 +92,33 @@ def filter_mappings(
         if model_field.annotation == str | None:
             mappings = _help_filter(mappings, name, value, converter=converter)
         elif name == "same_text":
-            if value:
-                mappings = (
-                    mapping
-                    for mapping in mappings
-                    if mapping.subject_name
-                    and mapping.object_name
-                    and _str_norm(mapping.subject_name) == _str_norm(mapping.object_name)
-                    and mapping.predicate.curie == "skos:exactMatch"
-                )
-            else:  # check that they're explicitly not the same
-                mappings = (
-                    mapping
-                    for mapping in mappings
-                    if mapping.predicate.curie == "skos:exactMatch"
-                    and (
-                        not mapping.subject_name
-                        or not mapping.object_name
-                        or _str_norm(mapping.subject_name) != _str_norm(mapping.object_name)
-                    )
-                )
+            mappings = _same_text(mappings, value)
         else:
             raise NotImplementedError
-    yield from mappings
+    return mappings
+
+
+def _same_text(mappings: Iterable[SemanticMapping], value: bool) -> Iterable[SemanticMapping]:
+    if value:
+        return (
+            mapping
+            for mapping in mappings
+            if mapping.subject_name
+            and mapping.object_name
+            and _str_norm(mapping.subject_name) == _str_norm(mapping.object_name)
+            and mapping.predicate.curie == "skos:exactMatch"
+        )
+    else:  # check that they're explicitly not the same
+        return (
+            mapping
+            for mapping in mappings
+            if mapping.predicate.curie == "skos:exactMatch"
+            and (
+                not mapping.subject_name
+                or not mapping.object_name
+                or _str_norm(mapping.subject_name) != _str_norm(mapping.object_name)
+            )
+        )
 
 
 def _str_norm(s: str) -> str:
@@ -120,9 +135,7 @@ def _help_filter(
     if name == "triple_id":
         if converter is None:
             raise ValueError("filtering by identifier (i.e., mapping hash) requires a converter")
-        for mapping in mappings:
-            if converter.hash_triple(mapping) == value:
-                yield mapping
+        yield from keep_triples_by_hash(mappings, converter, value)
     else:
         value = value.casefold()
         get_strings = QUERY_TO_FUNC[name]

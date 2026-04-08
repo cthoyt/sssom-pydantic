@@ -5,14 +5,13 @@ from __future__ import annotations
 import datetime
 import functools
 import hashlib
-import warnings
 from collections.abc import Callable
 from typing import Annotated, Any, Literal, TypeAlias
 
 import curies
 from curies import NamableReference, Reference, Triple
 from curies.mixins import SemanticallyStandardizable
-from curies.vocabulary import matching_processes
+from curies.vocabulary import exact_match, matching_processes, unspecified_matching_process
 from pydantic import AnyUrl, BaseModel, BeforeValidator, ConfigDict, Field
 from typing_extensions import Self
 
@@ -89,12 +88,6 @@ class RequiredSemanticMapping(Triple):
         examples=list(matching_processes),
     )
     predicate_modifier: PredicateModifier | None = Field(None)
-
-    @property
-    def mapping_justification(self) -> Reference:
-        """Get the mapping justification."""
-        warnings.warn("use justification directly", DeprecationWarning, stacklevel=2)
-        return self.justification
 
     @property
     def negated(self) -> bool:
@@ -324,6 +317,79 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
     see_also: list[str] | None = Field(None)
     similarity_measure: str | None = Field(None)
     similarity_score: float | None = Field(None, ge=0.0, le=1.0)
+
+    @classmethod
+    def from_triple(
+        cls,
+        subject: Reference,
+        predicate: Reference,
+        object: Reference,
+        *,
+        justification: Reference | None = None,
+        **kwargs: Any,
+    ) -> Self:
+        """Construct a semantic mapping from a subject-predicate-object triple.
+
+        :param subject: The subject of the mapping triple.
+        :param predicate: The predicate of the mapping triple.
+        :param object: The object of the mapping triple.
+        :param justification: The justification of the mapping triple. Defaults to
+            :data:`curies.vocabulary.unspecified_matching_process`
+        :param kwargs: Additional fields to pass to the constructor
+
+        :returns: A semantic mapping
+
+        >>> from curies import Reference
+        >>> from curies.vocabulary import exact_match
+        >>> from sssom_pydantic import SemanticMapping
+        >>> c1, c2, c3 = "DOID:0050577", "mesh:C562966", "umls:C4551571"
+        >>> r1, r2, r3 = (Reference.from_curie(c) for c in (c1, c2, c3))
+        >>> m1 = SemanticMapping.from_triple(r1, exact_match, r2)
+        >>> m2 = SemanticMapping.from_triple(r2, exact_match, r3)
+        >>> m3 = SemanticMapping.from_triple(r1, exact_match, r3)
+        """
+        return cls(
+            subject=subject,
+            predicate=predicate,
+            object=object,
+            justification=justification or unspecified_matching_process,
+            **kwargs,
+        )
+
+    @classmethod
+    def exact(
+        cls,
+        subject: Reference,
+        object: Reference,
+        *,
+        justification: Reference | None = None,
+        **kwargs: Any,
+    ) -> Self:
+        """Construct a ``skos:exactMatch`` mapping from a subject-object pair.
+
+        :param subject: The subject of the mapping triple.
+        :param object: The object of the mapping triple.
+        :param justification: The justification of the mapping triple. Defaults to
+            :data:`curies.vocabulary.unspecified_matching_process`
+        :param kwargs: Additional fields to pass to the constructor
+
+        :returns: A semantic mapping
+
+        >>> from curies import Reference
+        >>> from sssom_pydantic import SemanticMapping
+        >>> c1, c2, c3 = "DOID:0050577", "mesh:C562966", "umls:C4551571"
+        >>> r1, r2, r3 = (Reference.from_curie(c) for c in (c1, c2, c3))
+        >>> m1 = SemanticMapping.exact(r1, r2)
+        >>> m2 = SemanticMapping.exact(r2, r3)
+        >>> m3 = SemanticMapping.exact(r1, r3)
+        """
+        return cls.from_triple(
+            subject=subject,
+            predicate=exact_match,
+            object=object,
+            justification=justification,
+            **kwargs,
+        )
 
     def get_prefixes(self) -> set[str]:
         """Get prefixes used in this mapping."""
