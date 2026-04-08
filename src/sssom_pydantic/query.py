@@ -20,7 +20,9 @@ __all__ = [
     "filter_mappings",
     "get_entity_counter",
     "get_mappings",
+    "get_prefix_pair_counter",
     "get_total_entities",
+    "postprocess",
     "sort_mappings",
 ]
 
@@ -238,6 +240,11 @@ def get_mappings(
     return mappings
 
 
+def get_prefix_pair_counter(mappings: Iterable[SemanticMapping]) -> Counter[tuple[str, str]]:
+    """Count subject/object prefix pairs."""
+    return Counter((mapping.subject.prefix, mapping.object.prefix) for mapping in mappings)
+
+
 def get_entity_counter(mappings: Iterable[SemanticMapping]) -> Counter[Reference]:
     """Count appearances of subjects and objects."""
     cc: Counter[Reference] = Counter()
@@ -251,3 +258,28 @@ def get_total_entities(mappings: Iterable[SemanticMapping]) -> int:
     """Count the unique references appearing as subjects and objects."""
     cc = get_entity_counter(mappings)
     return len(cc)
+
+
+def postprocess(
+    mappings: Iterable[SemanticMapping],
+    sort: str | None = None,
+    offset: int | None = None,
+    limit: int | None = None,
+) -> Iterable[SemanticMapping]:
+    """Postprocess mappings with sort, offset, and limit operations."""
+    it = iter(mappings)
+    if sort is not None:
+        it = iter(sort_mappings(it, sort))
+    if offset is not None:
+        try:
+            for _ in range(offset):
+                next(it)
+        except StopIteration:
+            # if next() fails, then there are no remaining entries.
+            # do not pass go, do not collect 200 euro $
+            return
+    if limit is None:
+        yield from it
+    else:
+        for line_prediction, _ in zip(it, range(limit), strict=False):
+            yield line_prediction
