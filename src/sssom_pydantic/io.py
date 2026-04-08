@@ -22,7 +22,6 @@ from .api import (
     MappingSet,
     MappingSetRecord,
     MappingTool,
-    RequiredSemanticMapping,
     SemanticMapping,
     SemanticMappingPredicate,
     _other_to_dict,
@@ -238,7 +237,7 @@ def _get_mapping_set(
 
 
 def append(
-    mappings: Iterable[RequiredSemanticMapping],
+    mappings: Iterable[SemanticMapping],
     path: str | Path,
     *,
     metadata: Metadata | MappingSet | None = None,
@@ -257,7 +256,7 @@ def append(
     )
 
 
-def _prepare_records(mappings: Iterable[RequiredSemanticMapping]) -> tuple[list[Record], set[str]]:
+def _prepare_records(mappings: Iterable[SemanticMapping]) -> tuple[list[Record], set[str]]:
     records = []
     prefixes: set[str] = set()
     for mapping in mappings:
