@@ -120,7 +120,7 @@ ndex = [
     "ndex2",
 ]
 sssompy = [
-    "sssom>=0.4.19",
+    "sssom",
     "linkml>=1.10.0",
     "linkml-runtime>=1.10.0",
     "pandas",
