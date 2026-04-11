@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import typing
 from collections.abc import Callable, Iterable, Sequence
 from contextlib import closing
 from typing import TYPE_CHECKING, Any, Concatenate, Literal, ParamSpec, TypeVar, cast, overload
@@ -301,8 +300,6 @@ def _get_order_by(key: Sort | None) -> str | None:
         case "object":
             return " ORDER BY p.object_id"
         case _:
-            if key in typing.get_args(Sort):
-                raise NotImplementedError(f"sort component not implemented for neo4j: {key}")
             raise ValueError(f"invalid ordering: {key}")
 
 

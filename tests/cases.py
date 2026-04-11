@@ -50,7 +50,6 @@ from sssom_pydantic.web.router import ReviewPayload
 if TYPE_CHECKING:
     from starlette.testclient import TestClient
 
-
 __all__ = [
     "P1",
     "R1",
@@ -65,7 +64,6 @@ __all__ = [
     "_m",
     "_r",
 ]
-
 
 AUTHOR = charlie.without_name()
 
@@ -551,7 +549,11 @@ class TestRepository(MappingTestCaseMixin):
         for order_by in typing.get_args(Sort):
             with self.subTest(order_by=order_by):
                 self.repository.get_mappings(order_by=order_by)
-                # TODO add explicit values
+
+    def test_order_by_invalid(self) -> None:
+        """Test order by."""
+        with self.assertRaises(ValueError):
+            self.repository.get_mappings(order_by="nope")  # type:ignore
 
     def test_query_same_text(self) -> None:
         """Test querying for same text."""

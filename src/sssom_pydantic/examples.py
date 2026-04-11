@@ -228,7 +228,6 @@ simple_with_curation_rule_text = ExampleMapping(
     ),
 )
 
-
 simple_with_similarity = ExampleMapping(
     description="similarity measure and score",
     semantic_mapping=SemanticMapping(
@@ -377,6 +376,16 @@ e8 = ExampleMapping(
         justification=manual_mapping_curation.curie,
         mapping_date=datetime.date(2025, 11, 29),
         publication_date=datetime.date(2025, 11, 30),
+    ),
+)
+
+e9 = ExampleMapping(
+    description="This example is about when the mapping has an explicit predicate label",
+    semantic_mapping=SemanticMapping(
+        subject=R1,
+        predicate=NamedReference(prefix="skos", identifier="exactMatch", name="exact match"),
+        object=R2,
+        justification=manual_mapping_curation.curie,
     ),
 )
 
