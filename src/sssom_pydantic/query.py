@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import typing
+from collections import Counter
 from collections.abc import Callable, Collection, Iterable, Sequence
 from typing import TYPE_CHECKING, Any, Literal, NamedTuple, TypeAlias
 
@@ -12,13 +13,17 @@ from pydantic import BaseModel, Field
 from .api import SemanticMapping
 
 if TYPE_CHECKING:
-    from curies import Converter, Reference
+    from curies import Converter, NamableReference, Reference
 
 __all__ = [
     "Query",
     "Sort",
+    "count_entities",
+    "count_prefix_pairs",
+    "count_unique_entities",
     "filter_mappings",
     "get_mappings",
+    "paginate_mappings",
     "sort_mappings",
 ]
 
@@ -240,7 +245,7 @@ def sort_mappings(mappings: Iterable[SemanticMapping], sort: Sort) -> list[Seman
 
 def get_mappings(
     mappings: Sequence[SemanticMapping],
-    where_clauses: Query | None = None,
+    query: Query | None = None,
     *,
     limit: int | None = None,
     offset: int | None = None,
@@ -248,14 +253,74 @@ def get_mappings(
     converter: Converter | None = None,
 ) -> Sequence[SemanticMapping]:
     """Get a sequence of mappings."""
-    if where_clauses is not None:
-        mappings = list(filter_mappings(mappings, where_clauses, converter=converter))
-    if order_by is not None:
-        mappings = sort_mappings(mappings, order_by)
-    if offset and limit:
-        mappings = mappings[offset : offset + limit]
-    elif offset:
-        mappings = mappings[offset:]
-    else:
-        mappings = mappings[:limit]
+    if query is not None:
+        mappings = list(filter_mappings(mappings, query, converter=converter))
+    if order_by is not None or limit is not None or offset is not None:
+        mappings = list(paginate_mappings(mappings, limit=limit, offset=offset, sort=order_by))
     return mappings
+
+
+def count_prefix_pairs(mappings: Iterable[SemanticMapping]) -> Counter[tuple[str, str]]:
+    """Count subject/object prefix pairs."""
+    return Counter((mapping.subject.prefix, mapping.object.prefix) for mapping in mappings)
+
+
+def count_entities(mappings: Iterable[SemanticMapping]) -> Counter[Reference]:
+    """Count appearances of subjects and objects."""
+    return Counter(_subject_object_iterator(mappings))
+
+
+def count_unique_entities(mappings: Iterable[SemanticMapping]) -> int:
+    """Count the number of unique entities appearing in the subjects and objects of mappings."""
+    return len(set(_subject_object_iterator(mappings)))
+
+
+def _subject_object_iterator(mappings: Iterable[SemanticMapping]) -> Iterable[NamableReference]:
+    for mapping in mappings:
+        yield mapping.subject
+        yield mapping.object
+
+
+def paginate_mappings(
+    mappings: Iterable[SemanticMapping],
+    *,
+    sort: Sort | None = None,
+    offset: int | None = None,
+    limit: int | None = None,
+) -> Iterable[SemanticMapping]:
+    """Paginate mappings with sort, offset, and limit operations."""
+    if offset is not None and offset < 0:
+        raise ValueError("offset cannot be negative")
+    if limit is not None and limit < 0:
+        raise ValueError("limit cannot be negative")
+
+    if sort is not None:
+        yield from _paginate_sequence(sort_mappings(mappings, sort), limit=limit, offset=offset)
+    elif isinstance(mappings, Sequence):
+        yield from _paginate_sequence(mappings, limit=limit, offset=offset)
+    else:
+        it = iter(mappings)
+        if offset is not None:
+            try:
+                for _ in range(offset):
+                    next(it)
+            except StopIteration:
+                # if next() fails, then there are no remaining entries.
+                # do not pass go, do not collect 200 euro $
+                return
+        if limit is None:
+            yield from it
+        else:
+            for line_prediction, _ in zip(it, range(limit), strict=False):
+                yield line_prediction
+
+
+def _paginate_sequence(
+    mappings: Sequence[SemanticMapping], *, offset: int | None = None, limit: int | None = None
+) -> Sequence[SemanticMapping]:
+    if offset and limit:
+        return mappings[offset : offset + limit]
+    elif offset:
+        return mappings[offset:]
+    else:
+        return mappings[:limit]
