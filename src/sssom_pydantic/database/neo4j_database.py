@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import typing
 from collections.abc import Callable, Iterable, Sequence
 from contextlib import closing
 from typing import TYPE_CHECKING, Any, Concatenate, Literal, ParamSpec, TypeVar, cast, overload
