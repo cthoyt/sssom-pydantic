@@ -6,7 +6,14 @@ from curies import NamedReference
 from curies.vocabulary import exact_match, unspecified_matching_process
 
 from sssom_pydantic import SemanticMapping
-from sssom_pydantic.query import QUERY_TO_FUNC, Query, filter_mappings
+from sssom_pydantic.query import (
+    QUERY_TO_FUNC,
+    Query,
+    filter_mappings,
+    get_entity_counter,
+    get_prefix_pair_counter,
+    paginate_mappings,
+)
 
 
 class TestQuery(unittest.TestCase):
@@ -50,3 +57,15 @@ class TestQuery(unittest.TestCase):
         for i, (query, expected) in enumerate(cases):
             with self.subTest(i=i):
                 self.assertEqual(expected, list(filter_mappings(mappings, query)))
+
+    def test_get_entity_counter(self) -> None:
+        """Test getting an entity counter."""
+        get_entity_counter()
+
+    def test_get_prefix_pair_counter(self) -> None:
+        """Test getting a prefix pair counter."""
+        get_prefix_pair_counter()
+
+    def test_pagination(self) -> None:
+        """Test postprocessing."""
+        paginate_mappings()

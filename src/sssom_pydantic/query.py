@@ -23,7 +23,7 @@ __all__ = [
     "get_mappings",
     "get_prefix_pair_counter",
     "get_total_entities",
-    "postprocess",
+    "paginate_mappings",
     "sort_mappings",
 ]
 
@@ -245,7 +245,7 @@ def sort_mappings(mappings: Iterable[SemanticMapping], sort: Sort) -> list[Seman
 
 def get_mappings(
     mappings: Sequence[SemanticMapping],
-    where_clauses: Query | None = None,
+    query: Query | None = None,
     *,
     limit: int | None = None,
     offset: int | None = None,
@@ -253,8 +253,8 @@ def get_mappings(
     converter: Converter | None = None,
 ) -> Sequence[SemanticMapping]:
     """Get a sequence of mappings."""
-    if where_clauses is not None:
-        mappings = list(filter_mappings(mappings, where_clauses, converter=converter))
+    if query is not None:
+        mappings = list(filter_mappings(mappings, query, converter=converter))
     if order_by is not None:
         mappings = sort_mappings(mappings, order_by)
     if offset and offset < 0:
@@ -291,13 +291,13 @@ def _subject_object_iterator(mappings: Iterable[SemanticMapping]) -> Iterable[Na
         yield mapping.object
 
 
-def postprocess(
+def paginate_mappings(
     mappings: Iterable[SemanticMapping],
     sort: Sort | None = None,
     offset: int | None = None,
     limit: int | None = None,
 ) -> Iterable[SemanticMapping]:
-    """Postprocess mappings with sort, offset, and limit operations."""
+    """Paginate mappings with sort, offset, and limit operations."""
     it = iter(mappings)
     if sort is not None:
         it = iter(sort_mappings(it, sort))
