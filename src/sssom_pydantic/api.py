@@ -26,14 +26,12 @@ from .models import Cardinality, Record
 
 __all__ = [
     "NOT",
-    "CoreSemanticMapping",
     "ExtensionDefinition",
     "ExtensionDefinitionRecord",
     "MappingSet",
     "MappingSetRecord",
     "MappingTool",
     "PredicateModifier",
-    "RequiredSemanticMapping",
     "SemanticMapping",
     "SemanticMappingHash",
     "SemanticMappingPredicate",
@@ -65,163 +63,10 @@ def _ensure_namable(x: str | Reference | NamableReference) -> NamableReference:
         return x
 
 
-class RequiredSemanticMapping(Triple):
-    """Represents the required fields for SSSOM."""
-
-    model_config = ConfigDict(frozen=True)
-
-    subject: Annotated[NamableReference, BeforeValidator(_ensure_namable)] = Field(...)
-    predicate: Annotated[NamableReference, BeforeValidator(_ensure_namable)] = Field(...)
-    object: Annotated[NamableReference, BeforeValidator(_ensure_namable)] = Field(...)
-    justification: Reference = Field(
-        ...,
-        description="""\
-        A `semapv <https://bioregistry.io/registry/semapv>`_ term describing
-        the mapping type.
-
-        These are relatively high level, and can be any child of ``semapv:Matching``,
-        including:
-
-        1. ``semapv:LexicalMatching``
-        2. ``semapv:LogicalReasoning``
-        """,
-        examples=list(matching_processes),
-    )
-    predicate_modifier: PredicateModifier | None = Field(None)
-
-    @property
-    def negated(self) -> bool:
-        """Check if the mapping record is negated."""
-        return self.predicate_modifier == "Not"
-
-    @property
-    def subject_name(self) -> str | None:
-        """Get the subject label, if available."""
-        return _get_name(self.subject)
-
-    @property
-    def predicate_name(self) -> str | None:
-        """Get the predicate label, if available."""
-        return _get_name(self.predicate)
-
-    @property
-    def object_name(self) -> str | None:
-        """Get the object label, if available."""
-        return _get_name(self.object)
-
-    def to_record(self) -> Record:
-        """Get a record."""
-        return Record(
-            subject_id=self.subject.curie,
-            subject_label=self.subject_name,
-            #
-            predicate_id=self.predicate.curie,
-            predicate_label=self.predicate_name,
-            predicate_modifier=self.predicate_modifier,
-            #
-            object_id=self.object.curie,
-            object_label=self.object_name,
-            mapping_justification=self.justification.curie,
-        )
-
-    def get_prefixes(self) -> set[str]:
-        """Get prefixes used in this mapping."""
-        return {
-            self.subject.prefix,
-            self.predicate.prefix,
-            self.object.prefix,
-            self.justification.prefix,
-        }
-
-
 def _get_name(reference: Reference) -> str | None:
     if isinstance(reference, NamableReference):
         return reference.name
     return None
-
-
-class CoreSemanticMapping(RequiredSemanticMapping):
-    """Represents the most useful fields for SSSOM."""
-
-    model_config = ConfigDict(frozen=True)
-
-    record: Reference | None = Field(None)
-    authors: list[Reference] | None = Field(None)
-    confidence: float | None = Field(None, ge=0.0, le=1.0)
-    mapping_tool: MappingTool | None = Field(None)
-    license: str | None = Field(None)
-
-    @property
-    def mapping_tool_name(self) -> str | None:
-        """Get the mapping tool label, if available."""
-        if self.mapping_tool is None:
-            return None
-        return self.mapping_tool.name
-
-    def to_record(self) -> Record:
-        """Get a record."""
-        return Record(
-            record_id=self.record.curie if self.record is not None else None,
-            #
-            subject_id=self.subject.curie,
-            subject_label=self.subject_name,
-            #
-            predicate_id=self.predicate.curie,
-            predicate_label=self.predicate_name,
-            predicate_modifier=self.predicate_modifier,
-            #
-            object_id=self.object.curie,
-            object_label=self.object_name,
-            mapping_justification=self.justification.curie,
-            #
-            license=self.license,
-            author_id=_join(self.authors),
-            mapping_tool=self.mapping_tool.name
-            if self.mapping_tool is not None and self.mapping_tool.name is not None
-            else None,
-            mapping_tool_id=self.mapping_tool.reference.curie
-            if self.mapping_tool is not None and self.mapping_tool.reference is not None
-            else None,
-            mapping_tool_version=self.mapping_tool.version
-            if self.mapping_tool is not None and self.mapping_tool.version is not None
-            else None,
-            confidence=self.confidence,
-        )
-
-    def get_prefixes(self) -> set[str]:
-        """Get prefixes used in this mapping."""
-        rv = super().get_prefixes()
-        if self.record is not None:
-            rv.add(self.record.prefix)
-        for a in self.authors or []:
-            rv.add(a.prefix)
-        if self.mapping_tool and self.mapping_tool.reference:
-            rv.add(self.mapping_tool.reference.prefix)
-        return rv
-
-    @property
-    def author(self) -> Reference | None:
-        """Get the single author or raise a value error."""
-        if self.authors is None:
-            return None
-        if len(self.authors) != 1:
-            raise ValueError
-        return self.authors[0]
-
-    def __lt__(self, other: Any) -> bool:
-        if not isinstance(other, CoreSemanticMapping):
-            raise TypeError
-        return self._key() < other._key()
-
-    def _key(self) -> tuple[str, ...]:
-        """Return a tuple for sorting mapping dictionaries."""
-        return (
-            self.subject.curie,
-            self.predicate.curie,
-            self.object.curie,
-            self.justification.curie,
-            self.mapping_tool_name or "",
-        )
 
 
 def _join(references: list[Reference] | None) -> list[str] | None:
@@ -249,10 +94,35 @@ FORWARDS_MAPS = {
 BACKWARDS_MAPS = {v: k for k, v in FORWARDS_MAPS.items()}
 
 
-class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
-    """Represents all fields for SSSOM.."""
+class SemanticMapping(Triple, SemanticallyStandardizable):
+    """Represents most fields for SSSOM."""
 
     model_config = ConfigDict(frozen=True)
+
+    subject: Annotated[NamableReference, BeforeValidator(_ensure_namable)] = Field(...)
+    predicate: Annotated[NamableReference, BeforeValidator(_ensure_namable)] = Field(...)
+    object: Annotated[NamableReference, BeforeValidator(_ensure_namable)] = Field(...)
+    justification: Reference = Field(
+        ...,
+        description="""\
+        A `semapv <https://bioregistry.io/registry/semapv>`_ term describing
+        the mapping type.
+
+        These are relatively high level, and can be any child of ``semapv:Matching``,
+        including:
+
+        1. ``semapv:LexicalMatching``
+        2. ``semapv:LogicalReasoning``
+        """,
+        examples=list(matching_processes),
+    )
+    predicate_modifier: PredicateModifier | None = Field(None)
+
+    record: Reference | None = Field(None)
+    authors: list[Reference] | None = Field(None)
+    confidence: float | None = Field(None, ge=0.0, le=1.0)
+    mapping_tool: MappingTool | None = Field(None)
+    license: str | None = Field(None)
 
     # https://w3id.org/sssom/subject_category
     subject_category: Reference | None = Field(None)
@@ -391,9 +261,71 @@ class SemanticMapping(CoreSemanticMapping, SemanticallyStandardizable):
             **kwargs,
         )
 
+    @property
+    def negated(self) -> bool:
+        """Check if the mapping record is negated."""
+        return self.predicate_modifier == "Not"
+
+    @property
+    def subject_name(self) -> str | None:
+        """Get the subject label, if available."""
+        return _get_name(self.subject)
+
+    @property
+    def predicate_name(self) -> str | None:
+        """Get the predicate label, if available."""
+        return _get_name(self.predicate)
+
+    @property
+    def object_name(self) -> str | None:
+        """Get the object label, if available."""
+        return _get_name(self.object)
+
+    @property
+    def mapping_tool_name(self) -> str | None:
+        """Get the mapping tool label, if available."""
+        if self.mapping_tool is None:
+            return None
+        return self.mapping_tool.name
+
+    @property
+    def author(self) -> Reference | None:
+        """Get the single author or raise a value error."""
+        if self.authors is None:
+            return None
+        if len(self.authors) != 1:
+            raise ValueError
+        return self.authors[0]
+
+    def __lt__(self, other: Any) -> bool:
+        if not isinstance(other, SemanticMapping):
+            raise TypeError
+        return self._key() < other._key()
+
+    def _key(self) -> tuple[str, ...]:
+        """Return a tuple for sorting mapping dictionaries."""
+        return (
+            self.subject.curie,
+            self.predicate.curie,
+            self.object.curie,
+            self.justification.curie,
+            self.mapping_tool_name or "",
+        )
+
     def get_prefixes(self) -> set[str]:
         """Get prefixes used in this mapping."""
-        rv = super().get_prefixes()
+        rv: set[str] = {
+            self.subject.prefix,
+            self.predicate.prefix,
+            self.object.prefix,
+            self.justification.prefix,
+        }
+        if self.record is not None:
+            rv.add(self.record.prefix)
+        for a in self.authors or []:
+            rv.add(a.prefix)
+        if self.mapping_tool and self.mapping_tool.reference:
+            rv.add(self.mapping_tool.reference.prefix)
         for x in [
             self.subject_source,
             self.subject_type,

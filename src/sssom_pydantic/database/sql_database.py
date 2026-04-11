@@ -283,24 +283,24 @@ class SemanticMappingDatabase(SemanticMappingRepository):
             yield session
 
     def count_mappings(
-        self, where_clauses: Query | list[ColumnExpressionArgument[bool]] | None = None
+        self, query: Query | list[ColumnExpressionArgument[bool]] | None = None
     ) -> int:
         """Count the mappings in the database."""
         with self.get_session() as session:
             statement = select(func.count()).select_from(SemanticMappingModel)
-            statement = _apply_where_clauses(statement, where_clauses)
+            statement = _apply_where_clauses(statement, query)
             return session.exec(statement).one()
 
     def count_entities(
-        self, where_clauses: Query | list[ColumnExpressionArgument[bool]] | None = None
+        self, query: Query | list[ColumnExpressionArgument[bool]] | None = None
     ) -> int:
         """Count the mappings in the database."""
         with self.get_session() as session:
             sources = _apply_where_clauses(  # type:ignore[var-annotated]
-                select(col(SemanticMappingModel.source).label("entity_id")), where_clauses
+                select(col(SemanticMappingModel.source).label("entity_id")), query
             )
             targets = _apply_where_clauses(  # type:ignore[var-annotated]
-                select(col(SemanticMappingModel.object).label("entity_id")), where_clauses
+                select(col(SemanticMappingModel.object).label("entity_id")), query
             )
             all_entities = sqlmodel.union(sources, targets).subquery()
             return session.exec(select(func.count()).select_from(all_entities)).one()
@@ -366,7 +366,7 @@ class SemanticMappingDatabase(SemanticMappingRepository):
 
     def get_mappings(
         self,
-        where_clauses: Query | list[ColumnExpressionArgument[bool]] | None = None,
+        query: Query | list[ColumnExpressionArgument[bool]] | None = None,
         *,
         limit: int | None = None,
         offset: int | None = None,
@@ -378,7 +378,7 @@ class SemanticMappingDatabase(SemanticMappingRepository):
         """Get mappings."""
         with self.get_session() as session:
             statement = select(SemanticMappingModel)
-            statement = _apply_where_clauses(statement, where_clauses, converter=self.converter)
+            statement = _apply_where_clauses(statement, query, converter=self.converter)
 
             if limit is not None:
                 statement = statement.limit(limit)
