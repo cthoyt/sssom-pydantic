@@ -131,9 +131,9 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         self._write(cypher, batch=batch)
         return references
 
-    def count_mappings(self, where_clauses: Query | None = None) -> int:
+    def count_mappings(self, query: Query | None = None) -> int:
         """Count the mappings in the database."""
-        cypher, params = self._construct(where_clauses, count=True)
+        cypher, params = self._construct(query, count=True)
 
         def _count_nodes(tx: neo4j.ManagedTransaction, **kwargs: Any) -> int:
             result = tx.run(cypher, **kwargs)
@@ -142,9 +142,9 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         with closing(self.driver.session()) as session:
             return cast(int, session.execute_read(_count_nodes, **params))
 
-    def count_entities(self, where_clauses: Query | None = None) -> int:
+    def count_entities(self, query: Query | None = None) -> int:
         """Count the entities in the database."""
-        if where_clauses is not None:
+        if query is not None:
             raise NotImplementedError("need to implement filtering on entity counts for neo4j")
 
         def _count_nodes(tx: neo4j.ManagedTransaction) -> int:
@@ -203,14 +203,14 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
 
     def get_mappings(
         self,
-        where_clauses: Query | None = None,
+        query: Query | None = None,
         limit: int | None = None,
         offset: int | None = None,
         order_by: str | None = None,
     ) -> Sequence[SemanticMapping]:
         """Get mappings."""
         cypher, params = self._construct(
-            where_clauses, limit=limit, offset=offset, order_by=order_by, count=False
+            query, limit=limit, offset=offset, order_by=order_by, count=False
         )
 
         def _get_nodes(tx: neo4j.ManagedTransaction, **kwargs: Any) -> list[dict[str, Any]]:
@@ -223,7 +223,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
 
     @staticmethod
     def _construct(
-        where_clauses: Query | None = None,
+        query: Query | None = None,
         *,
         limit: int | None = None,
         offset: int | None = None,
@@ -232,7 +232,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
     ) -> tuple[str, dict[str, str | int]]:
         params: dict[str, str | int] = {}
         cypher = "MATCH (p:SemanticMapping)"
-        if where_clauses is not None and (where_val := _clauses_from_query(where_clauses)):
+        if query is not None and (where_val := _clauses_from_query(query)):
             cypher += where_val[0]
             params.update(where_val[1])
 
