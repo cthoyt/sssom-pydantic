@@ -52,11 +52,11 @@ class SemanticMappingRepository(ABC):
         return reference
 
     @abstractmethod
-    def count_mappings(self, where_clauses: Query | None = None) -> int:
+    def count_mappings(self, query: Query | None = None) -> int:
         """Count the mappings in the database."""
 
     @abstractmethod
-    def count_entities(self, where_clauses: Query | None = None) -> int:
+    def count_entities(self, query: Query | None = None) -> int:
         """Count the number of entities appearing as subjects/objects in the database."""
 
     def add_mapping(self, mapping: SemanticMapping) -> Reference:
@@ -102,7 +102,7 @@ class SemanticMappingRepository(ABC):
         *,
         metadata: MappingSet | Metadata | MappingSetRecord | None = None,
         exclude_columns: Collection[str] | None = None,
-        where_clauses: Query | None = None,
+        query: Query | None = None,
         limit: int | None = None,
         offset: int | None = None,
         **kwargs: Any,
@@ -110,7 +110,7 @@ class SemanticMappingRepository(ABC):
         """Write the database to a file."""
         # order_by is explicitly skipped since the writing function does this
         # in a canonical way
-        mappings = self.get_mappings(where_clauses=where_clauses, limit=limit, offset=offset)
+        mappings = self.get_mappings(query=query, limit=limit, offset=offset)
         write(
             mappings,
             path,
@@ -143,7 +143,7 @@ class SemanticMappingRepository(ABC):
     @abstractmethod
     def get_mappings(
         self,
-        where_clauses: Query | None = None,
+        query: Query | None = None,
         *,
         limit: int | None = None,
         offset: int | None = None,
