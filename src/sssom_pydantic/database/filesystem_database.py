@@ -16,7 +16,7 @@ from ..api import (
     SemanticMappingHash,
 )
 from ..io import append, read, write
-from ..query import Query, filter_mappings, get_mappings, get_total_entities
+from ..query import Query, Sort, filter_mappings, get_mappings, get_total_entities
 
 __all__ = ["FileSystemSemanticMappingRepository"]
 
@@ -57,11 +57,11 @@ class FileSystemSemanticMappingRepository(SemanticMappingRepository):
         super().__init__(semantic_mapping_hash=semantic_mapping_hash, converter=converter)
         self.write_action = write_action
 
-    def count_mappings(self, where_clauses: Query | None = None) -> int:
+    def count_mappings(self, query: Query | None = None) -> int:
         """Count the number of mappings."""
         return sum(1 for _ in filter_mappings(self.mappings, query, converter=self.converter))
 
-    def count_entities(self, where_clauses: Query | None = None) -> int:
+    def count_entities(self, query: Query | None = None) -> int:
         """Count the number of mappings."""
         return get_total_entities(filter_mappings(self.mappings, query, converter=self.converter))
 
@@ -122,15 +122,15 @@ class FileSystemSemanticMappingRepository(SemanticMappingRepository):
 
     def get_mappings(
         self,
-        where_clauses: Query | None = None,
+        query: Query | None = None,
         limit: int | None = None,
         offset: int | None = None,
-        order_by: str | None = None,
+        order_by: Sort | None = None,
     ) -> Sequence[SemanticMapping]:
         """Get a sequence of mappings."""
         return get_mappings(
             self.mappings,
-            where_clauses,
+            query,
             limit=limit,
             offset=offset,
             order_by=order_by,

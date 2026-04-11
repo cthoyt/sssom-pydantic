@@ -13,8 +13,9 @@ from __future__ import annotations
 
 import contextlib
 import datetime
+import typing
 from collections.abc import Callable, Generator, Iterable, Sequence
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, ParamSpec, TypeVar, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, ParamSpec, TypeVar, cast, overload
 
 import curies
 import sqlmodel
@@ -33,7 +34,7 @@ from typing_extensions import Self
 from sssom_pydantic.api import MappingTool, SemanticMapping, SemanticMappingHash
 from sssom_pydantic.database.repo import CURIENotFoundError, SemanticMappingRepository
 from sssom_pydantic.models import Cardinality
-from sssom_pydantic.query import Query
+from sssom_pydantic.query import Query, Sort
 
 if TYPE_CHECKING:
     from sqlalchemy.sql.selectable import ColumnExpressionArgument  # type:ignore[attr-defined]
@@ -282,24 +283,24 @@ class SemanticMappingDatabase(SemanticMappingRepository):
             yield session
 
     def count_mappings(
-        self, where_clauses: Query | list[ColumnExpressionArgument[bool]] | None = None
+        self, query: Query | list[ColumnExpressionArgument[bool]] | None = None
     ) -> int:
         """Count the mappings in the database."""
         with self.get_session() as session:
             statement = select(func.count()).select_from(SemanticMappingModel)
-            statement = _apply_where_clauses(statement, where_clauses)
+            statement = _apply_where_clauses(statement, query)
             return session.exec(statement).one()
 
     def count_entities(
-        self, where_clauses: Query | list[ColumnExpressionArgument[bool]] | None = None
+        self, query: Query | list[ColumnExpressionArgument[bool]] | None = None
     ) -> int:
         """Count the mappings in the database."""
         with self.get_session() as session:
             sources = _apply_where_clauses(  # type:ignore[var-annotated]
-                select(col(SemanticMappingModel.source).label("entity_id")), where_clauses
+                select(col(SemanticMappingModel.source).label("entity_id")), query
             )
             targets = _apply_where_clauses(  # type:ignore[var-annotated]
-                select(col(SemanticMappingModel.object).label("entity_id")), where_clauses
+                select(col(SemanticMappingModel.object).label("entity_id")), query
             )
             all_entities = sqlmodel.union(sources, targets).subquery()
             return session.exec(select(func.count()).select_from(all_entities)).one()
@@ -365,11 +366,11 @@ class SemanticMappingDatabase(SemanticMappingRepository):
 
     def get_mappings(
         self,
-        where_clauses: Query | list[ColumnExpressionArgument[bool]] | None = None,
+        query: Query | list[ColumnExpressionArgument[bool]] | None = None,
         *,
         limit: int | None = None,
         offset: int | None = None,
-        order_by: str
+        order_by: Sort
         | ColumnExpressionArgument[Any]
         | list[ColumnExpressionArgument[Any]]
         | None = None,
@@ -377,7 +378,7 @@ class SemanticMappingDatabase(SemanticMappingRepository):
         """Get mappings."""
         with self.get_session() as session:
             statement = select(SemanticMappingModel)
-            statement = _apply_where_clauses(statement, where_clauses, converter=self.converter)
+            statement = _apply_where_clauses(statement, query, converter=self.converter)
 
             if limit is not None:
                 statement = statement.limit(limit)
@@ -387,7 +388,9 @@ class SemanticMappingDatabase(SemanticMappingRepository):
             if order_by is None:
                 pass
             elif isinstance(order_by, str):
-                statement = statement.order_by(_get_sorter(order_by))
+                if order_by not in typing.get_args(Sort):
+                    raise ValueError
+                statement = statement.order_by(_get_sorter(cast(Sort, order_by)))
             elif isinstance(order_by, list):
                 statement = statement.order_by(*order_by)
             else:
@@ -526,7 +529,7 @@ def _apply_where_clauses(
         return statement.where(*where_clauses)
 
 
-def _get_sorter(sort: str) -> ColumnExpressionArgument[Any]:
+def _get_sorter(sort: Sort) -> ColumnExpressionArgument[Any]:
     match sort:
         case "confidence":
             return col(SemanticMappingModel.confidence).desc()
@@ -542,4 +545,6 @@ def _get_sorter(sort: str) -> ColumnExpressionArgument[Any]:
             return col(SemanticMappingModel.object).asc()
         # TODO add remaining values
         case _:
+            if sort in typing.get_args(Sort):
+                raise NotImplementedError(f"sort component not implemented for SQL: {sort}")
             raise ValueError(sort)

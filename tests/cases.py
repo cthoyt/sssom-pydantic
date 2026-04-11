@@ -42,7 +42,7 @@ from sssom_pydantic.examples import (
     TEST_PREFIX_MAP,
 )
 from sssom_pydantic.models import Record
-from sssom_pydantic.query import Query
+from sssom_pydantic.query import Query, Sort
 from sssom_pydantic.web.router import ReviewPayload
 
 if TYPE_CHECKING:
@@ -189,7 +189,7 @@ class TestRepository(MappingTestCaseMixin):
         if isinstance(db, SemanticMappingDatabase):
             # this test isn't relevant for all databases
             mappings = db.get_mappings(
-                where_clauses=[SemanticMappingModel.justification == lexical_matching_process]
+                query=[SemanticMappingModel.justification == lexical_matching_process]
             )
             self.assertEqual(2, len(mappings))
             self.assertEqual(lexical_matching_process, mappings[0].justification)
@@ -200,14 +200,14 @@ class TestRepository(MappingTestCaseMixin):
         self.assertEqual(4, len(db.get_mappings(limit=1000)))
 
         if isinstance(db, SemanticMappingDatabase):
-            mappings = db.get_mappings(where_clauses=[POSITIVE_MAPPING_CLAUSE])
+            mappings = db.get_mappings(query=[POSITIVE_MAPPING_CLAUSE])
             self.assertEqual(1, len(mappings))
             self.assertEqual(manual_mapping_curation, mappings[0].justification)
             self.assertIsNone(mappings[0].predicate_modifier)
             self.assertIsNone(mappings[0].comment)
 
         if isinstance(db, SemanticMappingDatabase):
-            mappings = db.get_mappings(where_clauses=[NEGATIVE_MAPPING_CLAUSE])
+            mappings = db.get_mappings(query=[NEGATIVE_MAPPING_CLAUSE])
             self.assertEqual(1, len(mappings))
             self.assertEqual(manual_mapping_curation, mappings[0].justification)
             self.assertIsNotNone(mappings[0].predicate_modifier)
@@ -219,38 +219,38 @@ class TestRepository(MappingTestCaseMixin):
             4,
             len(
                 db.get_mappings(
-                    where_clauses=Query(triple_id=db.converter.hash_triple(mapping_1)),
+                    query=Query(triple_id=db.converter.hash_triple(mapping_1)),
                 )
             ),
         )
         self.assertEqual(
             0,
-            len(db.get_mappings(where_clauses=Query(triple_id="xxxx"))),
+            len(db.get_mappings(query=Query(triple_id="xxxx"))),
         )
 
         # test no-op query
         query = Query()
-        mappings = db.get_mappings(where_clauses=query)
+        mappings = db.get_mappings(query=query)
         self.assertEqual(4, len(mappings))
 
         query = Query(subject_prefix="mesh")
-        mappings = db.get_mappings(where_clauses=query)
+        mappings = db.get_mappings(query=query)
         self.assertEqual(4, len(mappings))
 
         query = Query(object_prefix="chebi")
-        mappings = db.get_mappings(where_clauses=query)
+        mappings = db.get_mappings(query=query)
         self.assertEqual(4, len(mappings))
 
         query = Query(subject_prefix="chebi")
-        mappings = db.get_mappings(where_clauses=query)
+        mappings = db.get_mappings(query=query)
         self.assertEqual(0, len(mappings))
 
         query = Query(object_prefix="mesh")
-        mappings = db.get_mappings(where_clauses=query)
+        mappings = db.get_mappings(query=query)
         self.assertEqual(0, len(mappings))
 
         query = Query(query="mesh")
-        mappings = db.get_mappings(where_clauses=query)
+        mappings = db.get_mappings(query=query)
         self.assertEqual(4, len(mappings))
 
         db.delete_mapping(mapping_1)
@@ -525,14 +525,15 @@ class TestRepository(MappingTestCaseMixin):
 
     def test_order_by(self) -> None:
         """Test order by."""
-        for order_by in [
+        sorts: list[Sort] = [
             "confidence",
             "date",
             "date-published",
             "date-reviewed",
             "subject",
             "object",
-        ]:
+        ]
+        for order_by in sorts:
             with self.subTest(order_by=order_by):
                 self.repository.get_mappings(order_by=order_by)
                 # TODO add explicit values

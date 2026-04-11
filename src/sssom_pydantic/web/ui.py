@@ -1,5 +1,6 @@
 """A flask-based UI for SSSOM."""
 
+import typing
 from typing import cast
 
 import flask
@@ -9,7 +10,7 @@ from werkzeug.local import LocalProxy
 
 from sssom_pydantic.database import SemanticMappingRepository
 from sssom_pydantic.process import estimate_confidence
-from sssom_pydantic.query import Query
+from sssom_pydantic.query import Query, Sort
 
 __all__ = [
     "ui_blueprint",
@@ -20,17 +21,25 @@ ui_blueprint = Blueprint("ui", __name__)
 repository = cast(SemanticMappingRepository, LocalProxy(lambda: current_app.config["repository"]))
 
 
+def _get_sort() -> Sort | None:
+    sort = flask.request.args.get("order_by")
+    if not sort:
+        return None
+    if sort not in typing.get_args(Sort):
+        raise flask.abort(400, f"invalid sort: {sort}. try one of {typing.get_args(Sort)}")
+    return cast(Sort, sort)
+
+
 @ui_blueprint.get("/")
 def show_home() -> str:
     """Show the homepage."""
     query = Query.model_validate(flask.request.args)
     n_mappings = repository.count_mappings(query)
     n_entities = repository.count_entities(query)
-    mappings = repository.get_mappings(
-        query,
-        limit=10,
-        order_by=flask.request.args.get("order_by"),
-    )
+
+    sort = _get_sort()
+
+    mappings = repository.get_mappings(query, limit=10, order_by=sort)
     return flask.render_template(
         "home.html",
         repository=repository,
