@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import typing
 from collections.abc import Callable, Collection, Iterable, Sequence
 from typing import TYPE_CHECKING, Any, Literal, NamedTuple, TypeAlias
 
