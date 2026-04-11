@@ -280,14 +280,22 @@ def _get_order_by(key: Sort | None) -> str | None:
     match key:
         case None:
             return None
-        case "confidence":
-            return " ORDER BY p.confidence"
-        case "date":
-            return " ORDER BY p.mapping_date"
-        case "date-published":
-            return " ORDER BY p.published_date"
-        case "date-reviewed":
-            return " ORDER BY p.review_date"
+        case "confidence" | "-confidence" | "desc":
+            return " ORDER BY p.confidence DESC"
+        case "+confidence" | "asc":
+            return " ORDER BY p.confidence ASC"
+        case "date" | "-date":
+            return " ORDER BY p.mapping_date DESC"
+        case "+date":
+            return " ORDER BY p.mapping_date ASC"
+        case "date-published" | "-date-published":
+            return " ORDER BY p.published_date DESC"
+        case "+date-published":
+            return " ORDER BY p.published_date ASC"
+        case "date-reviewed" | "-date-reviewed":
+            return " ORDER BY p.review_date DESC"
+        case "+date-reviewed":
+            return " ORDER BY p.review_date ASC"
         case "subject":
             return " ORDER BY p.subject_id"
         case "object":

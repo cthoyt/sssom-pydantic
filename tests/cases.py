@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime
 import importlib.util
 import tempfile
+import typing
 import unittest
 from collections.abc import Iterable
 from pathlib import Path
@@ -547,15 +548,7 @@ class TestRepository(MappingTestCaseMixin):
 
     def test_order_by(self) -> None:
         """Test order by."""
-        sorts: list[Sort] = [
-            "confidence",
-            "date",
-            "date-published",
-            "date-reviewed",
-            "subject",
-            "object",
-        ]
-        for order_by in sorts:
+        for order_by in typing.get_args(Sort):
             with self.subTest(order_by=order_by):
                 self.repository.get_mappings(order_by=order_by)
                 # TODO add explicit values
