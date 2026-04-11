@@ -16,7 +16,7 @@ from ..api import (
     SemanticMappingHash,
 )
 from ..io import append, read, write
-from ..query import Query, filter_mappings, get_mappings
+from ..query import Query, Sort
 
 __all__ = ["FileSystemSemanticMappingRepository"]
 
