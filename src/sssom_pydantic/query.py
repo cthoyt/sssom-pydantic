@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import typing
 from collections.abc import Callable, Collection, Iterable, Sequence
 from typing import TYPE_CHECKING, Any, Literal, NamedTuple, TypeAlias
 
@@ -161,9 +162,6 @@ QUERY_TO_FUNC: dict[str, Callable[[SemanticMapping], list[str | None]]] = {
     "mapping_tool": lambda mapping: [mapping.mapping_tool_name],
 }
 
-#: Sort mechanisms
-Sort: TypeAlias = Literal["asc", "desc", "subject", "object"]
-
 
 class Sorter(NamedTuple):
     """A sorter."""
@@ -176,37 +174,65 @@ class Sorter(NamedTuple):
         return sorted(mappings, key=self.key, reverse=self.reverse)
 
 
-def get_sorter(sort: str) -> Sorter:
+#: Sort mechanisms
+Sort: TypeAlias = Literal[
+    "asc",
+    "desc",
+    "confidence",
+    "+confidence",
+    "-confidence",
+    "date",
+    "+date",
+    "-date",
+    "date-published",
+    "-date-published",
+    "+date-published",
+    "date-reviewed",
+    "+date-reviewed",
+    "-date-reviewed",
+    "subject",
+    "object",
+]
+
+
+def get_sorter(sort: Sort) -> Sorter:
     """Get a sort function."""
-    if sort in {"desc", "confidence", "-confidence"}:
-        return Sorter(key=lambda m: m.confidence or 0.0, reverse=True)
-    elif sort in {"asc", "+confidence"}:
-        return Sorter(key=lambda m: m.confidence or 0.0, reverse=False)
-    elif sort in {"date", "-date"}:
-        return Sorter(key=lambda m: (m.mapping_date is not None, m.publication_date), reverse=True)
-    elif sort == "+date":
-        return Sorter(key=lambda m: (m.mapping_date is not None, m.publication_date), reverse=False)
-    elif sort in {"date-published", "-date-published"}:
-        return Sorter(
-            key=lambda m: (m.publication_date is not None, m.publication_date), reverse=True
-        )
-    elif sort in {"date-reviewed", "-date-reviewed"}:
-        return Sorter(key=lambda m: (m.review_date is not None, m.review_date), reverse=True)
-    elif sort == "+date-reviewed":
-        return Sorter(key=lambda m: (m.review_date is not None, m.review_date), reverse=False)
-    elif sort == "+date-published":
-        return Sorter(
-            key=lambda m: (m.publication_date is not None, m.publication_date), reverse=False
-        )
-    elif sort == "subject":
-        return Sorter(key=lambda m: m.subject.curie, reverse=False)
-    elif sort == "object":
-        return Sorter(lambda m: m.object.curie, reverse=False)
-    else:
-        raise ValueError(f"invalid sort value: {sort}")
+    match sort:
+        case "desc" | "confidence" | "-confidence":
+            return Sorter(key=lambda m: m.confidence or 0.0, reverse=True)
+        case "asc" | "+confidence":
+            return Sorter(key=lambda m: m.confidence or 0.0, reverse=False)
+        case "date" | "-date":
+            return Sorter(
+                key=lambda m: (m.mapping_date is not None, m.publication_date), reverse=True
+            )
+        case "+date":
+            return Sorter(
+                key=lambda m: (m.mapping_date is not None, m.publication_date), reverse=False
+            )
+        case "date-published" | "-date-published":
+            return Sorter(
+                key=lambda m: (m.publication_date is not None, m.publication_date), reverse=True
+            )
+        case "date-reviewed" | "-date-reviewed":
+            return Sorter(key=lambda m: (m.review_date is not None, m.review_date), reverse=True)
+        case "+date-reviewed":
+            return Sorter(key=lambda m: (m.review_date is not None, m.review_date), reverse=False)
+        case "+date-published":
+            return Sorter(
+                key=lambda m: (m.publication_date is not None, m.publication_date), reverse=False
+            )
+        case "subject":
+            return Sorter(key=lambda m: m.subject.curie, reverse=False)
+        case "object":
+            return Sorter(lambda m: m.object.curie, reverse=False)
+        case _:
+            if sort in typing.get_args(Sort):
+                raise NotImplementedError(f"sort key not implemented: {sort}")
+            raise ValueError(f"invalid sort value: {sort}")
 
 
-def sort_mappings(mappings: Iterable[SemanticMapping], sort: str) -> list[SemanticMapping]:
+def sort_mappings(mappings: Iterable[SemanticMapping], sort: Sort) -> list[SemanticMapping]:
     """Sort mappings."""
     sorter = get_sorter(sort)
     return sorter(mappings)
@@ -218,7 +244,7 @@ def get_mappings(
     *,
     limit: int | None = None,
     offset: int | None = None,
-    order_by: str | None = None,
+    order_by: Sort | None = None,
     converter: Converter | None = None,
 ) -> Sequence[SemanticMapping]:
     """Get a sequence of mappings."""

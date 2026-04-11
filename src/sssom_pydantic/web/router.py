@@ -1,6 +1,7 @@
 """Router for SSSOM Server."""
 
 import datetime
+import typing
 from typing import Annotated, TypeAlias, cast
 
 import fastapi
@@ -12,7 +13,7 @@ from pydantic import BaseModel, Field
 from sssom_pydantic import SemanticMapping
 from sssom_pydantic.database import SemanticMappingRepository
 from sssom_pydantic.process import MARKS, Mark, estimate_confidence
-from sssom_pydantic.query import Query
+from sssom_pydantic.query import Query, Sort
 
 __all__ = ["ReviewPayload", "router"]
 
@@ -38,7 +39,7 @@ def get_mappings(
     query: Annotated[Query | None, fastapi.Path(examples=[Query(query="ammeline")])] = None,
     limit: Annotated[int | None, fastapi.Path()] = None,
     offset: Annotated[int | None, fastapi.Path()] = None,
-    order_by: Annotated[str | None, fastapi.Path()] = None,
+    order_by: Annotated[Sort | None, fastapi.Path(examples=list(typing.get_args(Sort)))] = None,
 ) -> list[SemanticMapping]:
     """Get mappings."""
     return list(repository.get_mappings(query, limit=limit, offset=offset, order_by=order_by))
