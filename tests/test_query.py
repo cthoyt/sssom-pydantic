@@ -1,17 +1,21 @@
 """Test queries."""
 
 import unittest
+from collections import Counter
 
 from curies import NamedReference
 from curies.vocabulary import exact_match, unspecified_matching_process
 
 from sssom_pydantic import SemanticMapping
+from sssom_pydantic.api import NOT
+from sssom_pydantic.examples import R1, R2, R3, R4, R5
 from sssom_pydantic.query import (
     QUERY_TO_FUNC,
     Query,
+    count_entities,
+    count_prefix_pairs,
+    count_unique_entities,
     filter_mappings,
-    get_entity_counter,
-    get_prefix_pair_counter,
     paginate_mappings,
 )
 
@@ -60,11 +64,35 @@ class TestQuery(unittest.TestCase):
 
     def test_get_entity_counter(self) -> None:
         """Test getting an entity counter."""
-        get_entity_counter()
+        mappings = [
+            SemanticMapping.exact(R1, R2),
+            SemanticMapping.exact(R3, R4),
+            SemanticMapping.exact(R5, R3, predicate_modifier=NOT),
+        ]
+        self.assertEqual(
+            Counter({R1: 1, R2: 1, R3: 2, R4: 1, R5: 1}),
+            count_entities(mappings),
+        )
+
+    def test_count_unique_entities(self) -> None:
+        """Test getting a prefix pair counter."""
+        mappings = [
+            SemanticMapping.exact(R1, R2),
+            SemanticMapping.exact(R3, R4),
+            SemanticMapping.exact(R5, R3, predicate_modifier=NOT),
+        ]
+        self.assertEqual(5, count_unique_entities(mappings))
 
     def test_get_prefix_pair_counter(self) -> None:
         """Test getting a prefix pair counter."""
-        get_prefix_pair_counter()
+        mappings = [
+            SemanticMapping.exact(R1, R2),
+            SemanticMapping.exact(R3, R4),
+            SemanticMapping.exact(R5, R3, predicate_modifier=NOT),
+        ]
+        self.assertEqual(
+            Counter({("mesh", "chebi"): 2, ("mesh", "mesh"): 1}), count_prefix_pairs(mappings)
+        )
 
     def test_pagination(self) -> None:
         """Test postprocessing."""

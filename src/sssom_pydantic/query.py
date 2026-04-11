@@ -18,11 +18,11 @@ if TYPE_CHECKING:
 __all__ = [
     "Query",
     "Sort",
+    "count_entities",
+    "count_prefix_pairs",
+    "count_unique_entities",
     "filter_mappings",
-    "get_entity_counter",
     "get_mappings",
-    "get_prefix_pair_counter",
-    "get_total_entities",
     "paginate_mappings",
     "sort_mappings",
 ]
@@ -270,18 +270,18 @@ def get_mappings(
     return mappings
 
 
-def get_prefix_pair_counter(mappings: Iterable[SemanticMapping]) -> Counter[tuple[str, str]]:
+def count_prefix_pairs(mappings: Iterable[SemanticMapping]) -> Counter[tuple[str, str]]:
     """Count subject/object prefix pairs."""
     return Counter((mapping.subject.prefix, mapping.object.prefix) for mapping in mappings)
 
 
-def get_entity_counter(mappings: Iterable[SemanticMapping]) -> Counter[Reference]:
+def count_entities(mappings: Iterable[SemanticMapping]) -> Counter[Reference]:
     """Count appearances of subjects and objects."""
     return Counter(_subject_object_iterator(mappings))
 
 
-def get_total_entities(mappings: Iterable[SemanticMapping]) -> int:
-    """Count the unique references appearing as subjects and objects."""
+def count_unique_entities(mappings: Iterable[SemanticMapping]) -> int:
+    """Count the number of unique entities appearing in the subjects and objects of mappings."""
     return len(set(_subject_object_iterator(mappings)))
 
 

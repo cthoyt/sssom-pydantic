@@ -16,7 +16,7 @@ from ..api import (
     SemanticMappingHash,
 )
 from ..io import append, read, write
-from ..query import Query, Sort, filter_mappings, get_mappings, get_total_entities
+from ..query import Query, Sort, count_unique_entities, filter_mappings, get_mappings
 
 __all__ = ["FileSystemSemanticMappingRepository"]
 
@@ -62,8 +62,10 @@ class FileSystemSemanticMappingRepository(SemanticMappingRepository):
         return sum(1 for _ in filter_mappings(self.mappings, query, converter=self.converter))
 
     def count_entities(self, query: Query | None = None) -> int:
-        """Count the number of mappings."""
-        return get_total_entities(filter_mappings(self.mappings, query, converter=self.converter))
+        """Count the number of unique entities appearing in the subjects and objects of mappings."""
+        return count_unique_entities(
+            filter_mappings(self.mappings, query, converter=self.converter)
+        )
 
     def add_mappings(
         self, mappings: Iterable[SemanticMapping], *, progress: bool = False
