@@ -6,6 +6,7 @@ import datetime
 import importlib.util
 import tempfile
 import unittest
+from collections.abc import Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -143,6 +144,31 @@ class MappingTestCaseMixin(unittest.TestCase):
             expected.model_dump(exclude_none=True), actual.model_dump(exclude_none=True)
         )
 
+    def assert_model_sequence_equal(
+        self, expected: Iterable[SemanticMapping], actual: Iterable[SemanticMapping] | None
+    ) -> None:
+        """Assert two model sequences are equal."""
+        if actual is None:
+            raise self.fail()
+        return self.assertEqual(
+            [
+                expected_mapping.model_dump(
+                    exclude_none=True,
+                    exclude_unset=True,
+                    exclude_defaults=True,
+                )
+                for expected_mapping in expected
+            ],
+            [
+                actual_mapping.model_dump(
+                    exclude_none=True,
+                    exclude_unset=True,
+                    exclude_defaults=True,
+                )
+                for actual_mapping in actual
+            ],
+        )
+
 
 class TestRepository(MappingTestCaseMixin):
     """Test the database."""
@@ -150,9 +176,11 @@ class TestRepository(MappingTestCaseMixin):
     repository: SemanticMappingRepository
 
     def assert_models_equal(
-        self, expected: list[SemanticMapping], actual: list[SemanticMapping]
+        self, expected: Iterable[SemanticMapping], actual: Iterable[SemanticMapping] | None
     ) -> None:
         """Assert two models are equal."""
+        if actual is None:
+            raise self.fail()
         return self.assertEqual(
             [
                 e.model_dump(
@@ -512,16 +540,10 @@ class TestRepository(MappingTestCaseMixin):
 
         if isinstance(db, SemanticMappingDatabase):
             uncurated_mappings = db.get_mappings([UNCURATED_NOT_UNSURE_CLAUSE])
-            self.assert_models_equal(
-                [m1],
-                list(uncurated_mappings),
-            )
+            self.assert_models_equal([m1], uncurated_mappings)
 
             unsure_mappings = db.get_mappings([UNCURATED_UNSURE_CLAUSE])
-            self.assert_models_equal(
-                [m2_curated],
-                list(unsure_mappings),
-            )
+            self.assert_models_equal([m2_curated], unsure_mappings)
 
     def test_order_by(self) -> None:
         """Test order by."""
@@ -569,8 +591,8 @@ class TestRepository(MappingTestCaseMixin):
         self.assertIsNotNone(db.get_mapping(db.hash_mapping(m2), strict=True).subject_name)
         self.assertIsNone(db.get_mapping(db.hash_mapping(m3), strict=True).subject_name)
 
-        self.assert_models_equal([m1, m2], list(db.get_mappings(Query(same_text=True))))
-        self.assert_models_equal([m3], list(db.get_mappings(Query(same_text=False))))
+        self.assert_models_equal([m1, m2], db.get_mappings(Query(same_text=True)))
+        self.assert_models_equal([m3], db.get_mappings(Query(same_text=False)))
 
     def test_read(self) -> None:
         """Test reading mappings from a file."""

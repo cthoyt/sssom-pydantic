@@ -255,18 +255,8 @@ def get_mappings(
     """Get a sequence of mappings."""
     if query is not None:
         mappings = list(filter_mappings(mappings, query, converter=converter))
-    if order_by is not None:
-        mappings = sort_mappings(mappings, order_by)
-    if offset and offset < 0:
-        raise ValueError("offset cannot be negative")
-    if limit and limit < 0:
-        raise ValueError("limit cannot be negative")
-    if offset and limit:
-        mappings = mappings[offset : offset + limit]
-    elif offset:
-        mappings = mappings[offset:]
-    else:
-        mappings = mappings[:limit]
+    if order_by is not None or limit is not None or offset is not None:
+        mappings = list(paginate_mappings(mappings, limit=limit, offset=offset, sort=order_by))
     return mappings
 
 
@@ -293,24 +283,44 @@ def _subject_object_iterator(mappings: Iterable[SemanticMapping]) -> Iterable[Na
 
 def paginate_mappings(
     mappings: Iterable[SemanticMapping],
+    *,
     sort: Sort | None = None,
     offset: int | None = None,
     limit: int | None = None,
 ) -> Iterable[SemanticMapping]:
     """Paginate mappings with sort, offset, and limit operations."""
-    it = iter(mappings)
+    if offset is not None and offset < 0:
+        raise ValueError("offset cannot be negative")
+    if limit is not None and limit < 0:
+        raise ValueError("limit cannot be negative")
+
     if sort is not None:
-        it = iter(sort_mappings(it, sort))
-    if offset is not None:
-        try:
-            for _ in range(offset):
-                next(it)
-        except StopIteration:
-            # if next() fails, then there are no remaining entries.
-            # do not pass go, do not collect 200 euro $
-            return
-    if limit is None:
-        yield from it
+        yield from _paginate_sequence(sort_mappings(mappings, sort), limit=limit, offset=offset)
+    elif isinstance(mappings, Sequence):
+        yield from _paginate_sequence(mappings, limit=limit, offset=offset)
     else:
-        for line_prediction, _ in zip(it, range(limit), strict=False):
-            yield line_prediction
+        it = iter(mappings)
+        if offset is not None:
+            try:
+                for _ in range(offset):
+                    next(it)
+            except StopIteration:
+                # if next() fails, then there are no remaining entries.
+                # do not pass go, do not collect 200 euro $
+                return
+        if limit is None:
+            yield from it
+        else:
+            for line_prediction, _ in zip(it, range(limit), strict=False):
+                yield line_prediction
+
+
+def _paginate_sequence(
+    mappings: Sequence[SemanticMapping], *, offset: int | None = None, limit: int | None = None
+) -> Sequence[SemanticMapping]:
+    if offset and limit:
+        return mappings[offset : offset + limit]
+    elif offset:
+        return mappings[offset:]
+    else:
+        return mappings[:limit]
