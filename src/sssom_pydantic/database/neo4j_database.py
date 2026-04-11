@@ -14,7 +14,7 @@ from typing_extensions import LiteralString
 
 from .repo import CURIENotFoundError, SemanticMappingRepository
 from ..api import SemanticMapping, SemanticMappingHash
-from ..query import Query
+from ..query import Query, Sort
 
 if TYPE_CHECKING:
     import neo4j
@@ -202,7 +202,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         where_clauses: Query | None = None,
         limit: int | None = None,
         offset: int | None = None,
-        order_by: str | None = None,
+        order_by: Sort | None = None,
     ) -> Sequence[SemanticMapping]:
         """Get mappings."""
         cypher, params = self._construct(
@@ -223,7 +223,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         *,
         limit: int | None = None,
         offset: int | None = None,
-        order_by: str | None = None,
+        order_by: Sort | None = None,
         count: bool,
     ) -> tuple[str, dict[str, str | int]]:
         params: dict[str, str | int] = {}
@@ -267,7 +267,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         return rv
 
 
-def _get_order_by(key: str | None) -> str | None:
+def _get_order_by(key: Sort | None) -> str | None:
     match key:
         case None:
             return None
@@ -283,8 +283,10 @@ def _get_order_by(key: str | None) -> str | None:
             return " ORDER BY p.subject_id"
         case "object":
             return " ORDER BY p.object_id"
-        case _ as e:
-            raise ValueError(f"invalid ordering: {e}")
+        case _:
+            if key in typing.get_args(Sort):
+                raise NotImplementedError(f"sort component not implemented for neo4j: {key}")
+            raise ValueError(f"invalid ordering: {key}")
 
 
 def _clauses_from_query(

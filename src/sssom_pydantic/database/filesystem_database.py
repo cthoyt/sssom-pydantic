@@ -131,7 +131,7 @@ class FileSystemSemanticMappingRepository(SemanticMappingRepository):
         where_clauses: Query | None = None,
         limit: int | None = None,
         offset: int | None = None,
-        order_by: str | None = None,
+        order_by: Sort | None = None,
     ) -> Sequence[SemanticMapping]:
         """Get a sequence of mappings."""
         return get_mappings(
