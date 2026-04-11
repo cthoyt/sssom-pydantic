@@ -531,13 +531,21 @@ def _apply_where_clauses(
 
 def _get_sorter(sort: Sort) -> ColumnExpressionArgument[Any]:
     match sort:
-        case "confidence":
+        case "confidence" | "desc" | "-confidence":
             return col(SemanticMappingModel.confidence).desc()
-        case "date":
+        case "+confidence" | "asc":
+            return col(SemanticMappingModel.confidence).asc()
+        case "date" | "-date":
             return col(SemanticMappingModel.mapping_date).desc()
-        case "date-published":
+        case "+date":
+            return col(SemanticMappingModel.mapping_date).asc()
+        case "date-published" | "-date-published":
             return col(SemanticMappingModel.publication_date).desc()
-        case "date-reviewed":  # TODO test
+        case "+date-published":
+            return col(SemanticMappingModel.publication_date).asc()
+        case "date-reviewed" | "-date-reviewed":
+            return col(SemanticMappingModel.review_date).desc()
+        case "+date-reviewed":
             return col(SemanticMappingModel.review_date).desc()
         case "subject":
             return col(SemanticMappingModel.subject).asc()
