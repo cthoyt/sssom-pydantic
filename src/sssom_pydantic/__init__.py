@@ -1,13 +1,11 @@
 """Pydantic models for SSSOM."""
 
 from .api import (
-    CoreSemanticMapping,
     ExtensionDefinition,
     ExtensionDefinitionRecord,
     MappingSet,
     MappingSetRecord,
     MappingTool,
-    RequiredSemanticMapping,
     SemanticMapping,
     SemanticMappingPredicate,
 )
@@ -25,7 +23,6 @@ from .io import (
 from .models import Record
 
 __all__ = [
-    "CoreSemanticMapping",
     "ExtensionDefinition",
     "ExtensionDefinitionRecord",
     "MappingSet",
@@ -33,7 +30,6 @@ __all__ = [
     "MappingTool",
     "Metadata",
     "Record",
-    "RequiredSemanticMapping",
     "SemanticMapping",
     "SemanticMappingPredicate",
     "append",
