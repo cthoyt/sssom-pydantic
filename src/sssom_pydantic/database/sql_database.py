@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import contextlib
 import datetime
-import typing
 from collections.abc import Callable, Generator, Iterable, Sequence
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, ParamSpec, TypeVar, cast, overload
 
@@ -197,8 +196,7 @@ class SemanticMappingModel(SQLModel, table=True):
             d["predicate_name"] = predicate_name
         if object_name := mapping.object_name:
             d["object_name"] = object_name
-        if converter is not None:
-            d["triple_id"] = converter.hash_triple(mapping)
+        d["triple_id"] = converter.hash_triple(mapping)
         return cls.model_validate(d)
 
     def to_semantic_mapping(self) -> SemanticMapping:
@@ -388,8 +386,6 @@ class SemanticMappingDatabase(SemanticMappingRepository):
             if order_by is None:
                 pass
             elif isinstance(order_by, str):
-                if order_by not in typing.get_args(Sort):
-                    raise ValueError
                 statement = statement.order_by(_get_sorter(cast(Sort, order_by)))
             elif isinstance(order_by, list):
                 statement = statement.order_by(*order_by)
@@ -553,6 +549,4 @@ def _get_sorter(sort: Sort) -> ColumnExpressionArgument[Any]:
             return col(SemanticMappingModel.object).asc()
         # TODO add remaining values
         case _:
-            if sort in typing.get_args(Sort):
-                raise NotImplementedError(f"sort component not implemented for SQL: {sort}")
             raise ValueError(sort)

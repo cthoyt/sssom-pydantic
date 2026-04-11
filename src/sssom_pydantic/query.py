@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import typing
 from collections import Counter
 from collections.abc import Callable, Collection, Iterable, Sequence
 from typing import TYPE_CHECKING, Any, Literal, NamedTuple, TypeAlias
@@ -232,8 +231,6 @@ def get_sorter(sort: Sort) -> Sorter:
         case "object":
             return Sorter(lambda m: m.object.curie, reverse=False)
         case _:
-            if sort in typing.get_args(Sort):
-                raise NotImplementedError(f"sort key not implemented: {sort}")
             raise ValueError(f"invalid sort value: {sort}")
 
 
