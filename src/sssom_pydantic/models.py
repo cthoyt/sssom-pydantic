@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Literal, TypeAlias
+from typing import TYPE_CHECKING, Any, Literal, TypeAlias
 
 from curies.vocabulary import matching_processes
 from pydantic import AnyUrl, BaseModel, ConfigDict, Field
@@ -24,6 +24,9 @@ __all__ = [
 #: Cardinality annotations, which are valid within the scope of a mapping set
 #: but should not be saved as part of a mapping
 Cardinality: TypeAlias = Literal["1:1", "1:n", "n:1", "1:0", "0:1", "n:n", "0:0"]
+
+
+Extensions: TypeAlias = dict[str, Any]
 
 
 class Record(BaseModel):
@@ -119,6 +122,8 @@ class Record(BaseModel):
     issue_tracker_item: str | None = Field(None)
     other: str | None = Field(None)
     comment: str | None = Field(None)
+
+    extensions: Extensions | None = None
 
     def expand(self, converter: curies.Converter) -> ExpandedRecord:
         """Expand CURIEs to URIs in the record."""

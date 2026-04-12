@@ -184,6 +184,8 @@ def record_to_semantic_mapping(record: Record, converter: curies.Converter) -> S
         see_also=record.see_also,
         similarity_measure=record.similarity_measure,
         similarity_score=record.similarity_score,
+        # TODO do some parsing w/ the converter?
+        extensions=record.extensions,
     )
 
 

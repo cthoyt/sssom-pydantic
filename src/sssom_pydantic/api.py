@@ -571,10 +571,19 @@ class MappingSetRecord(BaseModel):
                 prop_value = [prop_value]
             propagatable[key] = prop_value
 
-        return functools.partial(row_to_record, propagatable=propagatable)
+        return functools.partial(
+            row_to_record,
+            propagatable=propagatable,
+            extension_definitions=self.extension_definitions,
+        )
 
 
-def row_to_record(row: Row, *, propagatable: dict[str, str | list[str]] | None = None) -> Record:
+def row_to_record(
+    row: Row,
+    *,
+    propagatable: dict[str, str | list[str]] | None = None,
+    extension_definitions: list[ExtensionDefinitionRecord] | None = None,
+) -> Record:
     """Parse a row from a SSSOM TSV file, unprocessed."""
     # Step 1: propagate values from the header if it's not explicit in the record
     if propagatable:
@@ -588,6 +597,22 @@ def row_to_record(row: Row, *, propagatable: dict[str, str | list[str]] | None =
                 for subvalue in value.split("|")
                 if (stripped_subvalue := subvalue.strip())
             ]
+
+    extensions: dict[str, Any] = {}
+    if extension_definitions:
+        for extension in extension_definitions:
+            if value := row.get(extension.slot_name):
+                match extension.type_hint:
+                    case None | "xsd:string":
+                        extensions[extension.slot_name] = value
+                    case "xsd:float" | "xsd:decimal":
+                        extensions[extension.slot_name] = float(value)
+                    case _:
+                        raise NotImplementedError(
+                            f"extension slot type_hint is not supported: {extension.type_hint}"
+                        )
+        if extensions:
+            row["extensions"] = extensions
 
     rv = Record.model_validate(row)
     return rv
