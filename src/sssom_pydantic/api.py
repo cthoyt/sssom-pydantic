@@ -188,6 +188,9 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
     similarity_measure: str | None = Field(None)
     similarity_score: float | None = Field(None, ge=0.0, le=1.0)
 
+    # slot values
+    extensions: dict[str, Any] | None = None
+
     @classmethod
     def from_triple(
         cls,
@@ -602,15 +605,7 @@ def row_to_record(
     if extension_definitions:
         for extension in extension_definitions:
             if value := row.get(extension.slot_name):
-                match extension.type_hint:
-                    case None | "xsd:string":
-                        extensions[extension.slot_name] = value
-                    case "xsd:float" | "xsd:decimal":
-                        extensions[extension.slot_name] = float(value)
-                    case _:
-                        raise NotImplementedError(
-                            f"extension slot type_hint is not supported: {extension.type_hint}"
-                        )
+                extensions[extension.slot_name] = extension.parse_value(value)
         if extensions:
             row["extensions"] = extensions
 
@@ -674,12 +669,29 @@ class MappingSet(BaseModel):
         return rv
 
 
+ExtensionValue: TypeAlias = (
+    str
+    | int
+    | float
+    | datetime.date
+    | datetime.date
+    | Reference
+    | list[str]
+    | list[int]
+    | list[float]
+    | list[datetime.date]
+    | list[datetime.datetime]
+    | list[Reference]
+)
+
+
 class ExtensionDefinitionRecord(BaseModel):
     """An extension definition that can be readily dumped to SSSOM."""
 
     slot_name: str
     property: str | None = None
     type_hint: str | None = None
+    multivalued: bool = False
 
     def process(self, converter: curies.Converter) -> ExtensionDefinition:
         """Process the SSSOM data structure into a more idiomatic one."""
@@ -693,6 +705,29 @@ class ExtensionDefinitionRecord(BaseModel):
             else None,
         )
 
+    def parse_value(self, value: str) -> ExtensionValue:
+        """Parse a value."""
+        # see https://mapping-commons.github.io/sssom/spec-model/#defined-extensions
+        if self.multivalued:
+            return [self._help_parse(v_strip) for v in value.split("|") if (v_strip := v.strip())]
+        else:
+            return self._help_parse(value)
+
+    # TODO make the parser a computed value
+    def _help_parse(self, value: str) -> Any:
+        return XSD_TYPE_TO_FUNC.get(self.type_hint, str)(value)
+
+
+XSD_TYPE_TO_FUNC = {
+    "xsd:string": str,
+    "xsd:float": float,
+    "xsd:double": float,
+    "xsd:integer": int,
+    "xsd:date": datetime.date.fromisoformat,
+    "xsd:datetime": datetime.datetime.fromisoformat,
+    "sssom:curie": Reference.from_curie,
+}
+
 
 class ExtensionDefinition(BaseModel):
     """A processed extension definition."""
@@ -700,6 +735,7 @@ class ExtensionDefinition(BaseModel):
     slot_name: str
     property: Reference | None = None
     type_hint: Reference | None = None
+    multivalued: bool = False  # TODO add to SSSOM spec
 
     def get_prefixes(self) -> set[str]:
         """Get prefixes in the extension definition."""
@@ -716,6 +752,7 @@ class ExtensionDefinition(BaseModel):
             slot_name=self.slot_name,
             property=self.property.curie if self.property else None,
             type_hint=self.type_hint.curie if self.type_hint else None,
+            multivalued=self.multivalued,
         )
 
 
