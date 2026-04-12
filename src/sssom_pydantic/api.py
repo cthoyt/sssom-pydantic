@@ -684,13 +684,24 @@ ExtensionValue: TypeAlias = (
     | list[Reference]
 )
 
+TypeHint: TypeAlias = Literal[
+    "xsd:string",
+    "xsd:float",
+    "xsd:double",
+    "xsd:integer",
+    "xsd:date",
+    "xsd:datetime",
+    "sssom:curie",
+    "linkml:uriOrCurie",
+]
+
 
 class ExtensionDefinitionRecord(BaseModel):
     """An extension definition that can be readily dumped to SSSOM."""
 
     slot_name: str
     property: str | None = None
-    type_hint: str | None = None
+    type_hint: TypeHint = "xsd:string"
     multivalued: bool = False
 
     def process(self, converter: curies.Converter) -> ExtensionDefinition:
@@ -718,7 +729,7 @@ class ExtensionDefinitionRecord(BaseModel):
         return XSD_TYPE_TO_FUNC.get(self.type_hint, str)(value)
 
 
-XSD_TYPE_TO_FUNC = {
+XSD_TYPE_TO_FUNC: dict[TypeHint, Callable[[str], Any]] = {
     "xsd:string": str,
     "xsd:float": float,
     "xsd:double": float,
@@ -726,6 +737,7 @@ XSD_TYPE_TO_FUNC = {
     "xsd:date": datetime.date.fromisoformat,
     "xsd:datetime": datetime.datetime.fromisoformat,
     "sssom:curie": Reference.from_curie,
+    "linkml:uriOrCurie": Reference.from_curie,
 }
 
 

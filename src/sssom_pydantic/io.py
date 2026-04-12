@@ -591,6 +591,15 @@ def read_unprocessed_iterable(
         mapping_set_record = _chain_mapping_set_record(
             first_metadata, second_metadata, inline_metadata
         )
+
+        if mapping_set_record.extension_definitions:
+            for extension_definition in mapping_set_record.extension_definitions:
+                if extension_definition.slot_name in Record.model_fields:
+                    raise ValueError(
+                        f"extension_definition slot name conflicts with built-in field: "
+                        f"{extension_definition.slot_name}"
+                    )
+
         _row_to_record = mapping_set_record.get_parser()
         reader = csv.DictReader(file, fieldnames=columns, delimiter="\t")
         reader = tqdm(reader, **_tqdm_kwargs)
