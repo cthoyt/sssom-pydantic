@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import datetime
+from collections.abc import MutableMapping
 from typing import Literal, TypeAlias
 
 import curies
@@ -158,4 +160,7 @@ MAPPING_SLOT_SPECIFIC = {
 MAPPING_SET_SLOTS_SKIP = {"mappings"}
 MAPPING_SET_SLOTS = PROPAGATABLE | MAPPING_SLOT_SPECIFIC
 
-Row: TypeAlias = dict[str, str | list[str]]
+ExtensionSingleValue: TypeAlias = str | int | float | datetime.date | datetime.datetime | Reference
+ExtensionValue: TypeAlias = ExtensionSingleValue | list[ExtensionSingleValue]
+
+Row: TypeAlias = MutableMapping[str, str | list[str] | dict[str, ExtensionValue]]

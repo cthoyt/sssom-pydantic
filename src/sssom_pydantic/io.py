@@ -34,6 +34,8 @@ from .constants import (
     PREFIX_MAP_KEY,
     PROPAGATABLE,
     EntityTypeLiteral,
+    ExtensionSingleValue,
+    ExtensionValue,
     Row,
 )
 from .models import Record, RecordPredicate
@@ -278,6 +280,7 @@ def append_unprocessed(
 ) -> None:
     """Append records to the end of an existing file."""
     path = Path(path).expanduser().resolve()
+    metadata = _get_metadata(metadata)
     with path.open() as file:
         original_columns, _rv = _chomp_frontmatter(file)
     if not original_columns:
@@ -285,7 +288,7 @@ def append_unprocessed(
             f"can not append {len(records):,} mappings because no headers found in {path}"
         )
     exclude = {"mapping_set_id"}.union(exclude_columns or [])  # this is a hack...
-    columns = _get_columns(records)
+    columns = _get_columns(records, metadata)
     new_columns = set(columns).difference(original_columns).difference(exclude)
     if new_columns:
         raise NotImplementedError(
@@ -377,20 +380,19 @@ def _get_condensation(records: Iterable[Record]) -> dict[str, CondensationTypes]
 
 
 def _get_columns(records: Iterable[Record], metadata: Metadata) -> list[str]:
-    extension_slot_sequence = [
+    extension_slot_names = [
         extension_definition["slot_name"]
         for extension_definition in metadata.get("extension_definitions", [])
     ]
-    extension_slot_set = set(extension_slot_sequence)
 
     used_extension_slots: set[str] = set()
     columns: set[str] = set()
     for record in records:
-        for key in record.model_fields:
+        for key in record.model_fields_set:
             if value := getattr(record, key):
                 if key == "extensions":
                     for subkey in value:
-                        if subkey in extension_slot_set:
+                        if subkey in extension_slot_names:
                             used_extension_slots.add(subkey)
                         else:
                             raise ValueError(f"undefined extension: {subkey}")
@@ -403,8 +405,8 @@ def _get_columns(records: Iterable[Record], metadata: Metadata) -> list[str]:
     # add extension slots based on the order they appear in the metadata
     rv.extend(
         extension_slot
-        for extension_slot in extension_slot_sequence
-        if extension_slot_sequence in used_extension_slots
+        for extension_slot in extension_slot_names
+        if extension_slot in used_extension_slots
     )
     return rv
 
@@ -415,12 +417,38 @@ def _unprocess_row(record: Record, *, exclude: set[str] | None = None) -> dict[s
     )
 
     # splat out all extensions
-    rv.update(rv.pop("extensions", {}))
+    rv.update(_process_extensions(rv.pop("extensions", {})))
 
     for key in MULTIVALUED:
         if (value := rv.get(key)) and isinstance(value, list):
             rv[key] = "|".join(value)
     return rv
+
+
+def _process_extensions(data: dict[str, ExtensionValue]) -> dict[str, str]:
+    rv: dict[str, str] = {}
+    for key, value in data.items():
+        if isinstance(value, list):
+            rv[key] = "|".join(_extension_value_to_str(v) for v in value)
+        else:
+            rv[key] = _extension_value_to_str(value)
+    return rv
+
+
+def _extension_value_to_str(value: ExtensionSingleValue) -> str:
+    match value:
+        case datetime.datetime() | datetime.date():
+            return value.isoformat()
+        case bool():
+            return "true" if value else "false"
+        case str():
+            return value
+        case float() | int():
+            return str(value)
+        case Reference():
+            return value.curie
+        case _:
+            raise TypeError
 
 
 def _clean_row(row: Mapping[str, str | list[str]]) -> Row:

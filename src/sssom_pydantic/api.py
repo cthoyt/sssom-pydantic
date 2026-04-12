@@ -11,7 +11,12 @@ from typing import Annotated, Any, Literal, TypeAlias
 import curies
 from curies import NamableReference, Reference, Triple
 from curies.mixins import SemanticallyStandardizable
-from curies.vocabulary import exact_match, matching_processes, unspecified_matching_process
+from curies.vocabulary import (
+    exact_match,
+    matching_processes,
+    unspecified_matching_process,
+    xsd_string,
+)
 from pydantic import AnyUrl, BaseModel, BeforeValidator, ConfigDict, Field
 from typing_extensions import Self
 
@@ -20,6 +25,8 @@ from .constants import (
     MULTIVALUED,
     PROPAGATABLE,
     EntityTypeLiteral,
+    ExtensionSingleValue,
+    ExtensionValue,
     Row,
 )
 from .models import Cardinality, Record
@@ -601,7 +608,8 @@ def row_to_record(
                 if (stripped_subvalue := subvalue.strip())
             ]
 
-    extensions: dict[str, Any] = {}
+    # Step 3: collate all extension slots together
+    extensions: dict[str, ExtensionValue] = {}
     if extension_definitions:
         for extension in extension_definitions:
             if value := row.get(extension.slot_name):
@@ -669,21 +677,6 @@ class MappingSet(BaseModel):
         return rv
 
 
-ExtensionValue: TypeAlias = (
-    str
-    | int
-    | float
-    | datetime.date
-    | datetime.date
-    | Reference
-    | list[str]
-    | list[int]
-    | list[float]
-    | list[datetime.date]
-    | list[datetime.datetime]
-    | list[Reference]
-)
-
 TypeHint: TypeAlias = Literal[
     "xsd:string",
     "xsd:float",
@@ -716,20 +709,24 @@ class ExtensionDefinitionRecord(BaseModel):
             else None,
         )
 
-    def parse_value(self, value: str) -> ExtensionValue:
+    def parse_value(self, value: str | list[str]) -> ExtensionValue:
         """Parse a value."""
         # see https://mapping-commons.github.io/sssom/spec-model/#defined-extensions
-        if self.multivalued:
-            return [self._help_parse(v_strip) for v in value.split("|") if (v_strip := v.strip())]
-        else:
+        if not self.multivalued:
+            if isinstance(value, list):
+                raise ValueError
             return self._help_parse(value)
+        elif isinstance(value, list):  # FIXME one of these shouldn't be allowed
+            return [self._help_parse(v_strip) for v in value if (v_strip := v.strip())]
+        else:
+            return [self._help_parse(v_strip) for v in value.split("|") if (v_strip := v.strip())]
 
     # TODO make the parser a computed value
-    def _help_parse(self, value: str) -> Any:
+    def _help_parse(self, value: str) -> ExtensionSingleValue:
         return XSD_TYPE_TO_FUNC.get(self.type_hint, str)(value)
 
 
-XSD_TYPE_TO_FUNC: dict[TypeHint, Callable[[str], Any]] = {
+XSD_TYPE_TO_FUNC: dict[TypeHint, Callable[[str], ExtensionSingleValue]] = {
     "xsd:string": str,
     "xsd:float": float,
     "xsd:double": float,
@@ -746,7 +743,7 @@ class ExtensionDefinition(BaseModel):
 
     slot_name: str
     property: Reference | None = None
-    type_hint: Reference | None = None
+    type_hint: Reference = xsd_string
     multivalued: bool = False  # TODO add to SSSOM spec
 
     def get_prefixes(self) -> set[str]:
