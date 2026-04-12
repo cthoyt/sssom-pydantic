@@ -546,7 +546,10 @@ class MappingSetRecord(BaseModel):
             sssom_version=self.sssom_version,
             license=self.license,
             issue_tracker=self.issue_tracker,
-            extension_definitions=list(self.extension_definitions)
+            extension_definitions=[
+                extension_definition.process(converter)
+                for extension_definition in self.extension_definitions
+            ]
             if self.extension_definitions
             else None,
             creators=[converter.parse_curie(c, strict=True) for c in self.creator_id]
