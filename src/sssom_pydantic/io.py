@@ -310,9 +310,8 @@ def write_unprocessed(
 ) -> None:
     """Write unprocessed records."""
     path = Path(path).expanduser().resolve()
-    columns = _get_columns(records)
-
     metadata = _get_metadata(metadata)
+    columns = _get_columns(records, metadata)
 
     condensation = _get_condensation(records)
     for key, value in condensation.items():
@@ -377,22 +376,47 @@ def _get_condensation(records: Iterable[Record]) -> dict[str, CondensationTypes]
     return condensed
 
 
-def _get_columns(records: Iterable[Record]) -> list[str]:
-    columns = set()
+def _get_columns(records: Iterable[Record], metadata: Metadata) -> list[str]:
+    extension_slot_sequence = [
+        extension_definition["slot_name"]
+        for extension_definition in metadata.get("extension_definitions", [])
+    ]
+    extension_slot_set = set(extension_slot_sequence)
+
+    used_extension_slots: set[str] = set()
+    columns: set[str] = set()
     for record in records:
-        for key in record.model_fields_set:
-            if getattr(record, key) is not None:
-                columns.add(key)
+        for key in record.model_fields:
+            if value := getattr(record, key):
+                if key == "extensions":
+                    for subkey in value:
+                        if subkey in extension_slot_set:
+                            used_extension_slots.add(subkey)
+                        else:
+                            raise ValueError(f"undefined extension: {subkey}")
+                else:
+                    columns.add(key)
 
     # get them in the canonical order, based on how they appear in the
     # record, which mirrors https://w3id.org/sssom/Mapping
-    return [column for column in Record.model_fields if column in columns]
+    rv = [column for column in Record.model_fields if column in columns]
+    # add extension slots based on the order they appear in the metadata
+    rv.extend(
+        extension_slot
+        for extension_slot in extension_slot_sequence
+        if extension_slot_sequence in used_extension_slots
+    )
+    return rv
 
 
 def _unprocess_row(record: Record, *, exclude: set[str] | None = None) -> dict[str, Any]:
     rv = record.model_dump(
         exclude_none=True, exclude_unset=True, exclude_defaults=True, exclude=exclude
     )
+
+    # splat out all extensions
+    rv.update(rv.pop("extensions", {}))
+
     for key in MULTIVALUED:
         if (value := rv.get(key)) and isinstance(value, list):
             rv[key] = "|".join(value)
