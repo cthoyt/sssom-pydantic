@@ -70,13 +70,13 @@ def get_nice_cx_builder(
     builder.set_context(_get_prefix_map(mappings, converter=converter))
 
     if metadata is not None:
-        builder.add_network_attribute("reference", metadata.id)
+        builder.add_network_attribute("reference", str(metadata.id))
         if metadata.title:
             builder.set_name(metadata.title)
         if metadata.description:
             builder.add_network_attribute("description", metadata.description)
         if metadata.license:
-            builder.add_network_attribute("rights", metadata.license)
+            builder.add_network_attribute("rights", str(metadata.license))
         if metadata.version:
             builder.add_network_attribute("version", metadata.version)
         if metadata.creators:
