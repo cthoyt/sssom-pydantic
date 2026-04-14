@@ -120,9 +120,11 @@ class Record(BaseModel):
     other: str | None = Field(None)
     comment: str | None = Field(None)
 
-    def expand(self, converter: curies.Converter) -> ExpandedRecord:
+    def expand(
+        self, converter: curies.Converter, exclude: set[str] | None = None
+    ) -> ExpandedRecord:
         """Expand CURIEs to URIs in the record."""
-        data = self.model_dump(exclude_none=True, exclude_unset=True)
+        data = self.model_dump(exclude_none=True, exclude_unset=True, exclude=exclude)
         for key in SINGLE_REFERENCE_FIELDS:
             if curie := data.get(key):
                 data[key] = converter.expand(curie, strict=True)
