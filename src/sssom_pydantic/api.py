@@ -34,6 +34,7 @@ __all__ = [
     "SemanticMapping",
     "SemanticMappingHash",
     "SemanticMappingPredicate",
+    "hash_mapping",
     "hash_mapping_to_reference",
 ]
 
