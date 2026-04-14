@@ -690,14 +690,14 @@ class ExtensionDefinition(BaseModel):
         )
 
 
-MAPPING_HASH_V2_PREFIX = "sssom.record"
-MAPPING_HASH_V2_URI_PREFIX = "https://w3id.org/sssom/record/"
+MAPPING_HASH_CURIE_PREFIX = "sssom.record"
+MAPPING_HASH_URI_PREFIX = "https://w3id.org/sssom/record/"
 
 
 def hash_mapping_to_reference(mapping: SemanticMapping, converter: curies.Converter) -> Reference:
     """Hash a mapping into a reference."""
     identifier = hash_mapping(mapping, converter)
-    return Reference(prefix=MAPPING_HASH_V2_PREFIX, identifier=identifier)
+    return Reference(prefix=MAPPING_HASH_CURIE_PREFIX, identifier=identifier)
 
 
 def hash_mapping(mapping: SemanticMapping, converter: curies.Converter) -> str:

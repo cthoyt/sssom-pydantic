@@ -22,7 +22,7 @@ from pydantic import BaseModel
 
 import sssom_pydantic
 from sssom_pydantic import MappingSetRecord
-from sssom_pydantic.api import MAPPING_HASH_V2_PREFIX, SemanticMapping, mapping_to_sexpr_str
+from sssom_pydantic.api import MAPPING_HASH_CURIE_PREFIX, SemanticMapping, mapping_to_sexpr_str
 from sssom_pydantic.database import (
     NEGATIVE_MAPPING_CLAUSE,
     POSITIVE_MAPPING_CLAUSE,
@@ -614,7 +614,7 @@ class TestRepository(MappingTestCaseMixin):
                     written_path,
                     metadata=TEST_METADATA,
                     exclude_columns=["record_id"],
-                    exclude_prefixes=[MAPPING_HASH_V2_PREFIX],
+                    exclude_prefixes=[MAPPING_HASH_CURIE_PREFIX],
                 )
                 # clean up before actual test
                 db.delete_mapping(example.semantic_mapping)

@@ -14,8 +14,8 @@ from curies.vocabulary import (
 from pydantic import BaseModel
 
 from sssom_pydantic.api import (
-    MAPPING_HASH_V2_PREFIX,
-    MAPPING_HASH_V2_URI_PREFIX,
+    MAPPING_HASH_CURIE_PREFIX,
+    MAPPING_HASH_URI_PREFIX,
     MappingTool,
     SemanticMapping,
     hash_mapping_to_reference,
@@ -50,7 +50,7 @@ TEST_PREFIX_MAP = {
     #
     "spdx": "https://spdx.org/licenses/",
     "w3id": "https://w3id.org/",
-    MAPPING_HASH_V2_PREFIX: MAPPING_HASH_V2_URI_PREFIX,
+    MAPPING_HASH_CURIE_PREFIX: MAPPING_HASH_URI_PREFIX,
     "issue": "https://github.com/cthoyt/sssom-pydantic/issues/",
     "biolink": "https://w3id.org/biolink/vocab/",
     "rule": "https://example.org/disease-rule/",
