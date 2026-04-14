@@ -22,7 +22,7 @@ from sssom_pydantic.api import (
     FORWARDS_MAPS,
     MappingSetRecord,
     SemanticMapping,
-    mapping_hash_v1,
+    hash_mapping_to_reference,
 )
 from sssom_pydantic.constants import (
     MAPPING_SET_SLOTS,
@@ -316,7 +316,7 @@ class TestExampleCompleteness(unittest.TestCase):
         """Test that examples have unique hashes."""
         dd = defaultdict(list)
         for example in EXAMPLES:
-            dd[mapping_hash_v1(example.semantic_mapping, TEST_CONVERTER)].append(example)
+            dd[hash_mapping_to_reference(example.semantic_mapping, TEST_CONVERTER)].append(example)
 
         duplicates = {k: v for k, v in dd.items() if len(v) > 1}
         if duplicates:

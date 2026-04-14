@@ -16,7 +16,7 @@ from ..api import (
     MappingSetRecord,
     SemanticMapping,
     SemanticMappingHash,
-    mapping_hash_v1,
+    hash_mapping_to_reference,
 )
 from ..io import Metadata, read, write
 from ..process import Mark, curate, estimate_confidence, publish, review
@@ -39,7 +39,7 @@ class SemanticMappingRepository(ABC):
         converter: Converter,
     ) -> None:
         """Initialize the repository."""
-        self.semantic_mapping_hash = semantic_mapping_hash or mapping_hash_v1
+        self.semantic_mapping_hash = semantic_mapping_hash or hash_mapping_to_reference
         self.converter = converter
 
     def hash_mapping(self, mapping: SemanticMapping) -> Reference:

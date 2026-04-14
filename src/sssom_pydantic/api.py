@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import datetime
 import functools
-import hashlib
 from collections.abc import Callable
 from typing import Annotated, Any, Literal, TypeAlias
 
@@ -22,7 +21,7 @@ from .constants import (
     EntityTypeLiteral,
     Row,
 )
-from .models import Cardinality, Record
+from .models import Cardinality, Record, expanded_record_to_str
 
 __all__ = [
     "NOT",
@@ -35,7 +34,7 @@ __all__ = [
     "SemanticMapping",
     "SemanticMappingHash",
     "SemanticMappingPredicate",
-    "mapping_hash_v1",
+    "hash_mapping_to_reference",
 ]
 
 PredicateModifier: TypeAlias = Literal["Not"]
@@ -691,21 +690,45 @@ class ExtensionDefinition(BaseModel):
         )
 
 
-MAPPING_HASH_V1_PREFIX = "sssom-pydantic-mapping-hash-v2"
-MAPPING_HASH_V1_EXCLUDE: set[str] = {"record", "cardinality"}
-MAPPING_HASH_V1_URI_PREFIX = f"https://w3id.org/sssom/{MAPPING_HASH_V1_PREFIX}/"
+MAPPING_HASH_CURIE_PREFIX = "sssom.record"
+MAPPING_HASH_URI_PREFIX = "https://w3id.org/sssom/record/"
 
 
-def mapping_hash_v1(m: SemanticMapping, converter: curies.Converter) -> Reference:
+def hash_mapping_to_reference(mapping: SemanticMapping, converter: curies.Converter) -> Reference:
     """Hash a mapping into a reference."""
-    h = hashlib.md5(usedforsecurity=False)
-    h.update(
-        m.model_dump_json(
-            exclude=MAPPING_HASH_V1_EXCLUDE,
-            exclude_none=True,
-            exclude_unset=True,
-            exclude_defaults=True,
-        ).encode("utf8")
-    )
-    identifier = h.hexdigest()
-    return Reference(prefix=MAPPING_HASH_V1_PREFIX, identifier=identifier)
+    identifier = hash_mapping(mapping, converter)
+    return Reference(prefix=MAPPING_HASH_CURIE_PREFIX, identifier=identifier)
+
+
+def hash_mapping(mapping: SemanticMapping, converter: curies.Converter) -> str:
+    """Hash the mapping.
+
+    :param mapping: A semantic mapping
+    :param converter: A converter
+
+    :returns: A hexadecimal representation of the FNV64 hash of the canonical
+        S-expression for the mapping, proposed in
+        https://github.com/mapping-commons/sssom/pull/534.
+    """
+    return _fnv64(mapping_to_sexpr_str(mapping, converter).encode("utf-8")).hex().upper()
+
+
+FNV64_PRIME = 1099511628211
+FNV64_OFFSET = 14695981039346656037
+FNV64_MOD = 2**64
+
+
+def _fnv64(data: bytes) -> bytes:
+    h = FNV64_OFFSET
+    for byte in data:
+        h ^= byte
+        h = (h * FNV64_PRIME) % FNV64_MOD
+    return h.to_bytes(8, "little")
+
+
+def mapping_to_sexpr_str(
+    mapping: SemanticMapping, converter: curies.Converter, *, _debug: bool = False
+) -> str:
+    """Convert a mapping to a S-expression string."""
+    expanded_record = mapping.to_record().expand(converter)
+    return expanded_record_to_str(expanded_record, _debug=_debug)
