@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import datetime
 import functools
-import hashlib
 from collections.abc import Callable
 from typing import Annotated, Any, Literal, TypeAlias
 
@@ -35,8 +34,7 @@ __all__ = [
     "SemanticMapping",
     "SemanticMappingHash",
     "SemanticMappingPredicate",
-    "_hash_mapping_to_reference",
-    "mapping_hash_v1",
+    "hash_mapping_to_reference",
 ]
 
 PredicateModifier: TypeAlias = Literal["Not"]
@@ -692,37 +690,17 @@ class ExtensionDefinition(BaseModel):
         )
 
 
-MAPPING_HASH_V1_PREFIX = "sssom-pydantic-mapping-hash-v2"
-MAPPING_HASH_V1_EXCLUDE: set[str] = {"record", "cardinality"}
-MAPPING_HASH_V1_URI_PREFIX = f"https://w3id.org/sssom/{MAPPING_HASH_V1_PREFIX}/"
-
-
-def mapping_hash_v1(m: SemanticMapping, converter: curies.Converter) -> Reference:
-    """Hash a mapping into a reference."""
-    h = hashlib.md5(usedforsecurity=False)
-    h.update(
-        m.model_dump_json(
-            exclude=MAPPING_HASH_V1_EXCLUDE,
-            exclude_none=True,
-            exclude_unset=True,
-            exclude_defaults=True,
-        ).encode("utf8")
-    )
-    identifier = h.hexdigest()
-    return Reference(prefix=MAPPING_HASH_V1_PREFIX, identifier=identifier)
-
-
 MAPPING_HASH_V2_PREFIX = "sssom.record"
 MAPPING_HASH_V2_URI_PREFIX = "https://w3id.org/sssom/record/"
 
 
-def _hash_mapping_to_reference(mapping: SemanticMapping, converter: curies.Converter) -> Reference:
+def hash_mapping_to_reference(mapping: SemanticMapping, converter: curies.Converter) -> Reference:
     """Hash a mapping into a reference."""
-    identifier = _hash_mapping_to_str(mapping, converter)
+    identifier = hash_mapping(mapping, converter)
     return Reference(prefix=MAPPING_HASH_V2_PREFIX, identifier=identifier)
 
 
-def _hash_mapping_to_str(mapping: SemanticMapping, converter: curies.Converter) -> str:
+def hash_mapping(mapping: SemanticMapping, converter: curies.Converter) -> str:
     """Hash the mapping.
 
     :param mapping: A semantic mapping

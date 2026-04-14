@@ -18,7 +18,7 @@ from sssom_pydantic.api import (
     MAPPING_HASH_V2_URI_PREFIX,
     MappingTool,
     SemanticMapping,
-    _hash_mapping_to_reference,
+    hash_mapping_to_reference,
 )
 
 __all__ = [
@@ -91,7 +91,7 @@ simple = SemanticMapping(
 e1_with_hash = ExampleMapping(
     description="reference for the mapping itself in the `record` field",
     semantic_mapping=simple.model_copy(
-        update={"record": _hash_mapping_to_reference(simple, TEST_CONVERTER)}
+        update={"record": hash_mapping_to_reference(simple, TEST_CONVERTER)}
     ),
 )
 

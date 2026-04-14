@@ -6,7 +6,7 @@ import unittest
 from curies import Converter, Reference
 
 from sssom_pydantic import SemanticMapping
-from sssom_pydantic.api import _hash_mapping_to_str, mapping_to_sexpr_str
+from sssom_pydantic.api import hash_mapping, mapping_to_sexpr_str
 from sssom_pydantic.examples import EXAMPLES
 from sssom_pydantic.models import Box, box_to_str
 from tests.cases import TEST_CONVERTER
@@ -100,11 +100,11 @@ class TestSexpr(unittest.TestCase):
         """Test hashing works on all example mappings."""
         for example in EXAMPLES:
             with self.subTest(example=example.description):
-                s = _hash_mapping_to_str(example.semantic_mapping, TEST_CONVERTER)
+                s = hash_mapping(example.semantic_mapping, TEST_CONVERTER)
                 self.assertIsInstance(s, str)
 
     def test_explicit(self) -> None:
         """Test hashing works on explicit examples."""
         for mapping, sexpr, digest in CASES:
             self.assertEqual(sexpr, mapping_to_sexpr_str(mapping, converter=CONVERTER))
-            self.assertEqual(digest, _hash_mapping_to_str(mapping, converter=CONVERTER))
+            self.assertEqual(digest, hash_mapping(mapping, converter=CONVERTER))
