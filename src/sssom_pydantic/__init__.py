@@ -8,6 +8,8 @@ from .api import (
     MappingTool,
     SemanticMapping,
     SemanticMappingPredicate,
+    hash_mapping,
+    hash_mapping_to_reference,
 )
 from .io import (
     Metadata,
@@ -34,6 +36,8 @@ __all__ = [
     "SemanticMappingPredicate",
     "append",
     "append_unprocessed",
+    "hash_mapping",
+    "hash_mapping_to_reference",
     "lint",
     "read",
     "read_iterable",

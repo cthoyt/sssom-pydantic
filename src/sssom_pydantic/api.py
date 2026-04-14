@@ -34,6 +34,7 @@ __all__ = [
     "SemanticMapping",
     "SemanticMappingHash",
     "SemanticMappingPredicate",
+    "hash_mapping",
     "hash_mapping_to_reference",
 ]
 
@@ -730,5 +731,5 @@ def mapping_to_sexpr_str(
     mapping: SemanticMapping, converter: curies.Converter, *, _debug: bool = False
 ) -> str:
     """Convert a mapping to a S-expression string."""
-    expanded_record = mapping.to_record().expand(converter)
+    expanded_record = mapping.to_record().expand(converter, exclude={"record_id"})
     return expanded_record_to_str(expanded_record, _debug=_debug)
