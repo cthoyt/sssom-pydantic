@@ -38,8 +38,8 @@ __all__ = [
     "SemanticMapping",
     "SemanticMappingHash",
     "SemanticMappingPredicate",
+    "_hash_mapping_to_reference",
     "mapping_hash_v1",
-    "mapping_hash_v2",
 ]
 
 PredicateModifier: TypeAlias = Literal["Not"]
@@ -718,14 +718,22 @@ MAPPING_HASH_V2_PREFIX = "sssom.record"
 MAPPING_HASH_V2_URI_PREFIX = "https://w3id.org/sssom/record/"
 
 
-def mapping_hash_v2(m: SemanticMapping, converter: curies.Converter) -> Reference:
+def _hash_mapping_to_reference(mapping: SemanticMapping, converter: curies.Converter) -> Reference:
     """Hash a mapping into a reference."""
-    identifier = get_mapping_hash(m, converter)
+    identifier = _hash_mapping_to_str(mapping, converter)
     return Reference(prefix=MAPPING_HASH_V2_PREFIX, identifier=identifier)
 
 
-def get_mapping_hash(mapping: SemanticMapping, converter: curies.Converter) -> str:
-    """Hash the mapping."""
+def _hash_mapping_to_str(mapping: SemanticMapping, converter: curies.Converter) -> str:
+    """Hash the mapping.
+
+    :param mapping: A semantic mapping
+    :param converter: A converter
+
+    :returns: A hexadecimal representation of the FNV64 hash of the canonical
+        S-expression for the mapping, proposed in
+        https://github.com/mapping-commons/sssom/pull/534.
+    """
     return _fnv64(mapping_to_sexpr_str(mapping, converter).encode("utf-8")).hex().upper()
 
 
