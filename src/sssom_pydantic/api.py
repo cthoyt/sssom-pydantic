@@ -731,13 +731,14 @@ def get_mapping_hash(mapping: SemanticMapping, converter: curies.Converter) -> s
 
 FNV64_PRIME = 1099511628211
 FNV64_OFFSET = 14695981039346656037
+FNV64_MOD = 2**64
 
 
 def _fnv64(data: bytes) -> bytes:
     h = FNV64_OFFSET
     for byte in data:
-        h = h ^ byte
-        h = (h * FNV64_PRIME) % 2**64
+        h ^= byte
+        h = (h * FNV64_PRIME) % FNV64_MOD
     return h.to_bytes(8, "little")
 
 
