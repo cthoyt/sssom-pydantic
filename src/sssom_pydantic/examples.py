@@ -25,8 +25,14 @@ __all__ = [
     "EXAMPLES",
     "EXAMPLE_MAPPINGS",
     "P1",
+    "P2",
+    "P3",
     "R1",
     "R2",
+    "R3",
+    "R4",
+    "R5",
+    "R6",
     "TEST_CONVERTER",
     "TEST_PREFIX_MAP",
 ]
@@ -52,11 +58,19 @@ TEST_PREFIX_MAP = {
     "orcid": "https://orcid.org/",
 }
 TEST_CONVERTER = Converter.from_prefix_map(TEST_PREFIX_MAP)
-R1 = NamedReference(prefix="mesh", identifier="C000089", name="ammeline")
-R2 = NamedReference(prefix="chebi", identifier="28646", name="ammeline")
+
 P1 = NamableReference(prefix="skos", identifier="exactMatch")
 P2 = NamableReference(prefix="skos", identifier="broadMatch")
 P3 = NamableReference(prefix="skos", identifier="narrowMatch")
+
+R1 = NamedReference(prefix="mesh", identifier="C000089", name="ammeline")
+R2 = NamedReference(prefix="chebi", identifier="28646", name="ammeline")
+
+R3 = NamedReference.from_curie("mesh:C018305", name="glyoxal dioxime")
+R4 = NamedReference.from_curie("chebi:131408", name="glyoxime")
+
+R5 = NamedReference.from_curie("mesh:C027957", name="tyramine O-sulfate")
+R6 = NamedReference.from_curie("chebi:133530", name="tyramine sulfate")
 
 
 class ExampleMapping(BaseModel):
@@ -216,7 +230,6 @@ simple_with_curation_rule_text = ExampleMapping(
     ),
 )
 
-
 simple_with_similarity = ExampleMapping(
     description="similarity measure and score",
     semantic_mapping=SemanticMapping(
@@ -365,6 +378,16 @@ e8 = ExampleMapping(
         justification=manual_mapping_curation.curie,
         mapping_date=datetime.date(2025, 11, 29),
         publication_date=datetime.date(2025, 11, 30),
+    ),
+)
+
+e9 = ExampleMapping(
+    description="This example is about when the mapping has an explicit predicate label",
+    semantic_mapping=SemanticMapping(
+        subject=R1,
+        predicate=NamedReference(prefix="skos", identifier="exactMatch", name="exact match"),
+        object=R2,
+        justification=manual_mapping_curation.curie,
     ),
 )
 

@@ -26,7 +26,7 @@ from curies.vocabulary import (
     semantic_mapping_scopes,
 )
 
-from . import RequiredSemanticMapping, SemanticMapping
+from . import SemanticMapping
 
 if TYPE_CHECKING:
     from _typeshed import SupportsRichComparison
@@ -56,7 +56,7 @@ CanonicalMappingTuple: TypeAlias = tuple[str, str, str, str]
 #: A type variable bound to a semantic mapping type, to
 #: make it possible to annotate functions that spit out the
 #: same type that goes in
-MappingTypeVar = TypeVar("MappingTypeVar", bound=RequiredSemanticMapping)
+MappingTypeVar = TypeVar("MappingTypeVar", bound=SemanticMapping)
 
 #: The type used in hashing functions.
 HashTarget = TypeVar("HashTarget")
@@ -119,7 +119,7 @@ def remove_redundant_internal(
     return [max(mappings, key=scorer) for mappings in key_to_mappings.values()]
 
 
-def _score_mapping(mapping: RequiredSemanticMapping) -> int:
+def _score_mapping(mapping: SemanticMapping) -> int:
     """Assign a value for this mapping, where higher is better.
 
     :param mapping: A mapping dictionary
@@ -139,7 +139,7 @@ def _score_mapping(mapping: RequiredSemanticMapping) -> int:
     return 0
 
 
-def get_canonical_tuple(mapping: RequiredSemanticMapping) -> CanonicalMappingTuple:
+def get_canonical_tuple(mapping: SemanticMapping) -> CanonicalMappingTuple:
     """Get the canonical tuple from a mapping entry."""
     source, target = sorted([mapping.subject, mapping.object])
     return source.prefix, source.identifier, target.prefix, target.identifier
@@ -241,7 +241,7 @@ def curate(
         update["mapping_date"] = date
 
     if mark in semantic_mapping_scopes:
-        update["predicate"] = semantic_mapping_scopes[mark].pair.to_pydantic()
+        update["predicate"] = semantic_mapping_scopes[mark].without_name()
     elif mark == "incorrect":
         update["predicate_modifier"] = "Not"
     elif mark == "correct":

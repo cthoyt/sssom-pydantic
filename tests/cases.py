@@ -5,7 +5,9 @@ from __future__ import annotations
 import datetime
 import importlib.util
 import tempfile
+import typing
 import unittest
+from collections.abc import Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -42,12 +44,11 @@ from sssom_pydantic.examples import (
     TEST_PREFIX_MAP,
 )
 from sssom_pydantic.models import Record
-from sssom_pydantic.query import Query
+from sssom_pydantic.query import Query, Sort
 from sssom_pydantic.web.router import ReviewPayload
 
 if TYPE_CHECKING:
     from starlette.testclient import TestClient
-
 
 __all__ = [
     "P1",
@@ -64,8 +65,7 @@ __all__ = [
     "_r",
 ]
 
-
-AUTHOR = charlie.pair.to_pydantic()
+AUTHOR = charlie.without_name()
 
 
 def _m(
@@ -146,6 +146,31 @@ class MappingTestCaseMixin(unittest.TestCase):
             expected.model_dump(exclude_none=True), actual.model_dump(exclude_none=True)
         )
 
+    def assert_model_sequence_equal(
+        self, expected: Iterable[SemanticMapping], actual: Iterable[SemanticMapping] | None
+    ) -> None:
+        """Assert two model sequences are equal."""
+        if actual is None:
+            raise self.fail()
+        return self.assertEqual(
+            [
+                expected_mapping.model_dump(
+                    exclude_none=True,
+                    exclude_unset=True,
+                    exclude_defaults=True,
+                )
+                for expected_mapping in expected
+            ],
+            [
+                actual_mapping.model_dump(
+                    exclude_none=True,
+                    exclude_unset=True,
+                    exclude_defaults=True,
+                )
+                for actual_mapping in actual
+            ],
+        )
+
 
 class TestRepository(MappingTestCaseMixin):
     """Test the database."""
@@ -153,9 +178,11 @@ class TestRepository(MappingTestCaseMixin):
     repository: SemanticMappingRepository
 
     def assert_models_equal(
-        self, expected: list[SemanticMapping], actual: list[SemanticMapping]
+        self, expected: Iterable[SemanticMapping], actual: Iterable[SemanticMapping] | None
     ) -> None:
         """Assert two models are equal."""
+        if actual is None:
+            raise self.fail()
         return self.assertEqual(
             [
                 e.model_dump(
@@ -192,7 +219,7 @@ class TestRepository(MappingTestCaseMixin):
         if isinstance(db, SemanticMappingDatabase):
             # this test isn't relevant for all databases
             mappings = db.get_mappings(
-                where_clauses=[SemanticMappingModel.justification == lexical_matching_process]
+                query=[SemanticMappingModel.justification == lexical_matching_process]
             )
             self.assertEqual(2, len(mappings))
             self.assertEqual(lexical_matching_process, mappings[0].justification)
@@ -203,14 +230,14 @@ class TestRepository(MappingTestCaseMixin):
         self.assertEqual(4, len(db.get_mappings(limit=1000)))
 
         if isinstance(db, SemanticMappingDatabase):
-            mappings = db.get_mappings(where_clauses=[POSITIVE_MAPPING_CLAUSE])
+            mappings = db.get_mappings(query=[POSITIVE_MAPPING_CLAUSE])
             self.assertEqual(1, len(mappings))
             self.assertEqual(manual_mapping_curation, mappings[0].justification)
             self.assertIsNone(mappings[0].predicate_modifier)
             self.assertIsNone(mappings[0].comment)
 
         if isinstance(db, SemanticMappingDatabase):
-            mappings = db.get_mappings(where_clauses=[NEGATIVE_MAPPING_CLAUSE])
+            mappings = db.get_mappings(query=[NEGATIVE_MAPPING_CLAUSE])
             self.assertEqual(1, len(mappings))
             self.assertEqual(manual_mapping_curation, mappings[0].justification)
             self.assertIsNotNone(mappings[0].predicate_modifier)
@@ -222,38 +249,38 @@ class TestRepository(MappingTestCaseMixin):
             4,
             len(
                 db.get_mappings(
-                    where_clauses=Query(triple_id=db.converter.hash_triple(mapping_1)),
+                    query=Query(triple_id=db.converter.hash_triple(mapping_1)),
                 )
             ),
         )
         self.assertEqual(
             0,
-            len(db.get_mappings(where_clauses=Query(triple_id="xxxx"))),
+            len(db.get_mappings(query=Query(triple_id="xxxx"))),
         )
 
         # test no-op query
         query = Query()
-        mappings = db.get_mappings(where_clauses=query)
+        mappings = db.get_mappings(query=query)
         self.assertEqual(4, len(mappings))
 
         query = Query(subject_prefix="mesh")
-        mappings = db.get_mappings(where_clauses=query)
+        mappings = db.get_mappings(query=query)
         self.assertEqual(4, len(mappings))
 
         query = Query(object_prefix="chebi")
-        mappings = db.get_mappings(where_clauses=query)
+        mappings = db.get_mappings(query=query)
         self.assertEqual(4, len(mappings))
 
         query = Query(subject_prefix="chebi")
-        mappings = db.get_mappings(where_clauses=query)
+        mappings = db.get_mappings(query=query)
         self.assertEqual(0, len(mappings))
 
         query = Query(object_prefix="mesh")
-        mappings = db.get_mappings(where_clauses=query)
+        mappings = db.get_mappings(query=query)
         self.assertEqual(0, len(mappings))
 
         query = Query(query="mesh")
-        mappings = db.get_mappings(where_clauses=query)
+        mappings = db.get_mappings(query=query)
         self.assertEqual(4, len(mappings))
 
         db.delete_mapping(mapping_1)
@@ -515,30 +542,21 @@ class TestRepository(MappingTestCaseMixin):
 
         if isinstance(db, SemanticMappingDatabase):
             uncurated_mappings = db.get_mappings([UNCURATED_NOT_UNSURE_CLAUSE])
-            self.assert_models_equal(
-                [m1],
-                list(uncurated_mappings),
-            )
+            self.assert_models_equal([m1], uncurated_mappings)
 
             unsure_mappings = db.get_mappings([UNCURATED_UNSURE_CLAUSE])
-            self.assert_models_equal(
-                [m2_curated],
-                list(unsure_mappings),
-            )
+            self.assert_models_equal([m2_curated], unsure_mappings)
 
     def test_order_by(self) -> None:
         """Test order by."""
-        for order_by in [
-            "confidence",
-            "date",
-            "date-published",
-            "date-reviewed",
-            "subject",
-            "object",
-        ]:
+        for order_by in typing.get_args(Sort):
             with self.subTest(order_by=order_by):
                 self.repository.get_mappings(order_by=order_by)
-                # TODO add explicit values
+
+    def test_order_by_invalid(self) -> None:
+        """Test order by."""
+        with self.assertRaises(ValueError):
+            self.repository.get_mappings(order_by="nope")  # type:ignore
 
     def test_query_same_text(self) -> None:
         """Test querying for same text."""
@@ -571,8 +589,8 @@ class TestRepository(MappingTestCaseMixin):
         self.assertIsNotNone(db.get_mapping(db.hash_mapping(m2), strict=True).subject_name)
         self.assertIsNone(db.get_mapping(db.hash_mapping(m3), strict=True).subject_name)
 
-        self.assert_models_equal([m1, m2], list(db.get_mappings(Query(same_text=True))))
-        self.assert_models_equal([m3], list(db.get_mappings(Query(same_text=False))))
+        self.assert_models_equal([m1, m2], db.get_mappings(Query(same_text=True)))
+        self.assert_models_equal([m3], db.get_mappings(Query(same_text=False)))
 
     def test_read(self) -> None:
         """Test reading mappings from a file."""

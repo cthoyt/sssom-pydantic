@@ -33,7 +33,7 @@ class TestBioportal(cases.MappingTestCaseMixin):
         self.assertIsNotNone(mapping)
         expected = SemanticMapping(
             subject=Reference(prefix="OMRE", identifier="0000023"),
-            predicate=exact_match.pair.to_pydantic(),
+            predicate=exact_match.without_name(),
             object=Reference(prefix="SNOMEDCT", identifier="3415004"),
             justification=lexical_matching_process,
             mapping_tool=MappingTool(name="LOOM"),
@@ -53,7 +53,7 @@ class TestBioportal(cases.MappingTestCaseMixin):
         self.assertIsNotNone(mapping)
         expected = SemanticMapping(
             object=Reference(prefix="ATC", identifier="N05AX15"),
-            predicate=exact_match.pair.to_pydantic(),
+            predicate=exact_match.without_name(),
             subject=Reference(prefix="SNOMEDCT", identifier="715295006"),
             justification=mapping_chaining,
             mapping_tool=None,

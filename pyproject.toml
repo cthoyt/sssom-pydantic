@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "sssom_pydantic"
-version = "0.3.1-dev"
+version = "0.4.3-dev"
 description = "Pydantic models for SSSOM"
 readme = "README.md"
 authors = [
@@ -43,12 +43,13 @@ keywords = [
 
 # License Information.
 # See PEP-639 at https://peps.python.org/pep-0639/#add-license-files-key
-license = { file = "LICENSE" }
+license = "MIT"
+license-files = ["LICENSE"]
 
 requires-python = ">=3.10"
 dependencies = [
     "pydantic",
-    "curies>=0.13.1",
+    "curies>=0.13.3",
     "pyyaml",
     "pystow>=0.8.2",
     "tqdm",
@@ -272,7 +273,7 @@ known-first-party = [
 docstring-code-format = true
 
 [tool.bumpversion]
-current_version = "0.3.1-dev"
+current_version = "0.4.3-dev"
 parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)(?:-(?P<release>[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?(?:\\+(?P<build>[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?"
 serialize = [
     "{major}.{minor}.{patch}-{release}+{build}",
