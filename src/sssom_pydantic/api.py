@@ -7,10 +7,9 @@ import functools
 import hashlib
 import warnings
 from collections.abc import Callable
-from typing import Annotated, Any, Literal, TypeAlias, cast
+from typing import Annotated, Any, Literal, TypeAlias
 
 import curies
-import zbase32
 from curies import NamableReference, Reference, Triple
 from curies.mixins import SemanticallyStandardizable
 from curies.vocabulary import matching_processes
@@ -727,10 +726,19 @@ def mapping_hash_v2(m: SemanticMapping, converter: curies.Converter) -> Referenc
 
 def get_mapping_hash(mapping: SemanticMapping, converter: curies.Converter) -> str:
     """Hash the mapping."""
-    s = hashlib.sha256()
-    s.update(mapping_to_sexpr_str(mapping, converter).encode("utf-8"))
-    digest = s.digest()
-    return cast(str, zbase32.encode(digest))
+    return _fnv64(mapping_to_sexpr_str(mapping, converter).encode("utf-8")).hex().upper()
+
+
+FNV64_PRIME = 1099511628211
+FNV64_OFFSET = 14695981039346656037
+
+
+def _fnv64(data: bytes) -> bytes:
+    h = FNV64_OFFSET
+    for byte in data:
+        h = h ^ byte
+        h = (h * FNV64_PRIME) % 2**64
+    return h.to_bytes(8, "little")
 
 
 def mapping_to_sexpr_str(

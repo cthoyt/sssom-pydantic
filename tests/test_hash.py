@@ -39,7 +39,7 @@ CASES = [
             object_source_version="http://purl.obolibrary.org/obo/foodon/releases/2022-02-01/foodon.owl",
         ),
         "(7:mapping((10:subject_id34:https://kewl-foodie.ince/food/F001)(12:predicate_id46:http://www.w3.org/2004/02/skos/core#exactMatch)(9:object_id46:http://purl.obolibrary.org/obo/FOODON_00002473)(21:mapping_justification51:https://w3id.org/semapv/vocab/ManualMappingCuration)(14:subject_source32:https://kewl-foodie.ince/food/DB)(13:object_source39:https://www.wikidata.org/wiki/Q55118395)(21:object_source_version68:http://purl.obolibrary.org/obo/foodon/releases/2022-02-01/foodon.owl)(12:mapping_date10:2022-05-02)(10:confidence4:0.95)))",
-        "cdxs1je5rcwpiqnarmojsqmxmpfe9tj43sbahp8u6txk5rssoduo",
+        "97170EB542E9AE8F",
     ),
     (
         SemanticMapping(
@@ -50,7 +50,7 @@ CASES = [
             justification="semapv:LexicalMatching",
         ),
         "(7:mapping((10:subject_id43:http://purl.obolibrary.org/obo/FBbt_0009124)(12:predicate_id46:http://www.w3.org/2004/02/skos/core#exactMatch)(9:object_id45:http://purl.obolibrary.org/obo/UBERON_0000003)(21:mapping_justification45:https://w3id.org/semapv/vocab/LexicalMatching)))",
-        "qn1bra45hjtazt664husfgah5ewzo3oamh4swj5gomuka88rrqgo",
+        "18F3436E89AA1AA2",
     ),
     (
         SemanticMapping(
@@ -62,8 +62,9 @@ CASES = [
             provider="https://w3id.org/sssom/core_team",
         ),
         "(7:mapping((10:subject_id41:http://purl.obolibrary.org/obo/HP_0009124)(12:predicate_id46:http://www.w3.org/2004/02/skos/core#exactMatch)(9:object_id41:http://purl.obolibrary.org/obo/MP_0000003)(21:mapping_justification64:https://w3id.org/semapv/vocab/LexicalSimilarityThresholdMatching)(16:mapping_provider32:https://w3id.org/sssom/core_team)(16:similarity_score3:0.8)))",
-        "bsat1g1mxe564n5rtoy5usdifybheqxgpes53rtbrue5uu3ac19o",
+        "0D45A2E8C64EBD65",
     ),
+    # TODO add extension slot
 ]
 
 
