@@ -10,6 +10,7 @@ from .api import (
     SemanticMappingPredicate,
     hash_mapping,
     hash_mapping_to_reference,
+    hash_triple,
 )
 from .io import (
     Metadata,
@@ -38,6 +39,7 @@ __all__ = [
     "append_unprocessed",
     "hash_mapping",
     "hash_mapping_to_reference",
+    "hash_triple",
     "lint",
     "read",
     "read_iterable",
