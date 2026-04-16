@@ -36,6 +36,7 @@ __all__ = [
     "SemanticMappingPredicate",
     "hash_mapping",
     "hash_mapping_to_reference",
+    "hash_triple",
 ]
 
 PredicateModifier: TypeAlias = Literal["Not"]
@@ -455,6 +456,13 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
                 update[name] = [converter.standardize_reference(r, strict=True) for r in value]
         return self.model_copy(update=update)
 
+    def negate(self) -> Self:
+        """Return the negated version of this mapping."""
+        if self.negated:
+            return self.model_copy(update={"predicate_modifier": None})
+        else:
+            return self.model_copy(update={"predicate_modifier": NOT})
+
 
 OTHER_PRIMARY_SEP = "|"
 OTHER_SECONDARY_SEP = "="
@@ -702,7 +710,7 @@ def hash_mapping_to_reference(mapping: SemanticMapping, converter: curies.Conver
 
 
 def hash_mapping(mapping: SemanticMapping, converter: curies.Converter) -> str:
-    """Hash the mapping.
+    """Hash the entire SSSOM semantic mapping record.
 
     :param mapping: A semantic mapping
     :param converter: A converter
@@ -710,6 +718,29 @@ def hash_mapping(mapping: SemanticMapping, converter: curies.Converter) -> str:
     :returns: A hexadecimal representation of the FNV64 hash of the canonical
         S-expression for the mapping, proposed in
         https://github.com/mapping-commons/sssom/pull/534.
+
+    >>> from curies import NamedReference, Converter
+    >>> from sssom_pydantic import SemanticMapping, hash_mapping
+    >>> converter = Converter.from_prefix_map(
+    ...     {
+    ...         "CHEBI": "http://purl.obolibrary.org/obo/CHEBI_",
+    ...         "mesh": "http://id.nlm.nih.gov/mesh/",
+    ...         "skos": "http://www.w3.org/2004/02/skos/core#",
+    ...         "semapv": "https://w3id.org/semapv/vocab/",
+    ...     }
+    ... )
+    >>> mapping = SemanticMapping.exact(
+    ...     subject=NamedReference(prefix="mesh", identifier="C000089", name="ammeline"),
+    ...     object=NamedReference(prefix="CHEBI", identifier="28646", name="ammeline"),
+    ... )
+    >>> hash_mapping(mapping, converter)
+    '9D59EF306286DC1A'
+
+    .. note::
+
+        This creates a hash over the entire SSSOM semantic mapping record. If you just
+        want to hash the core triple (i.e., subject, predicate, predicate modifier, and
+        object), then use :func:`hash_triple`
     """
     return _fnv64(mapping_to_sexpr_str(mapping, converter).encode("utf-8")).hex().upper()
 
@@ -733,3 +764,35 @@ def mapping_to_sexpr_str(
     """Convert a mapping to a S-expression string."""
     expanded_record = mapping.to_record().expand(converter, exclude={"record_id"})
     return expanded_record_to_str(expanded_record, _debug=_debug)
+
+
+def hash_triple(mapping: SemanticMapping, converter: curies.Converter) -> str:
+    """Return a triples sameness identifier.
+
+    :param mapping: A semantic mapping
+    :param converter: A converter
+
+    :returns: A mapping sameness identifier, which incorporates the subject, predicate,
+        object, and predicate modifier based on
+        https://ts4nfdi.github.io/mapping-sameness-identifier/
+
+    >>> from sssom_pydantic import SemanticMapping, hash_triple
+    >>> from curies import Converter
+    >>> converter = Converter.from_prefix_map(
+    ...     {
+    ...         "CHEBI": "http://purl.obolibrary.org/obo/CHEBI_",
+    ...         "mesh": "http://id.nlm.nih.gov/mesh/",
+    ...         "skos": "http://www.w3.org/2004/02/skos/core#",
+    ...         "semapv": "https://w3id.org/semapv/vocab/",
+    ...     }
+    ... )
+    >>> mapping = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
+    >>> hash_triple(mapping, converter)
+    '36a1f9244ea7641a90987c82f33c25c0c13712ee8f48207b2a0825f8a4e4e26a'
+    >>> hash_triple(mapping.negate(), converter)
+    '36a1f9244ea7641a90987c82f33c25c0c13712ee8f48207b2a0825f8a4e4e26a~'
+    """
+    rv = converter.hash_triple(mapping)
+    if mapping.negated:
+        rv += "~"
+    return rv

@@ -2,14 +2,12 @@
  Usage
 #######
 
-.. automodule:: sssom_pydantic.api
-    :members:
+.. automodapi:: sssom_pydantic.api
 
-.. automodule:: sssom_pydantic.io
-    :members:
+.. automodapi:: sssom_pydantic.io
 
-.. automodule:: sssom_pydantic.models
-    :members:
+.. automodapi:: sssom_pydantic.models
 
-.. automodule:: sssom_pydantic.process
-    :members:
+.. automodapi:: sssom_pydantic.process
+
+.. automodapi:: sssom_pydantic.query

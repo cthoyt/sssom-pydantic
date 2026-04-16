@@ -243,6 +243,7 @@ texinfo_documents = [
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "pandas": ("https://pandas.pydata.org/docs", None),
+    "curies": ("https://curies.readthedocs.io/en/latest/", None),
 }
 
 autoclass_content = "both"
