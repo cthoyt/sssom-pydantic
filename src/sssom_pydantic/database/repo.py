@@ -56,6 +56,10 @@ class SemanticMappingRepository(ABC):
         """Count the mappings in the database."""
 
     @abstractmethod
+    def count_predictions(self, query: Query | None = None) -> int:
+        """Count the predictions in the database."""
+
+    @abstractmethod
     def count_entities(self, query: Query | None = None) -> int:
         """Count the number of entities appearing as subjects/objects in the database."""
 

@@ -61,6 +61,9 @@ class FileSystemSemanticMappingRepository(SemanticMappingRepository):
         """Count the number of mappings."""
         return sum(1 for _ in filter_mappings(self.mappings, query, converter=self.converter))
 
+    def count_predictions(self, query: Query | None = None) -> int:
+        raise NotImplementedError
+
     def count_entities(self, query: Query | None = None) -> int:
         """Count the number of unique entities appearing in the subjects and objects of mappings."""
         return count_unique_entities(

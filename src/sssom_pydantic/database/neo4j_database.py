@@ -142,6 +142,9 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         with closing(self.driver.session()) as session:
             return cast(int, session.execute_read(_count_nodes, **params))
 
+    def count_predictions(self, query: Query | None = None) -> int:
+        raise NotImplementedError
+
     def count_entities(self, query: Query | None = None) -> int:
         """Count the entities in the database."""
         if query is not None:

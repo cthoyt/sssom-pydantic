@@ -289,6 +289,10 @@ class SemanticMappingDatabase(SemanticMappingRepository):
             statement = _apply_where_clauses(statement, query)
             return session.exec(statement).one()
 
+    def count_predictions(self, query: Query | list[ColumnExpressionArgument[bool]] | None) -> int:
+        """Count predicted mappings (i.e., anything that's not manually curated/reviewed)."""
+        return self.count_mappings(query=[UNCURATED_NOT_UNSURE_CLAUSE, *clauses_from_query(query)])
+
     def count_entities(
         self, query: Query | list[ColumnExpressionArgument[bool]] | None = None
     ) -> int:
@@ -428,6 +432,7 @@ UNCURATED_UNSURE_CLAUSE = and_(
 )
 UNCURATED_NOT_UNSURE_CLAUSE = and_(
     SemanticMappingModel.justification != manual_mapping_curation,
+    # FIXME is this right?
     col(SemanticMappingModel.reviewer_agreement).is_(None),
 )
 
