@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import datetime
 import functools
+import logging
 from collections.abc import Callable
-from typing import Annotated, Any, Literal, TypeAlias
+from typing import Annotated, Any, Literal, TypeAlias, TypeVar
 
 import curies
 from curies import NamableReference, Reference, Triple
@@ -38,6 +39,9 @@ __all__ = [
     "hash_mapping_to_reference",
     "hash_triple",
 ]
+
+
+logger = logging.getLogger(__name__)
 
 PredicateModifier: TypeAlias = Literal["Not"]
 NOT: PredicateModifier = "Not"
@@ -488,12 +492,25 @@ SemanticMappingPredicate: TypeAlias = Callable[[SemanticMapping], bool]
 SemanticMappingHash: TypeAlias = Callable[[SemanticMapping, curies.Converter], Reference]
 
 
-def _upgrade_str(x: str | list[str] | None) -> list[str] | None:
+X = TypeVar("X")
+
+
+def _upgrade_list(x: X | list[X] | None) -> list[X] | None:
     if x is None:
         return None
-    elif isinstance(x, str):
-        return [x]
-    return x
+    elif isinstance(x, list):
+        return x
+    return [x]
+
+
+def _fix_relative_url(s: str | AnyUrl) -> AnyUrl:
+    if isinstance(s, AnyUrl):
+        return s
+    if s.startswith("http://") or s.startswith("https://"):
+        return AnyUrl(s)
+    url = f"https://w3id.org/sssom/mapping-set/{s}"
+    logger.warning("mapping set has non-relative URL: %s. Formatted into %s", s, url)
+    return AnyUrl(url)
 
 
 class MappingSetRecord(BaseModel):
@@ -503,15 +520,15 @@ class MappingSetRecord(BaseModel):
 
     curie_map: dict[str, str] | None = None
 
-    mapping_set_id: AnyUrl = Field(...)
+    mapping_set_id: Annotated[AnyUrl, BeforeValidator(_fix_relative_url)] = Field(...)
     mapping_set_confidence: float | None = Field(None, ge=0.0, le=1.0)
     mapping_set_description: str | None = Field(None)
-    mapping_set_source: list[AnyUrl] | None = Field(None)
+    mapping_set_source: Annotated[list[AnyUrl] | None, BeforeValidator(_upgrade_list)] = Field(None)
     mapping_set_title: str | None = Field(None)
     mapping_set_version: str | None = Field(None)
 
     publication_date: datetime.date | None = Field(None)
-    see_also: list[AnyUrl] | None = Field(None)
+    see_also: Annotated[list[AnyUrl] | None, BeforeValidator(_upgrade_list)] = Field(None)
     other: str | None = Field(None)
     comment: str | None = Field(None)
     sssom_version: str | None = Field(None)
@@ -520,7 +537,7 @@ class MappingSetRecord(BaseModel):
     license: AnyUrl | None = Field(None)
     issue_tracker: AnyUrl | None = Field(None)
     extension_definitions: list[ExtensionDefinitionRecord] | None = Field(None)
-    creator_id: Annotated[list[str] | None, BeforeValidator(_upgrade_str)] = None
+    creator_id: Annotated[list[str] | None, BeforeValidator(_upgrade_list)] = None
     creator_label: list[str] | None = None
 
     # propagatable slots
@@ -619,12 +636,12 @@ class MappingSet(BaseModel):
     version: str | None = Field(None)
 
     publication_date: datetime.date | None = Field(None)
-    see_also: list[str] | None = Field(None)
+    see_also: list[AnyUrl] | None = Field(None)
     other: str | None = Field(None)
     comment: str | None = Field(None)
     sssom_version: str | None = Field(None)
     license: AnyUrl | None = Field(None)
-    issue_tracker: str | None = Field(None)
+    issue_tracker: AnyUrl | None = Field(None)
     extension_definitions: list[ExtensionDefinition] | None = Field(None)
     creators: list[Reference] | None = None
     creator_label: list[str] | None = None

@@ -67,6 +67,7 @@ class Record(BaseModel):
         None, description="See https://mapping-commons.github.io/sssom/predicate_type"
     )
     mapping_provider: AnyUrl | None = Field(None)
+    #: https://mapping-commons.github.io/sssom/mapping_source/
     mapping_source: str | None = Field(None)
     #: see https://mapping-commons.github.io/sssom/MappingCardinalityEnum/
     mapping_cardinality: Cardinality | None = Field(None)

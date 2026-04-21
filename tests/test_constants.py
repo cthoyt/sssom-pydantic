@@ -211,6 +211,8 @@ class TestSchema(unittest.TestCase):
             with self.subTest(slot=slot):
                 self.assertIn(slot, MappingSetRecord.model_fields)
                 annotation = MappingSetRecord.model_fields[slot].annotation
+                if typing.get_origin(annotation) is typing.Annotated:
+                    annotation = typing.get_args(annotation)[0]
                 multivalued = self.view.get_slot(slot).multivalued
                 match self.view.get_slot(slot).range:
                     case "EntityReference":
@@ -247,13 +249,13 @@ class TestSchema(unittest.TestCase):
                             self.assertIn(
                                 annotation,
                                 {list[AnyUrl], list[AnyUrl] | None},
-                                msg=f"{slot} should be annotated as a list[str]",
+                                msg=f"\n{slot} should be annotated as a list[AnyUrl]",
                             )
                         else:
                             self.assertIn(
                                 annotation,
                                 {AnyUrl, AnyUrl | None},
-                                msg=f"{slot} should be annotated as a string",
+                                msg=f"{slot} should be annotated as a AnyUrl",
                             )
                     case "double":
                         self.assertIn(
