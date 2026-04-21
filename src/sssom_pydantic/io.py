@@ -591,7 +591,7 @@ def read_unprocessed_iterable(
         _tqdm_kwargs.update(progress_kwargs)
 
     with safe_open(path_or_url, representation="text", operation="read") as file:
-        columns, inline_metadata, _frontmatter_length = _chomp_frontmatter(file)
+        columns, inline_metadata, frontmatter_length = _chomp_frontmatter(file)
         mapping_set_record = _chain_mapping_set_record(
             first_metadata, second_metadata, inline_metadata
         )
@@ -600,7 +600,7 @@ def read_unprocessed_iterable(
         reader = tqdm(reader, **_tqdm_kwargs)
 
         def _iterate_record_tuples() -> Iterable[RecordTuple]:
-            for line_number, row in enumerate(reader, start=_frontmatter_length + 1):
+            for line_number, row in enumerate(reader, start=frontmatter_length + 1):
                 cleaned_row = _clean_row(row)
                 if not cleaned_row:
                     continue
