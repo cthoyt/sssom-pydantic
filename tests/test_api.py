@@ -286,11 +286,11 @@ class TestIO(cases.MappingTestCaseMixin):
         """)  # noqa:E501
         path = self.directory.joinpath("test.tsv")
         path.write_text(text)
-        with self.assertLogs(level="WARNING") as ctx:
+        with self.assertLogs(level="DEBUG") as ctx:
             mappings, _converter, _mapping_set = sssom_pydantic.read(path)
             self.assertEqual(
                 [
-                    "WARNING:sssom_pydantic.io:[line 7] failed to parse row: {'subject_id': 'mesh:C000090'}"  # noqa:E501
+                    "DEBUG:sssom_pydantic.io:[line 7] failed to parse row: {'subject_id': 'mesh:C000090'}"  # noqa:E501
                 ],
                 ctx.output,
             )
@@ -303,7 +303,9 @@ class TestIO(cases.MappingTestCaseMixin):
         self.assertEqual(1, len(mappings))
         self.assert_model_equal(_m(authors=[AUTHOR]), mappings[0])
         self.assertEqual(1, len(errors))
-        self.assertEqual(..., errors[0])
+        error = errors[0]
+        self.assertEqual(7, error.line_number)
+        # TODO add explicit error check?
 
     def test_append(self) -> None:
         """Test appending to the end of a file."""

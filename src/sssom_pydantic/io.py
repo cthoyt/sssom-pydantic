@@ -70,7 +70,7 @@ class SSSOMError(NamedTuple):
     """An exception during SSSOM parsing and processing."""
 
     line_number: int
-    exception: BaseException
+    exception: Exception
     stage: Stage
 
 
@@ -565,6 +565,7 @@ def read_iterable(
                 try:
                     mapping = record_to_semantic_mapping(record, t.converter)
                 except ValueError as e:
+                    logger.debug("[line %d] failed to process record: %s", line_number, record)
                     yield SSSOMError(line_number, e, stage="processing")
                 else:
                     if semantic_mapping_predicate is not None and not semantic_mapping_predicate(
@@ -703,6 +704,7 @@ def read_unprocessed_iterable(
                 try:
                     record = _row_to_record(cleaned_row)
                 except ValueError as e:
+                    logger.debug("[line %d] failed to parse row: %s", line_number, cleaned_row)
                     yield RecordTuple(line_number, SSSOMError(line_number, e, stage="raw"))
                 else:
                     if record_predicate is not None and not record_predicate(record):

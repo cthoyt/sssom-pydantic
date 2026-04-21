@@ -631,7 +631,7 @@ class MappingSet(BaseModel):
     id: AnyUrl = Field(...)
     confidence: float | None = Field(None, ge=0.0, le=1.0)
     description: str | None = Field(None)
-    source: list[str] | None = Field(None)
+    source: list[AnyUrl] | None = Field(None)
     title: str | None = Field(None)
     version: str | None = Field(None)
 
