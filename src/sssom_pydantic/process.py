@@ -22,11 +22,12 @@ from typing import (
 from curies import Reference
 from curies.vocabulary import (
     SemanticMappingScope,
+    exact_match,
     manual_mapping_curation,
     semantic_mapping_scopes,
 )
 
-from . import SemanticMapping
+from .api import SemanticMapping
 
 if TYPE_CHECKING:
     from _typeshed import SupportsRichComparison
@@ -44,6 +45,7 @@ __all__ = [
     "curate",
     "estimate_confidence",
     "get_canonical_tuple",
+    "invert",
     "publish",
     "remove_redundant_external",
     "remove_redundant_internal",
@@ -331,6 +333,34 @@ def publish(
         update={"publication_date": date if date is not None else datetime.date.today()}
     )
     return rv
+
+
+def invert(mapping: SemanticMapping) -> SemanticMapping:
+    """Invert a mapping.
+
+    :param mapping: A semantic mapping record
+    :returns: An inverted mapping.
+
+    >>> from sssom_pydantic import SemanticMapping, hash_triple
+    >>> mapping = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
+    >>> mapping_inv = SemanticMapping.exact("CHEBI:28646", "mesh:C000089")
+    >>> assert mapping_inv == invert(mapping)
+    """
+    if mapping.predicate != exact_match:
+        raise NotImplementedError()
+
+    data = mapping.model_dump(exclude_none=True)
+    update = {new_key: v for k, v in data.items() if (new_key := _invert_key(k))}
+    return mapping.model_copy(update=update)
+
+
+def _invert_key(key: str) -> str | None:
+    if key.startswith("subject"):
+        return "object" + key[7:]
+    elif key.startswith("object"):
+        return "subject" + key[6:]
+    else:
+        return None
 
 
 #: Models for aggregating mapping confidences

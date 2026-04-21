@@ -25,6 +25,7 @@ from sssom_pydantic.process import (
     Mark,
     curate,
     estimate_confidence,
+    invert,
     publish,
     review,
 )
@@ -432,3 +433,9 @@ class TestProcess(cases.MappingTestCaseMixin):
             self.assertLessEqual(estimate_confidence([v1]), estimate_confidence([v2]))
             self.assertAlmostEqual(i, estimate_confidence([v2]), places=4)
             self.assertLessEqual(estimate_confidence([v2]), estimate_confidence([v3]))
+
+    def test_invert(self) -> None:
+        """Test inverting a mapping."""
+        mapping = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
+        mapping_inv = SemanticMapping.exact("CHEBI:28646", "mesh:C000089")
+        self.assert_model_equal(mapping_inv, invert(mapping))
