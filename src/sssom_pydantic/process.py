@@ -362,6 +362,8 @@ def invert(mapping: SemanticMapping, converter: Converter) -> SemanticMapping:
         "subject": data.pop("object"),
         "object": data.pop("subject"),
         "justification": mapping_inversion,
+        "record": None,  # need to clear the record, since the mapping will now have a new identity
+        # TODO update cardinality?
     }
     for part in parts:
         subject_part = data.get(f"subject_{part}")
@@ -377,6 +379,7 @@ def invert(mapping: SemanticMapping, converter: Converter) -> SemanticMapping:
             update[f"subject_{part}"] = object_part
 
     update["derived_from"] = [hash_triple_to_reference(mapping, converter)]
+
     return mapping.model_copy(update=update)
 
 
