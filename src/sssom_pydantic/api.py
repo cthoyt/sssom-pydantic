@@ -488,6 +488,14 @@ SemanticMappingPredicate: TypeAlias = Callable[[SemanticMapping], bool]
 SemanticMappingHash: TypeAlias = Callable[[SemanticMapping, curies.Converter], Reference]
 
 
+def _upgrade_str(x: str | list[str] | None) -> list[str] | None:
+    if x is None:
+        return None
+    elif isinstance(x, str):
+        return [x]
+    return x
+
+
 class MappingSetRecord(BaseModel):
     """Represents a mapping set, readily serializable for usage in SSSOM TSV."""
 
@@ -512,7 +520,7 @@ class MappingSetRecord(BaseModel):
     license: AnyUrl | None = Field(None)
     issue_tracker: AnyUrl | None = Field(None)
     extension_definitions: list[ExtensionDefinitionRecord] | None = Field(None)
-    creator_id: list[str] | None = None
+    creator_id: Annotated[list[str] | None, BeforeValidator(_upgrade_str)] = None
     creator_label: list[str] | None = None
 
     # propagatable slots
@@ -557,7 +565,7 @@ class MappingSetRecord(BaseModel):
             extension_definitions=list(self.extension_definitions)
             if self.extension_definitions
             else None,
-            creators=[converter.parse_curie(c, strict=True) for c in self.creator_id]
+            creators=[converter.parse_curie(c, strict=True).to_pydantic() for c in self.creator_id]
             if self.creator_id
             else None,
             creator_label=self.creator_label,
