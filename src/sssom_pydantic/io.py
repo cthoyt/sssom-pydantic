@@ -95,7 +95,7 @@ def row_to_semantic_mapping(
 
 
 def record_to_semantic_mapping(
-    record: Record, converter: curies.Converter, line_number: int | None = None
+    record: Record, converter: curies.Converter, *, line_number: int | None = None
 ) -> SemanticMapping:
     """Parse a record into a mapping."""
     subject = converter.parse_curie(record.subject_id, strict=True).to_pydantic(

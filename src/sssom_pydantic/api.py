@@ -476,7 +476,7 @@ def _dict_to_other(x: dict[str, str]) -> str:
     return OTHER_PRIMARY_SEP.join(f"{k}{OTHER_SECONDARY_SEP}{v}" for k, v in sorted(x.items()))
 
 
-def _other_to_dict(x: str, line_number: int | None = None) -> dict[str, str] | None:
+def _other_to_dict(x: str, *, line_number: int | None = None) -> dict[str, str] | None:
     return (
         dict(
             pair
@@ -487,7 +487,7 @@ def _other_to_dict(x: str, line_number: int | None = None) -> dict[str, str] | N
     )
 
 
-def _split_key_value(s: str, line_number: int | None = None) -> tuple[str, str] | None:
+def _split_key_value(s: str, *, line_number: int | None = None) -> tuple[str, str] | None:
     try:
         left, right = s.split(OTHER_SECONDARY_SEP)
     except ValueError:
@@ -576,7 +576,7 @@ class MappingSetRecord(BaseModel):
     subject_source_version: str | None = None
     subject_type: str | None = None
 
-    def process(self, converter: curies.Converter, line_number: int | None = None) -> MappingSet:
+    def process(self, converter: curies.Converter, *, line_number: int | None = None) -> MappingSet:
         """Get a mapping set."""
         return MappingSet(
             id=self.mapping_set_id,
