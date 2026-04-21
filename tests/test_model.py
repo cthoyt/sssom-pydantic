@@ -6,10 +6,27 @@ from curies import NamableReference, Reference
 from curies.vocabulary import unspecified_matching_process
 
 from sssom_pydantic import SemanticMapping
+from sssom_pydantic.api import MappingSetRecord
 
 
 class TestModel(unittest.TestCase):
     """Tests for the Pydantic model."""
+
+    def test_creator_id(self) -> None:
+        """Test a non-list creator gets properly upgraded."""
+        x = {
+            "mapping_set_id": "https://example.org/test.tsv",
+            "creator_id": "orcid:1111-1111-1111-1111",
+        }
+        model = MappingSetRecord.model_validate(x)
+        self.assertIsInstance(model.creator_id, list)
+
+        x = {
+            "mapping_set_id": "https://example.org/test.tsv",
+            "creator_id": ["orcid:1111-1111-1111-1111"],
+        }
+        model = MappingSetRecord.model_validate(x)
+        self.assertIsInstance(model.creator_id, list)
 
     def test_upgrade(self) -> None:
         """Test before-validation rule on subject, predicate, and object."""
