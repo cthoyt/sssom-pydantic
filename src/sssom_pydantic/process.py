@@ -341,25 +341,23 @@ def invert(mapping: SemanticMapping) -> SemanticMapping:
     :param mapping: A semantic mapping record
 
     :returns: An inverted mapping.
-
-    >>> from sssom_pydantic import SemanticMapping, hash_triple
-    >>> mapping = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
-    >>> mapping_inv = SemanticMapping.exact("CHEBI:28646", "mesh:C000089")
-    >>> assert mapping_inv == invert(mapping)
     """
     if mapping.predicate != exact_match:
         raise NotImplementedError()
-
     data = mapping.model_dump(exclude_none=True)
     update = {new_key: v for k, v in data.items() if (new_key := _invert_key(k))}
     return mapping.model_copy(update=update)
 
 
 def _invert_key(key: str) -> str | None:
-    if key.startswith("subject"):
-        return "object" + key[7:]
-    elif key.startswith("object"):
-        return "subject" + key[6:]
+    if key == "subject":
+        return "object"
+    elif key == "object":
+        return "subject"
+    elif key.startswith("subject_"):
+        return "object_" + key[len("subject_"):]
+    elif key.startswith("object_"):
+        return "subject_" + key[len("object_"):]
     else:
         return None
 

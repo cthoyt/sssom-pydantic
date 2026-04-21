@@ -436,6 +436,23 @@ class TestProcess(cases.MappingTestCaseMixin):
 
     def test_invert(self) -> None:
         """Test inverting a mapping."""
-        mapping = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
-        mapping_inv = SemanticMapping.exact("CHEBI:28646", "mesh:C000089")
-        self.assert_model_equal(mapping_inv, invert(mapping))
+        pairs = [
+            (
+                SemanticMapping.exact("mesh:C000089", "CHEBI:28646"),
+                SemanticMapping.exact("CHEBI:28646", "mesh:C000089"),
+            ),
+            (
+                SemanticMapping.exact("mesh:C000089", "CHEBI:28646", subject_source="bioregistry:mesh"),
+                SemanticMapping.exact("CHEBI:28646", "mesh:C000089", object_source="bioregistry:mesh"),
+            ),
+            (
+                SemanticMapping.exact("mesh:C000089", "CHEBI:28646", subject_source="bioregistry:mesh", object_source="bioregistry:chebi"),
+                SemanticMapping.exact("CHEBI:28646", "mesh:C000089", object_source="bioregistry:mesh", subject_source="bioregistry:chebi"),
+            ),
+        ]
+        for i, (left, right) in enumerate(pairs, start=1):
+            with self.subTest(index=str(i)):
+                self.assert_model_equal(left, invert(right))
+                self.assert_model_equal(right, invert(left))
+                self.assert_model_equal(left, invert(invert(left)))
+                self.assert_model_equal(right, invert(invert(right)))
