@@ -476,11 +476,11 @@ def read_iterable(
     ) as t:
 
         def _process() -> Iterable[SemanticMapping]:
-            for _line_number, record in t.records:
+            for line_number, record in t.records:
                 try:
                     mapping = record_to_semantic_mapping(record, t.converter)
                 except ValueError:
-                    logger.warning("failed to process record: %s", record)
+                    logger.warning("[line %d] failed to process record: %s", line_number, record)
                     continue
                 else:
                     yield mapping
