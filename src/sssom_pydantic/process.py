@@ -342,7 +342,28 @@ def invert(mapping: SemanticMapping, converter: Converter) -> SemanticMapping:
     :param mapping: A semantic mapping record
     :param converter: A converter
 
-    :returns: An inverted mapping.
+    :returns:
+        An inverted mapping. Mapping inversion clears the ``record`` field if present.
+
+    >>> from curies import NamedReference, Converter
+    >>> from curies.vocabulary import charlie,
+    >>> from sssom_pydantic import SemanticMapping, hash_mapping
+    >>> converter = Converter.from_prefix_map(
+    ...     {
+    ...         "CHEBI": "http://purl.obolibrary.org/obo/CHEBI_",
+    ...         "mesh": "http://id.nlm.nih.gov/mesh/",
+    ...         "skos": "http://www.w3.org/2004/02/skos/core#",
+    ...         "semapv": "https://w3id.org/semapv/vocab/",
+    ...     }
+    ... )
+    >>> mapping = SemanticMapping(
+    ...     subject=NamedReference(prefix="mesh", identifier="C000089", name="ammeline"),
+    ...     predicate=exact_match,
+    ...     object=NamedReference(prefix="CHEBI", identifier="28646", name="ammeline"),
+    ...     authors=[charlie],
+    ...     mapping_date="2026-04-21",
+    ... )
+    >>> mapping_inv = invert_mapping(mapping, converter)
     """
     if mapping.predicate != exact_match:
         raise NotImplementedError()
