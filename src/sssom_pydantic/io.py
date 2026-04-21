@@ -6,8 +6,10 @@ import contextlib
 import csv
 import datetime
 import logging
+import traceback
 from collections import ChainMap, Counter, defaultdict
 from collections.abc import Collection, Generator, Iterable, Mapping, Sequence
+from io import StringIO
 from pathlib import Path
 from typing import Any, Literal, NamedTuple, TextIO, TypeAlias, overload
 
@@ -42,6 +44,7 @@ from .process import Hasher, MappingTypeVar, remove_redundant_external, remove_r
 
 __all__ = [
     "Metadata",
+    "ParseError",
     "ReadType",
     "append",
     "append_unprocessed",
@@ -66,12 +69,23 @@ Y = TypeVar("Y")
 Stage: TypeAlias = Literal["raw", "processing"]
 
 
-class SSSOMError(NamedTuple):
-    """An exception during SSSOM parsing and processing."""
+class ParseError(NamedTuple):
+    """An error during SSSOM parsing and processing that causes a row to be unrecoverable."""
 
     line_number: int
     exception: Exception
     stage: Stage
+
+    def format_exception(self) -> str:
+        """Format the exception as a string."""
+        return _get_exc(self.exception)
+
+
+def _get_exc(exc: Exception) -> str:
+    file = StringIO()
+    traceback.print_exception(exc, file=file)
+    file.seek(0)
+    return file.read()
 
 
 def _safe_dump_mapping_set(m: Metadata | MappingSet | MappingSetRecord) -> Metadata:
@@ -429,7 +443,7 @@ def _clean_row(row: Mapping[str, str | list[str]]) -> Row:
 
 #: The result of reading and processing a SSSOM TSV file
 ReadType: TypeAlias = tuple[list[SemanticMapping], Converter, MappingSet]
-ExtendedReadType: TypeAlias = tuple[list[SemanticMapping], Converter, MappingSet, list[SSSOMError]]
+ExtendedReadType: TypeAlias = tuple[list[SemanticMapping], Converter, MappingSet, list[ParseError]]
 
 
 # docstr-coverage:excused `overload`
@@ -520,7 +534,7 @@ def read(
         semantic_mapping_predicate=semantic_mapping_predicate,
     ) as t:
         mappings: list[SemanticMapping] = []
-        errors: list[SSSOMError] = []
+        errors: list[ParseError] = []
         for x in t.mappings:
             if isinstance(x, SemanticMapping):
                 mappings.append(x)
@@ -535,7 +549,7 @@ def read(
 class ReadTuple(NamedTuple):
     """A tuple returned from streaming reading of a SSSOM file."""
 
-    mappings: Iterable[SemanticMapping | SSSOMError]
+    mappings: Iterable[SemanticMapping | ParseError]
     converter: Converter
     mapping_set: MappingSet
 
@@ -563,9 +577,9 @@ def read_iterable(
         record_predicate=record_predicate,
     ) as t:
 
-        def _process() -> Iterable[SemanticMapping | SSSOMError]:
+        def _process() -> Iterable[SemanticMapping | ParseError]:
             for line_number, record in t.records:
-                if isinstance(record, SSSOMError):
+                if isinstance(record, ParseError):
                     yield record
                     continue
                 try:
@@ -574,7 +588,7 @@ def read_iterable(
                     )
                 except ValueError as e:
                     logger.debug("[line %d] failed to process record: %s", line_number, record)
-                    yield SSSOMError(line_number, e, stage="processing")
+                    yield ParseError(line_number, e, stage="processing")
                 else:
                     if semantic_mapping_predicate is not None and not semantic_mapping_predicate(
                         mapping
@@ -612,7 +626,7 @@ class RecordTuple(NamedTuple):
     """Return the unprocessed record."""
 
     line_number: int
-    record: Record | SSSOMError
+    record: Record | ParseError
 
 
 class ReadUnprocessedTuple(NamedTuple):
@@ -653,7 +667,7 @@ def read_unprocessed(
         record_predicate=record_predicate,
     ) as t:
         records: list[Record] = []
-        errors: list[SSSOMError] = []
+        errors: list[ParseError] = []
         for _, record in t.records:
             if isinstance(record, Record):
                 records.append(record)
@@ -713,7 +727,7 @@ def read_unprocessed_iterable(
                     record = _row_to_record(cleaned_row)
                 except ValueError as e:
                     logger.debug("[line %d] failed to parse row: %s", line_number, cleaned_row)
-                    yield RecordTuple(line_number, SSSOMError(line_number, e, stage="raw"))
+                    yield RecordTuple(line_number, ParseError(line_number, e, stage="raw"))
                 else:
                     if record_predicate is not None and not record_predicate(record):
                         continue
