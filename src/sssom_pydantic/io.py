@@ -277,7 +277,7 @@ def append_unprocessed(
     """Append records to the end of an existing file."""
     path = Path(path).expanduser().resolve()
     with path.open() as file:
-        original_columns, _rv, _length = _chomp_frontmatter(file)
+        original_columns, _rv, _frontmatter_length = _chomp_frontmatter(file)
     if not original_columns:
         raise ValueError(
             f"can not append {len(records):,} mappings because no headers found in {path}"
@@ -585,7 +585,7 @@ def read_unprocessed_iterable(
         _tqdm_kwargs.update(progress_kwargs)
 
     with safe_open(path_or_url, representation="text", operation="read") as file:
-        columns, inline_metadata, frontmatter_length = _chomp_frontmatter(file)
+        columns, inline_metadata, _frontmatter_length = _chomp_frontmatter(file)
         mapping_set_record = _chain_mapping_set_record(
             first_metadata, second_metadata, inline_metadata
         )
