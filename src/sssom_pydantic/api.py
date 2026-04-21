@@ -492,9 +492,9 @@ def _split_key_value(s: str, *, line_number: int | None = None) -> tuple[str, st
         left, right = s.split(OTHER_SECONDARY_SEP)
     except ValueError:
         if line_number is not None:
-            logging.warning("[line: %d] invalid value for `other`: %s", line_number, s)
+            logging.debug("[line: %d] invalid value for `other`: %s", line_number, s)
         else:
-            logging.warning("invalid value for `other`: %s", s)
+            logging.debug("invalid value for `other`: %s", s)
         return None
     return left, right
 
@@ -645,7 +645,7 @@ class MappingSet(BaseModel):
     id: AnyUrl = Field(...)
     confidence: float | None = Field(None, ge=0.0, le=1.0)
     description: str | None = Field(None)
-    source: list[str] | None = Field(None)
+    source: list[AnyUrl] | None = Field(None)
     title: str | None = Field(None)
     version: str | None = Field(None)
 

@@ -203,7 +203,7 @@ class TestLinting(unittest.TestCase):
                     mapping_justification="semapv:LexicalMatching",
                     mapping_tool_id="biotools:ssslm",
                 ).model_dump(exclude_none=True),
-                records[0].record.model_dump(exclude_none=True),
+                records[0].model_dump(exclude_none=True),
             )
 
             (
