@@ -15,7 +15,7 @@ import curies
 import yaml
 from curies import Converter, Reference
 from pydantic import AnyUrl
-from pystow.utils import safe_open
+from pystow.utils import read_pydantic_yaml, safe_open
 from tqdm import tqdm
 
 from .api import (
@@ -571,8 +571,7 @@ def read_unprocessed_iterable(
     if metadata_path is None:
         second_metadata = None
     else:
-        with safe_open(metadata_path, operation="read", representation="text") as file:
-            second_metadata = MappingSetRecord.model_validate(yaml.safe_load(file))
+        second_metadata = read_pydantic_yaml(metadata_path, MappingSetRecord)
 
     first_metadata = _get_mapping_set_record(metadata)
 
