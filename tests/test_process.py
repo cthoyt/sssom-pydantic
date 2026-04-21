@@ -25,6 +25,7 @@ from sssom_pydantic.process import (
     Mark,
     curate,
     estimate_confidence,
+    invert,
     publish,
     review,
 )
@@ -432,3 +433,48 @@ class TestProcess(cases.MappingTestCaseMixin):
             self.assertLessEqual(estimate_confidence([v1]), estimate_confidence([v2]))
             self.assertAlmostEqual(i, estimate_confidence([v2]), places=4)
             self.assertLessEqual(estimate_confidence([v2]), estimate_confidence([v3]))
+
+    def test_invert(self) -> None:
+        """Test inverting a mapping."""
+        pairs = [
+            (
+                SemanticMapping.exact("mesh:C000089", "CHEBI:28646"),
+                SemanticMapping.exact("CHEBI:28646", "mesh:C000089"),
+            ),
+            (
+                SemanticMapping.exact(
+                    "mesh:C000089", "CHEBI:28646", subject_source="bioregistry:mesh"
+                ),
+                SemanticMapping.exact(
+                    "CHEBI:28646", "mesh:C000089", object_source="bioregistry:mesh"
+                ),
+            ),
+            (
+                SemanticMapping.exact(
+                    "mesh:C000089", "CHEBI:28646", object_source="bioregistry:chebi"
+                ),
+                SemanticMapping.exact(
+                    "CHEBI:28646", "mesh:C000089", subject_source="bioregistry:chebi"
+                ),
+            ),
+            (
+                SemanticMapping.exact(
+                    "mesh:C000089",
+                    "CHEBI:28646",
+                    subject_source="bioregistry:mesh",
+                    object_source="bioregistry:chebi",
+                ),
+                SemanticMapping.exact(
+                    "CHEBI:28646",
+                    "mesh:C000089",
+                    object_source="bioregistry:mesh",
+                    subject_source="bioregistry:chebi",
+                ),
+            ),
+        ]
+        for i, (left, right) in enumerate(pairs, start=1):
+            with self.subTest(index=str(i)):
+                self.assert_model_equal(left, invert(right))
+                self.assert_model_equal(right, invert(left))
+                self.assert_model_equal(left, invert(invert(left)))
+                self.assert_model_equal(right, invert(invert(right)))

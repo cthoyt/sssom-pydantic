@@ -25,6 +25,7 @@ from .io import (
     write_unprocessed,
 )
 from .models import Record
+from .process import invert
 
 __all__ = [
     "ExtensionDefinition",
@@ -42,6 +43,7 @@ __all__ = [
     "hash_mapping_to_reference",
     "hash_triple",
     "hash_triple_to_reference",
+    "invert",
     "lint",
     "read",
     "read_iterable",

@@ -22,11 +22,12 @@ from typing import (
 from curies import Reference
 from curies.vocabulary import (
     SemanticMappingScope,
+    exact_match,
     manual_mapping_curation,
     semantic_mapping_scopes,
 )
 
-from . import SemanticMapping
+from .api import SemanticMapping
 
 if TYPE_CHECKING:
     from _typeshed import SupportsRichComparison
@@ -44,6 +45,7 @@ __all__ = [
     "curate",
     "estimate_confidence",
     "get_canonical_tuple",
+    "invert",
     "publish",
     "remove_redundant_external",
     "remove_redundant_internal",
@@ -331,6 +333,44 @@ def publish(
         update={"publication_date": date if date is not None else datetime.date.today()}
     )
     return rv
+
+
+def invert(mapping: SemanticMapping) -> SemanticMapping:
+    """Invert a mapping.
+
+    :param mapping: A semantic mapping record
+
+    :returns: An inverted mapping.
+    """
+    if mapping.predicate != exact_match:
+        raise NotImplementedError()
+    data = mapping.model_dump(exclude_none=True)
+
+    parts = set()
+    for key in data:
+        if key.startswith("subject_"):
+            parts.add(key[len("subject_") :])
+        elif key.startswith("object_"):
+            parts.add(key[len("object_") :])
+
+    update = {
+        "subject": data.pop("object"),
+        "object": data.pop("subject"),
+    }
+    for part in parts:
+        subject_part = data.get(f"subject_{part}")
+        object_part = data.get(f"object_{part}")
+        if subject_part and object_part:
+            update[f"object_{part}"] = subject_part
+            update[f"subject_{part}"] = object_part
+        elif subject_part:
+            update[f"object_{part}"] = subject_part
+            update[f"subject_{part}"] = None
+        else:  # elif object_part
+            update[f"object_{part}"] = None
+            update[f"subject_{part}"] = object_part
+
+    return mapping.model_copy(update=update)
 
 
 #: Models for aggregating mapping confidences
