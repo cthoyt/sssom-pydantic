@@ -277,7 +277,7 @@ def append_unprocessed(
     """Append records to the end of an existing file."""
     path = Path(path).expanduser().resolve()
     with path.open() as file:
-        original_columns, _rv = _chomp_frontmatter(file)
+        original_columns, _rv, _frontmatter_length = _chomp_frontmatter(file)
     if not original_columns:
         raise ValueError(
             f"can not append {len(records):,} mappings because no headers found in {path}"
@@ -585,7 +585,7 @@ def read_unprocessed_iterable(
         _tqdm_kwargs.update(progress_kwargs)
 
     with safe_open(path_or_url, representation="text", operation="read") as file:
-        columns, inline_metadata = _chomp_frontmatter(file)
+        columns, inline_metadata, _frontmatter_length = _chomp_frontmatter(file)
         mapping_set_record = _chain_mapping_set_record(
             first_metadata, second_metadata, inline_metadata
         )
@@ -639,10 +639,12 @@ def _cm(m: Iterable[dict[str, Any]]) -> dict[str, Any]:
     return dict(ChainMap(*m))
 
 
-def _chomp_frontmatter(file: TextIO) -> tuple[list[str], MappingSetRecord | None]:
+def _chomp_frontmatter(file: TextIO) -> tuple[list[str], MappingSetRecord | None, int]:
     # consume from the top of the stream until there's no more preceding #
+    count = 0
     header_yaml = ""
     while (line := file.readline()).startswith("#"):
+        count += 1
         line = line.lstrip("#").rstrip()
         if not line:
             continue
@@ -659,7 +661,7 @@ def _chomp_frontmatter(file: TextIO) -> tuple[list[str], MappingSetRecord | None
     else:
         rv = MappingSetRecord.model_validate(yaml.safe_load(header_yaml))
 
-    return columns, rv
+    return columns, rv, count
 
 
 def lint(
