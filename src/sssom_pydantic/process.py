@@ -19,15 +19,16 @@ from typing import (
     get_args,
 )
 
-from curies import Reference
+from curies import Converter, Reference
 from curies.vocabulary import (
     SemanticMappingScope,
     exact_match,
     manual_mapping_curation,
+    mapping_inversion,
     semantic_mapping_scopes,
 )
 
-from .api import SemanticMapping
+from .api import SemanticMapping, hash_triple_to_reference
 
 if TYPE_CHECKING:
     from _typeshed import SupportsRichComparison
@@ -335,15 +336,19 @@ def publish(
     return rv
 
 
-def invert(mapping: SemanticMapping) -> SemanticMapping:
+def invert(mapping: SemanticMapping, converter: Converter) -> SemanticMapping:
     """Invert a mapping.
 
     :param mapping: A semantic mapping record
+    :param converter: A converter
 
     :returns: An inverted mapping.
     """
     if mapping.predicate != exact_match:
         raise NotImplementedError()
+    if mapping.justification == mapping_inversion:
+        raise ValueError("double inversion is not supported")
+
     data = mapping.model_dump(exclude_none=True)
 
     parts = set()
@@ -356,6 +361,7 @@ def invert(mapping: SemanticMapping) -> SemanticMapping:
     update = {
         "subject": data.pop("object"),
         "object": data.pop("subject"),
+        "justification": mapping_inversion,
     }
     for part in parts:
         subject_part = data.get(f"subject_{part}")
@@ -370,6 +376,7 @@ def invert(mapping: SemanticMapping) -> SemanticMapping:
             update[f"object_{part}"] = None
             update[f"subject_{part}"] = object_part
 
+    update["derived_from"] = [hash_triple_to_reference(mapping, converter)]
     return mapping.model_copy(update=update)
 
 
