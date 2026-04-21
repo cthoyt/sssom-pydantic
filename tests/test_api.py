@@ -7,8 +7,10 @@ import types
 import typing
 from pathlib import Path
 from textwrap import dedent
+from typing import Any
 
 import curies
+import yaml
 from curies import Reference
 from curies.vocabulary import exact_match, manual_mapping_curation
 
@@ -81,6 +83,33 @@ class TestIO(cases.MappingTestCaseMixin):
         processed, _converter, _mapping_set = sssom_pydantic.io.read(path)
         self.assertEqual(1, len(processed))
         self.assert_base_model_equal(semantic_mapping, processed[0])
+
+    def test_chomp_empty(self) -> None:
+        """Test chomping a file with no header."""
+        text = dedent(f"""\
+            subject_id	subject_label	predicate_id	object_id	object_label	mapping_justification	author_id
+            mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	{manual_mapping_curation.curie}	{AUTHOR.curie}
+        """)  # noqa:E501
+        path = self.directory.joinpath("test.tsv")
+        path.write_text(text)
+
+        with path.open() as file:
+            columns, mapping_set_record, frontmatter_length = _chomp_frontmatter(file)
+        self.assertEqual(0, frontmatter_length)
+        self.assertEqual(
+            [
+                "subject_id",
+                "subject_label",
+                "predicate_id",
+                "object_id",
+                "object_label",
+                "mapping_justification",
+                "author_id",
+            ],
+            columns,
+            msg="columns were parsed incorrectly",
+        )
+        self.assertIsNone(mapping_set_record)
 
     def test_read_2(self) -> None:
         """Test reading from a file."""
@@ -166,6 +195,80 @@ class TestIO(cases.MappingTestCaseMixin):
 
         processed_records, _converter, _mapping_set = sssom_pydantic.io.read(path)
 
+        self.assertEqual(1, len(processed_records))
+        self.assert_model_equal(_m(authors=[AUTHOR]), processed_records[0])
+
+    def test_read_main_content_empty_line(self) -> None:
+        """Test reading from a file whose main content a blank line in it."""
+        text = dedent(f"""\
+            #curie_map:
+            #  mesh: "http://id.nlm.nih.gov/mesh/"
+            #  chebi: "http://purl.obolibrary.org/obo/CHEBI_"
+            #
+            #mapping_set_id: {TEST_MAPPING_SET_ID}
+            subject_id	subject_label	predicate_id	object_id	object_label	mapping_justification	author_id
+            mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	{manual_mapping_curation.curie}	{AUTHOR.curie}
+
+            mesh:C000090		skos:exactMatch	chebi:28647		{manual_mapping_curation.curie}	{AUTHOR.curie}
+        """)  # noqa:E501
+        path = self.directory.joinpath("test.tsv")
+        path.write_text(text)
+        processed_records, _converter, _mapping_set = sssom_pydantic.io.read(path)
+        self.assertEqual(2, len(processed_records))
+
+    def test_read_with_external_metadata(self) -> None:
+        """Test reading from a file whose main content a blank line in it."""
+        text = dedent(f"""\
+            subject_id	subject_label	predicate_id	object_id	object_label	mapping_justification	author_id
+            mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	{manual_mapping_curation.curie}	{AUTHOR.curie}
+        """)  # noqa:E501
+
+        m1 = {
+            "curie_map": {
+                "mesh": "http://id.nlm.nih.gov/mesh/",
+                "chebi": "http://purl.obolibrary.org/obo/CHEBI_",
+            },
+            "mapping_set_id": TEST_MAPPING_SET_ID,
+        }
+        m2 = MappingSetRecord(
+            curie_map={
+                "mesh": "http://id.nlm.nih.gov/mesh/",
+                "chebi": "http://purl.obolibrary.org/obo/CHEBI_",
+            },
+            mapping_set_id=TEST_MAPPING_SET_ID,
+        )
+        metadatas: list[dict[str, Any] | MappingSetRecord] = [m1, m2]
+        for i, metadata in enumerate(metadatas):
+            path = self.directory.joinpath(f"test-{i}.tsv")
+            path.write_text(text)
+            processed_records, _converter, _mapping_set = sssom_pydantic.io.read(
+                path, metadata=metadata
+            )
+            self.assertEqual(1, len(processed_records))
+            self.assert_model_equal(_m(authors=[AUTHOR]), processed_records[0])
+
+    def test_read_with_path_metadata(self) -> None:
+        """Test reading from a file whose main content a blank line in it."""
+        text = dedent(f"""\
+            subject_id	subject_label	predicate_id	object_id	object_label	mapping_justification	author_id
+            mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	{manual_mapping_curation.curie}	{AUTHOR.curie}
+        """)  # noqa:E501
+
+        m2 = MappingSetRecord(
+            curie_map={
+                "mesh": "http://id.nlm.nih.gov/mesh/",
+                "chebi": "http://purl.obolibrary.org/obo/CHEBI_",
+            },
+            mapping_set_id=TEST_MAPPING_SET_ID,
+        )
+        path_yaml = self.directory.joinpath("test.yaml")
+        # json mode required to serialize AnyURL instances properly
+        path_yaml.write_text(yaml.safe_dump(m2.model_dump(exclude_none=True, mode="json")))
+        path = self.directory.joinpath("test.tsv")
+        path.write_text(text)
+        processed_records, _converter, _mapping_set = sssom_pydantic.io.read(
+            path, metadata_path=path_yaml
+        )
         self.assertEqual(1, len(processed_records))
         self.assert_model_equal(_m(authors=[AUTHOR]), processed_records[0])
 
