@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime
 import functools
+import logging
 from collections.abc import Callable
 from typing import Annotated, Any, Literal, TypeAlias
 
@@ -472,12 +473,23 @@ def _dict_to_other(x: dict[str, str]) -> str:
     return OTHER_PRIMARY_SEP.join(f"{k}{OTHER_SECONDARY_SEP}{v}" for k, v in sorted(x.items()))
 
 
-def _other_to_dict(x: str) -> dict[str, str]:
-    return dict(_xx(y) for y in x.split(OTHER_PRIMARY_SEP))
+def _other_to_dict(x: str) -> dict[str, str] | None:
+    return (
+        dict(
+            pair
+            for key_value in x.split(OTHER_PRIMARY_SEP)
+            if (pair := _split_key_value(key_value))
+        )
+        or None
+    )
 
 
-def _xx(s: str) -> tuple[str, str]:
-    left, right = s.split(OTHER_SECONDARY_SEP)
+def _split_key_value(s: str) -> tuple[str, str] | None:
+    try:
+        left, right = s.split(OTHER_SECONDARY_SEP)
+    except ValueError:
+        logging.warning("invalid value for `other`: %s", s)
+        return None
     return left, right
 
 
