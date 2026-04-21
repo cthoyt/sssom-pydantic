@@ -38,6 +38,7 @@ __all__ = [
 ]
 
 TEST_PREFIX_MAP = {
+    "cas": "https://commonchemistry.cas.org/detail?cas_rn=",
     "mesh": "http://id.nlm.nih.gov/mesh/",
     "chebi": "http://purl.obolibrary.org/obo/CHEBI_",
     # the following are the default ones
@@ -58,6 +59,7 @@ TEST_PREFIX_MAP = {
     "orcid": "https://orcid.org/",
 }
 TEST_CONVERTER = Converter.from_prefix_map(TEST_PREFIX_MAP)
+TEST_CONVERTER.add_prefix_synonym("chebi", "CHEBI")
 
 P1 = NamableReference(prefix="skos", identifier="exactMatch")
 P2 = NamableReference(prefix="skos", identifier="broadMatch")

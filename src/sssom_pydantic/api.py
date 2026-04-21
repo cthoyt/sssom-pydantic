@@ -38,6 +38,7 @@ __all__ = [
     "hash_mapping",
     "hash_mapping_to_reference",
     "hash_triple",
+    "hash_triple_to_reference",
 ]
 
 
@@ -196,11 +197,11 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
     @classmethod
     def from_triple(
         cls,
-        subject: Reference,
-        predicate: Reference,
-        object: Reference,
+        subject: str | Reference,
+        predicate: str | Reference,
+        object: str | Reference,
         *,
-        justification: Reference | None = None,
+        justification: str | Reference | None = None,
         **kwargs: Any,
     ) -> Self:
         """Construct a semantic mapping from a subject-predicate-object triple.
@@ -234,10 +235,10 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
     @classmethod
     def exact(
         cls,
-        subject: Reference,
-        object: Reference,
+        subject: str | Reference,
+        object: str | Reference,
         *,
-        justification: Reference | None = None,
+        justification: str | Reference | None = None,
         **kwargs: Any,
     ) -> Self:
         """Construct a ``skos:exactMatch`` mapping from a subject-object pair.
@@ -762,6 +763,7 @@ def hash_mapping(mapping: SemanticMapping, converter: curies.Converter) -> str:
     >>> from sssom_pydantic import SemanticMapping, hash_mapping
     >>> converter = Converter.from_prefix_map(
     ...     {
+    ...         "cas": "https://commonchemistry.cas.org/detail?cas_rn=",
     ...         "CHEBI": "http://purl.obolibrary.org/obo/CHEBI_",
     ...         "mesh": "http://id.nlm.nih.gov/mesh/",
     ...         "skos": "http://www.w3.org/2004/02/skos/core#",
@@ -774,6 +776,12 @@ def hash_mapping(mapping: SemanticMapping, converter: curies.Converter) -> str:
     ... )
     >>> hash_mapping(mapping, converter)
     '9D59EF306286DC1A'
+    >>> mapping = SemanticMapping.exact(
+    ...     subject=NamedReference(prefix="CHEBI", identifier="28646", name="ammeline"),
+    ...     object=NamedReference(prefix="cas", identifier="645-92-1", name="Ammeline"),
+    ... )
+    >>> hash_mapping(mapping, converter)
+    '63C5D4FA232E1188'
 
     .. note::
 
@@ -819,6 +827,7 @@ def hash_triple(mapping: SemanticMapping, converter: curies.Converter) -> str:
     >>> from curies import Converter
     >>> converter = Converter.from_prefix_map(
     ...     {
+    ...         "cas": "https://commonchemistry.cas.org/detail?cas_rn=",
     ...         "CHEBI": "http://purl.obolibrary.org/obo/CHEBI_",
     ...         "mesh": "http://id.nlm.nih.gov/mesh/",
     ...         "skos": "http://www.w3.org/2004/02/skos/core#",
@@ -830,8 +839,16 @@ def hash_triple(mapping: SemanticMapping, converter: curies.Converter) -> str:
     '36a1f9244ea7641a90987c82f33c25c0c13712ee8f48207b2a0825f8a4e4e26a'
     >>> hash_triple(mapping.negate(), converter)
     '36a1f9244ea7641a90987c82f33c25c0c13712ee8f48207b2a0825f8a4e4e26a~'
+    >>> hash_triple(SemanticMapping.exact("CHEBI:28646", "cas:645-92-1"), converter)
+    'bb768f0b1e1643298f4df1a381001f6ed68fcc8fff49b371f0235b51dbab9e1e'
     """
-    rv = converter.hash_triple(mapping)
-    if mapping.negated:
-        rv += "~"
-    return rv
+    return converter.hash_triple(mapping, negate=mapping.negated)
+
+
+TRIPLE_CURIE_PREFIX = "mapping"
+TRIPLE_URI_PREFIX = "https://w3id.org/sssom/mapping/"
+
+
+def hash_triple_to_reference(mapping: SemanticMapping, converter: curies.Converter) -> Reference:
+    """Return a mapping sameness identifier as a reference."""
+    return Reference(prefix=TRIPLE_CURIE_PREFIX, identifier=hash_triple(mapping, converter))
