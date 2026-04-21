@@ -339,6 +339,7 @@ def invert(mapping: SemanticMapping) -> SemanticMapping:
     """Invert a mapping.
 
     :param mapping: A semantic mapping record
+
     :returns: An inverted mapping.
 
     >>> from sssom_pydantic import SemanticMapping, hash_triple
