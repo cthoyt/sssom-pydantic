@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime
 import functools
+import logging
 from collections.abc import Callable
 from typing import Annotated, Any, Literal, TypeAlias, TypeVar
 
@@ -38,6 +39,9 @@ __all__ = [
     "hash_mapping_to_reference",
     "hash_triple",
 ]
+
+
+logger = logging.getLogger(__name__)
 
 PredicateModifier: TypeAlias = Literal["Not"]
 NOT: PredicateModifier = "Not"
@@ -499,12 +503,14 @@ def _upgrade_list(x: X | list[X] | None) -> list[X] | None:
     return [x]
 
 
-def _fix_relative_url(x: str | AnyUrl) -> AnyUrl:
-    if isinstance(x, AnyUrl):
-        return x
-    if x.startswith("http://") or x.startswith("https://"):
-        return AnyUrl(x)
-    return AnyUrl(f"https://w3id.org/sssom/mapping-set/{x}")
+def _fix_relative_url(s: str | AnyUrl) -> AnyUrl:
+    if isinstance(s, AnyUrl):
+        return s
+    if s.startswith("http://") or s.startswith("https://"):
+        return AnyUrl(s)
+    url = f"https://w3id.org/sssom/mapping-set/{s}"
+    logger.warning("mapping set has non-relative URL: %s. Formatted into %s", s, url)
+    return AnyUrl(url)
 
 
 class MappingSetRecord(BaseModel):
