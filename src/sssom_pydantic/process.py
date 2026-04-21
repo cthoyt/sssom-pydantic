@@ -345,21 +345,32 @@ def invert(mapping: SemanticMapping) -> SemanticMapping:
     if mapping.predicate != exact_match:
         raise NotImplementedError()
     data = mapping.model_dump(exclude_none=True)
-    update = {new_key: v for k, v in data.items() if (new_key := _invert_key(k))}
+
+    parts = set()
+    for key in data:
+        if key.startswith("subject_"):
+            parts.add(key[len("subject_") :])
+        elif key.startswith("object_"):
+            parts.add(key[len("object_") :])
+
+    update = {
+        "subject": data.pop("object"),
+        "object": data.pop("subject"),
+    }
+    for part in parts:
+        subject_part = data.get(f"subject_{part}")
+        object_part = data.get(f"object_{part}")
+        if subject_part and object_part:
+            update[f"object_{part}"] = subject_part
+            update[f"subject_{part}"] = object_part
+        elif subject_part:
+            update[f"object_{part}"] = subject_part
+            update[f"subject_{part}"] = None
+        else:  # elif object_part
+            update[f"object_{part}"] = None
+            update[f"subject_{part}"] = object_part
+
     return mapping.model_copy(update=update)
-
-
-def _invert_key(key: str) -> str | None:
-    if key == "subject":
-        return "object"
-    elif key == "object":
-        return "subject"
-    elif key.startswith("subject_"):
-        return "object_" + key[len("subject_") :]
-    elif key.startswith("object_"):
-        return "subject_" + key[len("object_") :]
-    else:
-        return None
 
 
 #: Models for aggregating mapping confidences

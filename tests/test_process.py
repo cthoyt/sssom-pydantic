@@ -451,6 +451,14 @@ class TestProcess(cases.MappingTestCaseMixin):
             ),
             (
                 SemanticMapping.exact(
+                    "mesh:C000089", "CHEBI:28646", object_source="bioregistry:chebi"
+                ),
+                SemanticMapping.exact(
+                    "CHEBI:28646", "mesh:C000089", subject_source="bioregistry:chebi"
+                ),
+            ),
+            (
+                SemanticMapping.exact(
                     "mesh:C000089",
                     "CHEBI:28646",
                     subject_source="bioregistry:mesh",
