@@ -432,6 +432,7 @@ ReadType: TypeAlias = tuple[list[SemanticMapping], Converter, MappingSet]
 ExtendedReadType: TypeAlias = tuple[list[SemanticMapping], Converter, MappingSet, list[SSSOMError]]
 
 
+# docstr-coverage:excused `overload`
 @overload
 def read(
     path_or_url: str | Path | TextIO,
@@ -447,6 +448,7 @@ def read(
 ) -> ExtendedReadType: ...
 
 
+# docstr-coverage:excused `overload`
 @overload
 def read(
     path_or_url: str | Path | TextIO,
@@ -462,6 +464,7 @@ def read(
 ) -> ReadType: ...
 
 
+# docstr-coverage:excused `overload`
 @overload
 def read(
     path_or_url: str | Path | TextIO,
@@ -477,6 +480,7 @@ def read(
 ) -> ExtendedReadType: ...
 
 
+# docstr-coverage:excused `overload`
 @overload
 def read(
     path_or_url: str | Path | TextIO,
