@@ -21,11 +21,11 @@ class TestModel(unittest.TestCase):
         model = MappingSetRecord.model_validate(x)
         self.assertIsInstance(model.creator_id, list)
 
-        x = {
+        x2 = {
             "mapping_set_id": "https://example.org/test.tsv",
             "creator_id": ["orcid:1111-1111-1111-1111"],
         }
-        model = MappingSetRecord.model_validate(x)
+        model = MappingSetRecord.model_validate(x2)
         self.assertIsInstance(model.creator_id, list)
 
     def test_upgrade(self) -> None:
