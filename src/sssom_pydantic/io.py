@@ -9,7 +9,7 @@ import logging
 from collections import ChainMap, Counter, defaultdict
 from collections.abc import Collection, Generator, Iterable, Mapping, Sequence
 from pathlib import Path
-from typing import Any, NamedTuple, TextIO, TypeAlias, TypeVar
+from typing import Any, Literal, NamedTuple, TextIO, TypeAlias, overload
 
 import curies
 import yaml
@@ -17,6 +17,7 @@ from curies import Converter, Reference
 from pydantic import AnyUrl
 from pystow.utils import read_pydantic_yaml, safe_open
 from tqdm import tqdm
+from typing_extensions import TypeVar
 
 from .api import (
     MappingSet,
@@ -62,6 +63,15 @@ Metadata: TypeAlias = dict[str, Any]
 
 X = TypeVar("X")
 Y = TypeVar("Y")
+Stage: TypeAlias = Literal["raw", "processing"]
+
+
+class SSSOMError(NamedTuple):
+    """An exception during SSSOM parsing and processing."""
+
+    line_number: int
+    exception: BaseException
+    stage: Stage
 
 
 def _safe_dump_mapping_set(m: Metadata | MappingSet | MappingSetRecord) -> Metadata:
@@ -417,6 +427,67 @@ def _clean_row(row: Mapping[str, str | list[str]]) -> Row:
 
 #: The result of reading and processing a SSSOM TSV file
 ReadType: TypeAlias = tuple[list[SemanticMapping], Converter, MappingSet]
+ExtendedReadType: TypeAlias = tuple[list[SemanticMapping], Converter, MappingSet, list[SSSOMError]]
+
+
+@overload
+def read(
+    path_or_url: str | Path | TextIO,
+    *,
+    metadata_path: str | Path | None,
+    metadata: MappingSet | MappingSetRecord | Metadata | None,
+    converter: curies.Converter | None,
+    progress: bool,
+    progress_kwargs: dict[str, Any] | None,
+    record_predicate: RecordPredicate | None,
+    semantic_mapping_predicate: SemanticMappingPredicate | None,
+    return_errors: Literal[True] = True,
+) -> ExtendedReadType: ...
+
+
+@overload
+def read(
+    path_or_url: str | Path | TextIO,
+    *,
+    metadata_path: str | Path | None = ...,
+    metadata: MappingSet | MappingSetRecord | Metadata | None = ...,
+    converter: curies.Converter | None = ...,
+    progress: bool = ...,
+    progress_kwargs: dict[str, Any] | None = ...,
+    record_predicate: RecordPredicate | None = ...,
+    semantic_mapping_predicate: SemanticMappingPredicate | None = ...,
+    return_errors: Literal[False] = False,
+) -> ReadType: ...
+
+
+@overload
+def read(
+    path_or_url: str | Path | TextIO,
+    *,
+    metadata_path: str | Path | None = ...,
+    metadata: MappingSet | MappingSetRecord | Metadata | None = ...,
+    converter: curies.Converter | None = ...,
+    progress: bool = ...,
+    progress_kwargs: dict[str, Any] | None = ...,
+    record_predicate: RecordPredicate | None = ...,
+    semantic_mapping_predicate: SemanticMappingPredicate | None = ...,
+    return_errors: Literal[True] = True,
+) -> ExtendedReadType: ...
+
+
+@overload
+def read(
+    path_or_url: str | Path | TextIO,
+    *,
+    metadata_path: str | Path | None = ...,
+    metadata: MappingSet | MappingSetRecord | Metadata | None = ...,
+    converter: curies.Converter | None = ...,
+    progress: bool = ...,
+    progress_kwargs: dict[str, Any] | None = ...,
+    record_predicate: RecordPredicate | None = ...,
+    semantic_mapping_predicate: SemanticMappingPredicate | None = ...,
+    return_errors: None = ...,
+) -> ReadType: ...
 
 
 def read(
@@ -429,7 +500,8 @@ def read(
     progress_kwargs: dict[str, Any] | None = None,
     record_predicate: RecordPredicate | None = None,
     semantic_mapping_predicate: SemanticMappingPredicate | None = None,
-) -> ReadType:
+    return_errors: bool | None = None,
+) -> ReadType | ExtendedReadType:
     """Read and process SSSOM from TSV."""
     with read_iterable(
         path_or_url=path_or_url,
@@ -441,13 +513,23 @@ def read(
         record_predicate=record_predicate,
         semantic_mapping_predicate=semantic_mapping_predicate,
     ) as t:
-        return list(t.mappings), t.converter, t.mapping_set
+        mappings: list[SemanticMapping] = []
+        errors: list[SSSOMError] = []
+        for x in t.mappings:
+            if isinstance(x, SemanticMapping):
+                mappings.append(x)
+            elif return_errors:
+                errors.append(x)
+        if return_errors:
+            return mappings, t.converter, t.mapping_set, errors
+        else:
+            return mappings, t.converter, t.mapping_set
 
 
 class ReadTuple(NamedTuple):
     """A tuple returned from streaming reading of a SSSOM file."""
 
-    mappings: Iterable[SemanticMapping]
+    mappings: Iterable[SemanticMapping | SSSOMError]
     converter: Converter
     mapping_set: MappingSet
 
@@ -475,19 +557,23 @@ def read_iterable(
         record_predicate=record_predicate,
     ) as t:
 
-        def _process() -> Iterable[SemanticMapping]:
+        def _process() -> Iterable[SemanticMapping | SSSOMError]:
             for line_number, record in t.records:
+                if isinstance(record, SSSOMError):
+                    yield record
+                    continue
                 try:
                     mapping = record_to_semantic_mapping(record, t.converter)
-                except ValueError:
-                    logger.warning("[line %d] failed to process record: %s", line_number, record)
-                    continue
+                except ValueError as e:
+                    yield SSSOMError(line_number, e, stage="processing")
                 else:
+                    if semantic_mapping_predicate is not None and not semantic_mapping_predicate(
+                        mapping
+                    ):
+                        continue
                     yield mapping
 
         mappings = _process()
-        if semantic_mapping_predicate is not None:
-            mappings = (m for m in mappings if semantic_mapping_predicate(m))
         yield ReadTuple(mappings, t.converter, t.mapping_set)
 
 
@@ -517,13 +603,13 @@ class RecordTuple(NamedTuple):
     """Return the unprocessed record."""
 
     line_number: int
-    record: Record
+    record: Record | SSSOMError
 
 
 class ReadUnprocessedTuple(NamedTuple):
     """The results returned from reading a SSSOM file without processing."""
 
-    records: list[RecordTuple]
+    records: list[Record]
     converter: Converter
     mapping_set: MappingSet
 
@@ -545,6 +631,7 @@ def read_unprocessed(
     progress: bool = False,
     progress_kwargs: dict[str, Any] | None = None,
     record_predicate: RecordPredicate | None = None,
+    return_errors: bool = False,
 ) -> ReadUnprocessedTuple:
     """Read SSSOM TSV into unprocessed records."""
     with read_unprocessed_iterable(
@@ -556,8 +643,17 @@ def read_unprocessed(
         progress_kwargs=progress_kwargs,
         record_predicate=record_predicate,
     ) as t:
+        records: list[Record] = []
+        errors: list[SSSOMError] = []
+        for _, record in t.records:
+            if isinstance(record, Record):
+                records.append(record)
+            elif return_errors:
+                errors.append(record)
+        if return_errors:
+            raise NotImplementedError
         return ReadUnprocessedTuple(
-            list(t.records),
+            records,
             t.converter,
             t.mapping_set,
         )
@@ -606,9 +702,8 @@ def read_unprocessed_iterable(
                     continue
                 try:
                     record = _row_to_record(cleaned_row)
-                except ValueError:
-                    logger.warning("[line %d] failed to parse row: %s", line_number, cleaned_row)
-                    continue
+                except ValueError as e:
+                    yield RecordTuple(line_number, SSSOMError(line_number, e, stage="raw"))
                 else:
                     if record_predicate is not None and not record_predicate(record):
                         continue

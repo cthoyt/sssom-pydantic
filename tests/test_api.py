@@ -77,7 +77,7 @@ class TestIO(cases.MappingTestCaseMixin):
 
         unprocessed, _converter, _mapping_set = sssom_pydantic.io.read_unprocessed(path)
         self.assertEqual(1, len(unprocessed))
-        self.assert_base_model_equal(record, unprocessed[0].record)
+        self.assert_base_model_equal(record, unprocessed[0])
 
         semantic_mapping = _m()
         processed, _converter, _mapping_set = sssom_pydantic.io.read(path)
@@ -156,7 +156,7 @@ class TestIO(cases.MappingTestCaseMixin):
 
         unprocessed_records, _, _mapping_set = sssom_pydantic.io.read_unprocessed(path)
         self.assertEqual(1, len(unprocessed_records))
-        self.assert_base_model_equal(_r(author_id=[AUTHOR.curie]), unprocessed_records[0].record)
+        self.assert_base_model_equal(_r(author_id=[AUTHOR.curie]), unprocessed_records[0])
 
         processed_records, _converter, _mapping_set = sssom_pydantic.io.read(path)
 
@@ -271,6 +271,39 @@ class TestIO(cases.MappingTestCaseMixin):
         )
         self.assertEqual(1, len(processed_records))
         self.assert_model_equal(_m(authors=[AUTHOR]), processed_records[0])
+
+    def test_read_with_errors(self) -> None:
+        """Test returning errors."""
+        text = dedent(f"""\
+            #curie_map:
+            #  mesh: "http://id.nlm.nih.gov/mesh/"
+            #  chebi: "http://purl.obolibrary.org/obo/CHEBI_"
+            #
+            #mapping_set_id: {TEST_MAPPING_SET_ID}
+            subject_id	subject_label	predicate_id	object_id	object_label	mapping_justification	author_id
+            mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	{manual_mapping_curation.curie}	{AUTHOR.curie}
+            mesh:C000090
+        """)  # noqa:E501
+        path = self.directory.joinpath("test.tsv")
+        path.write_text(text)
+        with self.assertLogs(level="WARNING") as ctx:
+            mappings, _converter, _mapping_set = sssom_pydantic.read(path)
+            self.assertEqual(
+                [
+                    "WARNING:sssom_pydantic.io:[line 7] failed to parse row: {'subject_id': 'mesh:C000090'}"  # noqa:E501
+                ],
+                ctx.output,
+            )
+        self.assertEqual(1, len(mappings))
+        self.assert_model_equal(_m(authors=[AUTHOR]), mappings[0])
+
+        # now, return the errors explicitly
+
+        mappings, _converter, _mapping_set, errors = sssom_pydantic.read(path, return_errors=True)
+        self.assertEqual(1, len(mappings))
+        self.assert_model_equal(_m(authors=[AUTHOR]), mappings[0])
+        self.assertEqual(1, len(errors))
+        self.assertEqual(..., errors[0])
 
     def test_append(self) -> None:
         """Test appending to the end of a file."""
