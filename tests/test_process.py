@@ -442,12 +442,26 @@ class TestProcess(cases.MappingTestCaseMixin):
                 SemanticMapping.exact("CHEBI:28646", "mesh:C000089"),
             ),
             (
-                SemanticMapping.exact("mesh:C000089", "CHEBI:28646", subject_source="bioregistry:mesh"),
-                SemanticMapping.exact("CHEBI:28646", "mesh:C000089", object_source="bioregistry:mesh"),
+                SemanticMapping.exact(
+                    "mesh:C000089", "CHEBI:28646", subject_source="bioregistry:mesh"
+                ),
+                SemanticMapping.exact(
+                    "CHEBI:28646", "mesh:C000089", object_source="bioregistry:mesh"
+                ),
             ),
             (
-                SemanticMapping.exact("mesh:C000089", "CHEBI:28646", subject_source="bioregistry:mesh", object_source="bioregistry:chebi"),
-                SemanticMapping.exact("CHEBI:28646", "mesh:C000089", object_source="bioregistry:mesh", subject_source="bioregistry:chebi"),
+                SemanticMapping.exact(
+                    "mesh:C000089",
+                    "CHEBI:28646",
+                    subject_source="bioregistry:mesh",
+                    object_source="bioregistry:chebi",
+                ),
+                SemanticMapping.exact(
+                    "CHEBI:28646",
+                    "mesh:C000089",
+                    object_source="bioregistry:mesh",
+                    subject_source="bioregistry:chebi",
+                ),
             ),
         ]
         for i, (left, right) in enumerate(pairs, start=1):

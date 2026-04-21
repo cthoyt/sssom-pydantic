@@ -355,9 +355,9 @@ def _invert_key(key: str) -> str | None:
     elif key == "object":
         return "subject"
     elif key.startswith("subject_"):
-        return "object_" + key[len("subject_"):]
+        return "object_" + key[len("subject_") :]
     elif key.startswith("object_"):
-        return "subject_" + key[len("object_"):]
+        return "subject_" + key[len("object_") :]
     else:
         return None
 
