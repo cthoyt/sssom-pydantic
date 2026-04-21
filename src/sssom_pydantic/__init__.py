@@ -11,6 +11,7 @@ from .api import (
     hash_mapping,
     hash_mapping_to_reference,
     hash_triple,
+    hash_triple_to_reference,
 )
 from .io import (
     Metadata,
@@ -40,6 +41,7 @@ __all__ = [
     "hash_mapping",
     "hash_mapping_to_reference",
     "hash_triple",
+    "hash_triple_to_reference",
     "lint",
     "read",
     "read_iterable",
