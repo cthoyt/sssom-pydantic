@@ -476,12 +476,26 @@ def _dict_to_other(x: dict[str, str]) -> str:
     return OTHER_PRIMARY_SEP.join(f"{k}{OTHER_SECONDARY_SEP}{v}" for k, v in sorted(x.items()))
 
 
-def _other_to_dict(x: str) -> dict[str, str]:
-    return dict(_xx(y) for y in x.split(OTHER_PRIMARY_SEP))
+def _other_to_dict(x: str, *, line_number: int | None = None) -> dict[str, str] | None:
+    return (
+        dict(
+            pair
+            for key_value in x.split(OTHER_PRIMARY_SEP)
+            if (pair := _split_key_value(key_value, line_number=line_number))
+        )
+        or None
+    )
 
 
-def _xx(s: str) -> tuple[str, str]:
-    left, right = s.split(OTHER_SECONDARY_SEP)
+def _split_key_value(s: str, *, line_number: int | None = None) -> tuple[str, str] | None:
+    try:
+        left, right = s.split(OTHER_SECONDARY_SEP)
+    except ValueError:
+        if line_number is not None:
+            logging.warning("[line: %d] invalid value for `other`: %s", line_number, s)
+        else:
+            logging.warning("invalid value for `other`: %s", s)
+        return None
     return left, right
 
 
@@ -562,7 +576,7 @@ class MappingSetRecord(BaseModel):
     subject_source_version: str | None = None
     subject_type: str | None = None
 
-    def process(self, converter: curies.Converter) -> MappingSet:
+    def process(self, converter: curies.Converter, *, line_number: int | None = None) -> MappingSet:
         """Get a mapping set."""
         return MappingSet(
             id=self.mapping_set_id,
@@ -574,7 +588,7 @@ class MappingSetRecord(BaseModel):
             #
             publication_date=self.publication_date,
             see_also=self.see_also,
-            other=_other_to_dict(self.other) if self.other else None,
+            other=_other_to_dict(self.other, line_number=line_number) if self.other else None,
             comment=self.comment,
             sssom_version=self.sssom_version,
             license=self.license,

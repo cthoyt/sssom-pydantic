@@ -104,7 +104,9 @@ def row_to_semantic_mapping(
     return record_to_semantic_mapping(record, converter)
 
 
-def record_to_semantic_mapping(record: Record, converter: curies.Converter) -> SemanticMapping:
+def record_to_semantic_mapping(
+    record: Record, converter: curies.Converter, *, line_number: int | None = None
+) -> SemanticMapping:
     """Parse a record into a mapping."""
     subject = converter.parse_curie(record.subject_id, strict=True).to_pydantic(
         name=record.subject_label
@@ -190,7 +192,7 @@ def record_to_semantic_mapping(record: Record, converter: curies.Converter) -> S
         provider=record.mapping_provider,
         source=_parse_curie_or_uri(record.mapping_source),
         match_string=record.match_string,
-        other=_other_to_dict(record.other) if record.other else None,
+        other=_other_to_dict(record.other, line_number=line_number) if record.other else None,
         see_also=record.see_also,
         similarity_measure=record.similarity_measure,
         similarity_score=record.similarity_score,
@@ -563,7 +565,9 @@ def read_iterable(
                     yield record
                     continue
                 try:
-                    mapping = record_to_semantic_mapping(record, t.converter)
+                    mapping = record_to_semantic_mapping(
+                        record, t.converter, line_number=line_number
+                    )
                 except ValueError as e:
                     logger.debug("[line %d] failed to process record: %s", line_number, record)
                     yield SSSOMError(line_number, e, stage="processing")
