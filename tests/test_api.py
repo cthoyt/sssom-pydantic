@@ -96,7 +96,8 @@ class TestIO(cases.MappingTestCaseMixin):
         path.write_text(text)
 
         with path.open() as file:
-            columns, mapping_set_record = _chomp_frontmatter(file)
+            columns, mapping_set_record, frontmatter_length = _chomp_frontmatter(file)
+        self.assertEqual(4, frontmatter_length)
         self.assertEqual(
             [
                 "subject_id",
