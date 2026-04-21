@@ -6,7 +6,7 @@ import unittest
 from curies import Converter, Reference
 
 from sssom_pydantic import SemanticMapping
-from sssom_pydantic.api import hash_mapping, mapping_to_sexpr_str
+from sssom_pydantic.api import hash_mapping, hash_triple, mapping_to_sexpr_str
 from sssom_pydantic.examples import EXAMPLES
 from sssom_pydantic.models import Box, box_to_str
 from tests.cases import TEST_CONVERTER
@@ -108,3 +108,22 @@ class TestSexpr(unittest.TestCase):
         for mapping, sexpr, digest in CASES:
             self.assertEqual(sexpr, mapping_to_sexpr_str(mapping, converter=CONVERTER))
             self.assertEqual(digest, hash_mapping(mapping, converter=CONVERTER))
+
+
+class TestTripleHash(unittest.TestCase):
+    """Test hashing."""
+
+    def test_it(self) -> None:
+        """Test hashing."""
+        mapping = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
+        cases = [
+            ("36a1f9244ea7641a90987c82f33c25c0c13712ee8f48207b2a0825f8a4e4e26a", mapping),
+            ("36a1f9244ea7641a90987c82f33c25c0c13712ee8f48207b2a0825f8a4e4e26a~", mapping.negate()),
+            (
+                "bb768f0b1e1643298f4df1a381001f6ed68fcc8fff49b371f0235b51dbab9e1e",
+                SemanticMapping.exact("CHEBI:28646", "cas:645-92-1"),
+            ),
+        ]
+        for expected, mapping in cases:
+            with self.subTest(expected=expected):
+                self.assertEqual(expected, hash_triple(mapping, TEST_CONVERTER))
