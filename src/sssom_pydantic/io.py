@@ -476,7 +476,7 @@ def read_iterable(
     ) as t:
 
         def _process() -> Iterable[SemanticMapping]:
-            for record in t.records:
+            for _line_number, record in t.records:
                 try:
                     mapping = record_to_semantic_mapping(record, t.converter)
                 except ValueError:
