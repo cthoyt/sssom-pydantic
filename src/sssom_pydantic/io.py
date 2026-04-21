@@ -513,10 +513,17 @@ def _get_mapping_set_record(
         raise TypeError
 
 
+class RecordTuple(NamedTuple):
+    """Return the unprocessed record."""
+
+    line_number: int
+    record: Record
+
+
 class ReadUnprocessedTuple(NamedTuple):
     """The results returned from reading a SSSOM file without processing."""
 
-    records: list[Record]
+    records: list[RecordTuple]
     converter: Converter
     mapping_set: MappingSet
 
@@ -524,7 +531,7 @@ class ReadUnprocessedTuple(NamedTuple):
 class ReadUnprocessedStreamTuple(NamedTuple):
     """The results returned from reading a SSSOM file without processing with streaming."""
 
-    records: Iterable[Record]
+    records: Iterable[RecordTuple]
     converter: Converter
     mapping_set: MappingSet
 
@@ -591,12 +598,22 @@ def read_unprocessed_iterable(
         _row_to_record = mapping_set_record.get_parser()
         reader = csv.DictReader(file, fieldnames=columns, delimiter="\t")
         reader = tqdm(reader, **_tqdm_kwargs)
-        records = (
-            _row_to_record(cleaned_row) for row in reader if (cleaned_row := _clean_row(row))
-        )
-        if record_predicate is not None:
-            records = (m for m in records if record_predicate(m))
 
+        def _iterate_record_tuples() -> Iterable[RecordTuple]:
+            for line_number, row in enumerate(reader, start=_frontmatter_length + 1):
+                cleaned_row = _clean_row(row)
+                if not cleaned_row:
+                    continue
+                try:
+                    record = _row_to_record(cleaned_row)
+                except ValueError:
+                    raise
+                else:
+                    if record_predicate is not None and not record_predicate(record):
+                        continue
+                    yield RecordTuple(line_number, record)
+
+        records = _iterate_record_tuples()
         converter = _chain_converters(converter, mapping_set_record)
         mapping_set = mapping_set_record.process(converter)
         yield ReadUnprocessedStreamTuple(records, converter, mapping_set)

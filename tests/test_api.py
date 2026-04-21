@@ -75,7 +75,7 @@ class TestIO(cases.MappingTestCaseMixin):
 
         unprocessed, _converter, _mapping_set = sssom_pydantic.io.read_unprocessed(path)
         self.assertEqual(1, len(unprocessed))
-        self.assert_base_model_equal(record, unprocessed[0])
+        self.assert_base_model_equal(record, unprocessed[0].record)
 
         semantic_mapping = _m()
         processed, _converter, _mapping_set = sssom_pydantic.io.read(path)
@@ -127,7 +127,7 @@ class TestIO(cases.MappingTestCaseMixin):
 
         unprocessed_records, _, _mapping_set = sssom_pydantic.io.read_unprocessed(path)
         self.assertEqual(1, len(unprocessed_records))
-        self.assert_base_model_equal(_r(author_id=[AUTHOR.curie]), unprocessed_records[0])
+        self.assert_base_model_equal(_r(author_id=[AUTHOR.curie]), unprocessed_records[0].record)
 
         processed_records, _converter, _mapping_set = sssom_pydantic.io.read(path)
 
