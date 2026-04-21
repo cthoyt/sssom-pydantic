@@ -606,8 +606,9 @@ def read_unprocessed_iterable(
                     continue
                 try:
                     record = _row_to_record(cleaned_row)
-                except ValueError:
-                    raise
+                except ValueError as e:
+                    logger.warning("[line %d] failed to parse row: %s", line_number, cleaned_row)
+                    continue
                 else:
                     if record_predicate is not None and not record_predicate(record):
                         continue
