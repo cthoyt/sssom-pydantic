@@ -336,6 +336,14 @@ def publish(
     return rv
 
 
+EXCHANGABLE_FIELDS = set()
+for key in SemanticMapping.model_fields:
+    if key.startswith("subject_"):
+        EXCHANGABLE_FIELDS.add(key[len("subject_") :])
+    elif key.startswith("object_"):
+        EXCHANGABLE_FIELDS.add(key[len("object_") :])
+
+
 def invert(mapping: SemanticMapping, converter: Converter) -> SemanticMapping:
     """Invert a mapping.
 
@@ -345,9 +353,9 @@ def invert(mapping: SemanticMapping, converter: Converter) -> SemanticMapping:
     :returns:
         An inverted mapping. Mapping inversion clears the ``record`` field if present.
 
-    >>> from curies import NamedReference, Converter
-    >>> from curies.vocabulary import charlie,
-    >>> from sssom_pydantic import SemanticMapping, hash_mapping
+    >>> from curies import NamableReference, Converter
+    >>> from curies.vocabulary import charlie, manual_mapping_curation
+    >>> from sssom_pydantic import SemanticMapping, hash_triple_to_reference
     >>> converter = Converter.from_prefix_map(
     ...     {
     ...         "CHEBI": "http://purl.obolibrary.org/obo/CHEBI_",
@@ -357,38 +365,38 @@ def invert(mapping: SemanticMapping, converter: Converter) -> SemanticMapping:
     ...     }
     ... )
     >>> mapping = SemanticMapping(
-    ...     subject=NamedReference(prefix="mesh", identifier="C000089", name="ammeline"),
+    ...     subject=NamableReference(prefix="mesh", identifier="C000089", name="ammeline"),
     ...     predicate=exact_match,
-    ...     object=NamedReference(prefix="CHEBI", identifier="28646", name="ammeline"),
+    ...     object=NamableReference(prefix="CHEBI", identifier="28646", name="ammeline"),
+    ...     justification=manual_mapping_curation,
     ...     authors=[charlie],
     ...     mapping_date="2026-04-21",
     ... )
-    >>> mapping_inv = invert_mapping(mapping, converter)
-    """
+    >>> hash_triple_to_reference(mapping, converter)
+    Reference(prefix='mapping', identifier='36a1f9244ea7641a90987c82f33c25c0c13712ee8f48207b2a0825f8a4e4e26a')
+    >>> mapping_inv = invert(mapping, converter)
+    >>> mapping_inv.subject
+    NamableReference(prefix='CHEBI', identifier='28646', name='ammeline')
+    >>> mapping_inv.object
+    NamableReference(prefix='mesh', identifier='C000089', name='ammeline')
+    >>> mapping_inv.derived_from
+    [Reference(prefix='mapping', identifier='36a1f9244ea7641a90987c82f33c25c0c13712ee8f48207b2a0825f8a4e4e26a')]
+    """  # noqa:E501
     if mapping.predicate != exact_match:
         raise NotImplementedError()
     if mapping.justification == mapping_inversion:
         raise ValueError("double inversion is not supported")
 
-    data = mapping.model_dump(exclude_none=True)
-
-    parts = set()
-    for key in data:
-        if key.startswith("subject_"):
-            parts.add(key[len("subject_") :])
-        elif key.startswith("object_"):
-            parts.add(key[len("object_") :])
-
-    update = {
-        "subject": data.pop("object"),
-        "object": data.pop("subject"),
+    update: dict[str, Any] = {
+        "subject": mapping.object,
+        "object": mapping.subject,
         "justification": mapping_inversion,
         "record": None,  # need to clear the record, since the mapping will now have a new identity
         # TODO update cardinality?
     }
-    for part in parts:
-        subject_part = data.get(f"subject_{part}")
-        object_part = data.get(f"object_{part}")
+    for part in EXCHANGABLE_FIELDS:
+        subject_part = getattr(mapping, f"subject_{part}")
+        object_part = getattr(mapping, f"object_{part}")
         if subject_part and object_part:
             update[f"object_{part}"] = subject_part
             update[f"subject_{part}"] = object_part
