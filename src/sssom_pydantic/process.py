@@ -349,11 +349,11 @@ def invert(mapping: SemanticMapping) -> SemanticMapping:
 
     :param mapping: A semantic mapping record
 
-    :returns:
-        An inverted mapping. Mapping inversion clears the ``record`` field if present.
+    :returns: An inverted mapping. Mapping inversion clears the ``record`` field if
+        present.
 
     >>> from curies import NamableReference
-    >>> from curies.vocabulary import charlie, manual_mapping_curation
+    >>> from curies.vocabulary import charlie, manual_mapping_curation, exact_match
     >>> from sssom_pydantic import SemanticMapping
     >>> mapping = SemanticMapping(
     ...     subject=NamableReference(prefix="mesh", identifier="C000089", name="ammeline"),
