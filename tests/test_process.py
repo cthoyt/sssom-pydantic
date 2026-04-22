@@ -435,6 +435,12 @@ class TestProcess(cases.MappingTestCaseMixin):
             self.assertAlmostEqual(i, estimate_confidence([v2]), places=4)
             self.assertLessEqual(estimate_confidence([v2]), estimate_confidence([v3]))
 
+    def test_invert_errors(self) -> None:
+        """Test invert error."""
+        m1 = SemanticMapping.exact("CHEBI:28646", "mesh:C000089", justification=mapping_inversion)
+        with self.assertRaises(ValueError):
+            invert(m1)
+
     def test_invert(self) -> None:
         """Test inverting a mapping."""
         m1 = SemanticMapping.exact("CHEBI:28646", "mesh:C000089")
@@ -447,6 +453,9 @@ class TestProcess(cases.MappingTestCaseMixin):
             "mesh:C000089",
             object_source="bioregistry:mesh",
             subject_source="bioregistry:chebi",
+        )
+        m5 = SemanticMapping(
+            subject="VO:0011155", predicate=broad_match, object="mesh:D014404", justification=manual
         )
         pairs = [
             (
@@ -484,6 +493,15 @@ class TestProcess(cases.MappingTestCaseMixin):
                     justification=mapping_inversion,
                 ),
                 m4,
+            ),
+            (
+                SemanticMapping(
+                    object="VO:0011155",
+                    predicate=narrow_match,
+                    subject="mesh:D014404",
+                    justification=mapping_inversion,
+                ),
+                m5,
             ),
         ]
         for i, (expected, initial) in enumerate(pairs, start=1):

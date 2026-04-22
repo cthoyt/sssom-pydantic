@@ -22,9 +22,9 @@ from typing import (
 from curies import Reference
 from curies.vocabulary import (
     SemanticMappingScope,
-    exact_match,
     manual_mapping_curation,
     mapping_inversion,
+    semantic_mapping_inversions,
     semantic_mapping_scopes,
 )
 
@@ -369,13 +369,18 @@ def invert(mapping: SemanticMapping) -> SemanticMapping:
     >>> mapping_inv.object
     NamableReference(prefix='mesh', identifier='C000089', name='ammeline')
     """
-    if mapping.predicate != exact_match:
+    new_predicate = semantic_mapping_inversions.get(mapping.predicate)  # type:ignore
+    if new_predicate is None:
         raise NotImplementedError()
     if mapping.justification == mapping_inversion:
         raise ValueError("double inversion is not supported")
 
+    if not mapping.predicate.name:
+        new_predicate = new_predicate.without_name()
+
     update: dict[str, Any] = {
         "subject": mapping.object,
+        "predicate": new_predicate,
         "object": mapping.subject,
         "justification": mapping_inversion,
         "record": None,  # need to clear the record, since the mapping will now have a new identity
