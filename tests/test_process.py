@@ -8,6 +8,7 @@ from curies.vocabulary import (
     exact_match,
     lexical_matching_process,
     manual_mapping_curation,
+    mapping_inversion,
     narrow_match,
     semantic_mapping_scopes,
 )
@@ -434,28 +435,54 @@ class TestProcess(cases.MappingTestCaseMixin):
             self.assertAlmostEqual(i, estimate_confidence([v2]), places=4)
             self.assertLessEqual(estimate_confidence([v2]), estimate_confidence([v3]))
 
+    def test_invert_errors(self) -> None:
+        """Test invert error."""
+        m1 = SemanticMapping.exact("CHEBI:28646", "mesh:C000089", justification=mapping_inversion)
+        with self.assertRaises(ValueError):
+            invert(m1)
+
     def test_invert(self) -> None:
         """Test inverting a mapping."""
+        m1 = SemanticMapping.exact("CHEBI:28646", "mesh:C000089")
+        m2 = SemanticMapping.exact("CHEBI:28646", "mesh:C000089", object_source="bioregistry:mesh")
+        m3 = SemanticMapping.exact(
+            "CHEBI:28646", "mesh:C000089", subject_source="bioregistry:chebi"
+        )
+        m4 = SemanticMapping.exact(
+            "CHEBI:28646",
+            "mesh:C000089",
+            object_source="bioregistry:mesh",
+            subject_source="bioregistry:chebi",
+        )
+        m5 = SemanticMapping(
+            subject="VO:0011155", predicate=broad_match, object="mesh:D014404", justification=manual
+        )
         pairs = [
             (
-                SemanticMapping.exact("mesh:C000089", "CHEBI:28646"),
-                SemanticMapping.exact("CHEBI:28646", "mesh:C000089"),
+                SemanticMapping.exact(
+                    "mesh:C000089",
+                    "CHEBI:28646",
+                    justification=mapping_inversion,
+                ),
+                m1,
             ),
             (
                 SemanticMapping.exact(
-                    "mesh:C000089", "CHEBI:28646", subject_source="bioregistry:mesh"
+                    "mesh:C000089",
+                    "CHEBI:28646",
+                    subject_source="bioregistry:mesh",
+                    justification=mapping_inversion,
                 ),
-                SemanticMapping.exact(
-                    "CHEBI:28646", "mesh:C000089", object_source="bioregistry:mesh"
-                ),
+                m2,
             ),
             (
                 SemanticMapping.exact(
-                    "mesh:C000089", "CHEBI:28646", object_source="bioregistry:chebi"
+                    "mesh:C000089",
+                    "CHEBI:28646",
+                    object_source="bioregistry:chebi",
+                    justification=mapping_inversion,
                 ),
-                SemanticMapping.exact(
-                    "CHEBI:28646", "mesh:C000089", subject_source="bioregistry:chebi"
-                ),
+                m3,
             ),
             (
                 SemanticMapping.exact(
@@ -463,18 +490,20 @@ class TestProcess(cases.MappingTestCaseMixin):
                     "CHEBI:28646",
                     subject_source="bioregistry:mesh",
                     object_source="bioregistry:chebi",
+                    justification=mapping_inversion,
                 ),
-                SemanticMapping.exact(
-                    "CHEBI:28646",
-                    "mesh:C000089",
-                    object_source="bioregistry:mesh",
-                    subject_source="bioregistry:chebi",
+                m4,
+            ),
+            (
+                SemanticMapping(
+                    object="VO:0011155",
+                    predicate=narrow_match,
+                    subject="mesh:D014404",
+                    justification=mapping_inversion,
                 ),
+                m5,
             ),
         ]
-        for i, (left, right) in enumerate(pairs, start=1):
+        for i, (expected, initial) in enumerate(pairs, start=1):
             with self.subTest(index=str(i)):
-                self.assert_model_equal(left, invert(right))
-                self.assert_model_equal(right, invert(left))
-                self.assert_model_equal(left, invert(invert(left)))
-                self.assert_model_equal(right, invert(invert(right)))
+                self.assert_model_equal(expected, invert(initial))
