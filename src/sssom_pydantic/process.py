@@ -24,6 +24,7 @@ from curies.vocabulary import (
     SemanticMappingScope,
     exact_match,
     manual_mapping_curation,
+    mapping_inversion,
     semantic_mapping_scopes,
 )
 
@@ -335,31 +336,54 @@ def publish(
     return rv
 
 
+EXCHANGABLE_FIELDS = set()
+for key in SemanticMapping.model_fields:
+    if key.startswith("subject_"):
+        EXCHANGABLE_FIELDS.add(key[len("subject_") :])
+    elif key.startswith("object_"):
+        EXCHANGABLE_FIELDS.add(key[len("object_") :])
+
+
 def invert(mapping: SemanticMapping) -> SemanticMapping:
     """Invert a mapping.
 
     :param mapping: A semantic mapping record
 
-    :returns: An inverted mapping.
+    :returns:
+        An inverted mapping. Mapping inversion clears the ``record`` field if present.
+
+    >>> from curies import NamableReference
+    >>> from curies.vocabulary import charlie, manual_mapping_curation
+    >>> from sssom_pydantic import SemanticMapping
+    >>> mapping = SemanticMapping(
+    ...     subject=NamableReference(prefix="mesh", identifier="C000089", name="ammeline"),
+    ...     predicate=exact_match,
+    ...     object=NamableReference(prefix="CHEBI", identifier="28646", name="ammeline"),
+    ...     justification=manual_mapping_curation,
+    ...     authors=[charlie],
+    ...     mapping_date="2026-04-21",
+    ... )
+    >>> mapping_inv = invert(mapping)
+    >>> mapping_inv.subject
+    NamableReference(prefix='CHEBI', identifier='28646', name='ammeline')
+    >>> mapping_inv.object
+    NamableReference(prefix='mesh', identifier='C000089', name='ammeline')
     """
     if mapping.predicate != exact_match:
         raise NotImplementedError()
-    data = mapping.model_dump(exclude_none=True)
+    if mapping.justification == mapping_inversion:
+        raise ValueError("double inversion is not supported")
 
-    parts = set()
-    for key in data:
-        if key.startswith("subject_"):
-            parts.add(key[len("subject_") :])
-        elif key.startswith("object_"):
-            parts.add(key[len("object_") :])
-
-    update = {
-        "subject": data.pop("object"),
-        "object": data.pop("subject"),
+    update: dict[str, Any] = {
+        "subject": mapping.object,
+        "object": mapping.subject,
+        "justification": mapping_inversion,
+        "record": None,  # need to clear the record, since the mapping will now have a new identity
+        # TODO update cardinality?
     }
-    for part in parts:
-        subject_part = data.get(f"subject_{part}")
-        object_part = data.get(f"object_{part}")
+    for part in EXCHANGABLE_FIELDS:
+        subject_part = getattr(mapping, f"subject_{part}")
+        object_part = getattr(mapping, f"object_{part}")
         if subject_part and object_part:
             update[f"object_{part}"] = subject_part
             update[f"subject_{part}"] = object_part
