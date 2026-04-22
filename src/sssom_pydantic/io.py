@@ -17,7 +17,7 @@ import curies
 import yaml
 from curies import Converter, Reference
 from pydantic import AnyUrl
-from pystow.utils import read_pydantic_yaml, safe_open
+from pystow.utils import model_dump_yaml, read_pydantic_yaml, safe_open
 from tqdm import tqdm
 from typing_extensions import TypeVar
 
@@ -56,6 +56,7 @@ __all__ = [
     "row_to_record",
     "row_to_semantic_mapping",
     "write",
+    "write_metadata",
     "write_unprocessed",
 ]
 
@@ -363,14 +364,22 @@ def write_unprocessed(
     exclude = set(condensation).union(exclude_columns or [])
     columns = [column for column in columns if column not in exclude]
 
-    with path.open(mode="w") as file:
-        if metadata:
-            for line in yaml.safe_dump(metadata).splitlines():
-                print(f"#{line}", file=file)
-                # TODO add comment about being written with this software at a given time
+    with safe_open(path, operation="write", representation="text") as file:
+        write_metadata(metadata, file)
         writer = csv.DictWriter(file, columns, delimiter="\t")
         writer.writeheader()
         writer.writerows(_unprocess_row(record, exclude=exclude) for record in records)
+
+
+def write_metadata(metadata: MappingSetRecord | Metadata | MappingSet | None, file: TextIO) -> None:
+    """Write SSSOM metadata for the top of a TSV."""
+    mapping_set_record = _get_mapping_set_record(metadata)
+    if mapping_set_record is None:
+        return
+    # TODO add comment about being written with this software at a given time
+    yaml_str = model_dump_yaml(mapping_set_record, exclude_none=True, exclude_unset=True)
+    for line in yaml_str.splitlines():
+        file.write(f"#{line}\n")
 
 
 CondensationTypes: TypeAlias = str | float | None | datetime.date | tuple[str, ...]
@@ -600,6 +609,7 @@ def read_iterable(
         yield ReadTuple(mappings, t.converter, t.mapping_set)
 
 
+# FIXME delete
 def _get_metadata(metadata: MappingSet | MappingSetRecord | Metadata | None) -> Metadata:
     mapping_set_record = _get_mapping_set_record(metadata)
     if mapping_set_record is None:
