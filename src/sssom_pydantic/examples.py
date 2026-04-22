@@ -41,6 +41,7 @@ TEST_PREFIX_MAP = {
     "cas": "https://commonchemistry.cas.org/detail?cas_rn=",
     "mesh": "http://id.nlm.nih.gov/mesh/",
     "chebi": "http://purl.obolibrary.org/obo/CHEBI_",
+    "VO": "http://purl.obolibrary.org/obo/VO_",
     # the following are the default ones
     "owl": "http://www.w3.org/2002/07/owl#",
     "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
