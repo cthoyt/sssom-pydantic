@@ -22,9 +22,9 @@ from typing import (
 from curies import Converter, Reference
 from curies.vocabulary import (
     SemanticMappingScope,
-    exact_match,
     manual_mapping_curation,
     mapping_inversion,
+    semantic_mapping_inversions,
     semantic_mapping_scopes,
 )
 
@@ -350,11 +350,11 @@ def invert(mapping: SemanticMapping, converter: Converter) -> SemanticMapping:
     :param mapping: A semantic mapping record
     :param converter: A converter
 
-    :returns:
-        An inverted mapping. Mapping inversion clears the ``record`` field if present.
+    :returns: An inverted mapping. Mapping inversion clears the ``record`` field if
+        present.
 
     >>> from curies import NamableReference, Converter
-    >>> from curies.vocabulary import charlie, manual_mapping_curation
+    >>> from curies.vocabulary import charlie, manual_mapping_curation, exact_match
     >>> from sssom_pydantic import SemanticMapping, hash_triple_to_reference
     >>> converter = Converter.from_prefix_map(
     ...     {
@@ -382,13 +382,18 @@ def invert(mapping: SemanticMapping, converter: Converter) -> SemanticMapping:
     >>> mapping_inv.derived_from
     [Reference(prefix='mapping', identifier='36a1f9244ea7641a90987c82f33c25c0c13712ee8f48207b2a0825f8a4e4e26a')]
     """  # noqa:E501
-    if mapping.predicate != exact_match:
+    new_predicate = semantic_mapping_inversions.get(mapping.predicate)  # type:ignore
+    if new_predicate is None:
         raise NotImplementedError()
     if mapping.justification == mapping_inversion:
         raise ValueError("double inversion is not supported")
 
+    if not mapping.predicate.name:
+        new_predicate = new_predicate.without_name()
+
     update: dict[str, Any] = {
         "subject": mapping.object,
+        "predicate": new_predicate,
         "object": mapping.subject,
         "justification": mapping_inversion,
         "record": None,  # need to clear the record, since the mapping will now have a new identity
