@@ -194,6 +194,8 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
     similarity_measure: str | None = Field(None)
     similarity_score: float | None = Field(None, ge=0.0, le=1.0)
 
+    derived_from: list[Reference] | None = Field(None)
+
     @classmethod
     def from_triple(
         cls,

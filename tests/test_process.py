@@ -19,8 +19,9 @@ from curies.vocabulary import (
     manual_mapping_curation as manual,
 )
 
-from sssom_pydantic import SemanticMapping
+from sssom_pydantic import SemanticMapping, hash_triple_to_reference
 from sssom_pydantic.api import NOT
+from sssom_pydantic.examples import TEST_CONVERTER
 from sssom_pydantic.process import (
     InvalidExistsActionError,
     Mark,
@@ -439,7 +440,7 @@ class TestProcess(cases.MappingTestCaseMixin):
         """Test invert error."""
         m1 = SemanticMapping.exact("CHEBI:28646", "mesh:C000089", justification=mapping_inversion)
         with self.assertRaises(ValueError):
-            invert(m1)
+            invert(m1, TEST_CONVERTER)
 
     def test_invert(self) -> None:
         """Test inverting a mapping."""
@@ -463,6 +464,7 @@ class TestProcess(cases.MappingTestCaseMixin):
                     "mesh:C000089",
                     "CHEBI:28646",
                     justification=mapping_inversion,
+                    derived_from=[hash_triple_to_reference(m1, TEST_CONVERTER)],
                 ),
                 m1,
             ),
@@ -472,6 +474,7 @@ class TestProcess(cases.MappingTestCaseMixin):
                     "CHEBI:28646",
                     subject_source="bioregistry:mesh",
                     justification=mapping_inversion,
+                    derived_from=[hash_triple_to_reference(m2, TEST_CONVERTER)],
                 ),
                 m2,
             ),
@@ -481,6 +484,7 @@ class TestProcess(cases.MappingTestCaseMixin):
                     "CHEBI:28646",
                     object_source="bioregistry:chebi",
                     justification=mapping_inversion,
+                    derived_from=[hash_triple_to_reference(m3, TEST_CONVERTER)],
                 ),
                 m3,
             ),
@@ -491,6 +495,7 @@ class TestProcess(cases.MappingTestCaseMixin):
                     subject_source="bioregistry:mesh",
                     object_source="bioregistry:chebi",
                     justification=mapping_inversion,
+                    derived_from=[hash_triple_to_reference(m4, TEST_CONVERTER)],
                 ),
                 m4,
             ),
@@ -500,10 +505,11 @@ class TestProcess(cases.MappingTestCaseMixin):
                     predicate=narrow_match,
                     subject="mesh:D014404",
                     justification=mapping_inversion,
+                    derived_from=[hash_triple_to_reference(m5, TEST_CONVERTER)],
                 ),
                 m5,
             ),
         ]
         for i, (expected, initial) in enumerate(pairs, start=1):
             with self.subTest(index=str(i)):
-                self.assert_model_equal(expected, invert(initial))
+                self.assert_model_equal(expected, invert(initial, TEST_CONVERTER))

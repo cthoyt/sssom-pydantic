@@ -19,7 +19,7 @@ from typing import (
     get_args,
 )
 
-from curies import Reference
+from curies import Converter, Reference
 from curies.vocabulary import (
     SemanticMappingScope,
     manual_mapping_curation,
@@ -28,7 +28,7 @@ from curies.vocabulary import (
     semantic_mapping_scopes,
 )
 
-from .api import SemanticMapping
+from .api import SemanticMapping, hash_triple_to_reference
 
 if TYPE_CHECKING:
     from _typeshed import SupportsRichComparison
@@ -344,17 +344,26 @@ for key in SemanticMapping.model_fields:
         EXCHANGABLE_FIELDS.add(key[len("object_") :])
 
 
-def invert(mapping: SemanticMapping) -> SemanticMapping:
+def invert(mapping: SemanticMapping, converter: Converter) -> SemanticMapping:
     """Invert a mapping.
 
     :param mapping: A semantic mapping record
+    :param converter: A converter
 
     :returns: An inverted mapping. Mapping inversion clears the ``record`` field if
         present.
 
-    >>> from curies import NamableReference
+    >>> from curies import NamableReference, Converter
     >>> from curies.vocabulary import charlie, manual_mapping_curation, exact_match
-    >>> from sssom_pydantic import SemanticMapping
+    >>> from sssom_pydantic import SemanticMapping, hash_triple_to_reference
+    >>> converter = Converter.from_prefix_map(
+    ...     {
+    ...         "CHEBI": "http://purl.obolibrary.org/obo/CHEBI_",
+    ...         "mesh": "http://id.nlm.nih.gov/mesh/",
+    ...         "skos": "http://www.w3.org/2004/02/skos/core#",
+    ...         "semapv": "https://w3id.org/semapv/vocab/",
+    ...     }
+    ... )
     >>> mapping = SemanticMapping(
     ...     subject=NamableReference(prefix="mesh", identifier="C000089", name="ammeline"),
     ...     predicate=exact_match,
@@ -363,12 +372,16 @@ def invert(mapping: SemanticMapping) -> SemanticMapping:
     ...     authors=[charlie],
     ...     mapping_date="2026-04-21",
     ... )
-    >>> mapping_inv = invert(mapping)
+    >>> hash_triple_to_reference(mapping, converter)
+    Reference(prefix='mapping', identifier='36a1f9244ea7641a90987c82f33c25c0c13712ee8f48207b2a0825f8a4e4e26a')
+    >>> mapping_inv = invert(mapping, converter)
     >>> mapping_inv.subject
     NamableReference(prefix='CHEBI', identifier='28646', name='ammeline')
     >>> mapping_inv.object
     NamableReference(prefix='mesh', identifier='C000089', name='ammeline')
-    """
+    >>> mapping_inv.derived_from
+    [Reference(prefix='mapping', identifier='36a1f9244ea7641a90987c82f33c25c0c13712ee8f48207b2a0825f8a4e4e26a')]
+    """  # noqa:E501
     new_predicate = semantic_mapping_inversions.get(mapping.predicate)  # type:ignore
     if new_predicate is None:
         raise NotImplementedError()
@@ -398,6 +411,8 @@ def invert(mapping: SemanticMapping) -> SemanticMapping:
         else:  # elif object_part
             update[f"object_{part}"] = None
             update[f"subject_{part}"] = object_part
+
+    update["derived_from"] = [hash_triple_to_reference(mapping, converter)]
 
     return mapping.model_copy(update=update)
 
