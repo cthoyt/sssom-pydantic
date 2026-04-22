@@ -51,7 +51,7 @@ dependencies = [
     "pydantic",
     "curies>=0.13.6",
     "pyyaml",
-    "pystow>=0.8.5",
+    "pystow>=0.8.6",
     "tqdm",
 ]
 
