@@ -9,15 +9,7 @@ import statistics
 import typing
 from collections import defaultdict
 from collections.abc import Callable, Collection, Iterable
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Literal,
-    TypeAlias,
-    TypeVar,
-    cast,
-    get_args,
-)
+from typing import TYPE_CHECKING, Any, Literal, TypeAlias, cast, get_args
 
 from curies import Reference
 from curies.vocabulary import (
@@ -27,6 +19,7 @@ from curies.vocabulary import (
     semantic_mapping_inversions,
     semantic_mapping_scopes,
 )
+from typing_extensions import TypeVar
 
 from .api import MappingTypeVar, SemanticMapping, SemanticMappingPredicate
 
