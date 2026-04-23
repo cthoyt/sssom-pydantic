@@ -25,6 +25,7 @@ from .api import (
     MappingSet,
     MappingSetRecord,
     MappingTool,
+    MappingTypeVar,
     SemanticMapping,
     SemanticMappingPredicate,
     _other_to_dict,
@@ -40,7 +41,7 @@ from .constants import (
     Row,
 )
 from .models import Record, RecordPredicate
-from .process import Hasher, MappingTypeVar, remove_redundant_external, remove_redundant_internal
+from .process import Hasher, remove_redundant_external, remove_redundant_internal
 
 __all__ = [
     "Metadata",

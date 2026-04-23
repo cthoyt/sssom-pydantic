@@ -20,6 +20,7 @@ from curies.vocabulary import (
 )
 
 from sssom_pydantic import SemanticMapping
+from sssom_pydantic import process as pr
 from sssom_pydantic.api import NOT
 from sssom_pydantic.process import (
     InvalidExistsActionError,
@@ -507,3 +508,25 @@ class TestProcess(cases.MappingTestCaseMixin):
         for i, (expected, initial) in enumerate(pairs, start=1):
             with self.subTest(index=str(i)):
                 self.assert_model_equal(expected, invert(initial))
+
+    def test_exclude_negative(self) -> None:
+        """Test excluding negative mappings."""
+        m1 = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
+        m2 = SemanticMapping.exact("mesh:C000089", "CHEBI:28647", predicate_modifier=NOT)
+        self.assertEqual([m1], list(pr.exclude_negative([m1, m2])))
+
+    def test_exclude_unsure(self) -> None:
+        """Test excluding unsure mappings."""
+        m1 = SemanticMapping.exact("CHEBI:48552", "MESH:D020926")
+        m2 = SemanticMapping.exact("CHEBI:53227", "MESH:D020959", reviewer_agreement=1.0)
+        m3 = SemanticMapping.exact("CHEBI:82761", "MESH:D023082", reviewer_agreement=0.0)
+        self.assertEqual([m1, m2], list(pr.exclude_unsure([m1, m2, m3])))
+
+    def test_invert_so(self) -> None:
+        """Test inverting mappings with given S/O prefix pairs."""
+        m1 = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
+        m1_inv = SemanticMapping.exact(
+            "CHEBI:28646", "mesh:C000089", justification=mapping_inversion
+        )
+        m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
+        self.assertEqual([m1_inv, m2], list(pr.invert_by_prefix_pair([m1, m2], "mesh", "CHEBI")))

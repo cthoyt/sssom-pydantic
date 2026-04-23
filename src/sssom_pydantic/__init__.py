@@ -1,6 +1,7 @@
 """Pydantic models for SSSOM."""
 
 from .api import (
+    NOT,
     ExtensionDefinition,
     ExtensionDefinitionRecord,
     MappingSet,
@@ -28,6 +29,7 @@ from .models import Record
 from .process import invert
 
 __all__ = [
+    "NOT",
     "ExtensionDefinition",
     "ExtensionDefinitionRecord",
     "MappingSet",
