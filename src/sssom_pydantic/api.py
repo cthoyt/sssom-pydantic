@@ -6,14 +6,14 @@ import datetime
 import functools
 import logging
 from collections.abc import Callable
-from typing import Annotated, Any, Literal, TypeAlias, TypeVar
+from typing import Annotated, Any, Literal, TypeAlias
 
 import curies
 from curies import NamableReference, Reference, Triple
 from curies.mixins import SemanticallyStandardizable
 from curies.vocabulary import exact_match, matching_processes, unspecified_matching_process
 from pydantic import AnyUrl, BaseModel, BeforeValidator, ConfigDict, Field
-from typing_extensions import Self
+from typing_extensions import Self, TypeVar
 
 from .constants import (
     ENTITY_TYPE_REFERENCE_TO_LITERAL,
@@ -500,8 +500,13 @@ def _split_key_value(s: str, *, line_number: int | None = None) -> tuple[str, st
     return left, right
 
 
+#: A type variable bound to a semantic mapping type, to
+#: make it possible to annotate functions that spit out the
+#: same type that goes in
+MappingTypeVar = TypeVar("MappingTypeVar", bound=SemanticMapping, default=SemanticMapping)
+
 #: A predicate for a semantic mapping
-SemanticMappingPredicate: TypeAlias = Callable[[SemanticMapping], bool]
+SemanticMappingPredicate: TypeAlias = Callable[[MappingTypeVar], bool]
 
 #: A function that hashes a semantic mapping into a reference
 SemanticMappingHash: TypeAlias = Callable[[SemanticMapping, curies.Converter], Reference]

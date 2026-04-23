@@ -28,7 +28,7 @@ from curies.vocabulary import (
     semantic_mapping_scopes,
 )
 
-from .api import SemanticMapping
+from .api import MappingTypeVar, SemanticMapping, SemanticMappingPredicate
 
 if TYPE_CHECKING:
     from _typeshed import SupportsRichComparison
@@ -45,8 +45,11 @@ __all__ = [
     "Mark",
     "curate",
     "estimate_confidence",
+    "exclude_negative",
+    "exclude_unsure",
     "get_canonical_tuple",
     "invert",
+    "invert_by_prefix_pair",
     "publish",
     "remove_redundant_external",
     "remove_redundant_internal",
@@ -56,13 +59,10 @@ __all__ = [
 #: A canonical mapping tuple
 CanonicalMappingTuple: TypeAlias = tuple[str, str, str, str]
 
-#: A type variable bound to a semantic mapping type, to
-#: make it possible to annotate functions that spit out the
-#: same type that goes in
-MappingTypeVar = TypeVar("MappingTypeVar", bound=SemanticMapping)
-
-#: The type used in hashing functions.
-HashTarget = TypeVar("HashTarget")
+#: The type used in hashing functions, which get put into a set.
+#: This is set with ``tuple[str, ...]`` as a default because normally,
+#: The hash function used is :func:`get_canonical_tuple`
+HashTarget = TypeVar("HashTarget", bound=typing.Hashable, default=tuple[str, ...])
 
 #: A function that constructs a hashable object from a semantic mapping
 Hasher: TypeAlias = Callable[[MappingTypeVar], HashTarget]
@@ -344,7 +344,7 @@ for key in SemanticMapping.model_fields:
         EXCHANGABLE_FIELDS.add(key[len("object_") :])
 
 
-def invert(mapping: SemanticMapping) -> SemanticMapping:
+def invert(mapping: MappingTypeVar) -> MappingTypeVar:
     """Invert a mapping.
 
     :param mapping: A semantic mapping record
@@ -528,6 +528,89 @@ def plot2d() -> None:
     fig.colorbar(mesh, ax=ax)
     plt.show()
     plt.savefig("images/reviewer-agreement-aggregation.svg")
+
+
+def exclude_negative(mappings: Iterable[MappingTypeVar]) -> Iterable[MappingTypeVar]:
+    """Exclude negative mappings.
+
+    :param mappings: An iterable of semantic mappings
+
+    :returns: A list of semantic mappings, with all negative mappings excluded
+
+    >>> from sssom_pydantic import SemanticMapping, NOT
+    >>> m1 = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
+    >>> m2 = SemanticMapping.exact("mesh:C000089", "CHEBI:28647", predicate_modifier=NOT)
+    >>> assert [m1] == list(exclude_negative([m1, m2]))
+    """
+    for mapping in mappings:
+        if mapping.predicate_modifier is None:
+            yield mapping
+
+
+def exclude_unsure(mappings: Iterable[MappingTypeVar]) -> Iterable[MappingTypeVar]:
+    """Exclude usunre mappings.
+
+    :param mappings: An iterable of semantic mappings
+
+    :returns: A list of semantic mappings, with all unsure mappings excluded.
+        Mappings are considered unsure when there's a explicit reviewer agreement of 0.0.
+
+    >>> from sssom_pydantic import SemanticMapping, NOT
+    >>> m1 = SemanticMapping.exact("CHEBI:48552", "MESH:D020926")
+    >>> m2 = SemanticMapping.exact("CHEBI:53227", "MESH:D020959", reviewer_agreement=1.0)
+    >>> m3 = SemanticMapping.exact("CHEBI:82761", "MESH:D023082", reviewer_agreement=0.0)
+    >>> assert [m1, m2] == list(exclude_unsure([m1, m2, m3]))
+    """
+    for mapping in mappings:
+        if mapping.reviewer_agreement != 0.0:
+            yield mapping
+
+
+def invert_by_predicate(
+    mappings: Iterable[MappingTypeVar], predicate: SemanticMappingPredicate
+) -> Iterable[MappingTypeVar]:
+    """Invert based on prefixes.
+
+    :param mappings: An iterable of semantic mappings
+    :param predicate: A predicate function
+
+    :returns: An iterable of semantic mappings, with the correct ones inverted
+    """
+    for mapping in mappings:
+        if predicate(mapping):
+            yield invert(mapping)
+        else:
+            yield mapping
+
+
+def invert_by_prefix_pair(
+    mappings: Iterable[MappingTypeVar], source_prefix: str, target_prefix: str
+) -> Iterable[MappingTypeVar]:
+    """Invert mappings with the given subject and object (SO) prefixes.
+
+    :param mappings: An iterable of semantic mappings
+    :param source_prefix: Invert mappings that have this source prefix
+    :param target_prefix: Invert mappings that have this target prefix
+
+    :returns: An iterable of semantic mappings, with the correct ones inverted
+
+    >>> from curies.vocabulary import mapping_inversion
+    >>> from sssom_pydantic import SemanticMapping, NOT
+    >>> m1 = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
+    >>> m1_inv = SemanticMapping.exact(
+    ...     "CHEBI:28646", "mesh:C000089", justification=mapping_inversion
+    ... )
+    >>> m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
+    >>> assert [m1_inv, m2] == list(invert_by_prefix_pair([m1, m2], "mesh", "CHEBI"))
+    """
+    yield from invert_by_predicate(mappings, _so_prefixes(source_prefix, target_prefix))
+
+
+def _so_prefixes(source_prefix: str, target_prefix: str) -> SemanticMappingPredicate:
+    def _func(m: MappingTypeVar) -> bool:
+        return m.subject.prefix == source_prefix and m.object.prefix == target_prefix
+
+    return _func
 
 
 if __name__ == "__main__":
