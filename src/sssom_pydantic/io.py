@@ -216,7 +216,7 @@ def record_to_semantic_mapping(
 
 def write(
     mappings: Iterable[MappingTypeVar],
-    path: str | Path,
+    path: str | Path | TextIO,
     *,
     metadata: MappingSet | Metadata | MappingSetRecord | None = None,
     converter: curies.Converter | None = None,
@@ -326,7 +326,7 @@ def append_unprocessed(
 
 def write_unprocessed(
     records: Sequence[Record],
-    path: str | Path,
+    path: str | Path | TextIO,
     *,
     metadata: MappingSet | Metadata | MappingSetRecord | None = None,
     converter: curies.Converter | None = None,
@@ -334,7 +334,6 @@ def write_unprocessed(
     exclude_columns: Collection[str] | None = None,
 ) -> None:
     """Write unprocessed records."""
-    path = Path(path).expanduser().resolve()
     columns = _get_columns(records)
 
     metadata = _get_metadata(metadata)
