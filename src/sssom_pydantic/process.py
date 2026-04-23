@@ -545,8 +545,8 @@ def exclude_unsure(mappings: Iterable[MappingTypeVar]) -> Iterable[MappingTypeVa
 
     :param mappings: An iterable of semantic mappings
 
-    :returns: A list of semantic mappings, with all unsure mappings excluded.
-        Mappings are considered unsure when there's a explicit reviewer agreement of 0.0.
+    :returns: A list of semantic mappings, with all unsure mappings excluded. Mappings
+        are considered unsure when there's a explicit reviewer agreement of 0.0.
 
     >>> from sssom_pydantic import SemanticMapping, NOT
     >>> m1 = SemanticMapping.exact("CHEBI:48552", "MESH:D020926")
