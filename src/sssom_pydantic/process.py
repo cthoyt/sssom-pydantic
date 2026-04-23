@@ -371,7 +371,9 @@ def invert(mapping: SemanticMapping) -> SemanticMapping:
     """
     new_predicate = semantic_mapping_inversions.get(mapping.predicate)  # type:ignore
     if new_predicate is None:
-        raise NotImplementedError(f"inversion is not implemented for predicate: {mapping.predicate}")
+        raise NotImplementedError(
+            f"inversion is not implemented for predicate: {mapping.predicate}"
+        )
     if mapping.justification == mapping_inversion:
         raise ValueError("double inversion is not supported")
 
