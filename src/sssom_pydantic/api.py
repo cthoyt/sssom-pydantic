@@ -41,7 +41,6 @@ __all__ = [
     "hash_triple_to_reference",
 ]
 
-
 logger = logging.getLogger(__name__)
 
 PredicateModifier: TypeAlias = Literal["Not"]
@@ -455,7 +454,12 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
             value = getattr(self, name)
             if value is None:
                 continue
-            if field_info.annotation in {NamableReference, Reference, Reference | None}:
+            if field_info.annotation in {
+                NamableReference,
+                NamableReference | None,
+                Reference,
+                Reference | None,
+            }:
                 update[name] = converter.standardize_reference(value, strict=True)
             elif field_info.annotation in {list[Reference], list[Reference] | None}:
                 update[name] = [converter.standardize_reference(r, strict=True) for r in value]
@@ -510,7 +514,6 @@ SemanticMappingPredicate: TypeAlias = Callable[[MappingTypeVar], bool]
 
 #: A function that hashes a semantic mapping into a reference
 SemanticMappingHash: TypeAlias = Callable[[SemanticMapping, curies.Converter], Reference]
-
 
 X = TypeVar("X")
 
