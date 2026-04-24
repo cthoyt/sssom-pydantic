@@ -17,6 +17,7 @@ import curies
 import yaml
 from curies import Converter, Reference
 from pydantic import AnyUrl
+from pystow.cache import Cached
 from pystow.utils import model_dump_yaml, read_pydantic_yaml, safe_open
 from tqdm import tqdm
 from typing_extensions import TypeVar
@@ -44,9 +45,10 @@ from .models import Record, RecordPredicate
 from .process import Hasher, remove_redundant_external, remove_redundant_internal
 
 __all__ = [
+    "CachedSemanticMappings",
     "Metadata",
     "ParseError",
-    "ReadType",
+    "SemanticMappingPack",
     "append",
     "append_unprocessed",
     "lint",
@@ -450,8 +452,14 @@ def _clean_row(row: Mapping[str, str | list[str]]) -> Row:
     return rv
 
 
-#: The result of reading and processing a SSSOM TSV file
-ReadType: TypeAlias = tuple[list[SemanticMapping], Converter, MappingSet]
+class SemanticMappingPack(NamedTuple):
+    """The results of reading and processing a SSSOM TSV file."""
+
+    mappings: list[SemanticMapping]
+    converter: Converter
+    mapping_set: MappingSet
+
+
 ExtendedReadType: TypeAlias = tuple[list[SemanticMapping], Converter, MappingSet, list[ParseError]]
 
 
@@ -484,7 +492,7 @@ def read(
     record_predicate: RecordPredicate | None = ...,
     semantic_mapping_predicate: SemanticMappingPredicate | None = ...,
     return_errors: Literal[False] = False,
-) -> ReadType: ...
+) -> SemanticMappingPack: ...
 
 
 # docstr-coverage:excused `overload`
@@ -516,7 +524,7 @@ def read(
     record_predicate: RecordPredicate | None = ...,
     semantic_mapping_predicate: SemanticMappingPredicate | None = ...,
     return_errors: None = ...,
-) -> ReadType: ...
+) -> SemanticMappingPack: ...
 
 
 def read(
@@ -530,7 +538,7 @@ def read(
     record_predicate: RecordPredicate | None = None,
     semantic_mapping_predicate: SemanticMappingPredicate | None = None,
     return_errors: bool | None = None,
-) -> ReadType | ExtendedReadType:
+) -> SemanticMappingPack | ExtendedReadType:
     """Read and process SSSOM from TSV."""
     with read_iterable(
         path_or_url=path_or_url,
@@ -552,7 +560,7 @@ def read(
         if return_errors:
             return mappings, t.converter, t.mapping_set, errors
         else:
-            return mappings, t.converter, t.mapping_set
+            return SemanticMappingPack(mappings, t.converter, t.mapping_set)
 
 
 class ReadTuple(NamedTuple):
@@ -836,3 +844,20 @@ def lint(
         drop_duplicates_key=drop_duplicates_key,
         sort=True,
     )
+
+
+class CachedSemanticMappings(Cached[SemanticMappingPack]):
+    """Make a function lazily cache SSSOM."""
+
+    def load(self) -> SemanticMappingPack:
+        """Load data from the cache as a dataframe."""
+        return read(self.path)
+
+    def dump(self, read_type: SemanticMappingPack) -> None:
+        """Dump data to the cache as a dataframe."""
+        write(
+            read_type.mappings,
+            self.path,
+            converter=read_type.converter,
+            metadata=read_type.mapping_set,
+        )
