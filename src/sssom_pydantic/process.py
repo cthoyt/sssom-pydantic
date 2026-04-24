@@ -14,9 +14,9 @@ from typing import TYPE_CHECKING, Any, Literal, TypeAlias, cast, get_args
 from curies import Reference
 from curies.vocabulary import (
     SemanticMappingScope,
-    inversions,
     manual_mapping_curation,
     mapping_inversion,
+    semantic_mapping_inversions,
     semantic_mapping_scopes,
 )
 from typing_extensions import TypeVar
@@ -362,7 +362,7 @@ def invert(mapping: MappingTypeVar) -> MappingTypeVar:
     >>> mapping_inv.object
     NamableReference(prefix='mesh', identifier='C000089', name='ammeline')
     """
-    new_predicate = inversions.get(mapping.predicate)  # type:ignore
+    new_predicate = semantic_mapping_inversions.get(mapping.predicate)  # type:ignore
     if new_predicate is None:
         raise NotImplementedError(
             f"inversion is not implemented for predicate: {mapping.predicate}"
