@@ -22,7 +22,7 @@ from pydantic import BaseModel
 
 import sssom_pydantic
 from sssom_pydantic import MappingSetRecord
-from sssom_pydantic.api import MAPPING_HASH_CURIE_PREFIX, SemanticMapping, mapping_to_sexpr_str
+from sssom_pydantic.api import MAPPING_HASH_CURIE_PREFIX, SemanticMapping
 from sssom_pydantic.database import (
     NEGATIVE_MAPPING_CLAUSE,
     POSITIVE_MAPPING_CLAUSE,
@@ -45,6 +45,7 @@ from sssom_pydantic.examples import (
 )
 from sssom_pydantic.models import Record
 from sssom_pydantic.query import Query, Sort
+from sssom_pydantic.testing import assert_semantic_model_equal
 from sssom_pydantic.web.router import ReviewPayload
 
 if TYPE_CHECKING:
@@ -119,26 +120,11 @@ class MappingTestCaseMixin(unittest.TestCase):
         msg: str | None = None,
     ) -> None:
         """Assert two models are equal."""
-        if actual is None:
-            raise self.fail()
-
         if hasattr(self, "repository"):
-            self.assertEqual(
-                mapping_to_sexpr_str(expected, self.repository.converter, _debug=True),
-                mapping_to_sexpr_str(actual, self.repository.converter, _debug=True),
-            )
-
-        parameters: dict[str, Any] = {
-            "exclude_none": True,
-            "exclude_unset": True,
-            "exclude_defaults": True,
-        }
-        self.assertEqual(
-            expected.model_dump(**parameters), actual.model_dump(**parameters), msg=msg
-        )
-        self.assertEqual(expected.subject_name, actual.subject_name)
-        self.assertEqual(expected.predicate_name, actual.predicate_name)
-        self.assertEqual(expected.object_name, actual.object_name)
+            converter = self.repository.converter
+        else:
+            converter = None
+        assert_semantic_model_equal(self, expected, actual, converter=converter, msg=msg)
 
     def assert_base_model_equal(self, expected: BaseModel, actual: BaseModel) -> None:
         """Check two models are equal by serializing to dict."""
