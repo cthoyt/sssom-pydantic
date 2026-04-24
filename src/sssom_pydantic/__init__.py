@@ -16,6 +16,7 @@ from .api import (
 )
 from .io import (
     Metadata,
+    SemanticMappingPack,
     append,
     append_unprocessed,
     lint,
@@ -38,6 +39,7 @@ __all__ = [
     "Metadata",
     "Record",
     "SemanticMapping",
+    "SemanticMappingPack",
     "SemanticMappingPredicate",
     "append",
     "append_unprocessed",

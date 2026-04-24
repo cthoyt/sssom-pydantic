@@ -45,7 +45,7 @@ from sssom_pydantic.examples import (
 )
 from sssom_pydantic.models import Record
 from sssom_pydantic.query import Query, Sort
-from sssom_pydantic.testing import assert_semantic_model_equal
+from sssom_pydantic.testing import assert_semantic_mapping_equal
 from sssom_pydantic.web.router import ReviewPayload
 
 if TYPE_CHECKING:
@@ -124,7 +124,7 @@ class MappingTestCaseMixin(unittest.TestCase):
             converter = self.repository.converter
         else:
             converter = None
-        assert_semantic_model_equal(self, expected, actual, converter=converter, msg=msg)
+        assert_semantic_mapping_equal(self, expected, actual, converter=converter, msg=msg)
 
     def assert_base_model_equal(self, expected: BaseModel, actual: BaseModel) -> None:
         """Check two models are equal by serializing to dict."""

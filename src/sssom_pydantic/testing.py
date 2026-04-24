@@ -13,11 +13,11 @@ if TYPE_CHECKING:
     import unittest
 
 __all__ = [
-    "assert_semantic_model_equal",
+    "assert_semantic_mapping_equal",
 ]
 
 
-def assert_semantic_model_equal(
+def assert_semantic_mapping_equal(
     test_case: unittest.TestCase,
     expected: SemanticMapping,
     actual: SemanticMapping | None,
@@ -41,8 +41,23 @@ def assert_semantic_model_equal(
         "exclude_defaults": True,
     }
     test_case.assertEqual(
+        expected.predicate.curie, actual.predicate.curie, msg="predicate mismatch"
+    )
+    test_case.assertEqual(
+        expected.subject_name,
+        actual.subject_name,
+        msg=f"subject name mismatch in {actual.predicate.curie} relation",
+    )
+    test_case.assertEqual(
+        expected.predicate_name,
+        actual.predicate_name,
+        msg=f"predicate name mismatch in {actual.predicate.curie} relation",
+    )
+    test_case.assertEqual(
+        expected.object_name,
+        actual.object_name,
+        msg=f"object name mismatch in {actual.predicate.curie} relation",
+    )
+    test_case.assertEqual(
         expected.model_dump(**parameters), actual.model_dump(**parameters), msg=msg
     )
-    test_case.assertEqual(expected.subject_name, actual.subject_name)
-    test_case.assertEqual(expected.predicate_name, actual.predicate_name)
-    test_case.assertEqual(expected.object_name, actual.object_name)
