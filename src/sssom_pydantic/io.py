@@ -61,7 +61,7 @@ __all__ = [
     "record_to_semantic_mapping",
     "row_to_record",
     "row_to_semantic_mapping",
-    "to_pandas_dataframe",
+    "to_dataframe",
     "write",
     "write_metadata",
     "write_unprocessed",
@@ -867,7 +867,7 @@ class CachedSemanticMappings(Cached[SemanticMappingPack]):
         )
 
 
-def to_pandas_dataframe(mappings: Iterable[SemanticMapping]) -> pandas.DataFrame:
+def to_dataframe(mappings: Iterable[SemanticMapping]) -> pandas.DataFrame:
     """Construct a pandas dataframe that represents the SSSOM TSV format.
 
     :param mappings: An iterable of SSSOM mappings.

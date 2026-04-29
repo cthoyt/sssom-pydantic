@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import curies
 
 from ..api import MappingSet, MappingSetRecord, SemanticMapping
-from ..io import Metadata, _safe_dump_mapping_set, to_pandas_dataframe
+from ..io import Metadata, _safe_dump_mapping_set, to_dataframe
 
 if TYPE_CHECKING:
     import sssom
@@ -30,7 +30,7 @@ def mappings_to_msdf(
     from sssom import MappingSetDataFrame
     from sssom.parsers import from_sssom_dataframe
 
-    df = to_pandas_dataframe(mappings)
+    df = to_dataframe(mappings)
     meta = _safe_dump_mapping_set(metadata)
 
     # SSSOM-Py insists that license is a required field,
