@@ -11,7 +11,7 @@ from collections import ChainMap, Counter, defaultdict
 from collections.abc import Collection, Generator, Iterable, Mapping, Sequence
 from io import StringIO
 from pathlib import Path
-from typing import Any, Literal, NamedTuple, TextIO, TypeAlias, overload
+from typing import TYPE_CHECKING, Any, Literal, NamedTuple, TextIO, TypeAlias, overload
 
 import curies
 import yaml
@@ -44,6 +44,9 @@ from .constants import (
 from .models import Record, RecordPredicate
 from .process import Hasher, remove_redundant_external, remove_redundant_internal
 
+if TYPE_CHECKING:
+    import pandas
+
 __all__ = [
     "CachedSemanticMappings",
     "Metadata",
@@ -58,6 +61,7 @@ __all__ = [
     "record_to_semantic_mapping",
     "row_to_record",
     "row_to_semantic_mapping",
+    "to_pandas_dataframe",
     "write",
     "write_metadata",
     "write_unprocessed",
@@ -861,3 +865,21 @@ class CachedSemanticMappings(Cached[SemanticMappingPack]):
             converter=read_type.converter,
             metadata=read_type.mapping_set,
         )
+
+
+def to_pandas_dataframe(mappings: Iterable[SemanticMapping]) -> pandas.DataFrame:
+    """Construct a pandas dataframe that represents the SSSOM TSV format.
+
+    :param mappings: An iterable of SSSOM mappings.
+
+    :returns: A pandas dataframe that represents the SSSOM TSV format.
+
+    .. seealso::
+
+        If you want compatibility with :mod:`sssom`, then use
+        :func:`sssom_pydantic.contrib.sssompy.mappings_to_msdf`
+    """
+    import pandas
+
+    rv = pandas.DataFrame(_unprocess_row(mapping.to_record()) for mapping in mappings)
+    return rv
