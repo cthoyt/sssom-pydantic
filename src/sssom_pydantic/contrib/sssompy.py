@@ -7,10 +7,9 @@ from typing import TYPE_CHECKING
 import curies
 
 from ..api import MappingSet, MappingSetRecord, SemanticMapping
-from ..io import Metadata, _safe_dump_mapping_set, _unprocess_row
+from ..io import Metadata, _safe_dump_mapping_set, to_dataframe
 
 if TYPE_CHECKING:
-    import pandas
     import sssom
 
 __all__ = [
@@ -18,15 +17,6 @@ __all__ = [
 ]
 
 SSSOM_PY_DEFAULT_LICENSE = "https://w3id.org/sssom/license/unspecified"
-
-
-def _mappings_to_df(mappings: list[SemanticMapping]) -> pandas.DataFrame:
-    """Construct a pandas dataframe that represents the SSSOM TSV format."""
-    import pandas
-
-    rows = [_unprocess_row(mapping.to_record()) for mapping in mappings]
-    rv = pandas.DataFrame(rows)
-    return rv
 
 
 def mappings_to_msdf(
@@ -40,7 +30,7 @@ def mappings_to_msdf(
     from sssom import MappingSetDataFrame
     from sssom.parsers import from_sssom_dataframe
 
-    df = _mappings_to_df(mappings)
+    df = to_dataframe(mappings)
     meta = _safe_dump_mapping_set(metadata)
 
     # SSSOM-Py insists that license is a required field,

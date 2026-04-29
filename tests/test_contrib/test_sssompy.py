@@ -8,7 +8,8 @@ from typing import TYPE_CHECKING
 
 from curies.vocabulary import charlie, manual_mapping_curation
 
-from sssom_pydantic.contrib.sssompy import _mappings_to_df, mappings_to_msdf
+from sssom_pydantic.contrib.sssompy import mappings_to_msdf
+from sssom_pydantic.io import to_dataframe
 from tests.cases import P1, R1, R2, TEST_CONVERTER, TEST_METADATA, _m
 
 if TYPE_CHECKING:
@@ -45,7 +46,7 @@ class TestSSSOMPy(unittest.TestCase):
 
     def test_to_pandas_1(self) -> None:
         """Test simplest reading."""
-        df = _mappings_to_df(self.mappings)
+        df = to_dataframe(self.mappings)
         self.assertEqual(self.expected_columns, df.columns.tolist())
         self.assertEqual(self.expected_rows, df.to_numpy().tolist())
 
@@ -66,7 +67,7 @@ class TestSSSOMPy(unittest.TestCase):
     def test_to_pandas_2(self) -> None:
         """Test simplest reading."""
         mappings = [_m(authors=[charlie, charlie])]
-        df = _mappings_to_df(mappings)
+        df = to_dataframe(mappings)
 
         expected_columns = [
             "subject_id",

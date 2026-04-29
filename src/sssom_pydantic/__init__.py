@@ -23,6 +23,7 @@ from .io import (
     read,
     read_iterable,
     read_unprocessed,
+    to_dataframe,
     write,
     write_unprocessed,
 )
@@ -52,6 +53,7 @@ __all__ = [
     "read",
     "read_iterable",
     "read_unprocessed",
+    "to_dataframe",
     "write",
     "write_unprocessed",
 ]
