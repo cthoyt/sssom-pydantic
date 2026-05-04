@@ -232,17 +232,52 @@ def write(
     drop_duplicates: bool = False,
     drop_duplicates_key: Hasher[MappingTypeVar, Y] | None = None,
     sort: bool = False,
+    columns: Sequence[str] | None = None,
     exclude_columns: Collection[str] | None = None,
     exclude_prefixes: Collection[str] | None = None,
+    condense: bool = True,
+    reduce_prefix_map: bool = True,
 ) -> None:
-    """Write processed records."""
+    """Write semantic mappings as SSSOM TSV.
+
+    :param mappings: an iterable of semantic mappings
+    :param path: the path or file-like object to write to
+    :param metadata: metadata to write to the header of the SSSOM file
+    :param converter: the converter whose internal prefix map will be written in the
+        header of the SSSOM file. If ``reduce_prefix_map`` is ``True``, then only
+        prefixes used in semantic mappings will be written
+    :param exclude_mappings: an iterable of semantic mappings to exclude. If used,
+        streaming writing is not possible.
+    :param exclude_mappings_key: a key function for identifying "redundant" mappings
+    :param drop_duplicates: whether to drop redundant mappings. If used, streaming
+        writing is not possible.
+    :param drop_duplicates_key: a key function for identifying "duplicate" mappings
+    :param sort: Should mappings be sorted? If used, streaming writing is not possible.
+    :param columns: If given, explicitly use these columns instead of inferring which
+        have data in the given semantic mappings. This is required to enable streaming
+        writing.
+    :param exclude_columns: columns to explicitly exclude from writing, whether
+        ``columns`` is given or not
+    :param exclude_prefixes: prefixes to explicitly exclude from writing
+    :param condense: Should fields from mappings be condensed into the SSSOM header?
+        Defaults to ``True``, but must be turned off to enable streaming writing.
+    :param reduce_prefix_map: Should the prefix map be reduced based on prefixes
+        appearing in mappings and the metadata? If used, streaming writing is not
+        possible.
+    """
     if exclude_mappings is not None:
         mappings = remove_redundant_external(mappings, exclude_mappings, key=exclude_mappings_key)
     if drop_duplicates:
         mappings = remove_redundant_internal(mappings, key=drop_duplicates_key)
     if sort:
         mappings = sorted(mappings)
-    records, prefixes = _prepare_records(mappings)
+
+    if reduce_prefix_map:
+        records, prefixes = _prepare_records(mappings)
+    else:
+        records = (m.to_record() for m in mappings)
+        prefixes = set()
+
     if metadata is not None:
         if converter is None:
             raise NotImplementedError("when passing non-parsed metadata, need a converter")
@@ -255,8 +290,10 @@ def write(
         path=path,
         metadata=metadata,
         converter=converter,
-        prefixes=prefixes,
+        prefixes=prefixes if reduce_prefix_map else None,
+        columns=columns,
         exclude_columns=exclude_columns,
+        condense=condense,
     )
 
 
@@ -267,7 +304,7 @@ def _get_mapping_set(
         return m
     if isinstance(m, MappingSetRecord):
         return m.process(converter)
-    raise NotImplementedError
+    raise NotImplementedError(f"not sure what to do with {type(m)}")
 
 
 def append(
@@ -281,7 +318,7 @@ def append(
     """Append processed records."""
     records, prefixes = _prepare_records(mappings)
     append_unprocessed(
-        records,
+        list(records),
         path=path,
         metadata=metadata,
         converter=converter,
@@ -290,7 +327,7 @@ def append(
     )
 
 
-def _prepare_records(mappings: Iterable[SemanticMapping]) -> tuple[list[Record], set[str]]:
+def _prepare_records(mappings: Iterable[SemanticMapping]) -> tuple[Iterable[Record], set[str]]:
     records = []
     prefixes: set[str] = set()
     for mapping in mappings:
@@ -332,24 +369,44 @@ def append_unprocessed(
 
 
 def write_unprocessed(
-    records: Sequence[Record],
+    records: Iterable[Record],
     path: str | Path | TextIO,
     *,
     metadata: MappingSet | Metadata | MappingSetRecord | None = None,
     converter: curies.Converter | None = None,
     prefixes: set[str] | None = None,
+    columns: Sequence[str] | None = None,
     exclude_columns: Collection[str] | None = None,
+    condense: bool = True,
 ) -> None:
-    """Write unprocessed records."""
-    columns = _get_columns(records)
+    """Write unprocessed records.
 
+    :param records: records to write
+    :param path: the path to a file or a file-like object to write to
+    :param metadata: metadata to use
+    :param converter: converter to use
+    :param prefixes: if given, subsets the converter
+    :param columns: explicitly set what columns should be output. Results in taking more
+        than one pass over the mappings
+    :param exclude_columns: explicitly set what columns should not be output
+    :param condense: condense mappings into mapping set metadata. Results in taking more
+        than one pass over the mappings
+    """
     metadata = _get_metadata(metadata)
 
-    condensation = _get_condensation(records)
-    for key, value in condensation.items():
-        if key in metadata and metadata[key] != value:
-            logger.warning("mismatch between given metadata and observed. overwriting")
-        metadata[key] = value
+    if condense or columns is None:
+        # in this case, we can't stream, since we need to take
+        # one or more passes over the records
+        records = list(records)
+
+    if condense:
+        condensation = _get_condensation(records)
+        for key, value in condensation.items():
+            if key in metadata and metadata[key] != value:
+                logger.warning("mismatch between given metadata and observed. overwriting")
+            metadata[key] = value
+    else:
+        condensation = {}
 
     converters = []
     if converter is not None:
@@ -367,12 +424,16 @@ def write_unprocessed(
     if bimap := converter.bimap:
         metadata[PREFIX_MAP_KEY] = bimap
 
-    exclude = set(condensation).union(exclude_columns or [])
-    columns = [column for column in columns if column not in exclude]
+    if columns is None:
+        columns = _get_columns(records)
+        exclude = set(condensation).union(exclude_columns or [])
+        columns = [column for column in columns if column not in exclude]
+    else:
+        exclude = None
 
     with safe_open(path, operation="write", representation="text") as file:
         write_metadata(metadata, file)
-        writer = csv.DictWriter(file, columns, delimiter="\t")
+        writer = csv.DictWriter(file, columns, delimiter="\t", extrasaction="ignore")
         writer.writeheader()
         writer.writerows(_unprocess_row(record, exclude=exclude) for record in records)
 
