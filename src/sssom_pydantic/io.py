@@ -238,7 +238,33 @@ def write(
     condense: bool = True,
     reduce_prefix_map: bool = True,
 ) -> None:
-    """Write processed records."""
+    """Write semantic mappings as SSSOM TSV.
+
+    :param mappings: an iterable of semantic mappings
+    :param path: the path or file-like object to write to
+    :param metadata: metadata to write to the header of the SSSOM file
+    :param converter: the converter whose internal prefix map will be written in the
+        header of the SSSOM file. If ``reduce_prefix_map`` is ``True``, then only
+        prefixes used in semantic mappings will be written
+    :param exclude_mappings: an iterable of semantic mappings to exclude. If used,
+        streaming writing is not possible.
+    :param exclude_mappings_key: a key function for identifying "redundant" mappings
+    :param drop_duplicates: whether to drop redundant mappings. If used, streaming
+        writing is not possible.
+    :param drop_duplicates_key: a key function for identifying "duplicate" mappings
+    :param sort: Should mappings be sorted? If used, streaming writing is not possible.
+    :param columns: If given, explicitly use these columns instead of inferring which
+        have data in the given semantic mappings. This is required to enable streaming
+        writing.
+    :param exclude_columns: columns to explicitly exclude from writing, whether
+        ``columns`` is given or not
+    :param exclude_prefixes: prefixes to explicitly exclude from writing
+    :param condense: Should fields from mappings be condensed into the SSSOM header?
+        Defaults to ``True``, but must be turned off to enable streaming writing.
+    :param reduce_prefix_map: Should the prefix map be reduced based on prefixes
+        appearing in mappings and the metadata? If used, streaming writing is not
+        possible.
+    """
     if exclude_mappings is not None:
         mappings = remove_redundant_external(mappings, exclude_mappings, key=exclude_mappings_key)
     if drop_duplicates:
@@ -360,11 +386,11 @@ def write_unprocessed(
     :param metadata: metadata to use
     :param converter: converter to use
     :param prefixes: if given, subsets the converter
-    :param columns: explicitly set what columns should be output.
-        Results in taking more than one pass over the mappings
+    :param columns: explicitly set what columns should be output. Results in taking more
+        than one pass over the mappings
     :param exclude_columns: explicitly set what columns should not be output
-    :param condense: condense mappings into mapping set metadata.
-        Results in taking more than one pass over the mappings
+    :param condense: condense mappings into mapping set metadata. Results in taking more
+        than one pass over the mappings
     """
     metadata = _get_metadata(metadata)
 
