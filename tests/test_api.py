@@ -540,7 +540,7 @@ class TestIO(cases.MappingTestCaseMixin):
             self.path,
             converter=TEST_CONVERTER,
             metadata=MappingSet(id=TEST_MAPPING_SET_ID),
-            subset_converter=False,
+            reduce_prefix_map=False,
         )
         self.assert_path(f"""\
             #curie_map:

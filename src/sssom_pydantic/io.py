@@ -236,7 +236,7 @@ def write(
     exclude_columns: Collection[str] | None = None,
     exclude_prefixes: Collection[str] | None = None,
     condense: bool = True,
-    subset_converter: bool = True,
+    reduce_prefix_map: bool = True,
 ) -> None:
     """Write processed records."""
     if exclude_mappings is not None:
@@ -246,7 +246,7 @@ def write(
     if sort:
         mappings = sorted(mappings)
 
-    if subset_converter:
+    if reduce_prefix_map:
         records, prefixes = _prepare_records(mappings)
     else:
         records = [m.to_record() for m in mappings]
@@ -264,7 +264,7 @@ def write(
         path=path,
         metadata=metadata,
         converter=converter,
-        prefixes=prefixes if subset_converter else None,
+        prefixes=prefixes if reduce_prefix_map else None,
         columns=columns,
         exclude_columns=exclude_columns,
         condense=condense,
