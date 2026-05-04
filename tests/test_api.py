@@ -508,7 +508,7 @@ class TestIO(cases.MappingTestCaseMixin):
                 #mapping_set_id: {TEST_MAPPING_SET_ID}
                 subject_id	subject_label	predicate_id	object_id	object_label	mapping_justification	author_id
                 mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	semapv:ManualMappingCuration	{AUTHOR.curie}
-                mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	semapv:ManualMappingCuration
+                mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	semapv:ManualMappingCuration	
             """),  # noqa:E501
             path_condensed.read_text(),
             msg="subject/object labels and authors should not be included, "
@@ -530,7 +530,7 @@ class TestIO(cases.MappingTestCaseMixin):
                 #mapping_set_id: {TEST_MAPPING_SET_ID}
                 subject_id	subject_label	predicate_id	object_id	object_label	mapping_justification	author_id	mapping_date
                 mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	semapv:ManualMappingCuration	{AUTHOR.curie}	2026-05-04
-                mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	semapv:ManualMappingCuration		2026-05-04	
+                mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	semapv:ManualMappingCuration		2026-05-04
             """),  # noqa:E501
             path_uncondensed.read_text(),
             msg="\nskipping condense failed",
