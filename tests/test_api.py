@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 import tempfile
 import types
 import typing
@@ -450,4 +451,87 @@ class TestIO(cases.MappingTestCaseMixin):
                 mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	semapv:ManualMappingCuration	{a2.curie}
             """),  # noqa:E501
             path.read_text(),
+        )
+
+    def test_write_explicit_columns(self) -> None:
+        """Test writing with exclude."""
+        path = self.directory.joinpath("test.sssom.tsv")
+        metadata = MappingSet(id=TEST_MAPPING_SET_ID)
+        m = _m(authors=[AUTHOR])
+        sssom_pydantic.write(
+            [m],
+            path,
+            converter=TEST_CONVERTER,
+            metadata=metadata,
+            columns=["subject_id", "predicate_id", "object_id", "mapping_justification"],
+        )
+        self.assertEqual(
+            dedent(f"""\
+                #curie_map:
+                #  chebi: http://purl.obolibrary.org/obo/CHEBI_
+                #  mesh: http://id.nlm.nih.gov/mesh/
+                #  orcid: https://orcid.org/
+                #  semapv: https://w3id.org/semapv/vocab/
+                #  skos: http://www.w3.org/2004/02/skos/core#
+                #mapping_set_id: {TEST_MAPPING_SET_ID}
+                subject_id	predicate_id	object_id	mapping_justification
+                mesh:C000089	skos:exactMatch	chebi:28646	semapv:ManualMappingCuration
+            """),
+            path.read_text(),
+            msg="subject/object labels and authors should not be included, "
+            "since they were not in the columns list",
+        )
+
+    def test_toggle_condense(self) -> None:
+        """Test toggling condense."""
+        metadata = MappingSet(id=TEST_MAPPING_SET_ID)
+        date = "2026-05-04"
+        m1 = _m(authors=[AUTHOR], mapping_date=datetime.date.fromisoformat(date))
+        m2 = _m(mapping_date=datetime.date.fromisoformat(date))
+
+        path_condensed = self.directory.joinpath("test.sssom.tsv")
+        sssom_pydantic.write(
+            [m1, m2],
+            path_condensed,
+            converter=TEST_CONVERTER,
+            metadata=metadata,
+        )
+        self.assertEqual(
+            dedent(f"""\
+                #curie_map:
+                #  chebi: http://purl.obolibrary.org/obo/CHEBI_
+                #  mesh: http://id.nlm.nih.gov/mesh/
+                #  orcid: https://orcid.org/
+                #  semapv: https://w3id.org/semapv/vocab/
+                #  skos: http://www.w3.org/2004/02/skos/core#
+                #mapping_date: '2026-05-04'
+                #mapping_set_id: {TEST_MAPPING_SET_ID}
+                subject_id	subject_label	predicate_id	object_id	object_label	mapping_justification	author_id
+                mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	semapv:ManualMappingCuration	{AUTHOR.curie}
+                mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	semapv:ManualMappingCuration
+            """),  # noqa:E501
+            path_condensed.read_text(),
+            msg="subject/object labels and authors should not be included, "
+            "since they were not in the columns list",
+        )
+
+        path_uncondensed = self.directory.joinpath("test-uncondensed.sssom.tsv")
+        sssom_pydantic.write(
+            [m1, m2], path_uncondensed, converter=TEST_CONVERTER, metadata=metadata, condense=False
+        )
+        self.assertEqual(
+            dedent(f"""\
+                #curie_map:
+                #  chebi: http://purl.obolibrary.org/obo/CHEBI_
+                #  mesh: http://id.nlm.nih.gov/mesh/
+                #  orcid: https://orcid.org/
+                #  semapv: https://w3id.org/semapv/vocab/
+                #  skos: http://www.w3.org/2004/02/skos/core#
+                #mapping_set_id: {TEST_MAPPING_SET_ID}
+                subject_id	subject_label	predicate_id	object_id	object_label	mapping_justification	author_id	mapping_date
+                mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	semapv:ManualMappingCuration	{AUTHOR.curie}	2026-05-04
+                mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	semapv:ManualMappingCuration		2026-05-04	
+            """),  # noqa:E501
+            path_uncondensed.read_text(),
+            msg="\nskipping condense failed",
         )

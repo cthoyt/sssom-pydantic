@@ -232,8 +232,10 @@ def write(
     drop_duplicates: bool = False,
     drop_duplicates_key: Hasher[MappingTypeVar, Y] | None = None,
     sort: bool = False,
+    columns: Sequence[str] | None = None,
     exclude_columns: Collection[str] | None = None,
     exclude_prefixes: Collection[str] | None = None,
+    condense: bool = True,
 ) -> None:
     """Write processed records."""
     if exclude_mappings is not None:
@@ -256,7 +258,9 @@ def write(
         metadata=metadata,
         converter=converter,
         prefixes=prefixes,
+        columns=columns,
         exclude_columns=exclude_columns,
+        condense=condense,
     )
 
 
@@ -267,7 +271,7 @@ def _get_mapping_set(
         return m
     if isinstance(m, MappingSetRecord):
         return m.process(converter)
-    raise NotImplementedError
+    raise NotImplementedError(f"not sure what to do with {type(m)}")
 
 
 def append(
@@ -338,18 +342,33 @@ def write_unprocessed(
     metadata: MappingSet | Metadata | MappingSetRecord | None = None,
     converter: curies.Converter | None = None,
     prefixes: set[str] | None = None,
+    columns: Sequence[str] | None = None,
     exclude_columns: Collection[str] | None = None,
+    condense: bool = True,
 ) -> None:
-    """Write unprocessed records."""
-    columns = _get_columns(records)
+    """Write unprocessed records.
 
+    :param records: records to write
+    :param path: the path to a file or a file-like object to write to
+    :param metadata: metadata to use
+    :param converter: converter to use
+    :param prefixes: if given, subsets the converter
+    :param columns: explicitly set what columns should be output.
+        Results in taking more than one pass over the mappings
+    :param exclude_columns: explicitly set what columns should not be output
+    :param condense: condense mappings into mapping set metadata.
+        Results in taking more than one pass over the mappings
+    """
     metadata = _get_metadata(metadata)
 
-    condensation = _get_condensation(records)
-    for key, value in condensation.items():
-        if key in metadata and metadata[key] != value:
-            logger.warning("mismatch between given metadata and observed. overwriting")
-        metadata[key] = value
+    if condense:
+        condensation = _get_condensation(records)
+        for key, value in condensation.items():
+            if key in metadata and metadata[key] != value:
+                logger.warning("mismatch between given metadata and observed. overwriting")
+            metadata[key] = value
+    else:
+        condensation = {}
 
     converters = []
     if converter is not None:
@@ -367,12 +386,16 @@ def write_unprocessed(
     if bimap := converter.bimap:
         metadata[PREFIX_MAP_KEY] = bimap
 
-    exclude = set(condensation).union(exclude_columns or [])
-    columns = [column for column in columns if column not in exclude]
+    if columns is None:
+        columns = _get_columns(records)
+        exclude = set(condensation).union(exclude_columns or [])
+        columns = [column for column in columns if column not in exclude]
+    else:
+        exclude = None
 
     with safe_open(path, operation="write", representation="text") as file:
         write_metadata(metadata, file)
-        writer = csv.DictWriter(file, columns, delimiter="\t")
+        writer = csv.DictWriter(file, columns, delimiter="\t", extrasaction="ignore")
         writer.writeheader()
         writer.writerows(_unprocess_row(record, exclude=exclude) for record in records)
 
