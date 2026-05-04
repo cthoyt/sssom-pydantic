@@ -509,7 +509,7 @@ class TestIO(cases.MappingTestCaseMixin):
                 subject_id	subject_label	predicate_id	object_id	object_label	mapping_justification	author_id
                 mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	semapv:ManualMappingCuration	{AUTHOR.curie}
                 mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	semapv:ManualMappingCuration	
-            """),  # noqa:E501
+            """),  # noqa:E501,W291
             path_condensed.read_text(),
             msg="subject/object labels and authors should not be included, "
             "since they were not in the columns list",
