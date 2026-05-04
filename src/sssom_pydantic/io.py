@@ -275,7 +275,7 @@ def write(
     if reduce_prefix_map:
         records, prefixes = _prepare_records(mappings)
     else:
-        records = [m.to_record() for m in mappings]
+        records = (m.to_record() for m in mappings)
         prefixes = set()
 
     if metadata is not None:
@@ -318,7 +318,7 @@ def append(
     """Append processed records."""
     records, prefixes = _prepare_records(mappings)
     append_unprocessed(
-        records,
+        list(records),
         path=path,
         metadata=metadata,
         converter=converter,
@@ -327,7 +327,7 @@ def append(
     )
 
 
-def _prepare_records(mappings: Iterable[SemanticMapping]) -> tuple[list[Record], set[str]]:
+def _prepare_records(mappings: Iterable[SemanticMapping]) -> tuple[Iterable[Record], set[str]]:
     records = []
     prefixes: set[str] = set()
     for mapping in mappings:
@@ -369,7 +369,7 @@ def append_unprocessed(
 
 
 def write_unprocessed(
-    records: Sequence[Record],
+    records: Iterable[Record],
     path: str | Path | TextIO,
     *,
     metadata: MappingSet | Metadata | MappingSetRecord | None = None,
@@ -393,6 +393,11 @@ def write_unprocessed(
         than one pass over the mappings
     """
     metadata = _get_metadata(metadata)
+
+    if condense or columns is None:
+        # in this case, we can't stream, since we need to take
+        # one or more passes over the records
+        records = list(records)
 
     if condense:
         condensation = _get_condensation(records)
