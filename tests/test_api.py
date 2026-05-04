@@ -42,10 +42,15 @@ class TestIO(cases.MappingTestCaseMixin):
         """Set up the test case."""
         self._tmp_directory = tempfile.TemporaryDirectory()
         self.directory = Path(self._tmp_directory.name)
+        self.path = self.directory.joinpath("test.sssom.tsv")
 
     def tearDown(self) -> None:
         """Tear down the test case."""
         self._tmp_directory.cleanup()
+
+    def assert_path(self, contents: str) -> None:
+        """Check the path has the right contents after dedenting."""
+        self.assertEqual(dedent(contents), self.path.read_text())
 
     def test_multivalued_record(self) -> None:
         """Test the Record class is properly type-annotated."""
@@ -455,32 +460,24 @@ class TestIO(cases.MappingTestCaseMixin):
 
     def test_write_explicit_columns(self) -> None:
         """Test writing with exclude."""
-        path = self.directory.joinpath("test.sssom.tsv")
-        metadata = MappingSet(id=TEST_MAPPING_SET_ID)
-        m = _m(authors=[AUTHOR])
         sssom_pydantic.write(
-            [m],
-            path,
+            [_m(authors=[AUTHOR])],
+            self.path,
             converter=TEST_CONVERTER,
-            metadata=metadata,
+            metadata=MappingSet(id=TEST_MAPPING_SET_ID),
             columns=["subject_id", "predicate_id", "object_id", "mapping_justification"],
         )
-        self.assertEqual(
-            dedent(f"""\
-                #curie_map:
-                #  chebi: http://purl.obolibrary.org/obo/CHEBI_
-                #  mesh: http://id.nlm.nih.gov/mesh/
-                #  orcid: https://orcid.org/
-                #  semapv: https://w3id.org/semapv/vocab/
-                #  skos: http://www.w3.org/2004/02/skos/core#
-                #mapping_set_id: {TEST_MAPPING_SET_ID}
-                subject_id	predicate_id	object_id	mapping_justification
-                mesh:C000089	skos:exactMatch	chebi:28646	semapv:ManualMappingCuration
-            """),
-            path.read_text(),
-            msg="subject/object labels and authors should not be included, "
-            "since they were not in the columns list",
-        )
+        self.assert_path(f"""\
+            #curie_map:
+            #  chebi: http://purl.obolibrary.org/obo/CHEBI_
+            #  mesh: http://id.nlm.nih.gov/mesh/
+            #  orcid: https://orcid.org/
+            #  semapv: https://w3id.org/semapv/vocab/
+            #  skos: http://www.w3.org/2004/02/skos/core#
+            #mapping_set_id: {TEST_MAPPING_SET_ID}
+            subject_id	predicate_id	object_id	mapping_justification
+            mesh:C000089	skos:exactMatch	chebi:28646	semapv:ManualMappingCuration
+        """)
 
     def test_toggle_condense(self) -> None:
         """Test toggling condense."""
@@ -535,3 +532,36 @@ class TestIO(cases.MappingTestCaseMixin):
             path_uncondensed.read_text(),
             msg="\nskipping condense failed",
         )
+
+    def test_toggle_subset_converter(self) -> None:
+        """Test toggling condense."""
+        sssom_pydantic.write(
+            [_m()],
+            self.path,
+            converter=TEST_CONVERTER,
+            metadata=MappingSet(id=TEST_MAPPING_SET_ID),
+            subset_converter=False,
+        )
+        self.assert_path(f"""\
+            #curie_map:
+            #  biolink: https://w3id.org/biolink/vocab/
+            #  bioregistry: https://bioregistry.io/
+            #  cas: https://commonchemistry.cas.org/detail?cas_rn=
+            #  chebi: http://purl.obolibrary.org/obo/CHEBI_
+            #  issue: https://github.com/cthoyt/sssom-pydantic/issues/
+            #  mesh: http://id.nlm.nih.gov/mesh/
+            #  orcid: https://orcid.org/
+            #  owl: http://www.w3.org/2002/07/owl#
+            #  rdf: http://www.w3.org/1999/02/22-rdf-syntax-ns#
+            #  rdfs: http://www.w3.org/2000/01/rdf-schema#
+            #  rule: https://example.org/disease-rule/
+            #  semapv: https://w3id.org/semapv/vocab/
+            #  skos: http://www.w3.org/2004/02/skos/core#
+            #  spdx: https://spdx.org/licenses/
+            #  sssom: https://w3id.org/sssom/
+            #  sssom.record: https://w3id.org/sssom/record/
+            #  w3id: https://w3id.org/
+            #mapping_set_id: {TEST_MAPPING_SET_ID}
+            subject_id	subject_label	predicate_id	object_id	object_label	mapping_justification
+            mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	semapv:ManualMappingCuration
+        """)  # noqa:E501

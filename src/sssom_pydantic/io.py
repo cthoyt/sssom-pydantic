@@ -236,6 +236,7 @@ def write(
     exclude_columns: Collection[str] | None = None,
     exclude_prefixes: Collection[str] | None = None,
     condense: bool = True,
+    subset_converter: bool = True,
 ) -> None:
     """Write processed records."""
     if exclude_mappings is not None:
@@ -244,7 +245,13 @@ def write(
         mappings = remove_redundant_internal(mappings, key=drop_duplicates_key)
     if sort:
         mappings = sorted(mappings)
-    records, prefixes = _prepare_records(mappings)
+
+    if subset_converter:
+        records, prefixes = _prepare_records(mappings)
+    else:
+        records = [m.to_record() for m in mappings]
+        prefixes = set()
+
     if metadata is not None:
         if converter is None:
             raise NotImplementedError("when passing non-parsed metadata, need a converter")
@@ -257,7 +264,7 @@ def write(
         path=path,
         metadata=metadata,
         converter=converter,
-        prefixes=prefixes,
+        prefixes=prefixes if subset_converter else None,
         columns=columns,
         exclude_columns=exclude_columns,
         condense=condense,
