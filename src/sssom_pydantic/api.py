@@ -166,7 +166,6 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
     reviewers: Annotated[
         list[Reference] | None,
         Field(
-            None,
             description="The reviewer is the person who looks at a mapping that has already been "
             "manually curated (i.e., has an author) and gives a second look. If the mapping was "
             "machine generated, then the person who takes a first look is not the reviewer, but "
