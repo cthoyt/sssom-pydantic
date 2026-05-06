@@ -54,7 +54,7 @@ class MappingTool(BaseModel):
 
     reference: Reference | None = None
     name: str | None = None
-    version: str | None = Field(None)
+    version: str | None = None
 
 
 def _ensure_namable(x: str | Reference | NamableReference) -> NamableReference:
@@ -104,12 +104,13 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
 
     model_config = ConfigDict(frozen=True)
 
-    subject: Annotated[NamableReference, BeforeValidator(_ensure_namable)] = Field(...)
-    predicate: Annotated[NamableReference, BeforeValidator(_ensure_namable)] = Field(...)
-    object: Annotated[NamableReference, BeforeValidator(_ensure_namable)] = Field(...)
-    justification: Reference = Field(
-        ...,
-        description="""\
+    subject: Annotated[NamableReference, BeforeValidator(_ensure_namable)]
+    predicate: Annotated[NamableReference, BeforeValidator(_ensure_namable)]
+    object: Annotated[NamableReference, BeforeValidator(_ensure_namable)]
+    justification: Annotated[
+        Reference,
+        Field(
+            description="""\
         A `semapv <https://bioregistry.io/registry/semapv>`_ term describing
         the mapping type.
 
@@ -119,79 +120,85 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
         1. ``semapv:LexicalMatching``
         2. ``semapv:LogicalReasoning``
         """,
-        examples=list(matching_processes),
-    )
-    predicate_modifier: PredicateModifier | None = Field(None)
+            examples=list(matching_processes),
+        ),
+    ]
+    predicate_modifier: PredicateModifier | None = None
 
-    record: Reference | None = Field(None)
-    authors: list[Reference] | None = Field(None)
-    confidence: float | None = Field(None, ge=0.0, le=1.0)
-    mapping_tool: MappingTool | None = Field(None)
-    license: str | None = Field(None)
+    record: Reference | None = None
+    authors: list[Reference] | None = None
+    confidence: Annotated[float | None, Field(ge=0.0, le=1.0)] = None
+    mapping_tool: MappingTool | None = None
+    license: str | None = None
 
     # https://w3id.org/sssom/subject_category
-    subject_category: Reference | None = Field(None)
-    subject_match_field: list[Reference] | None = Field(None)
-    subject_preprocessing: list[Reference] | None = Field(None)
-    subject_source: Reference | None = Field(None)
-    subject_source_version: str | None = Field(None)
+    subject_category: Reference | None = None
+    subject_match_field: list[Reference] | None = None
+    subject_preprocessing: list[Reference] | None = None
+    subject_source: Reference | None = None
+    subject_source_version: str | None = None
     # https://w3id.org/sssom/subject_type
-    subject_type: Reference | None = Field(None)
+    subject_type: Reference | None = None
 
     # TODO limit with https://mapping-commons.github.io/sssom/EntityTypeEnum/
-    predicate_type: Reference | None = Field(None)
+    predicate_type: Reference | None = None
 
-    object_category: Reference | None = Field(None)
-    object_match_field: list[Reference] | None = Field(None)
-    object_preprocessing: list[Reference] | None = Field(None)
-    object_source: Reference | None = Field(None)
-    object_source_version: str | None = Field(None)
-    object_type: Reference | None = Field(None)
+    object_category: Reference | None = None
+    object_match_field: list[Reference] | None = None
+    object_preprocessing: list[Reference] | None = None
+    object_source: Reference | None = None
+    object_source_version: str | None = None
+    object_type: Reference | None = None
 
-    creators: list[Reference] | None = Field(
-        None,
-        description="The creator is the person responsible for the creation of the mapping. For"
-        "example, if the mapping was produced by a lexical matching workflow, then the creator "
-        "is the person who decided to run the workflow. This is _not_ the same as the person who "
-        "developed the workflow. The creator is the one who takes responsibility for the creation "
-        "of the mapping (but necessarily was the one who made it). If a person curates a de novo "
-        "mapping directly, then they are both the creator and the author.",
-    )
+    creators: Annotated[
+        list[Reference] | None,
+        Field(
+            description="The creator is the person responsible for the creation of the mapping. "
+            "For example, if the mapping was produced by a lexical matching workflow, then the "
+            "creator is the person who decided to run the workflow. This is _not_ the same as the "
+            "person who developed the workflow. The creator is the one who takes responsibility "
+            "for the creation of the mapping (but necessarily was the one who made it). If a "
+            "person curates a de novo mapping directly, then they are both the creator and the "
+            "author.",
+        ),
+    ] = None
     # TODO maybe creator_labels
-    reviewers: list[Reference] | None = Field(
-        None,
-        description="The reviewer is the person who looks at a mapping that has already been "
-        "manually curated (i.e., has an author) and gives a second look. If the mapping was "
-        "machine generated, then the person who takes a first look is not the reviewer, but "
-        "actually the author.",
-    )
+    reviewers: Annotated[
+        list[Reference] | None,
+        Field(
+            description="The reviewer is the person who looks at a mapping that has already been "
+            "manually curated (i.e., has an author) and gives a second look. If the mapping was "
+            "machine generated, then the person who takes a first look is not the reviewer, but "
+            "actually the author.",
+        ),
+    ] = None
     # TODO maybe reviewer_labels
 
-    publication_date: datetime.date | None = Field(None)
-    mapping_date: datetime.date | None = Field(None)
-    review_date: datetime.date | None = Field(None)
-    reviewer_agreement: float | None = Field(None, ge=-1.0, le=1.0)
+    publication_date: datetime.date | None = None
+    mapping_date: datetime.date | None = None
+    review_date: datetime.date | None = None
+    reviewer_agreement: Annotated[float | None, Field(ge=-1.0, le=1.0)] = None
 
-    comment: str | None = Field(None)
-    curation_rule: list[Reference] | None = Field(None)
-    curation_rule_text: list[str] | None = Field(None)
-    issue_tracker_item: Reference | None = Field(None)
+    comment: str | None = None
+    curation_rule: list[Reference] | None = None
+    curation_rule_text: list[str] | None = None
+    issue_tracker_item: Reference | None = None
 
     #: see https://mapping-commons.github.io/sssom/MappingCardinalityEnum/
     #: and https://w3id.org/sssom/mapping_cardinality
-    cardinality: Cardinality | None = Field(None)
-    cardinality_scope: list[str] | None = Field(None)
+    cardinality: Cardinality | None = None
+    cardinality_scope: list[str] | None = None
     # https://w3id.org/sssom/mapping_provider
-    provider: AnyUrl | None = Field(None)
+    provider: AnyUrl | None = None
     # https://w3id.org/sssom/mapping_source
-    source: Reference | None = Field(None)
+    source: Reference | None = None
 
-    match_string: list[str] | None = Field(None)
+    match_string: list[str] | None = None
 
-    other: dict[str, str] | None = Field(None)
-    see_also: list[str] | None = Field(None)
-    similarity_measure: str | None = Field(None)
-    similarity_score: float | None = Field(None, ge=0.0, le=1.0)
+    other: dict[str, str] | None = None
+    see_also: list[str] | None = None
+    similarity_measure: str | None = None
+    similarity_score: Annotated[float | None, Field(ge=0.0, le=1.0)] = None
 
     @classmethod
     def from_triple(
@@ -543,23 +550,23 @@ class MappingSetRecord(BaseModel):
 
     curie_map: dict[str, str] | None = None
 
-    mapping_set_id: Annotated[AnyUrl, BeforeValidator(_fix_relative_url)] = Field(...)
-    mapping_set_confidence: float | None = Field(None, ge=0.0, le=1.0)
-    mapping_set_description: str | None = Field(None)
-    mapping_set_source: Annotated[list[AnyUrl] | None, BeforeValidator(_upgrade_list)] = Field(None)
-    mapping_set_title: str | None = Field(None)
-    mapping_set_version: str | None = Field(None)
+    mapping_set_id: Annotated[AnyUrl, BeforeValidator(_fix_relative_url)]
+    mapping_set_confidence: Annotated[float | None, Field(ge=0.0, le=1.0)] = None
+    mapping_set_description: str | None = None
+    mapping_set_source: Annotated[list[AnyUrl] | None, BeforeValidator(_upgrade_list)] = None
+    mapping_set_title: str | None = None
+    mapping_set_version: str | None = None
 
-    publication_date: datetime.date | None = Field(None)
-    see_also: Annotated[list[AnyUrl] | None, BeforeValidator(_upgrade_list)] = Field(None)
-    other: str | None = Field(None)
-    comment: str | None = Field(None)
-    sssom_version: str | None = Field(None)
+    publication_date: datetime.date | None = None
+    see_also: Annotated[list[AnyUrl] | None, BeforeValidator(_upgrade_list)] = None
+    other: str | None = None
+    comment: str | None = None
+    sssom_version: str | None = None
     # note that this diverges from the SSSOM spec, which says license is required
     # and injects a placeholder license... I don't think this is actually valuable
-    license: AnyUrl | None = Field(None)
-    issue_tracker: AnyUrl | None = Field(None)
-    extension_definitions: list[ExtensionDefinitionRecord] | None = Field(None)
+    license: AnyUrl | None = None
+    issue_tracker: AnyUrl | None = None
+    extension_definitions: list[ExtensionDefinitionRecord] | None = None
     creator_id: Annotated[list[str] | None, BeforeValidator(_upgrade_list)] = None
     creator_label: list[str] | None = None
 
@@ -651,21 +658,22 @@ class MappingSet(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    id: AnyUrl = Field(...)
-    confidence: float | None = Field(None, ge=0.0, le=1.0)
-    description: str | None = Field(None)
-    source: list[AnyUrl] | None = Field(None)
-    title: str | None = Field(None)
-    version: str | None = Field(None)
+    id: AnyUrl
+    confidence: Annotated[float | None, Field(ge=0.0, le=1.0)] = None
+    description: str | None = None
+    source: list[AnyUrl] | None = None
+    title: str | None = None
+    version: str | None = None
 
-    publication_date: datetime.date | None = Field(None)
-    see_also: list[AnyUrl] | None = Field(None)
-    other: str | None = Field(None)
-    comment: str | None = Field(None)
-    sssom_version: str | None = Field(None)
-    license: AnyUrl | None = Field(None)
-    issue_tracker: AnyUrl | None = Field(None)
-    extension_definitions: list[ExtensionDefinition] | None = Field(None)
+    publication_date: datetime.date | None = None
+    see_also: list[AnyUrl] | None = None
+    other: str | None = None
+    comment: str | None = None
+    sssom_version: str | None = None
+    # TODO add in SPDX automatic upgrade mechanism
+    license: AnyUrl | None = None
+    issue_tracker: AnyUrl | None = None
+    extension_definitions: list[ExtensionDefinition] | None = None
     creators: list[Reference] | None = None
     creator_label: list[str] | None = None
 

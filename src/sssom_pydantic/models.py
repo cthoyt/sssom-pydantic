@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime
 from collections.abc import Callable, Sequence
-from typing import TYPE_CHECKING, Literal, NamedTuple, TypeAlias
+from typing import TYPE_CHECKING, Annotated, Literal, NamedTuple, TypeAlias
 
 from curies.vocabulary import matching_processes
 from pydantic import AnyUrl, BaseModel, ConfigDict, Field
@@ -34,55 +34,59 @@ class Record(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    record_id: str | None = Field(None)
+    record_id: str | None = None
 
-    subject_id: str = Field(...)
-    subject_label: str | None = Field(None)
-    subject_category: str | None = Field(None)
-    predicate_id: str = Field(...)
-    predicate_label: str | None = Field(None)
-    predicate_modifier: Literal["Not"] | None = Field(None)
-    object_id: str = Field(...)
-    object_label: str | None = Field(None)
-    object_category: str | None = Field(None)
-    mapping_justification: str = Field(..., examples=[p.curie for p in matching_processes])
-    author_id: list[str] | None = Field(None)
-    author_label: list[str] | None = Field(None)
-    reviewer_id: list[str] | None = Field(None)
-    reviewer_label: list[str] | None = Field(None)
-    creator_id: list[str] | None = Field(None)
-    creator_label: list[str] | None = Field(None)
-    license: str | None = Field(None)
-    subject_type: EntityTypeLiteral | None = Field(
-        None, description="See https://mapping-commons.github.io/sssom/subject_type"
-    )
-    subject_source: str | None = Field(None)
-    subject_source_version: str | None = Field(None)
-    object_type: EntityTypeLiteral | None = Field(
-        None, description="See https://mapping-commons.github.io/sssom/object_type"
-    )
-    object_source: str | None = Field(None)
-    object_source_version: str | None = Field(None)
-    predicate_type: EntityTypeLiteral | None = Field(
-        None, description="See https://mapping-commons.github.io/sssom/predicate_type"
-    )
-    mapping_provider: AnyUrl | None = Field(None)
+    subject_id: str
+    subject_label: str | None = None
+    subject_category: str | None = None
+    predicate_id: str
+    predicate_label: str | None = None
+    predicate_modifier: Literal["Not"] | None = None
+    object_id: str
+    object_label: str | None = None
+    object_category: str | None = None
+    mapping_justification: Annotated[str, Field(examples=[p.curie for p in matching_processes])]
+    author_id: list[str] | None = None
+    author_label: list[str] | None = None
+    reviewer_id: list[str] | None = None
+    reviewer_label: list[str] | None = None
+    creator_id: list[str] | None = None
+    creator_label: list[str] | None = None
+    license: str | None = None
+    subject_type: Annotated[
+        EntityTypeLiteral | None,
+        Field(description="See https://mapping-commons.github.io/sssom/subject_type"),
+    ] = None
+    subject_source: str | None = None
+    subject_source_version: str | None = None
+    object_type: Annotated[
+        EntityTypeLiteral | None,
+        Field(description="See https://mapping-commons.github.io/sssom/object_type"),
+    ] = None
+    object_source: str | None = None
+    object_source_version: str | None = None
+    predicate_type: Annotated[
+        EntityTypeLiteral | None,
+        Field(description="See https://mapping-commons.github.io/sssom/predicate_type"),
+    ] = None
+    mapping_provider: AnyUrl | None = None
     #: https://mapping-commons.github.io/sssom/mapping_source/
-    mapping_source: str | None = Field(None)
+    mapping_source: str | None = None
     #: see https://mapping-commons.github.io/sssom/MappingCardinalityEnum/
-    mapping_cardinality: Cardinality | None = Field(None)
-    cardinality_scope: list[str] | None = Field(None)
-    mapping_tool: str | None = Field(None)
-    mapping_tool_id: str | None = Field(None)
-    mapping_tool_version: str | None = Field(None)
-    mapping_date: datetime.date | None = Field(None)
-    publication_date: datetime.date | None = Field(None)
-    review_date: datetime.date | None = Field(None)
-    confidence: float | None = Field(
-        None,
-        ge=0.0,
-        le=1.0,
-        description="""\
+    mapping_cardinality: Cardinality | None = None
+    cardinality_scope: list[str] | None = None
+    mapping_tool: str | None = None
+    mapping_tool_id: str | None = None
+    mapping_tool_version: str | None = None
+    mapping_date: datetime.date | None = None
+    publication_date: datetime.date | None = None
+    review_date: datetime.date | None = None
+    confidence: Annotated[
+        float | None,
+        Field(
+            ge=0.0,
+            le=1.0,
+            description="""\
         An assessment of the confidence of the mapping, reported by the method used to generate it.
 
         This means that confidence values aren't generally comparable, though they should follow
@@ -105,21 +109,24 @@ class Record(BaseModel):
         However, other variants are possible. For example, this confidence could reflect the loss
         function if a knowledge graph embedding model was used ot generate a mapping prediction.
         """,
-    )
-    reviewer_agreement: float | None = Field(None, ge=-1.0, le=1.0, examples=[-1.0, 0.0, 1.0])
-    curation_rule: list[str] | None = Field(None)
-    curation_rule_text: list[str] | None = Field(None)
-    subject_match_field: list[str] | None = Field(None)
-    object_match_field: list[str] | None = Field(None)
-    match_string: list[str] | None = Field(None)
-    subject_preprocessing: list[str] | None = Field(None)
-    object_preprocessing: list[str] | None = Field(None)
-    similarity_score: float | None = Field(None, ge=0.0, le=1.0)
-    similarity_measure: str | None = Field(None)
-    see_also: list[str] | None = Field(None)
-    issue_tracker_item: str | None = Field(None)
-    other: str | None = Field(None)
-    comment: str | None = Field(None)
+        ),
+    ] = None
+    reviewer_agreement: Annotated[
+        float | None, Field(ge=-1.0, le=1.0, examples=[-1.0, 0.0, 1.0])
+    ] = None
+    curation_rule: list[str] | None = None
+    curation_rule_text: list[str] | None = None
+    subject_match_field: list[str] | None = None
+    object_match_field: list[str] | None = None
+    match_string: list[str] | None = None
+    subject_preprocessing: list[str] | None = None
+    object_preprocessing: list[str] | None = None
+    similarity_score: Annotated[float | None, Field(ge=0.0, le=1.0)] = None
+    similarity_measure: str | None = None
+    see_also: list[str] | None = None
+    issue_tracker_item: str | None = None
+    other: str | None = None
+    comment: str | None = None
 
     def expand(
         self, converter: curies.Converter, exclude: set[str] | None = None
@@ -170,63 +177,68 @@ class ExpandedRecord(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    record_id: AnyUrl | None = Field(None)
-    subject_id: AnyUrl = Field(...)
-    subject_label: str | None = Field(None)
-    subject_category: str | None = Field(None)
-    predicate_id: AnyUrl = Field(...)
-    predicate_label: str | None = Field(None)
-    predicate_modifier: Literal["Not"] | None = Field(None)
-    object_id: str = Field(...)
-    object_label: str | None = Field(None)
-    object_category: str | None = Field(None)
-    mapping_justification: str = Field(..., examples=[p.curie for p in matching_processes])
-    author_id: list[str] | None = Field(None)
-    author_label: list[str] | None = Field(None)
-    reviewer_id: list[AnyUrl] | None = Field(None)
-    reviewer_label: list[str] | None = Field(None)
-    creator_id: list[AnyUrl] | None = Field(None)
-    creator_label: list[str] | None = Field(None)
-    license: str | None = Field(None)
-    subject_type: EntityTypeLiteral | None = Field(
-        None, description="See https://mapping-commons.github.io/sssom/subject_type"
-    )
-    subject_source: AnyUrl | None = Field(None)
-    subject_source_version: str | None = Field(None)
-    object_type: EntityTypeLiteral | None = Field(
-        None, description="See https://mapping-commons.github.io/sssom/object_type"
-    )
-    object_source: AnyUrl | None = Field(None)
-    object_source_version: str | None = Field(None)
-    predicate_type: EntityTypeLiteral | None = Field(
-        None, description="See https://mapping-commons.github.io/sssom/predicate_type"
-    )
-    mapping_provider: AnyUrl | None = Field(None)
-    mapping_source: AnyUrl | None = Field(None)
+    record_id: AnyUrl | None = None
+    subject_id: AnyUrl
+    subject_label: str | None = None
+    subject_category: str | None = None
+    predicate_id: AnyUrl
+    predicate_label: str | None = None
+    predicate_modifier: Literal["Not"] | None = None
+    object_id: str
+    object_label: str | None = None
+    object_category: str | None = None
+    mapping_justification: Annotated[str, Field(examples=[p.curie for p in matching_processes])]
+    author_id: list[str] | None = None
+    author_label: list[str] | None = None
+    reviewer_id: list[AnyUrl] | None = None
+    reviewer_label: list[str] | None = None
+    creator_id: list[AnyUrl] | None = None
+    creator_label: list[str] | None = None
+    license: str | None = None
+    subject_type: Annotated[
+        EntityTypeLiteral | None,
+        Field(description="See https://mapping-commons.github.io/sssom/subject_type"),
+    ] = None
+    subject_source: AnyUrl | None = None
+    subject_source_version: str | None = None
+    object_type: Annotated[
+        EntityTypeLiteral | None,
+        Field(description="See https://mapping-commons.github.io/sssom/object_type"),
+    ] = None
+    object_source: AnyUrl | None = None
+    object_source_version: str | None = None
+    predicate_type: Annotated[
+        EntityTypeLiteral | None,
+        Field(description="See https://mapping-commons.github.io/sssom/predicate_type"),
+    ] = None
+    mapping_provider: AnyUrl | None = None
+    mapping_source: AnyUrl | None = None
     #: see https://mapping-commons.github.io/sssom/MappingCardinalityEnum/
-    mapping_cardinality: Cardinality | None = Field(None)
-    cardinality_scope: list[str] | None = Field(None)
-    mapping_tool: str | None = Field(None)
-    mapping_tool_id: AnyUrl | None = Field(None)
-    mapping_tool_version: str | None = Field(None)
-    mapping_date: datetime.date | None = Field(None)
-    publication_date: datetime.date | None = Field(None)
-    review_date: datetime.date | None = Field(None)
-    confidence: float | None = Field(None, ge=0.0, le=1.0)
-    reviewer_agreement: float | None = Field(None, ge=-1.0, le=1.0, examples=[-1.0, 0.0, 1.0])
-    curation_rule: list[AnyUrl] | None = Field(None)
-    curation_rule_text: list[str] | None = Field(None)
-    subject_match_field: list[AnyUrl] | None = Field(None)
-    object_match_field: list[AnyUrl] | None = Field(None)
-    match_string: list[str] | None = Field(None)
-    subject_preprocessing: list[AnyUrl] | None = Field(None)
-    object_preprocessing: list[AnyUrl] | None = Field(None)
-    similarity_score: float | None = Field(None, ge=0.0, le=1.0)
-    similarity_measure: str | None = Field(None)
-    see_also: list[str] | None = Field(None)
-    issue_tracker_item: str | None = Field(None)
-    other: str | None = Field(None)
-    comment: str | None = Field(None)
+    mapping_cardinality: Cardinality | None = None
+    cardinality_scope: list[str] | None = None
+    mapping_tool: str | None = None
+    mapping_tool_id: AnyUrl | None = None
+    mapping_tool_version: str | None = None
+    mapping_date: datetime.date | None = None
+    publication_date: datetime.date | None = None
+    review_date: datetime.date | None = None
+    confidence: Annotated[float | None, Field(ge=0.0, le=1.0)] = None
+    reviewer_agreement: Annotated[
+        float | None, Field(ge=-1.0, le=1.0, examples=[-1.0, 0.0, 1.0])
+    ] = None
+    curation_rule: list[AnyUrl] | None = None
+    curation_rule_text: list[str] | None = None
+    subject_match_field: list[AnyUrl] | None = None
+    object_match_field: list[AnyUrl] | None = None
+    match_string: list[str] | None = None
+    subject_preprocessing: list[AnyUrl] | None = None
+    object_preprocessing: list[AnyUrl] | None = None
+    similarity_score: Annotated[float | None, Field(ge=0.0, le=1.0)] = None
+    similarity_measure: str | None = None
+    see_also: list[str] | None = None
+    issue_tracker_item: str | None = None
+    other: str | None = None
+    comment: str | None = None
 
     def compress(self, converter: curies.Converter) -> Record:
         """Compress expanded URIs into CURIEs."""
