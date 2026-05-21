@@ -43,17 +43,12 @@ def web(add_examples: bool, tab: bool, host: str, port: int) -> None:
 
 
 @main.command()
-@click.option("source_prefix", required=True, type=Path)
-@click.option("target_prefix", required=True, type=Path)
-@click.option("input", required=True)
-@click.option("output", required=True)
-def filter(source_prefix: str, target_prefix: str | None, input: Path, output: Path) -> None:
-    """Implement the filter workflow for a given prefix.
-
-    $ sssom_pydantic filter
-
-
-    """
+@click.option("--prefix", required=True, type=Path)
+@click.option("--target-prefix", required=True, type=Path)
+@click.option("--input", required=True)
+@click.option("--output", required=True)
+def filter(prefix: str, target_prefix: str | None, input: Path, output: Path) -> None:
+    """Implement the filter workflow for a given prefix."""
     from curies.triples import (
         keep_predicates,
         keep_prefixes_both,
@@ -76,11 +71,11 @@ def filter(source_prefix: str, target_prefix: str | None, input: Path, output: P
     mappings = keep_predicates(mappings, exact_match)
 
     if target_prefix:
-        mappings = keep_prefixes_both(mappings, {source_prefix, target_prefix})
-        mappings = invert_by_prefix_pair(mappings, source_prefix, target_prefix)
+        mappings = keep_prefixes_both(mappings, {prefix, target_prefix})
+        mappings = invert_by_prefix_pair(mappings, prefix, target_prefix)
     else:
-        mappings = keep_prefixes_either(mappings, source_prefix)
-        mappings = invert_by_target_prefix(mappings, source_prefix)
+        mappings = keep_prefixes_either(mappings, prefix)
+        mappings = invert_by_target_prefix(mappings, prefix)
 
     sssom_pydantic.write(mappings, converter=converter, metadata=metadata, path=output)
 
