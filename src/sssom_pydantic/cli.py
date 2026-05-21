@@ -43,12 +43,15 @@ def web(add_examples: bool, tab: bool, host: str, port: int) -> None:
 
 
 @main.command()
-@click.option("--prefix", required=True, type=Path)
-@click.option("--target-prefix", required=True, type=Path)
+@click.option("--prefix", required=True)
+@click.option("--target-prefix")
 @click.option("--input", required=True)
-@click.option("--output", required=True)
-def filter(prefix: str, target_prefix: str | None, input: Path, output: Path) -> None:
-    """Implement the filter workflow for a given prefix."""
+@click.option("--output", required=True, type=Path)
+def subset(prefix: str, target_prefix: str | None, input: Path, output: Path) -> None:
+    """Implement the filter workflow for a given prefix.
+
+    This workflow removes negative mappings, unsure mappings, and non-exact mappings.
+    """
     from curies.triples import (
         keep_predicates,
         keep_prefixes_both,
@@ -72,10 +75,12 @@ def filter(prefix: str, target_prefix: str | None, input: Path, output: Path) ->
 
     if target_prefix:
         mappings = keep_prefixes_both(mappings, {prefix, target_prefix})
-        mappings = invert_by_prefix_pair(mappings, prefix, target_prefix)
+        mappings = invert_by_prefix_pair(
+            mappings, prefix, target_prefix, update_justification=False
+        )
     else:
         mappings = keep_prefixes_either(mappings, prefix)
-        mappings = invert_by_target_prefix(mappings, prefix)
+        mappings = invert_by_target_prefix(mappings, prefix, update_justification=False)
 
     sssom_pydantic.write(mappings, converter=converter, metadata=metadata, path=output)
 

@@ -339,7 +339,7 @@ for key in SemanticMapping.model_fields:
         EXCHANGABLE_FIELDS.add(key[len("object_") :])
 
 
-def invert(mapping: MappingTypeVar) -> MappingTypeVar:
+def invert(mapping: MappingTypeVar, *, update_justification: bool = True) -> MappingTypeVar:
     """Invert a mapping.
 
     :param mapping: A semantic mapping record
@@ -369,8 +369,6 @@ def invert(mapping: MappingTypeVar) -> MappingTypeVar:
         raise NotImplementedError(
             f"inversion is not implemented for predicate: {mapping.predicate}"
         )
-    if mapping.justification == mapping_inversion:
-        raise ValueError("double inversion is not supported")
 
     if not mapping.predicate.name:
         new_predicate = new_predicate.without_name()
@@ -379,10 +377,14 @@ def invert(mapping: MappingTypeVar) -> MappingTypeVar:
         "subject": mapping.object,
         "predicate": new_predicate,
         "object": mapping.subject,
-        "justification": mapping_inversion,
         "record": None,  # need to clear the record, since the mapping will now have a new identity
         # TODO update cardinality?
     }
+    if update_justification:
+        if mapping.justification == mapping_inversion:
+            raise ValueError("double inversion is not supported")
+        update["justification"] = mapping_inversion
+
     for part in EXCHANGABLE_FIELDS:
         subject_part = getattr(mapping, f"subject_{part}")
         object_part = getattr(mapping, f"object_{part}")
@@ -562,7 +564,10 @@ def exclude_unsure(mappings: Iterable[MappingTypeVar]) -> Iterable[MappingTypeVa
 
 
 def invert_by_predicate(
-    mappings: Iterable[MappingTypeVar], predicate: SemanticMappingPredicate
+    mappings: Iterable[MappingTypeVar],
+    predicate: SemanticMappingPredicate,
+    *,
+    update_justification: bool = True,
 ) -> Iterable[MappingTypeVar]:
     """Invert based on prefixes.
 
@@ -573,13 +578,13 @@ def invert_by_predicate(
     """
     for mapping in mappings:
         if predicate(mapping):
-            yield invert(mapping)
+            yield invert(mapping, update_justification=update_justification)
         else:
             yield mapping
 
 
 def invert_by_subject_prefix(
-    mappings: Iterable[MappingTypeVar], subject_prefix: str
+    mappings: Iterable[MappingTypeVar], subject_prefix: str, *, update_justification: bool = True
 ) -> Iterable[MappingTypeVar]:
     """Invert mappings with the given subject prefix.
 
@@ -597,7 +602,9 @@ def invert_by_subject_prefix(
     >>> m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
     >>> assert [m1_inv, m2] == list(invert_by_subject_prefix([m1, m2], "mesh"))
     """
-    yield from invert_by_predicate(mappings, _subject_prefix(subject_prefix))
+    yield from invert_by_predicate(
+        mappings, _subject_prefix(subject_prefix), update_justification=update_justification
+    )
 
 
 def _subject_prefix(subject_prefix: str) -> SemanticMappingPredicate:
@@ -608,7 +615,7 @@ def _subject_prefix(subject_prefix: str) -> SemanticMappingPredicate:
 
 
 def invert_by_target_prefix(
-    mappings: Iterable[MappingTypeVar], target_prefix: str
+    mappings: Iterable[MappingTypeVar], target_prefix: str, *, update_justification: bool = True
 ) -> Iterable[MappingTypeVar]:
     """Invert mappings with the given object prefix.
 
@@ -626,7 +633,9 @@ def invert_by_target_prefix(
     >>> m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
     >>> assert [m1_inv, m2] == list(invert_by_target_prefix([m1, m2], "CHEBI"))
     """
-    yield from invert_by_predicate(mappings, _object_prefix(target_prefix))
+    yield from invert_by_predicate(
+        mappings, _object_prefix(target_prefix), update_justification=update_justification
+    )
 
 
 def _object_prefix(target_prefix: str) -> SemanticMappingPredicate:
@@ -638,7 +647,11 @@ def _object_prefix(target_prefix: str) -> SemanticMappingPredicate:
 
 
 def invert_by_prefix_pair(
-    mappings: Iterable[MappingTypeVar], source_prefix: str, target_prefix: str
+    mappings: Iterable[MappingTypeVar],
+    source_prefix: str,
+    target_prefix: str,
+    *,
+    update_justification: bool = True,
 ) -> Iterable[MappingTypeVar]:
     """Invert mappings with the given subject and object (SO) prefixes.
 
@@ -657,7 +670,11 @@ def invert_by_prefix_pair(
     >>> m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
     >>> assert [m1_inv, m2] == list(invert_by_prefix_pair([m1, m2], "mesh", "CHEBI"))
     """
-    yield from invert_by_predicate(mappings, _so_prefixes(source_prefix, target_prefix))
+    yield from invert_by_predicate(
+        mappings,
+        _so_prefixes(source_prefix, target_prefix),
+        update_justification=update_justification,
+    )
 
 
 def _so_prefixes(source_prefix: str, target_prefix: str) -> SemanticMappingPredicate:
