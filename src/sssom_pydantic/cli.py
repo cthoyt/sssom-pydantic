@@ -46,8 +46,16 @@ def web(add_examples: bool, tab: bool, host: str, port: int) -> None:
 @click.option("--prefix", required=True)
 @click.option("--target-prefix")
 @click.option("--input", required=True)
-@click.option("--output", required=True, type=Path)
-def subset(prefix: str, target_prefix: str | None, input: Path, output: Path) -> None:
+@click.option("--output", type=Path)
+@click.option(
+    "--update-justification",
+    is_flag=True,
+    help="When inverting mappings, should the justification be updated to semapv:MappingInversion "
+    "and reference be made back to the original mapping?",
+)
+def subset(
+    prefix: str, target_prefix: str | None, input: Path, output: Path, update_justification: bool
+) -> None:
     """Implement the filter workflow for a given prefix.
 
     This workflow removes negative mappings, unsure mappings, and non-exact mappings.
@@ -57,6 +65,7 @@ def subset(prefix: str, target_prefix: str | None, input: Path, output: Path) ->
         keep_prefixes_both,
         keep_prefixes_either,
     )
+    import sys
     from curies.vocabulary import exact_match
 
     import sssom_pydantic
@@ -73,16 +82,18 @@ def subset(prefix: str, target_prefix: str | None, input: Path, output: Path) ->
     mappings = exclude_unsure(mappings)
     mappings = keep_predicates(mappings, exact_match)
 
-    if target_prefix:
+    if target_prefix is not None:
         mappings = keep_prefixes_both(mappings, {prefix, target_prefix})
         mappings = invert_by_prefix_pair(
-            mappings, prefix, target_prefix, update_justification=False
+            mappings, target_prefix, prefix, update_justification=update_justification
         )
     else:
         mappings = keep_prefixes_either(mappings, prefix)
-        mappings = invert_by_target_prefix(mappings, prefix, update_justification=False)
+        mappings = invert_by_target_prefix(
+            mappings, prefix, update_justification=update_justification
+        )
 
-    sssom_pydantic.write(mappings, converter=converter, metadata=metadata, path=output)
+    sssom_pydantic.write(mappings, output or sys.stdout, converter=converter, metadata=metadata)
 
 
 if __name__ == "__main__":
