@@ -595,7 +595,7 @@ def invert_by_subject_prefix(
     ...     "CHEBI:28646", "mesh:C000089", justification=mapping_inversion
     ... )
     >>> m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
-    >>> assert [m1_inv, m2] == list(invert_by_prefix_pair([m1, m2], "mesh"))
+    >>> assert [m1_inv, m2] == list(invert_by_subject_prefix([m1, m2], "mesh"))
     """
     yield from invert_by_predicate(mappings, _subject_prefix(subject_prefix))
 
@@ -624,7 +624,7 @@ def invert_by_target_prefix(
     ...     "CHEBI:28646", "mesh:C000089", justification=mapping_inversion
     ... )
     >>> m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
-    >>> assert [m1_inv, m2] == list(invert_by_prefix_pair([m1, m2], "CHEBI"))
+    >>> assert [m1_inv, m2] == list(invert_by_target_prefix([m1, m2], "CHEBI"))
     """
     yield from invert_by_predicate(mappings, _object_prefix(target_prefix))
 
