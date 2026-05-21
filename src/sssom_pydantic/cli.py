@@ -60,12 +60,13 @@ def subset(
 
     This workflow removes negative mappings, unsure mappings, and non-exact mappings.
     """
+    import sys
+
     from curies.triples import (
         keep_predicates,
         keep_prefixes_both,
         keep_prefixes_either,
     )
-    import sys
     from curies.vocabulary import exact_match
 
     import sssom_pydantic
