@@ -43,6 +43,8 @@ __all__ = [
     "get_canonical_tuple",
     "invert",
     "invert_by_prefix_pair",
+    "invert_by_subject_prefix",
+    "invert_by_target_prefix",
     "publish",
     "remove_redundant_external",
     "remove_redundant_internal",
@@ -574,6 +576,65 @@ def invert_by_predicate(
             yield invert(mapping)
         else:
             yield mapping
+
+
+def invert_by_subject_prefix(
+    mappings: Iterable[MappingTypeVar], subject_prefix: str
+) -> Iterable[MappingTypeVar]:
+    """Invert mappings with the given subject prefix.
+
+    :param mappings: An iterable of semantic mappings
+    :param subject_prefix: Invert mappings that have this subject prefix
+
+    :returns: An iterable of semantic mappings, with the correct ones inverted
+
+    >>> from curies.vocabulary import mapping_inversion
+    >>> from sssom_pydantic import SemanticMapping, NOT
+    >>> m1 = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
+    >>> m1_inv = SemanticMapping.exact(
+    ...     "CHEBI:28646", "mesh:C000089", justification=mapping_inversion
+    ... )
+    >>> m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
+    >>> assert [m1_inv, m2] == list(invert_by_prefix_pair([m1, m2], "mesh"))
+    """
+    yield from invert_by_predicate(mappings, _subject_prefix(subject_prefix))
+
+
+def _subject_prefix(subject_prefix: str) -> SemanticMappingPredicate:
+    def _func(m: MappingTypeVar) -> bool:
+        return m.subject.prefix == subject_prefix
+
+    return _func
+
+
+def invert_by_target_prefix(
+    mappings: Iterable[MappingTypeVar], target_prefix: str
+) -> Iterable[MappingTypeVar]:
+    """Invert mappings with the given object prefix.
+
+    :param mappings: An iterable of semantic mappings
+    :param target_prefix: Invert mappings that have this target prefix
+
+    :returns: An iterable of semantic mappings, with the correct ones inverted
+
+    >>> from curies.vocabulary import mapping_inversion
+    >>> from sssom_pydantic import SemanticMapping, NOT
+    >>> m1 = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
+    >>> m1_inv = SemanticMapping.exact(
+    ...     "CHEBI:28646", "mesh:C000089", justification=mapping_inversion
+    ... )
+    >>> m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
+    >>> assert [m1_inv, m2] == list(invert_by_prefix_pair([m1, m2], "CHEBI"))
+    """
+    yield from invert_by_predicate(mappings, _object_prefix(target_prefix))
+
+
+def _object_prefix(target_prefix: str) -> SemanticMappingPredicate:
+
+    def _func(m: MappingTypeVar) -> bool:
+        return m.object.prefix == target_prefix
+
+    return _func
 
 
 def invert_by_prefix_pair(
