@@ -8,8 +8,6 @@ __all__ = [
     "main",
 ]
 
-import curies
-
 
 @click.group()
 def main() -> None:
@@ -27,7 +25,7 @@ def format_sssom_tsv(path: Path, standardize: bool) -> None:
     """Lint a SSSOM TSV file."""
     import sssom_pydantic
 
-    sssom_pydantic.lint(path, standardize=standardize)
+    sssom_pydantic.format(path, standardize=standardize)
 
 
 @main.command()
@@ -74,6 +72,7 @@ def subset(
     This workflow removes negative mappings, unsure mappings, and non-exact mappings.
     """
     import sys
+    import curies
 
     from curies.triples import (
         keep_predicates,
