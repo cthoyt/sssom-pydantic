@@ -63,8 +63,13 @@ def web(add_examples: bool, tab: bool, host: str, port: int) -> None:
     help="The prefix that becomes the object of all mappings. If used in combination with "
     "--standardize, will get automatically standardized.",
 )
-@click.option("--input", required=True)
-@click.option("--output", type=Path)
+@click.option(
+    "--input",
+    help="Path to a local file or URL to a remote file. If not given, will get input from STDIN",
+)
+@click.option(
+    "--output", type=Path, help="Path to a local file to output. If not given, will write to STDOUT"
+)
 @click.option(
     "--justification-policy",
     is_flag=True,
@@ -77,7 +82,7 @@ def web(add_examples: bool, tab: bool, host: str, port: int) -> None:
 def subset(
     prefix: str,
     target_prefix: str | None,
-    input: Path,
+    input: Path | None,
     output: Path | None,
     justification_policy: Literal["retain", "derive"],
     standardize: bool,
@@ -89,11 +94,7 @@ def subset(
     import sys
 
     import curies
-    from curies.triples import (
-        keep_predicates,
-        keep_prefixes_both,
-        keep_prefixes_either,
-    )
+    from curies.triples import keep_predicates, keep_prefixes_both, keep_prefixes_either
     from curies.vocabulary import exact_match
 
     import sssom_pydantic
@@ -106,7 +107,7 @@ def subset(
         invert_by_prefix_pair,
     )
 
-    mappings_list, converter, metadata = sssom_pydantic.read(input)
+    mappings_list, converter, metadata = sssom_pydantic.read(input or sys.stdin)
 
     mappings = exclude_negative(mappings_list)
     mappings = exclude_unsure(mappings)
