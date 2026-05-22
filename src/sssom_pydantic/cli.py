@@ -69,8 +69,8 @@ def web(add_examples: bool, tab: bool, host: str, port: int) -> None:
 @click.option(
     "--justification-policy",
     is_flag=True,
-    type=click.Choice(["keep", "derive"]),
-    default="keep",
+    type=click.Choice(["retain", "derive"]),
+    default="retain",
     help="When inverting mappings, should the justification be derived to semapv:MappingInversion "
     "and reference be made back to the original mapping?",
 )
@@ -81,7 +81,7 @@ def subset(
     target_prefix: str | None,
     input: Path,
     output: Path | None,
-    justification_policy: Literal["keep", "derive"],
+    justification_policy: Literal["retain", "derive"],
     standardize: bool,
 ) -> None:
     """Implement the filter workflow for a given prefix.
