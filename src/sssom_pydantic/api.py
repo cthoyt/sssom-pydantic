@@ -875,14 +875,13 @@ def standardize_mappings(
     mappings: Iterable[MappingTypeVar], *, converter: curies.Converter | None = None
 ) -> Iterable[MappingTypeVar]:
     """Standardize mappings against the Bioregistry."""
-    import curies
-
     if converter is None:
         try:
             import bioregistry
         except ImportError:
             raise ImportError(
-                "Standardization during SSSOM formatting requires `pip install bioregistry`"
+                "Standardization of semantic mappings without an explicitly passed "
+                "converter requires `pip install bioregistry`"
             ) from None
         converter = bioregistry.get_preferred_converter()
 
