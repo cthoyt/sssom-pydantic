@@ -349,6 +349,18 @@ class InversionDerivationPolicy(enum.Enum):
     #: Derive a new evidence, whose justification is ``semapv:MappingInversion``
     derive = enum.auto()
 
+    @classmethod
+    def parse(cls, value: InversionDerivationPolicy | str | None) -> InversionDerivationPolicy:
+        """Parse an inversion derivation policy."""
+        match value:
+            case None | "retain":
+                return cls.retain
+            case "derive":
+                return cls.derive
+            case InversionDerivationPolicy():
+                return value
+        raise ValueError(f"invalid inversion derivation: {value}")
+
 
 def invert(
     mapping: MappingTypeVar, *, derivation_policy: InversionDerivationPolicy | None = None
@@ -584,7 +596,7 @@ def invert_by_predicate(
     mappings: Iterable[MappingTypeVar],
     predicate: SemanticMappingPredicate,
     *,
-    derivation_policy: InversionDerivationPolicy | None = None,
+    derivation_policy: InversionDerivationPolicy | str | None = None,
 ) -> Iterable[MappingTypeVar]:
     """Invert based on prefixes.
 
@@ -601,6 +613,7 @@ def invert_by_predicate(
         mappings with ``semapv:MappingInversion`` justification are simply yielded and
         not considered for re-inverting
     """
+    derivation_policy = InversionDerivationPolicy.parse(derivation_policy)
     for mapping in mappings:
         if mapping.justification != mapping_inversion and predicate(mapping):
             yield invert(mapping, derivation_policy=derivation_policy)
@@ -612,7 +625,7 @@ def invert_by_subject_prefix(
     mappings: Iterable[MappingTypeVar],
     subject_prefix: str,
     *,
-    derivation_policy: InversionDerivationPolicy | None = None,
+    derivation_policy: InversionDerivationPolicy | str | None = None,
 ) -> Iterable[MappingTypeVar]:
     """Invert mappings with the given subject prefix.
 
@@ -627,9 +640,7 @@ def invert_by_subject_prefix(
     >>> from curies.vocabulary import mapping_inversion
     >>> from sssom_pydantic import SemanticMapping, NOT
     >>> m1 = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
-    >>> m1_inv = SemanticMapping.exact(
-    ...     "CHEBI:28646", "mesh:C000089", justification=mapping_inversion
-    ... )
+    >>> m1_inv = SemanticMapping.exact("CHEBI:28646", "mesh:C000089")
     >>> m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
     >>> assert [m1_inv, m2] == list(invert_by_subject_prefix([m1, m2], "mesh"))
     """
@@ -649,7 +660,7 @@ def invert_by_object_prefix(
     mappings: Iterable[MappingTypeVar],
     object_prefix: str,
     *,
-    derivation_policy: InversionDerivationPolicy | None = None,
+    derivation_policy: InversionDerivationPolicy | str | None = None,
 ) -> Iterable[MappingTypeVar]:
     """Invert mappings with the given object prefix.
 
@@ -664,9 +675,7 @@ def invert_by_object_prefix(
     >>> from curies.vocabulary import mapping_inversion
     >>> from sssom_pydantic import SemanticMapping, NOT
     >>> m1 = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
-    >>> m1_inv = SemanticMapping.exact(
-    ...     "CHEBI:28646", "mesh:C000089", justification=mapping_inversion
-    ... )
+    >>> m1_inv = SemanticMapping.exact("CHEBI:28646", "mesh:C000089")
     >>> m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
     >>> assert [m1_inv, m2] == list(invert_by_object_prefix([m1, m2], "CHEBI"))
     """
@@ -687,7 +696,7 @@ def invert_by_prefix_pair(
     source_prefix: str,
     object_prefix: str,
     *,
-    derivation_policy: InversionDerivationPolicy | None = None,
+    derivation_policy: InversionDerivationPolicy | str | None = None,
 ) -> Iterable[MappingTypeVar]:
     """Invert mappings with the given subject and object (SO) prefixes.
 
@@ -703,9 +712,7 @@ def invert_by_prefix_pair(
     >>> from curies.vocabulary import mapping_inversion
     >>> from sssom_pydantic import SemanticMapping, NOT
     >>> m1 = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
-    >>> m1_inv = SemanticMapping.exact(
-    ...     "CHEBI:28646", "mesh:C000089", justification=mapping_inversion
-    ... )
+    >>> m1_inv = SemanticMapping.exact("CHEBI:28646", "mesh:C000089")
     >>> m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
     >>> assert [m1_inv, m2] == list(invert_by_prefix_pair([m1, m2], "mesh", "CHEBI"))
     """
