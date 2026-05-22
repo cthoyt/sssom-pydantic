@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import enum
 import itertools as itt
 import math
 import statistics
@@ -42,7 +43,9 @@ __all__ = [
     "exclude_unsure",
     "get_canonical_tuple",
     "invert",
+    "invert_by_object_prefix",
     "invert_by_prefix_pair",
+    "invert_by_subject_prefix",
     "publish",
     "remove_redundant_external",
     "remove_redundant_internal",
@@ -137,8 +140,8 @@ def _score_mapping(mapping: SemanticMapping) -> int:
 
 def get_canonical_tuple(mapping: SemanticMapping) -> CanonicalMappingTuple:
     """Get the canonical tuple from a mapping entry."""
-    source, target = sorted([mapping.subject, mapping.object])
-    return source.prefix, source.identifier, target.prefix, target.identifier
+    subject, object_ = sorted([mapping.subject, mapping.object])
+    return subject.prefix, subject.identifier, object_.prefix, object_.identifier
 
 
 def remove_redundant_external(
@@ -337,10 +340,39 @@ for key in SemanticMapping.model_fields:
         EXCHANGABLE_FIELDS.add(key[len("object_") :])
 
 
-def invert(mapping: MappingTypeVar) -> MappingTypeVar:
+class InversionJustificationPolicy(enum.Enum):
+    """An enumeration of different inversion derivation policies."""
+
+    #: Keep the original justification (default)
+    retain = enum.auto()
+
+    #: Derive a new evidence, whose justification is ``semapv:MappingInversion``
+    derive = enum.auto()
+
+    @classmethod
+    def parse(
+        cls, value: InversionJustificationPolicy | str | None
+    ) -> InversionJustificationPolicy:
+        """Parse an inversion derivation policy."""
+        match value:
+            case None | "retain":
+                return cls.retain
+            case "derive":
+                return cls.derive
+            case InversionJustificationPolicy():
+                return value
+        raise ValueError(f"invalid inversion derivation: {value}")
+
+
+def invert(
+    mapping: MappingTypeVar, *, justification_policy: InversionJustificationPolicy | None = None
+) -> MappingTypeVar:
     """Invert a mapping.
 
     :param mapping: A semantic mapping record
+    :param justification_policy: The policy for how the original evidence is mutated
+        during inversion. Defaults to :class:`InversionDerivationPolicy.retain`, where
+        the original justification is retained
 
     :returns: An inverted mapping. Mapping inversion clears the ``record`` field if
         present.
@@ -377,10 +409,13 @@ def invert(mapping: MappingTypeVar) -> MappingTypeVar:
         "subject": mapping.object,
         "predicate": new_predicate,
         "object": mapping.subject,
-        "justification": mapping_inversion,
         "record": None,  # need to clear the record, since the mapping will now have a new identity
         # TODO update cardinality?
     }
+
+    if justification_policy is InversionJustificationPolicy.derive:
+        update["justification"] = mapping_inversion
+
     for part in EXCHANGABLE_FIELDS:
         subject_part = getattr(mapping, f"subject_{part}")
         object_part = getattr(mapping, f"object_{part}")
@@ -560,48 +595,139 @@ def exclude_unsure(mappings: Iterable[MappingTypeVar]) -> Iterable[MappingTypeVa
 
 
 def invert_by_predicate(
-    mappings: Iterable[MappingTypeVar], predicate: SemanticMappingPredicate
+    mappings: Iterable[MappingTypeVar],
+    predicate: SemanticMappingPredicate,
+    *,
+    justification_policy: InversionJustificationPolicy | str | None = None,
 ) -> Iterable[MappingTypeVar]:
     """Invert based on prefixes.
 
     :param mappings: An iterable of semantic mappings
     :param predicate: A predicate function
+    :param justification_policy: The policy for how the original evidence is mutated
+        during inversion. Defaults to :class:`InversionDerivationPolicy.retain`, where
+        the original justification is retained
 
     :returns: An iterable of semantic mappings, with the correct ones inverted
+
+    .. note::
+
+        mappings with ``semapv:MappingInversion`` justification are simply yielded and
+        not considered for re-inverting
     """
+    justification_policy = InversionJustificationPolicy.parse(justification_policy)
     for mapping in mappings:
-        if predicate(mapping):
-            yield invert(mapping)
+        if mapping.justification != mapping_inversion and predicate(mapping):
+            yield invert(mapping, justification_policy=justification_policy)
         else:
             yield mapping
 
 
-def invert_by_prefix_pair(
-    mappings: Iterable[MappingTypeVar], source_prefix: str, target_prefix: str
+def invert_by_subject_prefix(
+    mappings: Iterable[MappingTypeVar],
+    subject_prefix: str,
+    *,
+    justification_policy: InversionJustificationPolicy | str | None = None,
 ) -> Iterable[MappingTypeVar]:
-    """Invert mappings with the given subject and object (SO) prefixes.
+    """Invert mappings with the given subject prefix.
 
     :param mappings: An iterable of semantic mappings
-    :param source_prefix: Invert mappings that have this source prefix
-    :param target_prefix: Invert mappings that have this target prefix
+    :param subject_prefix: Invert mappings that have this subject prefix
+    :param justification_policy: The policy for how the original evidence is mutated
+        during inversion. Defaults to :class:`InversionDerivationPolicy.retain`, where
+        the original justification is retained
 
     :returns: An iterable of semantic mappings, with the correct ones inverted
 
     >>> from curies.vocabulary import mapping_inversion
     >>> from sssom_pydantic import SemanticMapping, NOT
     >>> m1 = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
-    >>> m1_inv = SemanticMapping.exact(
-    ...     "CHEBI:28646", "mesh:C000089", justification=mapping_inversion
-    ... )
+    >>> m1_inv = SemanticMapping.exact("CHEBI:28646", "mesh:C000089")
+    >>> m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
+    >>> assert [m1_inv, m2] == list(invert_by_subject_prefix([m1, m2], "mesh"))
+    """
+    yield from invert_by_predicate(
+        mappings, _subject_prefix(subject_prefix), justification_policy=justification_policy
+    )
+
+
+def _subject_prefix(subject_prefix: str) -> SemanticMappingPredicate:
+    def _func(m: MappingTypeVar) -> bool:
+        return m.subject.prefix == subject_prefix
+
+    return _func
+
+
+def invert_by_object_prefix(
+    mappings: Iterable[MappingTypeVar],
+    object_prefix: str,
+    *,
+    justification_policy: InversionJustificationPolicy | str | None = None,
+) -> Iterable[MappingTypeVar]:
+    """Invert mappings with the given object prefix.
+
+    :param mappings: An iterable of semantic mappings
+    :param object_prefix: Invert mappings that have this object prefix
+    :param justification_policy: The policy for how the original evidence is mutated
+        during inversion. Defaults to :class:`InversionDerivationPolicy.retain`, where
+        the original justification is retained
+
+    :returns: An iterable of semantic mappings, with the correct ones inverted
+
+    >>> from curies.vocabulary import mapping_inversion
+    >>> from sssom_pydantic import SemanticMapping, NOT
+    >>> m1 = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
+    >>> m1_inv = SemanticMapping.exact("CHEBI:28646", "mesh:C000089")
+    >>> m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
+    >>> assert [m1_inv, m2] == list(invert_by_object_prefix([m1, m2], "CHEBI"))
+    """
+    yield from invert_by_predicate(
+        mappings, _object_prefix(object_prefix), justification_policy=justification_policy
+    )
+
+
+def _object_prefix(object_prefix: str) -> SemanticMappingPredicate:
+    def _func(m: MappingTypeVar) -> bool:
+        return m.object.prefix == object_prefix
+
+    return _func
+
+
+def invert_by_prefix_pair(
+    mappings: Iterable[MappingTypeVar],
+    source_prefix: str,
+    object_prefix: str,
+    *,
+    justification_policy: InversionJustificationPolicy | str | None = None,
+) -> Iterable[MappingTypeVar]:
+    """Invert mappings with the given subject and object (SO) prefixes.
+
+    :param mappings: An iterable of semantic mappings
+    :param source_prefix: Invert mappings that have this source prefix
+    :param object_prefix: Invert mappings that have this object prefix
+    :param justification_policy: The policy for how the original evidence is mutated
+        during inversion. Defaults to :class:`InversionDerivationPolicy.retain`, where
+        the original justification is retained
+
+    :returns: An iterable of semantic mappings, with the correct ones inverted
+
+    >>> from curies.vocabulary import mapping_inversion
+    >>> from sssom_pydantic import SemanticMapping, NOT
+    >>> m1 = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
+    >>> m1_inv = SemanticMapping.exact("CHEBI:28646", "mesh:C000089")
     >>> m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
     >>> assert [m1_inv, m2] == list(invert_by_prefix_pair([m1, m2], "mesh", "CHEBI"))
     """
-    yield from invert_by_predicate(mappings, _so_prefixes(source_prefix, target_prefix))
+    yield from invert_by_predicate(
+        mappings,
+        _so_prefixes(source_prefix, object_prefix),
+        justification_policy=justification_policy,
+    )
 
 
-def _so_prefixes(source_prefix: str, target_prefix: str) -> SemanticMappingPredicate:
+def _so_prefixes(source_prefix: str, object_prefix: str) -> SemanticMappingPredicate:
     def _func(m: MappingTypeVar) -> bool:
-        return m.subject.prefix == source_prefix and m.object.prefix == target_prefix
+        return m.subject.prefix == source_prefix and m.object.prefix == object_prefix
 
     return _func
 
