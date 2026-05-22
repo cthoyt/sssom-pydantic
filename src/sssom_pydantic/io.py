@@ -7,6 +7,7 @@ import csv
 import datetime
 import logging
 import traceback
+import warnings
 from collections import ChainMap, Counter, defaultdict
 from collections.abc import Collection, Generator, Iterable, Mapping, Sequence
 from io import StringIO
@@ -54,6 +55,7 @@ __all__ = [
     "SemanticMappingPack",
     "append",
     "append_unprocessed",
+    "format",
     "lint",
     "read",
     "read_iterable",
@@ -883,7 +885,7 @@ def _chomp_frontmatter(file: TextIO) -> tuple[list[str], MappingSetRecord | None
     return columns, rv, count
 
 
-def lint(
+def format(
     path: str | Path,
     *,
     metadata_path: str | Path | None = None,
@@ -922,6 +924,12 @@ def lint(
         drop_duplicates_key=drop_duplicates_key,
         sort=True,
     )
+
+
+def lint(*args: Any, **kwargs: Any) -> None:
+    """Run the formatter."""
+    warnings.warn("use sssom_pydantic.format() instead", DeprecationWarning, stacklevel=2)
+    return format(*args, **kwargs)
 
 
 class CachedSemanticMappings(Cached[SemanticMappingPack]):
