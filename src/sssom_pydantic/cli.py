@@ -57,7 +57,8 @@ def web(add_examples: bool, tab: bool, host: str, port: int) -> None:
     "--justification-policy",
     is_flag=True,
     type=click.Choice(["keep", "derive"]),
-    help="When inverting mappings, should the justification be updated to semapv:MappingInversion "
+    default="keep",
+    help="When inverting mappings, should the justification be derived to semapv:MappingInversion "
     "and reference be made back to the original mapping?",
 )
 @click.option("--preferred", is_flag=True)
@@ -65,7 +66,7 @@ def subset(
     prefix: str,
     target_prefix: str | None,
     input: Path,
-    output: Path,
+    output: Path | None,
     justification_policy: Literal["keep", "derive"],
     preferred: bool,
 ) -> None:
@@ -75,7 +76,6 @@ def subset(
     """
     import sys
 
-    import curies
     from curies.triples import (
         keep_predicates,
         keep_prefixes_both,
@@ -84,6 +84,7 @@ def subset(
     from curies.vocabulary import exact_match
 
     import sssom_pydantic
+    from sssom_pydantic import standardize_mappings
     from sssom_pydantic.process import (
         exclude_negative,
         exclude_unsure,
@@ -98,9 +99,7 @@ def subset(
     mappings = keep_predicates(mappings, exact_match)
 
     if preferred:
-        import bioregistry
-
-        mappings = curies.standardize(mappings, bioregistry.get_preferred_converter())
+        mappings = standardize_mappings(mappings)
 
     if target_prefix is not None:
         mappings = keep_prefixes_both(mappings, {prefix, target_prefix})
