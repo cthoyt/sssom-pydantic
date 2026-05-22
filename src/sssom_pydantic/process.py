@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import enum
 import itertools as itt
 import math
 import statistics
@@ -339,10 +340,25 @@ for key in SemanticMapping.model_fields:
         EXCHANGABLE_FIELDS.add(key[len("object_") :])
 
 
-def invert(mapping: MappingTypeVar, *, update_justification: bool = True) -> MappingTypeVar:
+class InversionDerivationPolicy(enum.Enum):
+    """An enumeration of different inversion derivation policies."""
+
+    #: Keep the original justification (default)
+    retain = enum.auto()
+
+    #: Derive a new evidence, whose justification is ``semapv:MappingInversion``
+    derive = enum.auto()
+
+
+def invert(
+    mapping: MappingTypeVar, *, derivation_policy: InversionDerivationPolicy | None = None
+) -> MappingTypeVar:
     """Invert a mapping.
 
     :param mapping: A semantic mapping record
+    :param derivation_policy: The policy for how the original evidence is mutated during
+        inversion. Defaults to :class:`InversionDerivationPolicy.retain`, where the
+        original justification is retained
 
     :returns: An inverted mapping. Mapping inversion clears the ``record`` field if
         present.
@@ -380,7 +396,7 @@ def invert(mapping: MappingTypeVar, *, update_justification: bool = True) -> Map
         "record": None,  # need to clear the record, since the mapping will now have a new identity
         # TODO update cardinality?
     }
-    if update_justification:
+    if derivation_policy is InversionDerivationPolicy.derive:
         if mapping.justification == mapping_inversion:
             raise ValueError("double inversion is not supported")
         update["justification"] = mapping_inversion
@@ -567,29 +583,38 @@ def invert_by_predicate(
     mappings: Iterable[MappingTypeVar],
     predicate: SemanticMappingPredicate,
     *,
-    update_justification: bool = True,
+    derivation_policy: InversionDerivationPolicy | None = None,
 ) -> Iterable[MappingTypeVar]:
     """Invert based on prefixes.
 
     :param mappings: An iterable of semantic mappings
     :param predicate: A predicate function
+    :param derivation_policy: The policy for how the original evidence is mutated during
+        inversion. Defaults to :class:`InversionDerivationPolicy.retain`, where the
+        original justification is retained
 
     :returns: An iterable of semantic mappings, with the correct ones inverted
     """
     for mapping in mappings:
         if predicate(mapping):
-            yield invert(mapping, update_justification=update_justification)
+            yield invert(mapping, derivation_policy=derivation_policy)
         else:
             yield mapping
 
 
 def invert_by_subject_prefix(
-    mappings: Iterable[MappingTypeVar], subject_prefix: str, *, update_justification: bool = True
+    mappings: Iterable[MappingTypeVar],
+    subject_prefix: str,
+    *,
+    derivation_policy: InversionDerivationPolicy | None = None,
 ) -> Iterable[MappingTypeVar]:
     """Invert mappings with the given subject prefix.
 
     :param mappings: An iterable of semantic mappings
     :param subject_prefix: Invert mappings that have this subject prefix
+    :param derivation_policy: The policy for how the original evidence is mutated during
+        inversion. Defaults to :class:`InversionDerivationPolicy.retain`, where the
+        original justification is retained
 
     :returns: An iterable of semantic mappings, with the correct ones inverted
 
@@ -603,7 +628,7 @@ def invert_by_subject_prefix(
     >>> assert [m1_inv, m2] == list(invert_by_subject_prefix([m1, m2], "mesh"))
     """
     yield from invert_by_predicate(
-        mappings, _subject_prefix(subject_prefix), update_justification=update_justification
+        mappings, _subject_prefix(subject_prefix), derivation_policy=derivation_policy
     )
 
 
@@ -615,12 +640,18 @@ def _subject_prefix(subject_prefix: str) -> SemanticMappingPredicate:
 
 
 def invert_by_object_prefix(
-    mappings: Iterable[MappingTypeVar], object_prefix: str, *, update_justification: bool = True
+    mappings: Iterable[MappingTypeVar],
+    object_prefix: str,
+    *,
+    derivation_policy: InversionDerivationPolicy | None = None,
 ) -> Iterable[MappingTypeVar]:
     """Invert mappings with the given object prefix.
 
     :param mappings: An iterable of semantic mappings
     :param object_prefix: Invert mappings that have this object prefix
+    :param derivation_policy: The policy for how the original evidence is mutated during
+        inversion. Defaults to :class:`InversionDerivationPolicy.retain`, where the
+        original justification is retained
 
     :returns: An iterable of semantic mappings, with the correct ones inverted
 
@@ -634,12 +665,11 @@ def invert_by_object_prefix(
     >>> assert [m1_inv, m2] == list(invert_by_object_prefix([m1, m2], "CHEBI"))
     """
     yield from invert_by_predicate(
-        mappings, _object_prefix(object_prefix), update_justification=update_justification
+        mappings, _object_prefix(object_prefix), derivation_policy=derivation_policy
     )
 
 
 def _object_prefix(object_prefix: str) -> SemanticMappingPredicate:
-
     def _func(m: MappingTypeVar) -> bool:
         return m.object.prefix == object_prefix
 
@@ -651,13 +681,16 @@ def invert_by_prefix_pair(
     source_prefix: str,
     object_prefix: str,
     *,
-    update_justification: bool = True,
+    derivation_policy: InversionDerivationPolicy | None = None,
 ) -> Iterable[MappingTypeVar]:
     """Invert mappings with the given subject and object (SO) prefixes.
 
     :param mappings: An iterable of semantic mappings
     :param source_prefix: Invert mappings that have this source prefix
     :param object_prefix: Invert mappings that have this object prefix
+    :param derivation_policy: The policy for how the original evidence is mutated during
+        inversion. Defaults to :class:`InversionDerivationPolicy.retain`, where the
+        original justification is retained
 
     :returns: An iterable of semantic mappings, with the correct ones inverted
 
@@ -673,7 +706,7 @@ def invert_by_prefix_pair(
     yield from invert_by_predicate(
         mappings,
         _so_prefixes(source_prefix, object_prefix),
-        update_justification=update_justification,
+        derivation_policy=derivation_policy,
     )
 
 
