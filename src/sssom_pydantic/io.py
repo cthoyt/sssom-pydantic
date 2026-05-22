@@ -893,11 +893,20 @@ def lint(
     exclude_mappings_key: Hasher[SemanticMapping, X] | None = None,
     drop_duplicates: bool = False,
     drop_duplicates_key: Hasher[SemanticMapping, Y] | None = None,
+    standardize: bool = False,
 ) -> None:
     """Lint a file."""
     mappings, converter_processed, mapping_set = read(
         path, metadata_path=metadata_path, metadata=metadata, converter=converter
     )
+
+    if standardize:
+        import bioregistry
+
+        mappings = curies.standardize(
+            mappings, bioregistry.get_preferred_converter(), return_iterator=False
+        )
+
     write(
         mappings,
         path,
