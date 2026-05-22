@@ -36,7 +36,12 @@ class TestLinting(unittest.TestCase):
     ) -> None:
         """Test linting."""
         self.path.write_text(original)
-        format(self.path, exclude_mappings=exclude_mappings, drop_duplicates=drop_duplicates, standardize=standardize)
+        format(
+            self.path,
+            exclude_mappings=exclude_mappings,
+            drop_duplicates=drop_duplicates,
+            standardize=standardize,
+        )
         self.assertEqual(expected.splitlines(), self.path.read_text().splitlines())
 
     def test_minimal(self) -> None:
@@ -343,9 +348,14 @@ class TestLinting(unittest.TestCase):
         """)
         self.assert_linted(expected_vanilla, original, drop_duplicates=False)
 
-
     def test_standardize(self) -> None:
-        """Test standardizing.."""
+        """Test standardizing.
+
+        This makes sure that if there are non-standard prefixes,
+        that they come along for the ride (i.e., ``nopenope``)
+        and the ones that can be standardized (i.e., ``CHEBI``)
+        are
+        """
         original = dedent("""\
             #mapping_set_id: https://example.org/test.tsv
             #curie_map:
