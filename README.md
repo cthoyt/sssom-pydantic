@@ -68,6 +68,14 @@ It does the following:
    [Bioregistry](https://github.com/biopragmatics/bioregistry) preferred CURIE
    prefixes and RDF URI prefixes if `--standardize` is passed
 
+`sssom-pydantic` also has a subsetting mechanism for extracting all mappings for
+a given resource, e.g., to all mappings from CHMO:
+
+```console
+$ wget https://w3id.org/biopragmatics/biomappings/sssom/biomappings.sssom.tsv
+$ sssom_pydantic subset -i biomappings.sssom.tsv -p CHMO -o biomappings-chmo.sssom.tsv
+```
+
 ## 🚀 Installation
 
 The most recent release can be installed from

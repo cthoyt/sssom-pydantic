@@ -53,6 +53,7 @@ def web(add_examples: bool, tab: bool, host: str, port: int) -> None:
 
 @main.command()
 @click.option(
+    "-p",
     "--prefix",
     required=True,
     help="The prefix that becomes the subjects of all mappings. If used in combination with "
@@ -64,11 +65,15 @@ def web(add_examples: bool, tab: bool, host: str, port: int) -> None:
     "--standardize, will get automatically standardized.",
 )
 @click.option(
+    "-i",
     "--input",
     help="Path to a local file or URL to a remote file. If not given, will get input from STDIN",
 )
 @click.option(
-    "--output", type=Path, help="Path to a local file to output. If not given, will write to STDOUT"
+    "-o",
+    "--output",
+    type=Path,
+    help="Path to a local file to output. If not given, will write to STDOUT",
 )
 @click.option(
     "--justification-policy",
