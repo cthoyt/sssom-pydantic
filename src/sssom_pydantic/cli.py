@@ -8,6 +8,8 @@ __all__ = [
     "main",
 ]
 
+import curies
+
 
 @click.group()
 def main() -> None:
@@ -53,8 +55,14 @@ def web(add_examples: bool, tab: bool, host: str, port: int) -> None:
     help="When inverting mappings, should the justification be updated to semapv:MappingInversion "
     "and reference be made back to the original mapping?",
 )
+@click.option("--preferred", is_flag=True)
 def subset(
-    prefix: str, target_prefix: str | None, input: Path, output: Path, update_justification: bool
+    prefix: str,
+    target_prefix: str | None,
+    input: Path,
+    output: Path,
+    update_justification: bool,
+    preferred: bool,
 ) -> None:
     """Implement the filter workflow for a given prefix.
 
@@ -82,6 +90,11 @@ def subset(
     mappings = exclude_negative(mappings_list)
     mappings = exclude_unsure(mappings)
     mappings = keep_predicates(mappings, exact_match)
+
+    if preferred:
+        import bioregistry
+
+        mappings = curies.standardize(mappings, bioregistry.get_preferred_converter())
 
     if target_prefix is not None:
         mappings = keep_prefixes_both(mappings, {prefix, target_prefix})
