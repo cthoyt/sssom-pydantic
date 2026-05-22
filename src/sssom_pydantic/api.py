@@ -876,13 +876,17 @@ def standardize_mappings(
 ) -> Iterable[MappingTypeVar]:
     """Standardize mappings against the Bioregistry."""
     if converter is None:
-        try:
-            import bioregistry
-        except ImportError:
-            raise ImportError(
-                "Standardization of semantic mappings without an explicitly passed "
-                "converter requires `pip install bioregistry`"
-            ) from None
-        converter = bioregistry.get_preferred_converter()
+        converter = _get_preferred_converter()
 
     return curies.standardize(mappings, converter, return_iterator=True)
+
+
+def _get_preferred_converter() -> curies.Converter:
+    try:
+        import bioregistry
+    except ImportError:
+        raise ImportError(
+            "Standardization of semantic mappings without an explicitly passed "
+            "converter requires `pip install bioregistry`"
+        ) from None
+    return bioregistry.get_preferred_converter()
