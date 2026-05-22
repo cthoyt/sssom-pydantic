@@ -64,10 +64,9 @@ It does the following:
 4. Adds explicit usages of default/built-in prefixes, like `semapv`, to the
    prefix map
 5. Deletes unused columns
-
-Planned formatting modules:
-
-- validating prefixes and local unique identifiers against the Bioregistry
+6. Optionally, standardizes against
+   [Bioregistry](https://github.com/biopragmatics/bioregistry) preferred CURIE
+   prefixes and RDF URI prefixes if `--standardize` is passed
 
 ## 🚀 Installation
 

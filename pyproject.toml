@@ -142,7 +142,7 @@ fastapi = [
 wikidata = [
     "wikidata-client",
     "quickstatements-client>=0.1.2",
-    "bioregistry",
+    "bioregistry>=0.13.56",
 ]
 
 # See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#urls
