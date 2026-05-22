@@ -901,8 +901,12 @@ def lint(
     )
 
     if standardize:
-        import bioregistry
-
+        try:
+            import bioregistry
+        except ImportError:
+            raise ImportError(
+                "Standardization during SSSOM formatting requires `pip install bioregistry`"
+            ) from None
         mappings = curies.standardize(
             mappings, bioregistry.get_preferred_converter(), return_iterator=False
         )
