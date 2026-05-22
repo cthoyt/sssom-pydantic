@@ -617,7 +617,11 @@ def invert_by_predicate(
     """
     justification_policy = InversionJustificationPolicy.parse(justification_policy)
     for mapping in mappings:
-        if mapping.justification != mapping_inversion and predicate(mapping):
+        if (
+            mapping.justification != mapping_inversion
+            and mapping.predicate in semantic_mapping_inversions
+            and predicate(mapping)
+        ):
             yield invert(mapping, justification_policy=justification_policy)
         else:
             yield mapping
