@@ -18,11 +18,16 @@ def main() -> None:
 
 @main.command(name="format")
 @click.argument("path", type=Path)
-def format_sssom_tsv(path: Path) -> None:
+@click.option(
+    "--standardize",
+    is_flag=True,
+    help="Standardize against Bioregistry preferred CURIE prefixes and (RDF) URI prefixes",
+)
+def format_sssom_tsv(path: Path, standardize: bool) -> None:
     """Lint a SSSOM TSV file."""
     import sssom_pydantic
 
-    sssom_pydantic.lint(path)
+    sssom_pydantic.lint(path, standardize=standardize)
 
 
 @main.command()
