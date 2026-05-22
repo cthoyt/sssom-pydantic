@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime
 import functools
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from typing import Annotated, Any, Literal, TypeAlias
 
 import curies
@@ -39,6 +39,7 @@ __all__ = [
     "hash_mapping_to_reference",
     "hash_triple",
     "hash_triple_to_reference",
+    "standardize_mappings",
 ]
 
 logger = logging.getLogger(__name__)
@@ -868,3 +869,20 @@ TRIPLE_URI_PREFIX = "https://w3id.org/sssom/mapping/"
 def hash_triple_to_reference(mapping: SemanticMapping, converter: curies.Converter) -> Reference:
     """Return a mapping sameness identifier as a reference."""
     return Reference(prefix=TRIPLE_CURIE_PREFIX, identifier=hash_triple(mapping, converter))
+
+
+def standardize_mappings(
+    mappings: Iterable[MappingTypeVar], *, converter: curies.Converter | None = None
+) -> Iterable[MappingTypeVar]:
+    """Standardize mappings against the Bioregistry."""
+    if converter is None:
+        try:
+            import bioregistry
+        except ImportError:
+            raise ImportError(
+                "Standardization of semantic mappings without an explicitly passed "
+                "converter requires `pip install bioregistry`"
+            ) from None
+        converter = bioregistry.get_preferred_converter()
+
+    return curies.standardize(mappings, converter, return_iterator=True)

@@ -32,6 +32,7 @@ from .api import (
     SemanticMappingPredicate,
     _other_to_dict,
     row_to_record,
+    standardize_mappings,
 )
 from .constants import (
     BUILTIN_CONVERTER,
@@ -903,15 +904,7 @@ def format(
     )
 
     if standardize:
-        try:
-            import bioregistry
-        except ImportError:
-            raise ImportError(
-                "Standardization during SSSOM formatting requires `pip install bioregistry`"
-            ) from None
-        mappings = curies.standardize(
-            mappings, bioregistry.get_preferred_converter(), return_iterator=False
-        )
+        mappings = list(standardize_mappings(mappings))
 
     write(
         mappings,

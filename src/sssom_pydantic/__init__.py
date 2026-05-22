@@ -13,6 +13,7 @@ from .api import (
     hash_mapping_to_reference,
     hash_triple,
     hash_triple_to_reference,
+    standardize_mappings,
 )
 from .io import (
     Metadata,
@@ -55,6 +56,7 @@ __all__ = [
     "read",
     "read_iterable",
     "read_unprocessed",
+    "standardize_mappings",
     "to_dataframe",
     "write",
     "write_unprocessed",
