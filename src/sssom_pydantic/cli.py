@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Literal
 
 import click
+from more_click import verbose_option
 
 __all__ = [
     "main",
@@ -15,13 +16,16 @@ def main() -> None:
     """CLI for sssom_pydantic."""
 
 
-@main.command(name="format")
-@click.argument("path", type=Path)
-@click.option(
+STANDARDIZE_FLAG = click.option(
     "--standardize",
     is_flag=True,
     help="Standardize against Bioregistry preferred CURIE prefixes and (RDF) URI prefixes",
 )
+
+
+@main.command(name="format")
+@click.argument("path", type=Path)
+@STANDARDIZE_FLAG
 def format_sssom_tsv(path: Path, standardize: bool) -> None:
     """Lint a SSSOM TSV file."""
     import sssom_pydantic
@@ -49,8 +53,17 @@ def web(add_examples: bool, tab: bool, host: str, port: int) -> None:
 
 
 @main.command()
-@click.option("--prefix", required=True)
-@click.option("--target-prefix")
+@click.option(
+    "--prefix",
+    required=True,
+    help="The prefix that becomes the subjects of all mappings. If used in combination with "
+    "--standardize, will get automatically standardized.",
+)
+@click.option(
+    "--target-prefix",
+    help="The prefix that becomes the object of all mappings. If used in combination with "
+    "--standardize, will get automatically standardized.",
+)
 @click.option("--input", required=True)
 @click.option("--output", type=Path)
 @click.option(
@@ -61,14 +74,15 @@ def web(add_examples: bool, tab: bool, host: str, port: int) -> None:
     help="When inverting mappings, should the justification be derived to semapv:MappingInversion "
     "and reference be made back to the original mapping?",
 )
-@click.option("--preferred", is_flag=True)
+@STANDARDIZE_FLAG
+@verbose_option
 def subset(
     prefix: str,
     target_prefix: str | None,
     input: Path,
     output: Path | None,
     justification_policy: Literal["keep", "derive"],
-    preferred: bool,
+    standardize: bool,
 ) -> None:
     """Implement the filter workflow for a given prefix.
 
@@ -76,6 +90,7 @@ def subset(
     """
     import sys
 
+    import curies
     from curies.triples import (
         keep_predicates,
         keep_prefixes_both,
@@ -85,6 +100,7 @@ def subset(
 
     import sssom_pydantic
     from sssom_pydantic import standardize_mappings
+    from sssom_pydantic.api import _get_preferred_converter
     from sssom_pydantic.process import (
         exclude_negative,
         exclude_unsure,
@@ -98,10 +114,14 @@ def subset(
     mappings = exclude_unsure(mappings)
     mappings = keep_predicates(mappings, exact_match)
 
-    if preferred:
-        mappings = standardize_mappings(mappings)
+    if standardize:
+        converter = curies.chain([_get_preferred_converter(), converter])
+        mappings = standardize_mappings(mappings_list, converter=converter)
+
+    prefix = converter.standardize_prefix(prefix, strict=True)
 
     if target_prefix is not None:
+        target_prefix = converter.standardize_prefix(target_prefix, strict=True)
         mappings = keep_prefixes_both(mappings, {prefix, target_prefix})
         mappings = invert_by_prefix_pair(
             mappings, target_prefix, prefix, justification_policy=justification_policy
