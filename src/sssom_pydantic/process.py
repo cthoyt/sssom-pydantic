@@ -42,9 +42,9 @@ __all__ = [
     "exclude_unsure",
     "get_canonical_tuple",
     "invert",
+    "invert_by_object_prefix",
     "invert_by_prefix_pair",
     "invert_by_subject_prefix",
-    "invert_by_target_prefix",
     "publish",
     "remove_redundant_external",
     "remove_redundant_internal",
@@ -139,8 +139,8 @@ def _score_mapping(mapping: SemanticMapping) -> int:
 
 def get_canonical_tuple(mapping: SemanticMapping) -> CanonicalMappingTuple:
     """Get the canonical tuple from a mapping entry."""
-    source, target = sorted([mapping.subject, mapping.object])
-    return source.prefix, source.identifier, target.prefix, target.identifier
+    subject, object_ = sorted([mapping.subject, mapping.object])
+    return subject.prefix, subject.identifier, object_.prefix, object_.identifier
 
 
 def remove_redundant_external(
@@ -614,13 +614,13 @@ def _subject_prefix(subject_prefix: str) -> SemanticMappingPredicate:
     return _func
 
 
-def invert_by_target_prefix(
-    mappings: Iterable[MappingTypeVar], target_prefix: str, *, update_justification: bool = True
+def invert_by_object_prefix(
+    mappings: Iterable[MappingTypeVar], object_prefix: str, *, update_justification: bool = True
 ) -> Iterable[MappingTypeVar]:
     """Invert mappings with the given object prefix.
 
     :param mappings: An iterable of semantic mappings
-    :param target_prefix: Invert mappings that have this target prefix
+    :param object_prefix: Invert mappings that have this object prefix
 
     :returns: An iterable of semantic mappings, with the correct ones inverted
 
@@ -631,17 +631,17 @@ def invert_by_target_prefix(
     ...     "CHEBI:28646", "mesh:C000089", justification=mapping_inversion
     ... )
     >>> m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
-    >>> assert [m1_inv, m2] == list(invert_by_target_prefix([m1, m2], "CHEBI"))
+    >>> assert [m1_inv, m2] == list(invert_by_object_prefix([m1, m2], "CHEBI"))
     """
     yield from invert_by_predicate(
-        mappings, _object_prefix(target_prefix), update_justification=update_justification
+        mappings, _object_prefix(object_prefix), update_justification=update_justification
     )
 
 
-def _object_prefix(target_prefix: str) -> SemanticMappingPredicate:
+def _object_prefix(object_prefix: str) -> SemanticMappingPredicate:
 
     def _func(m: MappingTypeVar) -> bool:
-        return m.object.prefix == target_prefix
+        return m.object.prefix == object_prefix
 
     return _func
 
@@ -649,7 +649,7 @@ def _object_prefix(target_prefix: str) -> SemanticMappingPredicate:
 def invert_by_prefix_pair(
     mappings: Iterable[MappingTypeVar],
     source_prefix: str,
-    target_prefix: str,
+    object_prefix: str,
     *,
     update_justification: bool = True,
 ) -> Iterable[MappingTypeVar]:
@@ -657,7 +657,7 @@ def invert_by_prefix_pair(
 
     :param mappings: An iterable of semantic mappings
     :param source_prefix: Invert mappings that have this source prefix
-    :param target_prefix: Invert mappings that have this target prefix
+    :param object_prefix: Invert mappings that have this object prefix
 
     :returns: An iterable of semantic mappings, with the correct ones inverted
 
@@ -672,14 +672,14 @@ def invert_by_prefix_pair(
     """
     yield from invert_by_predicate(
         mappings,
-        _so_prefixes(source_prefix, target_prefix),
+        _so_prefixes(source_prefix, object_prefix),
         update_justification=update_justification,
     )
 
 
-def _so_prefixes(source_prefix: str, target_prefix: str) -> SemanticMappingPredicate:
+def _so_prefixes(source_prefix: str, object_prefix: str) -> SemanticMappingPredicate:
     def _func(m: MappingTypeVar) -> bool:
-        return m.subject.prefix == source_prefix and m.object.prefix == target_prefix
+        return m.subject.prefix == source_prefix and m.object.prefix == object_prefix
 
     return _func
 

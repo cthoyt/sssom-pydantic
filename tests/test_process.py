@@ -530,3 +530,21 @@ class TestProcess(cases.MappingTestCaseMixin):
         )
         m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
         self.assertEqual([m1_inv, m2], list(pr.invert_by_prefix_pair([m1, m2], "mesh", "CHEBI")))
+
+    def test_invert_subject(self) -> None:
+        """Test inverting mappings with given subject prefix pairs."""
+        m1 = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
+        m1_inv = SemanticMapping.exact(
+            "CHEBI:28646", "mesh:C000089", justification=mapping_inversion
+        )
+        m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
+        self.assertEqual([m1_inv, m2], list(pr.invert_by_subject_prefix([m1, m2], "mesh")))
+
+    def test_invert_object(self) -> None:
+        """Test inverting mappings with given object prefix pairs."""
+        m1 = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
+        m1_inv = SemanticMapping.exact(
+            "CHEBI:28646", "mesh:C000089", justification=mapping_inversion
+        )
+        m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
+        self.assertEqual([m1_inv, m2], list(pr.invert_by_object_prefix([m1, m2], "CHEBI")))
