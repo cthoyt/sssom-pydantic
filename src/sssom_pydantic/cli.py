@@ -1,6 +1,7 @@
 """Command line interface for :mod:`sssom_pydantic`."""
 
 from pathlib import Path
+from typing import Literal
 
 import click
 
@@ -53,8 +54,9 @@ def web(add_examples: bool, tab: bool, host: str, port: int) -> None:
 @click.option("--input", required=True)
 @click.option("--output", type=Path)
 @click.option(
-    "--update-justification",
+    "--justification-policy",
     is_flag=True,
+    type=click.Choice(["keep", "derive"]),
     help="When inverting mappings, should the justification be updated to semapv:MappingInversion "
     "and reference be made back to the original mapping?",
 )
@@ -64,7 +66,7 @@ def subset(
     target_prefix: str | None,
     input: Path,
     output: Path,
-    update_justification: bool,
+    justification_policy: Literal["keep", "derive"],
     preferred: bool,
 ) -> None:
     """Implement the filter workflow for a given prefix.
@@ -72,8 +74,8 @@ def subset(
     This workflow removes negative mappings, unsure mappings, and non-exact mappings.
     """
     import sys
-    import curies
 
+    import curies
     from curies.triples import (
         keep_predicates,
         keep_prefixes_both,
@@ -85,8 +87,8 @@ def subset(
     from sssom_pydantic.process import (
         exclude_negative,
         exclude_unsure,
+        invert_by_object_prefix,
         invert_by_prefix_pair,
-        invert_by_target_prefix,
     )
 
     mappings_list, converter, metadata = sssom_pydantic.read(input)
@@ -103,12 +105,12 @@ def subset(
     if target_prefix is not None:
         mappings = keep_prefixes_both(mappings, {prefix, target_prefix})
         mappings = invert_by_prefix_pair(
-            mappings, target_prefix, prefix, update_justification=update_justification
+            mappings, target_prefix, prefix, justification_policy=justification_policy
         )
     else:
         mappings = keep_prefixes_either(mappings, prefix)
-        mappings = invert_by_target_prefix(
-            mappings, prefix, update_justification=update_justification
+        mappings = invert_by_object_prefix(
+            mappings, prefix, justification_policy=justification_policy
         )
 
     sssom_pydantic.write(mappings, output or sys.stdout, converter=converter, metadata=metadata)
