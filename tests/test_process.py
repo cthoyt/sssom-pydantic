@@ -441,7 +441,7 @@ class TestProcess(cases.MappingTestCaseMixin):
         """Test invert error."""
         m1 = SemanticMapping.exact("CHEBI:28646", "mesh:C000089", justification=mapping_inversion)
         with self.assertRaises(ValueError):
-            invert(m1, derivation_policy=pr.InversionDerivationPolicy.derive)
+            invert(m1, justification_policy=pr.InversionJustificationPolicy.derive)
 
     def test_invert(self) -> None:
         """Test inverting a mapping."""
@@ -509,7 +509,8 @@ class TestProcess(cases.MappingTestCaseMixin):
         for i, (expected, initial) in enumerate(pairs, start=1):
             with self.subTest(index=str(i)):
                 self.assert_model_equal(
-                    expected, invert(initial, derivation_policy=pr.InversionDerivationPolicy.derive)
+                    expected,
+                    invert(initial, justification_policy=pr.InversionJustificationPolicy.derive),
                 )
 
     def test_exclude_negative(self) -> None:
@@ -537,14 +538,20 @@ class TestProcess(cases.MappingTestCaseMixin):
             self,
             [m1_inv_derive, m2],
             pr.invert_by_prefix_pair(
-                [m1, m2], "mesh", "CHEBI", derivation_policy=pr.InversionDerivationPolicy.derive
+                [m1, m2],
+                "mesh",
+                "CHEBI",
+                justification_policy=pr.InversionJustificationPolicy.derive,
             ),
         )
         assert_semantic_mappings_equal(
             self,
             [m1_inv_retain, m2],
             pr.invert_by_prefix_pair(
-                [m1, m2], "mesh", "CHEBI", derivation_policy=pr.InversionDerivationPolicy.retain
+                [m1, m2],
+                "mesh",
+                "CHEBI",
+                justification_policy=pr.InversionJustificationPolicy.retain,
             ),
         )
 
@@ -560,14 +567,14 @@ class TestProcess(cases.MappingTestCaseMixin):
             self,
             [m1_inv_derive, m2],
             pr.invert_by_subject_prefix(
-                [m1, m2], "mesh", derivation_policy=pr.InversionDerivationPolicy.derive
+                [m1, m2], "mesh", justification_policy=pr.InversionJustificationPolicy.derive
             ),
         )
         assert_semantic_mappings_equal(
             self,
             [m1_inv_retain, m2],
             pr.invert_by_subject_prefix(
-                [m1, m2], "mesh", derivation_policy=pr.InversionDerivationPolicy.retain
+                [m1, m2], "mesh", justification_policy=pr.InversionJustificationPolicy.retain
             ),
         )
 
@@ -582,6 +589,6 @@ class TestProcess(cases.MappingTestCaseMixin):
             self,
             [m1_inv, m2],
             pr.invert_by_object_prefix(
-                [m1, m2], "CHEBI", derivation_policy=pr.InversionDerivationPolicy.derive
+                [m1, m2], "CHEBI", justification_policy=pr.InversionJustificationPolicy.derive
             ),
         )
