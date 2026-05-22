@@ -31,6 +31,7 @@ from sssom_pydantic.process import (
     publish,
     review,
 )
+from sssom_pydantic.testing import assert_semantic_mappings_equal
 from tests import cases
 from tests.cases import R1, R2, _m
 
@@ -440,7 +441,7 @@ class TestProcess(cases.MappingTestCaseMixin):
         """Test invert error."""
         m1 = SemanticMapping.exact("CHEBI:28646", "mesh:C000089", justification=mapping_inversion)
         with self.assertRaises(ValueError):
-            invert(m1)
+            invert(m1, derivation_policy=pr.InversionDerivationPolicy.derive)
 
     def test_invert(self) -> None:
         """Test inverting a mapping."""
@@ -507,7 +508,9 @@ class TestProcess(cases.MappingTestCaseMixin):
         ]
         for i, (expected, initial) in enumerate(pairs, start=1):
             with self.subTest(index=str(i)):
-                self.assert_model_equal(expected, invert(initial))
+                self.assert_model_equal(
+                    expected, invert(initial, derivation_policy=pr.InversionDerivationPolicy.derive)
+                )
 
     def test_exclude_negative(self) -> None:
         """Test excluding negative mappings."""
@@ -525,20 +528,48 @@ class TestProcess(cases.MappingTestCaseMixin):
     def test_invert_so(self) -> None:
         """Test inverting mappings with given S/O prefix pairs."""
         m1 = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
-        m1_inv = SemanticMapping.exact(
+        m1_inv_derive = SemanticMapping.exact(
             "CHEBI:28646", "mesh:C000089", justification=mapping_inversion
         )
+        m1_inv_retain = SemanticMapping.exact("CHEBI:28646", "mesh:C000089")
         m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
-        self.assertEqual([m1_inv, m2], list(pr.invert_by_prefix_pair([m1, m2], "mesh", "CHEBI")))
+        assert_semantic_mappings_equal(
+            self,
+            [m1_inv_derive, m2],
+            pr.invert_by_prefix_pair(
+                [m1, m2], "mesh", "CHEBI", derivation_policy=pr.InversionDerivationPolicy.derive
+            ),
+        )
+        assert_semantic_mappings_equal(
+            self,
+            [m1_inv_retain, m2],
+            pr.invert_by_prefix_pair(
+                [m1, m2], "mesh", "CHEBI", derivation_policy=pr.InversionDerivationPolicy.retain
+            ),
+        )
 
     def test_invert_subject(self) -> None:
         """Test inverting mappings with given subject prefix pairs."""
         m1 = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
-        m1_inv = SemanticMapping.exact(
+        m1_inv_derive = SemanticMapping.exact(
             "CHEBI:28646", "mesh:C000089", justification=mapping_inversion
         )
+        m1_inv_retain = SemanticMapping.exact("CHEBI:28646", "mesh:C000089")
         m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
-        self.assertEqual([m1_inv, m2], list(pr.invert_by_subject_prefix([m1, m2], "mesh")))
+        assert_semantic_mappings_equal(
+            self,
+            [m1_inv_derive, m2],
+            pr.invert_by_subject_prefix(
+                [m1, m2], "mesh", derivation_policy=pr.InversionDerivationPolicy.derive
+            ),
+        )
+        assert_semantic_mappings_equal(
+            self,
+            [m1_inv_retain, m2],
+            pr.invert_by_subject_prefix(
+                [m1, m2], "mesh", derivation_policy=pr.InversionDerivationPolicy.retain
+            ),
+        )
 
     def test_invert_object(self) -> None:
         """Test inverting mappings with given object prefix pairs."""
@@ -547,4 +578,10 @@ class TestProcess(cases.MappingTestCaseMixin):
             "CHEBI:28646", "mesh:C000089", justification=mapping_inversion
         )
         m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
-        self.assertEqual([m1_inv, m2], list(pr.invert_by_object_prefix([m1, m2], "CHEBI")))
+        assert_semantic_mappings_equal(
+            self,
+            [m1_inv, m2],
+            pr.invert_by_object_prefix(
+                [m1, m2], "CHEBI", derivation_policy=pr.InversionDerivationPolicy.derive
+            ),
+        )

@@ -385,6 +385,8 @@ def invert(
         raise NotImplementedError(
             f"inversion is not implemented for predicate: {mapping.predicate}"
         )
+    if mapping.justification == mapping_inversion:
+        raise ValueError("double inversion is not supported")
 
     if not mapping.predicate.name:
         new_predicate = new_predicate.without_name()
@@ -396,9 +398,8 @@ def invert(
         "record": None,  # need to clear the record, since the mapping will now have a new identity
         # TODO update cardinality?
     }
+
     if derivation_policy is InversionDerivationPolicy.derive:
-        if mapping.justification == mapping_inversion:
-            raise ValueError("double inversion is not supported")
         update["justification"] = mapping_inversion
 
     for part in EXCHANGABLE_FIELDS:
@@ -594,9 +595,14 @@ def invert_by_predicate(
         original justification is retained
 
     :returns: An iterable of semantic mappings, with the correct ones inverted
+
+    .. note::
+
+        mappings with ``semapv:MappingInversion`` justification are simply yielded and
+        not considered for re-inverting
     """
     for mapping in mappings:
-        if predicate(mapping):
+        if mapping.justification != mapping_inversion and predicate(mapping):
             yield invert(mapping, derivation_policy=derivation_policy)
         else:
             yield mapping

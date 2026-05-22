@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Sequence
 from typing import TYPE_CHECKING, Any
 
 import curies
@@ -14,6 +15,7 @@ if TYPE_CHECKING:
 
 __all__ = [
     "assert_semantic_mapping_equal",
+    "assert_semantic_mappings_equal",
 ]
 
 
@@ -61,3 +63,14 @@ def assert_semantic_mapping_equal(
     test_case.assertEqual(
         expected.model_dump(**parameters), actual.model_dump(**parameters), msg=msg
     )
+
+
+def assert_semantic_mappings_equal(
+    test_case: unittest.TestCase,
+    expected: Sequence[SemanticMapping],
+    actual: Iterable[SemanticMapping] | None,
+) -> None:
+    """Assert two lists of mappings are equal."""
+    if actual is None:
+        raise test_case.fail(msg="no mappings were given")
+    test_case.assertEqual(list(expected), list(actual))
