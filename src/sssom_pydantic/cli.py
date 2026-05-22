@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Literal
 
 import click
-from more_click import verbose_option
 
 __all__ = [
     "main",
@@ -75,7 +74,6 @@ def web(add_examples: bool, tab: bool, host: str, port: int) -> None:
     "and reference be made back to the original mapping?",
 )
 @STANDARDIZE_FLAG
-@verbose_option
 def subset(
     prefix: str,
     target_prefix: str | None,
