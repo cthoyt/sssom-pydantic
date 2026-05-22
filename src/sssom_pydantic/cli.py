@@ -81,7 +81,8 @@ def web(add_examples: bool, tab: bool, host: str, port: int) -> None:
     type=click.Choice(["retain", "derive"]),
     default="retain",
     help="When inverting mappings, should the justification be derived to semapv:MappingInversion "
-    "and reference be made back to the original mapping?",
+    "and reference be made back to the original mapping, or should the original jusitication be "
+    "retained?",
 )
 @STANDARDIZE_FLAG
 def subset(
