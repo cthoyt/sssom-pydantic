@@ -11,7 +11,7 @@ from curies.vocabulary import exact_match, manual_mapping_curation
 
 import sssom_pydantic
 from sssom_pydantic import MappingTool, Record, SemanticMapping
-from sssom_pydantic.io import lint
+from sssom_pydantic.io import format
 
 
 class TestLinting(unittest.TestCase):
@@ -35,7 +35,7 @@ class TestLinting(unittest.TestCase):
     ) -> None:
         """Test linting."""
         self.path.write_text(original)
-        lint(self.path, exclude_mappings=exclude_mappings, drop_duplicates=drop_duplicates)
+        format(self.path, exclude_mappings=exclude_mappings, drop_duplicates=drop_duplicates)
         self.assertEqual(expected.splitlines(), self.path.read_text().splitlines())
 
     def test_minimal(self) -> None:

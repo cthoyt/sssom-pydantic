@@ -25,7 +25,7 @@ def format_sssom_tsv(path: Path, standardize: bool) -> None:
     """Lint a SSSOM TSV file."""
     import sssom_pydantic
 
-    sssom_pydantic.lint(path, standardize=standardize)
+    sssom_pydantic.format(path, standardize=standardize)
 
 
 @main.command()
