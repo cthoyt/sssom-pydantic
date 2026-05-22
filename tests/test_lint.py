@@ -32,10 +32,16 @@ class TestLinting(unittest.TestCase):
         original: str,
         exclude_mappings: Iterable[SemanticMapping] | None = None,
         drop_duplicates: bool = False,
+        standardize: bool = False,
     ) -> None:
         """Test linting."""
         self.path.write_text(original)
-        format(self.path, exclude_mappings=exclude_mappings, drop_duplicates=drop_duplicates)
+        format(
+            self.path,
+            exclude_mappings=exclude_mappings,
+            drop_duplicates=drop_duplicates,
+            standardize=standardize,
+        )
         self.assertEqual(expected.splitlines(), self.path.read_text().splitlines())
 
     def test_minimal(self) -> None:
@@ -341,3 +347,36 @@ class TestLinting(unittest.TestCase):
             mesh:C000089	skos:exactMatch	chebi:28646	semapv:LexicalMatching	0.95
         """)
         self.assert_linted(expected_vanilla, original, drop_duplicates=False)
+
+    def test_standardize(self) -> None:
+        """Test standardizing.
+
+        This makes sure that if there are non-standard prefixes,
+        that they come along for the ride (i.e., ``nopenope``)
+        and the ones that can be standardized (i.e., ``CHEBI``)
+        are
+        """
+        original = dedent("""\
+            #mapping_set_id: https://example.org/test.tsv
+            #curie_map:
+            #  chebi: "http://purl.obolibrary.org/obo/CHEBI_"
+            #  mesh: "http://id.nlm.nih.gov/mesh/"
+            #  nopenope: "https://example.org/nopenope/"
+            #  oboInOwl: "http://www.geneontology.org/formats/oboInOwl#"
+            object_id	subject_id	predicate_id	mapping_justification	confidence
+            chebi:28646	mesh:C000089	skos:exactMatch	semapv:LexicalMatching	0.95
+            nopenope:1	mesh:C000001	skos:exactMatch	semapv:LexicalMatching	0.95
+        """)
+        expected_deduplicated = dedent("""\
+            #curie_map:
+            #  CHEBI: http://purl.obolibrary.org/obo/CHEBI_
+            #  mesh: http://id.nlm.nih.gov/mesh/
+            #  nopenope: https://example.org/nopenope/
+            #  semapv: https://w3id.org/semapv/vocab/
+            #  skos: http://www.w3.org/2004/02/skos/core#
+            #mapping_set_id: https://example.org/test.tsv
+            subject_id	predicate_id	object_id	mapping_justification	confidence
+            mesh:C000001	skos:exactMatch	nopenope:1	semapv:LexicalMatching	0.95
+            mesh:C000089	skos:exactMatch	CHEBI:28646	semapv:LexicalMatching	0.95
+        """)
+        self.assert_linted(expected_deduplicated, original, standardize=True)

@@ -30,6 +30,7 @@ from .api import (
     MappingTypeVar,
     SemanticMapping,
     SemanticMappingPredicate,
+    _get_preferred_converter,
     _other_to_dict,
     row_to_record,
     standardize_mappings,
@@ -904,7 +905,8 @@ def format(
     )
 
     if standardize:
-        mappings = list(standardize_mappings(mappings))
+        converter_processed = curies.chain([_get_preferred_converter(), converter_processed])
+        mappings = list(standardize_mappings(mappings, converter=converter_processed))
 
     write(
         mappings,
