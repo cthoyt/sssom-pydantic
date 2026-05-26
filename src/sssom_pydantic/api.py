@@ -362,6 +362,7 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
             self.creators,
             self.reviewers,
             self.curation_rule,
+            self.derived_from,
         ]:
             if y is not None:
                 for z in y:
