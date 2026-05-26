@@ -140,5 +140,19 @@ def subset(
     sssom_pydantic.write(mappings, output or sys.stdout, converter=converter, metadata=metadata)
 
 
+def merge(paths, output, metadata, **kwargs) -> None:
+    import curies
+
+    import sssom_pydantic
+
+    parts = [sssom_pydantic.read(path) for path in paths]
+    converter = curies.chain([part.converter for part in parts])
+    mappings = []
+    for part in parts:
+        mappings.extend(part.mappings)
+
+    sssom_pydantic.write(mappings, output, converter=converter, metadata=metadata)
+
+
 if __name__ == "__main__":
     main()
