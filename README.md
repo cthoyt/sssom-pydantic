@@ -64,10 +64,17 @@ It does the following:
 4. Adds explicit usages of default/built-in prefixes, like `semapv`, to the
    prefix map
 5. Deletes unused columns
+6. Optionally, standardizes against
+   [Bioregistry](https://github.com/biopragmatics/bioregistry) preferred CURIE
+   prefixes and RDF URI prefixes if `--standardize` is passed
 
-Planned formatting modules:
+`sssom-pydantic` also has a subsetting mechanism for extracting all mappings for
+a given resource, e.g., to all mappings from CHMO:
 
-- validating prefixes and local unique identifiers against the Bioregistry
+```console
+$ wget https://w3id.org/biopragmatics/biomappings/sssom/biomappings.sssom.tsv
+$ sssom_pydantic subset -i biomappings.sssom.tsv -p CHMO -o biomappings-chmo.sssom.tsv
+```
 
 ## 🚀 Installation
 
