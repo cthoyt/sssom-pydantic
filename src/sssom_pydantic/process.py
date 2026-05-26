@@ -374,7 +374,8 @@ def invert(
     """Invert a mapping.
 
     :param mapping: A semantic mapping record
-    :param converter: A converter function hashing the mapping to fill the "derives_from" field
+    :param converter: A converter function hashing the mapping to fill the
+        "derives_from" field
     :param justification_policy: The policy for how the original evidence is mutated
         during inversion. Defaults to :class:`InversionDerivationPolicy.retain`, where
         the original justification is retained
@@ -403,7 +404,7 @@ def invert(
     ... )
     >>> hash_triple_to_reference(mapping, converter)
     Reference(prefix='mapping', identifier='36a1f9244ea7641a90987c82f33c25c0c13712ee8f48207b2a0825f8a4e4e26a')
-    >>> mapping_inv = invert(mapping, converter)
+    >>> mapping_inv = invert(mapping, converter=converter)
     >>> mapping_inv.subject
     NamableReference(prefix='CHEBI', identifier='28646', name='ammeline')
     >>> mapping_inv.object
@@ -624,7 +625,8 @@ def invert_by_predicate(
 
     :param mappings: An iterable of semantic mappings
     :param predicate: A predicate function
-    :param converter: A converter function hashing the mapping to fill the "derives_from" field
+    :param converter: A converter function hashing the mapping to fill the
+        "derives_from" field
     :param justification_policy: The policy for how the original evidence is mutated
         during inversion. Defaults to :class:`InversionDerivationPolicy.retain`, where
         the original justification is retained
@@ -659,19 +661,34 @@ def invert_by_subject_prefix(
 
     :param mappings: An iterable of semantic mappings
     :param subject_prefix: Invert mappings that have this subject prefix
-    :param converter: A converter function hashing the mapping to fill the "derives_from" field
+    :param converter: A converter function hashing the mapping to fill the
+        "derives_from" field
     :param justification_policy: The policy for how the original evidence is mutated
         during inversion. Defaults to :class:`InversionDerivationPolicy.retain`, where
         the original justification is retained
 
     :returns: An iterable of semantic mappings, with the correct ones inverted
 
+    >>> from curies import Converter
     >>> from curies.vocabulary import mapping_inversion
-    >>> from sssom_pydantic import SemanticMapping, NOT
+    >>> from sssom_pydantic import SemanticMapping, NOT, hash_triple_to_reference
+    >>> converter = Converter.from_prefix_map(
+    ...     {
+    ...         "CHEBI": "http://purl.obolibrary.org/obo/CHEBI_",
+    ...         "mesh": "http://id.nlm.nih.gov/mesh/",
+    ...         "skos": "http://www.w3.org/2004/02/skos/core#",
+    ...         "semapv": "https://w3id.org/semapv/vocab/",
+    ...         "mapping": "https://w3id.org/mapping/",
+    ...     }
+    ... )
     >>> m1 = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
-    >>> m1_inv = SemanticMapping.exact("CHEBI:28646", "mesh:C000089")
+    >>> m1_inv = SemanticMapping.exact(
+    ...     "CHEBI:28646",
+    ...     "mesh:C000089",
+    ...     derived_from=[hash_triple_to_reference(m1, converter)],
+    ... )
     >>> m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
-    >>> assert [m1_inv, m2] == list(invert_by_subject_prefix([m1, m2], "mesh"))
+    >>> assert [m1_inv, m2] == list(invert_by_subject_prefix([m1, m2], "mesh", converter=converter))
     """
     yield from invert_by_predicate(
         mappings,
@@ -699,19 +716,34 @@ def invert_by_object_prefix(
 
     :param mappings: An iterable of semantic mappings
     :param object_prefix: Invert mappings that have this object prefix
-    :param converter: A converter function hashing the mapping to fill the "derives_from" field
+    :param converter: A converter function hashing the mapping to fill the
+        "derives_from" field
     :param justification_policy: The policy for how the original evidence is mutated
         during inversion. Defaults to :class:`InversionDerivationPolicy.retain`, where
         the original justification is retained
 
     :returns: An iterable of semantic mappings, with the correct ones inverted
 
+    >>> from curies import Converter
     >>> from curies.vocabulary import mapping_inversion
-    >>> from sssom_pydantic import SemanticMapping, NOT
+    >>> from sssom_pydantic import SemanticMapping, NOT, hash_triple_to_reference
+    >>> converter = Converter.from_prefix_map(
+    ...     {
+    ...         "CHEBI": "http://purl.obolibrary.org/obo/CHEBI_",
+    ...         "mesh": "http://id.nlm.nih.gov/mesh/",
+    ...         "skos": "http://www.w3.org/2004/02/skos/core#",
+    ...         "semapv": "https://w3id.org/semapv/vocab/",
+    ...         "mapping": "https://w3id.org/mapping/",
+    ...     }
+    ... )
     >>> m1 = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
-    >>> m1_inv = SemanticMapping.exact("CHEBI:28646", "mesh:C000089")
+    >>> m1_inv = SemanticMapping.exact(
+    ...     "CHEBI:28646",
+    ...     "mesh:C000089",
+    ...     derived_from=[hash_triple_to_reference(m1, converter)],
+    ... )
     >>> m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
-    >>> assert [m1_inv, m2] == list(invert_by_object_prefix([m1, m2], "CHEBI"))
+    >>> assert [m1_inv, m2] == list(invert_by_object_prefix([m1, m2], "CHEBI", converter=converter))
     """
     yield from invert_by_predicate(
         mappings,
@@ -741,19 +773,36 @@ def invert_by_prefix_pair(
     :param mappings: An iterable of semantic mappings
     :param source_prefix: Invert mappings that have this source prefix
     :param object_prefix: Invert mappings that have this object prefix
-    :param converter: A converter function hashing the mapping to fill the "derives_from" field
+    :param converter: A converter function hashing the mapping to fill the
+        "derives_from" field
     :param justification_policy: The policy for how the original evidence is mutated
         during inversion. Defaults to :class:`InversionDerivationPolicy.retain`, where
         the original justification is retained
 
     :returns: An iterable of semantic mappings, with the correct ones inverted
 
+    >>> from curies import Converter
     >>> from curies.vocabulary import mapping_inversion
-    >>> from sssom_pydantic import SemanticMapping, NOT
+    >>> from sssom_pydantic import SemanticMapping, NOT, hash_triple_to_reference
+    >>> converter = Converter.from_prefix_map(
+    ...     {
+    ...         "CHEBI": "http://purl.obolibrary.org/obo/CHEBI_",
+    ...         "mesh": "http://id.nlm.nih.gov/mesh/",
+    ...         "skos": "http://www.w3.org/2004/02/skos/core#",
+    ...         "semapv": "https://w3id.org/semapv/vocab/",
+    ...         "mapping": "https://w3id.org/mapping/",
+    ...     }
+    ... )
     >>> m1 = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
-    >>> m1_inv = SemanticMapping.exact("CHEBI:28646", "mesh:C000089")
+    >>> m1_inv = SemanticMapping.exact(
+    ...     "CHEBI:28646",
+    ...     "mesh:C000089",
+    ...     derived_from=[hash_triple_to_reference(m1, converter)],
+    ... )
     >>> m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
-    >>> assert [m1_inv, m2] == list(invert_by_prefix_pair([m1, m2], "mesh", "CHEBI"))
+    >>> assert [m1_inv, m2] == list(
+    ...     invert_by_prefix_pair([m1, m2], "mesh", "CHEBI", converter=converter)
+    ... )
     """
     yield from invert_by_predicate(
         mappings,

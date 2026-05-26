@@ -351,10 +351,9 @@ class TestLinting(unittest.TestCase):
     def test_standardize(self) -> None:
         """Test standardizing.
 
-        This makes sure that if there are non-standard prefixes,
-        that they come along for the ride (i.e., ``nopenope``)
-        and the ones that can be standardized (i.e., ``CHEBI``)
-        are
+        This makes sure that if there are non-standard prefixes, that they come along
+        for the ride (i.e., ``nopenope``) and the ones that can be standardized (i.e.,
+        ``CHEBI``) are
         """
         original = dedent("""\
             #mapping_set_id: https://example.org/test.tsv
