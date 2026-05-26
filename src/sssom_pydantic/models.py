@@ -125,6 +125,7 @@ class Record(BaseModel):
     similarity_measure: str | None = None
     see_also: list[str] | None = None
     issue_tracker_item: str | None = None
+    derived_from: list[str] | None = None
     other: str | None = None
     comment: str | None = None
 
@@ -166,6 +167,7 @@ MULTIPLE_REFERENCE_FIELDS = {
     "creator_id",
     "reviewer_id",
     "curation_rule",
+    "derived_from",
 }
 
 #: A predicate for a record
@@ -237,6 +239,7 @@ class ExpandedRecord(BaseModel):
     similarity_measure: str | None = None
     see_also: list[str] | None = None
     issue_tracker_item: str | None = None
+    derived_from: list[AnyUrl] | None = None
     other: str | None = None
     comment: str | None = None
 

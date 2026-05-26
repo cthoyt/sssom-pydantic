@@ -9,6 +9,7 @@ from curies.vocabulary import (
     charlie,
     lexical_matching_process,
     manual_mapping_curation,
+    mapping_inversion,
     semantic_similarity,
 )
 from pydantic import BaseModel
@@ -19,6 +20,7 @@ from sssom_pydantic.api import (
     MappingTool,
     SemanticMapping,
     hash_mapping_to_reference,
+    hash_triple_to_reference,
 )
 
 __all__ = [
@@ -41,6 +43,7 @@ TEST_PREFIX_MAP = {
     "cas": "https://commonchemistry.cas.org/detail?cas_rn=",
     "mesh": "http://id.nlm.nih.gov/mesh/",
     "chebi": "http://purl.obolibrary.org/obo/CHEBI_",
+    "VO": "http://purl.obolibrary.org/obo/VO_",
     # the following are the default ones
     "owl": "http://www.w3.org/2002/07/owl#",
     "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
@@ -57,6 +60,7 @@ TEST_PREFIX_MAP = {
     "rule": "https://example.org/disease-rule/",
     "bioregistry": "https://bioregistry.io/",
     "orcid": "https://orcid.org/",
+    "mapping": "https://w3id.org/mapping/",
 }
 TEST_CONVERTER = Converter.from_prefix_map(TEST_PREFIX_MAP)
 TEST_CONVERTER.add_prefix_synonym("chebi", "CHEBI")
@@ -390,6 +394,17 @@ e9 = ExampleMapping(
         predicate=NamedReference(prefix="skos", identifier="exactMatch", name="exact match"),
         object=R2,
         justification=manual_mapping_curation.curie,
+    ),
+)
+
+e10 = ExampleMapping(
+    description="Demonstrate the `derived_from` field",
+    semantic_mapping=SemanticMapping(
+        subject=R2,
+        predicate=P1,
+        object=R1,
+        justification=mapping_inversion,
+        derived_from=[hash_triple_to_reference(simple, TEST_CONVERTER)],
     ),
 )
 

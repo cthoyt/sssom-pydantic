@@ -119,6 +119,7 @@ MULTIVALUED: set[str] = {
     "subject_match_field",
     "subject_preprocessing",
     "cardinality_scope",
+    "derived_from",
 }
 
 #: The default prefix map for SSSOM

@@ -109,7 +109,7 @@ class TestWikidata(unittest.TestCase):
                     "bioregistry": None,  # does not exist
                 },
             )
-        except requests.exceptions.ReadTimeout:
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError):
             raise unittest.SkipTest("wikidata SPARQL is not available") from None
         else:
             self.assertEqual({"Q47512": {Reference(prefix="chebi", identifier="15366")}}, res)
@@ -121,7 +121,7 @@ class TestWikidata(unittest.TestCase):
         converter = Converter.from_prefix_map({"GO": "http://purl.obolibrary.org/obo/GO_"})
         try:
             res = _get_wikidata_to_exact_matches(wikidata_ids=["Q128700"], converter=converter)
-        except requests.exceptions.ReadTimeout:
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError):
             raise unittest.SkipTest("wikidata SPARQL is not available") from None
         else:
             self.assertEqual({"Q128700": {Reference(prefix="GO", identifier="0005618")}}, res)

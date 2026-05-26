@@ -197,6 +197,7 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
     match_string: list[str] | None = None
 
     other: dict[str, str] | None = None
+    derived_from: list[Reference] | None = None
     see_also: list[str] | None = None
     similarity_measure: str | None = None
     similarity_score: Annotated[float | None, Field(ge=0.0, le=1.0)] = None
@@ -361,6 +362,7 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
             self.creators,
             self.reviewers,
             self.curation_rule,
+            self.derived_from,
         ]:
             if y is not None:
                 for z in y:
@@ -449,6 +451,7 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
             else None,
             match_string=self.match_string,
             #
+            derived_from=_safe_curies(self.derived_from),
             other=_dict_to_other(self.other) if self.other else None,
             see_also=self.see_also,
             similarity_measure=self.similarity_measure,
