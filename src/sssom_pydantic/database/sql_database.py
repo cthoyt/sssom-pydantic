@@ -176,6 +176,7 @@ class SemanticMappingModel(SQLModel, table=True):
 
     match_string: list[str] | None = Field(None, sa_type=JSON)
 
+    derived_from: list[Reference] | None = Field(None, sa_column=get_reference_list_sa_column())
     other: dict[str, str] | None = Field(None, sa_type=JSON)
     see_also: list[str] | None = Field(None, sa_type=JSON)
     similarity_measure: str | None = Field(None)

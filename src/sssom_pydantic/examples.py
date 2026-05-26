@@ -60,6 +60,7 @@ TEST_PREFIX_MAP = {
     "rule": "https://example.org/disease-rule/",
     "bioregistry": "https://bioregistry.io/",
     "orcid": "https://orcid.org/",
+    "mapping": "https://w3id.org/mapping/",
 }
 TEST_CONVERTER = Converter.from_prefix_map(TEST_PREFIX_MAP)
 TEST_CONVERTER.add_prefix_synonym("chebi", "CHEBI")

@@ -544,11 +544,13 @@ class TestIO(cases.MappingTestCaseMixin):
         )
         self.assert_path(f"""\
             #curie_map:
+            #  VO: http://purl.obolibrary.org/obo/VO_
             #  biolink: https://w3id.org/biolink/vocab/
             #  bioregistry: https://bioregistry.io/
             #  cas: https://commonchemistry.cas.org/detail?cas_rn=
             #  chebi: http://purl.obolibrary.org/obo/CHEBI_
             #  issue: https://github.com/cthoyt/sssom-pydantic/issues/
+            #  mapping: https://w3id.org/mapping/
             #  mesh: http://id.nlm.nih.gov/mesh/
             #  orcid: https://orcid.org/
             #  owl: http://www.w3.org/2002/07/owl#

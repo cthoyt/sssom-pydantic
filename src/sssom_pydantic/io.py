@@ -218,6 +218,7 @@ def record_to_semantic_mapping(
         provider=record.mapping_provider,
         source=_parse_curie_or_uri(record.mapping_source),
         match_string=record.match_string,
+        derived_from=_parse_curies_or_uris(record.derived_from),
         other=_other_to_dict(record.other, line_number=line_number) if record.other else None,
         see_also=record.see_also,
         similarity_measure=record.similarity_measure,

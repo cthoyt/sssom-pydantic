@@ -544,9 +544,16 @@ class TestProcess(cases.MappingTestCaseMixin):
         """Test inverting mappings with given S/O prefix pairs."""
         m1 = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
         m1_inv_derive = SemanticMapping.exact(
-            "CHEBI:28646", "mesh:C000089", justification=mapping_inversion
+            "CHEBI:28646",
+            "mesh:C000089",
+            justification=mapping_inversion,
+            derived_from=[hash_triple_to_reference(m1, TEST_CONVERTER)],
         )
-        m1_inv_retain = SemanticMapping.exact("CHEBI:28646", "mesh:C000089")
+        m1_inv_retain = SemanticMapping.exact(
+            "CHEBI:28646",
+            "mesh:C000089",
+            derived_from=[hash_triple_to_reference(m1, TEST_CONVERTER)],
+        )
         m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
         assert_semantic_mappings_equal(
             self,
@@ -575,9 +582,16 @@ class TestProcess(cases.MappingTestCaseMixin):
         """Test inverting mappings with given subject prefix pairs."""
         m1 = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
         m1_inv_derive = SemanticMapping.exact(
-            "CHEBI:28646", "mesh:C000089", justification=mapping_inversion
+            "CHEBI:28646",
+            "mesh:C000089",
+            justification=mapping_inversion,
+            derived_from=[hash_triple_to_reference(m1, TEST_CONVERTER)],
         )
-        m1_inv_retain = SemanticMapping.exact("CHEBI:28646", "mesh:C000089")
+        m1_inv_retain = SemanticMapping.exact(
+            "CHEBI:28646",
+            "mesh:C000089",
+            derived_from=[hash_triple_to_reference(m1, TEST_CONVERTER)],
+        )
         m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
         assert_semantic_mappings_equal(
             self,
@@ -604,7 +618,10 @@ class TestProcess(cases.MappingTestCaseMixin):
         """Test inverting mappings with given object prefix pairs."""
         m1 = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
         m1_inv = SemanticMapping.exact(
-            "CHEBI:28646", "mesh:C000089", justification=mapping_inversion
+            "CHEBI:28646",
+            "mesh:C000089",
+            justification=mapping_inversion,
+            derived_from=[hash_triple_to_reference(m1, TEST_CONVERTER)],
         )
         m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
         assert_semantic_mappings_equal(

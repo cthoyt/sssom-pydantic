@@ -123,6 +123,7 @@ class Record(BaseModel):
     object_preprocessing: list[str] | None = None
     similarity_score: Annotated[float | None, Field(ge=0.0, le=1.0)] = None
     similarity_measure: str | None = None
+    derived_from: list[str] | None = None
     see_also: list[str] | None = None
     issue_tracker_item: str | None = None
     other: str | None = None
@@ -166,6 +167,7 @@ MULTIPLE_REFERENCE_FIELDS = {
     "creator_id",
     "reviewer_id",
     "curation_rule",
+    "derived_from",
 }
 
 #: A predicate for a record
@@ -235,6 +237,7 @@ class ExpandedRecord(BaseModel):
     object_preprocessing: list[AnyUrl] | None = None
     similarity_score: Annotated[float | None, Field(ge=0.0, le=1.0)] = None
     similarity_measure: str | None = None
+    derived_from: list[AnyUrl] | None = None
     see_also: list[str] | None = None
     issue_tracker_item: str | None = None
     other: str | None = None
