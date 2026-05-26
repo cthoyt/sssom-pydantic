@@ -9,6 +9,7 @@ from curies.vocabulary import (
     charlie,
     lexical_matching_process,
     manual_mapping_curation,
+    mapping_inversion,
     semantic_similarity,
 )
 from pydantic import BaseModel
@@ -19,6 +20,7 @@ from sssom_pydantic.api import (
     MappingTool,
     SemanticMapping,
     hash_mapping_to_reference,
+    hash_triple_to_reference,
 )
 
 __all__ = [
@@ -391,6 +393,17 @@ e9 = ExampleMapping(
         predicate=NamedReference(prefix="skos", identifier="exactMatch", name="exact match"),
         object=R2,
         justification=manual_mapping_curation.curie,
+    ),
+)
+
+e10 = ExampleMapping(
+    description="Demonstrate the `derived_from` field",
+    semantic_mapping=SemanticMapping(
+        subject=R2,
+        predicate=P1,
+        object=R1,
+        justification=mapping_inversion,
+        derived_from=[hash_triple_to_reference(simple, TEST_CONVERTER)],
     ),
 )
 
