@@ -12,6 +12,7 @@ from collections import defaultdict
 from collections.abc import Callable, Collection, Iterable
 from typing import TYPE_CHECKING, Any, Literal, TypeAlias, cast, get_args
 
+import curies
 from curies import Converter, Reference
 from curies.vocabulary import (
     SemanticMappingScope,
@@ -366,13 +367,14 @@ class InversionJustificationPolicy(enum.Enum):
 
 def invert(
     mapping: MappingTypeVar,
-    converter: Converter,
     *,
+    converter: Converter,
     justification_policy: InversionJustificationPolicy | None = None,
 ) -> MappingTypeVar:
     """Invert a mapping.
 
     :param mapping: A semantic mapping record
+    :param converter: A converter function hashing the mapping to fill the "derives_from" field
     :param justification_policy: The policy for how the original evidence is mutated
         during inversion. Defaults to :class:`InversionDerivationPolicy.retain`, where
         the original justification is retained
@@ -615,12 +617,14 @@ def invert_by_predicate(
     mappings: Iterable[MappingTypeVar],
     predicate: SemanticMappingPredicate,
     *,
+    converter: curies.Converter,
     justification_policy: InversionJustificationPolicy | str | None = None,
 ) -> Iterable[MappingTypeVar]:
     """Invert based on prefixes.
 
     :param mappings: An iterable of semantic mappings
     :param predicate: A predicate function
+    :param converter: A converter function hashing the mapping to fill the "derives_from" field
     :param justification_policy: The policy for how the original evidence is mutated
         during inversion. Defaults to :class:`InversionDerivationPolicy.retain`, where
         the original justification is retained
@@ -639,7 +643,7 @@ def invert_by_predicate(
             and mapping.predicate in semantic_mapping_inversions
             and predicate(mapping)
         ):
-            yield invert(mapping, justification_policy=justification_policy)
+            yield invert(mapping, converter=converter, justification_policy=justification_policy)
         else:
             yield mapping
 
@@ -648,12 +652,14 @@ def invert_by_subject_prefix(
     mappings: Iterable[MappingTypeVar],
     subject_prefix: str,
     *,
+    converter: curies.Converter,
     justification_policy: InversionJustificationPolicy | str | None = None,
 ) -> Iterable[MappingTypeVar]:
     """Invert mappings with the given subject prefix.
 
     :param mappings: An iterable of semantic mappings
     :param subject_prefix: Invert mappings that have this subject prefix
+    :param converter: A converter function hashing the mapping to fill the "derives_from" field
     :param justification_policy: The policy for how the original evidence is mutated
         during inversion. Defaults to :class:`InversionDerivationPolicy.retain`, where
         the original justification is retained
@@ -668,7 +674,10 @@ def invert_by_subject_prefix(
     >>> assert [m1_inv, m2] == list(invert_by_subject_prefix([m1, m2], "mesh"))
     """
     yield from invert_by_predicate(
-        mappings, _subject_prefix(subject_prefix), justification_policy=justification_policy
+        mappings,
+        _subject_prefix(subject_prefix),
+        converter=converter,
+        justification_policy=justification_policy,
     )
 
 
@@ -683,12 +692,14 @@ def invert_by_object_prefix(
     mappings: Iterable[MappingTypeVar],
     object_prefix: str,
     *,
+    converter: curies.Converter,
     justification_policy: InversionJustificationPolicy | str | None = None,
 ) -> Iterable[MappingTypeVar]:
     """Invert mappings with the given object prefix.
 
     :param mappings: An iterable of semantic mappings
     :param object_prefix: Invert mappings that have this object prefix
+    :param converter: A converter function hashing the mapping to fill the "derives_from" field
     :param justification_policy: The policy for how the original evidence is mutated
         during inversion. Defaults to :class:`InversionDerivationPolicy.retain`, where
         the original justification is retained
@@ -703,7 +714,10 @@ def invert_by_object_prefix(
     >>> assert [m1_inv, m2] == list(invert_by_object_prefix([m1, m2], "CHEBI"))
     """
     yield from invert_by_predicate(
-        mappings, _object_prefix(object_prefix), justification_policy=justification_policy
+        mappings,
+        _object_prefix(object_prefix),
+        converter=converter,
+        justification_policy=justification_policy,
     )
 
 
@@ -719,6 +733,7 @@ def invert_by_prefix_pair(
     source_prefix: str,
     object_prefix: str,
     *,
+    converter: curies.Converter,
     justification_policy: InversionJustificationPolicy | str | None = None,
 ) -> Iterable[MappingTypeVar]:
     """Invert mappings with the given subject and object (SO) prefixes.
@@ -726,6 +741,7 @@ def invert_by_prefix_pair(
     :param mappings: An iterable of semantic mappings
     :param source_prefix: Invert mappings that have this source prefix
     :param object_prefix: Invert mappings that have this object prefix
+    :param converter: A converter function hashing the mapping to fill the "derives_from" field
     :param justification_policy: The policy for how the original evidence is mutated
         during inversion. Defaults to :class:`InversionDerivationPolicy.retain`, where
         the original justification is retained
@@ -742,6 +758,7 @@ def invert_by_prefix_pair(
     yield from invert_by_predicate(
         mappings,
         _so_prefixes(source_prefix, object_prefix),
+        converter=converter,
         justification_policy=justification_policy,
     )
 

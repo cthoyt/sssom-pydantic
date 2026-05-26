@@ -201,7 +201,7 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
     similarity_measure: str | None = None
     similarity_score: Annotated[float | None, Field(ge=0.0, le=1.0)] = None
 
-    derived_from: list[Reference] | None = Field(None)
+    derived_from: list[Reference] | None = None
 
     @classmethod
     def from_triple(

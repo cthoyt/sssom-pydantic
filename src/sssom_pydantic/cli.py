@@ -129,12 +129,16 @@ def subset(
         target_prefix = converter.standardize_prefix(target_prefix, strict=True)
         mappings = keep_prefixes_both(mappings, {prefix, target_prefix})
         mappings = invert_by_prefix_pair(
-            mappings, target_prefix, prefix, justification_policy=justification_policy
+            mappings,
+            target_prefix,
+            prefix,
+            converter=converter,
+            justification_policy=justification_policy,
         )
     else:
         mappings = keep_prefixes_either(mappings, prefix)
         mappings = invert_by_object_prefix(
-            mappings, prefix, justification_policy=justification_policy
+            mappings, prefix, converter=converter, justification_policy=justification_policy
         )
 
     sssom_pydantic.write(mappings, output or sys.stdout, converter=converter, metadata=metadata)
