@@ -144,6 +144,9 @@ wikidata = [
     "quickstatements-client>=0.1.2",
     "bioregistry>=0.13.56",
 ]
+cli = [
+    "click",
+]
 
 # See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#urls
 # and also https://packaging.python.org/en/latest/specifications/well-known-project-urls/
