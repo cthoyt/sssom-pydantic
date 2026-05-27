@@ -64,9 +64,18 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         cypher = "MATCH (n) DETACH DELETE n;"
         self._write(cypher)
 
-    def _write(self, cypher: LiteralString, *args: Any, **kwargs: Any) -> None:
+    def _write(self, cypher: LiteralString, /, *args: Any, **kwargs: Any) -> None:
         with closing(self.driver.session()) as session:
             session.execute_write(_get_worker(cypher), *args, **kwargs)
+
+    def _read(
+        self,
+        func: Callable[Concatenate[neo4j.ManagedTransaction, P], R],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> R:
+        with closing(self.driver.session()) as session:
+            return cast(R, session.execute_read(func, *args, **kwargs))
 
     def add_mappings(
         self, mappings: Iterable[SemanticMapping], *, progress: bool = False
@@ -135,29 +144,27 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         """Count the mappings in the database."""
         cypher, params = self._construct(query, count=True)
 
-        def _count_nodes(tx: neo4j.ManagedTransaction, **kwargs: Any) -> int:
-            result = tx.run(cypher, **kwargs)
+        def _count_nodes(tx: neo4j.ManagedTransaction, /, *args: Any, **kwargs: Any) -> int:
+            result = tx.run(cypher, *args, **kwargs)
             return cast(int, result.single()["total"])
 
-        with closing(self.driver.session()) as session:
-            return cast(int, session.execute_read(_count_nodes, **params))
+        return self._read(_count_nodes, **params)
 
     def count_entities(self, query: Query | None = None) -> int:
         """Count the entities in the database."""
         if query is not None:
             raise NotImplementedError("need to implement filtering on entity counts for neo4j")
 
-        def _count_nodes(tx: neo4j.ManagedTransaction) -> int:
+        def _count_nodes(tx: neo4j.ManagedTransaction, /) -> int:
             result = tx.run("MATCH (n:Entity) RETURN count(n) AS total")
             return cast(int, result.single()["total"])
 
-        with closing(self.driver.session()) as session:
-            return cast(int, session.execute_read(_count_nodes))
+        return self._read(_count_nodes)
 
     def delete_mapping(self, reference: Reference | SemanticMapping) -> None:
         """Delete a mapping from the database."""
 
-        def _delete_node(tx: neo4j.ManagedTransaction, curie: str) -> int:
+        def _delete_node(tx: neo4j.ManagedTransaction, /, curie: str) -> int:
             result = tx.run(
                 """
                 MATCH (p:SemanticMapping {curie: $curie})
@@ -187,13 +194,13 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
     def get_mapping(self, reference: Reference, *, strict: bool = False) -> SemanticMapping | None:
         """Get a mapping."""
 
-        def _get_node(tx: neo4j.ManagedTransaction, uid: str) -> dict[str, Any] | None:
+        def _get_node(tx: neo4j.ManagedTransaction, /, uid: str) -> dict[str, Any] | None:
             result = tx.run("MATCH (p:SemanticMapping {curie: $uid}) RETURN p", uid=uid)
             record = result.single()
             return record["p"] if record else None
 
-        with self.driver.session() as session:
-            node = session.execute_read(_get_node, reference.curie)
+        node = self._read(_get_node, reference.curie)
+
         if node is not None:
             return self._from_data(node)
         elif strict:
@@ -213,23 +220,12 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
             query, limit=limit, offset=offset, order_by=order_by, count=False
         )
 
-
         def _get_nodes(
-            tx: neo4j.ManagedTransaction, *args: Any, **kwargs: Any
+            tx: neo4j.ManagedTransaction, /, *args: Any, **kwargs: Any
         ) -> list[SemanticMapping]:
-            result = list(tx.run(cypher, *args, **kwargs))
-            return [self._from_data(record["p"]) for record in result]
+            return [self._from_data(record["p"]) for record in tx.run(cypher, *args, **kwargs)]
 
         return self._read(_get_nodes, **params)
-
-    def _read(
-        self,
-        func: Callable[Concatenate[neo4j.ManagedTransaction, P], R],
-        *args: P.args,
-        **kwargs: P.kwargs,
-    ) -> R:
-        with self.driver.session(database="neo4j") as session:
-            return cast(R, session.execute_read(func, *args, **kwargs))
 
     @staticmethod
     def _construct(
