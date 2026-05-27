@@ -104,7 +104,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
               SET record.object_label = row.object_label
               SET record.justification = row.justification
               SET record.rest = row.rest
-            MERGE (record)-[:SemanticMapping_of]->(mapping)
+            MERGE (record)-[:record_of]->(mapping)
             MERGE (subject)-[:subject_of]->(record)
             MERGE (object)-[:object_of]->(record)
 
@@ -295,6 +295,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
             model_update["object"] = NamableReference(
                 prefix=rv.object.prefix, identifier=rv.object.identifier, name=object_label
             )
+        # TODO reload the derived_from back in here
         if model_update:
             rv = rv.model_copy(update=model_update)
         return rv
