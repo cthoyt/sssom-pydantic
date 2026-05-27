@@ -15,7 +15,6 @@ from typing_extensions import LiteralString
 from sssom_pydantic.api import (
     SemanticMapping,
     SemanticMappingHash,
-    hash_triple_to_reference,
 )
 from sssom_pydantic.database.repo import CURIENotFoundError, SemanticMappingRepository
 from sssom_pydantic.query import Query, Sort
@@ -83,7 +82,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
             MERGE (object:Entity {curie: row.object})
               SET object.name = row.object_label
             WITH subject, object, row
-            MERGE (mapping:Mapping {curie: row.triple_id})
+            MERGE (mapping:Mapping {id: row.triple_id})
                 SET mapping.subject = row.subject
                 SET mapping.subject_label = row.subject_label
                 SET mapping.predicate = row.predicate
@@ -110,8 +109,8 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
             MERGE (object)-[:object_of]->(record)
 
             WITH record, row
-            UNWIND row.derived_from AS derived_curie
-            MERGE (source:Mapping {curie: derived_curie})
+            UNWIND row.derived_from AS triple_id
+            MERGE (source:Mapping {id: triple_id})
             MERGE (record)-[:derived_from]->(source)
         """
         batch = []
@@ -136,7 +135,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
             batch.append(
                 {
                     "curie": reference.curie,
-                    "triple_id": hash_triple_to_reference(mapping, self.converter).curie,
+                    "triple_id": self.converter.hash_triple(mapping),
                     "subject": mapping.subject.curie,
                     "subject_label": mapping.subject_name,
                     "predicate": mapping.predicate.curie,
@@ -145,7 +144,13 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
                     "object": mapping.object.curie,
                     "object_label": mapping.object_name,
                     "justification": mapping.justification.curie,
-                    "derived_from": [x.curie for x in mapping.derived_from or []] or None,
+                    "derived_from": [
+                        reference.identifier
+                        for reference in mapping.derived_from
+                        if reference.prefix == "mapping"
+                    ]
+                    if mapping.derived_from
+                    else None,
                     "rest": mapping.model_dump_json(
                         exclude=exclude_fields,
                         exclude_none=True,
@@ -282,8 +287,14 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         data = dict(node)
         data.update(json.loads(data.pop("rest")))
         data["record"] = data.pop("curie")
+        if derived_from := data.pop("derived_from", None):
+            data["derived_from"] = [
+                NamableReference(prefix="mapping", identifier=triple_id)
+                for triple_id in derived_from
+            ]
+
         rv = SemanticMapping.model_validate(data)
-        model_update = {}
+        model_update: dict[str, Any] = {}
         if subject_label := data.get("subject_label"):
             model_update["subject"] = NamableReference(
                 prefix=rv.subject.prefix, identifier=rv.subject.identifier, name=subject_label
@@ -296,8 +307,6 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
             model_update["object"] = NamableReference(
                 prefix=rv.object.prefix, identifier=rv.object.identifier, name=object_label
             )
-        if derived_from := data.get("derived_from"):
-            model_update["derived_from"] = [NamableReference.from_curie(c) for c in derived_from]
         if model_update:
             rv = rv.model_copy(update=model_update)
         return rv
