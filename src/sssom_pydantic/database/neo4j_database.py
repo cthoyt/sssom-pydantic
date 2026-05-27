@@ -12,9 +12,13 @@ from curies import NamableReference, Reference
 from tqdm import tqdm
 from typing_extensions import LiteralString
 
-from .repo import CURIENotFoundError, SemanticMappingRepository
-from ..api import SemanticMapping, SemanticMappingHash
-from ..query import Query, Sort
+from sssom_pydantic.api import (
+    SemanticMapping,
+    SemanticMappingHash,
+    hash_triple_to_reference,
+)
+from sssom_pydantic.database.repo import CURIENotFoundError, SemanticMappingRepository
+from sssom_pydantic.query import Query, Sort
 
 if TYPE_CHECKING:
     import neo4j
@@ -79,8 +83,14 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
             MERGE (object:Entity {curie: row.object})
               SET object.name = row.object_label
             WITH subject, object, row
-            MERGE (mapping:Mapping {curie: row.triple_id})
+            MERGE (mapping:Mapping {curie: row.mapping_id})
+                SET mapping.subject = row.subject
+                SET mapping.subject_label = row.subject_label
                 SET mapping.predicate = row.predicate
+                SET mapping.predicate_label = row.predicate_label
+                SET mapping.predicate_modifier = row.predicate_modifier
+                SET mapping.object = row.object
+                SET mapping.object_label = row.object_label
             MERGE (subject)-[:subject_of]->(mapping)
             MERGE (object)-[:object_of]->(mapping)
 
@@ -89,6 +99,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
               SET record.subject_label = row.subject_label
               SET record.predicate = row.predicate
               SET record.predicate_label = row.predicate_label
+              SET mapping.predicate_modifier = row.predicate_modifier
               SET record.object = row.object
               SET record.object_label = row.object_label
               SET record.justification = row.justification
@@ -99,7 +110,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
 
             WITH record, row
             UNWIND row.derived_from AS derived_curie
-            MERGE (source_mapping:Entity {curie: derived_curie})
+            MERGE (source:Mapping {curie: derived_curie})
             MERGE (record)-[:derived_from]->(source)
         """
         batch = []
@@ -114,6 +125,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
             "object_label",
             "justification",
             "derived_from",
+            "predicate_modifier",
         }
         for mapping in tqdm(
             mappings, disable=not progress, leave=False, desc="Preparing mappings for Neo4j"
@@ -123,11 +135,12 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
             batch.append(
                 {
                     "curie": record_id.curie,
-                    "triple_id": self.converter.hash_triple(mapping),
+                    "mapping_id": hash_triple_to_reference(mapping, self.converter).curie,
                     "subject": mapping.subject.curie,
                     "subject_label": mapping.subject_name,
                     "predicate": mapping.predicate.curie,
                     "predicate_label": mapping.predicate_name,
+                    "predicate_modifier": mapping.predicate_modifier,
                     "object": mapping.object.curie,
                     "object_label": mapping.object_name,
                     "justification": mapping.justification.curie,
@@ -344,7 +357,7 @@ QUERY_TO_CLAUSE: dict[str, Callable[[str | bool], str]] = {
         ")"
         # TODO also search over mapping tool name
     ),
-    "triple_id": lambda value: "p.triple_id = $triple_id",
+    "triple_id": lambda value: "p.mapping_id = $mapping_id",
     "subject_prefix": lambda value: "p.subject STARTS WITH $subject_prefix",
     "subject_query": lambda value: (
         "(toLower(p.subject) CONTAINS toLower($subject_query) "
