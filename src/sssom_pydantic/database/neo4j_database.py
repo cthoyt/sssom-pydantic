@@ -130,11 +130,11 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         for mapping in tqdm(
             mappings, disable=not progress, leave=False, desc="Preparing mappings for Neo4j"
         ):
-            record_id = self.hash_mapping(mapping)
-            references.append(record_id)
+            reference = self.hash_mapping(mapping)
+            references.append(reference)
             batch.append(
                 {
-                    "curie": record_id.curie,
+                    "curie": reference.curie,
                     "triple_id": hash_triple_to_reference(mapping, self.converter).curie,
                     "subject": mapping.subject.curie,
                     "subject_label": mapping.subject_name,
