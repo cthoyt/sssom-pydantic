@@ -12,12 +12,9 @@ from curies import NamableReference, Reference
 from tqdm import tqdm
 from typing_extensions import LiteralString
 
-from sssom_pydantic.api import (
-    SemanticMapping,
-    SemanticMappingHash,
-)
-from sssom_pydantic.database.repo import CURIENotFoundError, SemanticMappingRepository
-from sssom_pydantic.query import Query, Sort
+from .repo import CURIENotFoundError, SemanticMappingRepository
+from ..api import SemanticMapping, SemanticMappingHash
+from ..query import Query, Sort
 
 if TYPE_CHECKING:
     import neo4j
