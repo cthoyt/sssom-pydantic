@@ -88,18 +88,37 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
             MERGE (object:Entity {curie: row.object})
               SET object.name = row.object_label
             WITH subject, object, row
-            MERGE (m:SemanticMapping {curie: row.curie})
-              SET m.triple_id = row.triple_id
-              SET m.subject = row.subject
-              SET m.subject_label = row.subject_label
-              SET m.predicate = row.predicate
-              SET m.predicate_label = row.predicate_label
-              SET m.object = row.object
-              SET m.object_label = row.object_label
-              SET m.justification = row.justification
-              SET m.rest = row.rest
-            MERGE (subject)-[:subject_of]->(m)
-            MERGE (object)-[:object_of]->(m)
+            MERGE (mapping:Mapping {id: row.triple_id})
+                SET mapping.subject = row.subject
+                SET mapping.subject_label = row.subject_label
+                SET mapping.predicate = row.predicate
+                SET mapping.predicate_label = row.predicate_label
+                SET mapping.predicate_modifier = row.predicate_modifier
+                SET mapping.object = row.object
+                SET mapping.object_label = row.object_label
+            MERGE (subject)-[:subject_of]->(mapping)
+            MERGE (object)-[:object_of]->(mapping)
+
+            MERGE (record:SemanticMapping {curie: row.curie})
+              SET record.triple_id = row.triple_id
+              SET record.subject = row.subject
+              SET record.subject_label = row.subject_label
+              SET record.predicate = row.predicate
+              SET record.predicate_label = row.predicate_label
+              SET record.predicate_modifier = row.predicate_modifier
+              SET record.object = row.object
+              SET record.object_label = row.object_label
+              SET record.justification = row.justification
+              SET record.derived_from = row.derived_from
+              SET record.rest = row.rest
+            MERGE (record)-[:record_of]->(mapping)
+            MERGE (subject)-[:subject_of]->(record)
+            MERGE (object)-[:object_of]->(record)
+
+            WITH record, row
+            UNWIND row.derived_from AS triple_id
+            MERGE (source:Mapping {id: triple_id})
+            MERGE (record)-[:derived_from]->(source)
         """
         batch = []
         references = []
@@ -112,6 +131,8 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
             "object",
             "object_label",
             "justification",
+            "derived_from",
+            "predicate_modifier",
         }
         for mapping in tqdm(
             mappings, disable=not progress, leave=False, desc="Preparing mappings for Neo4j"
@@ -126,9 +147,17 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
                     "subject_label": mapping.subject_name,
                     "predicate": mapping.predicate.curie,
                     "predicate_label": mapping.predicate_name,
+                    "predicate_modifier": mapping.predicate_modifier,
                     "object": mapping.object.curie,
                     "object_label": mapping.object_name,
                     "justification": mapping.justification.curie,
+                    "derived_from": [
+                        reference.identifier
+                        for reference in mapping.derived_from
+                        if reference.prefix == "mapping"
+                    ]
+                    if mapping.derived_from
+                    else None,
                     "rest": mapping.model_dump_json(
                         exclude=exclude_fields,
                         exclude_none=True,
@@ -262,6 +291,12 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         data = dict(node)
         data.update(json.loads(data.pop("rest")))
         data["record"] = data.pop("curie")
+        if derived_from := data.pop("derived_from", None):
+            data["derived_from"] = [
+                NamableReference(prefix="mapping", identifier=triple_id)
+                for triple_id in derived_from
+            ]
+
         rv = SemanticMapping.model_validate(data)
         model_update = {}
         if subject_label := data.get("subject_label"):

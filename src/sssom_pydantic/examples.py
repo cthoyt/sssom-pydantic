@@ -9,6 +9,7 @@ from curies.vocabulary import (
     charlie,
     lexical_matching_process,
     manual_mapping_curation,
+    mapping_chaining,
     mapping_inversion,
     semantic_similarity,
 )
@@ -77,6 +78,10 @@ R4 = NamedReference.from_curie("chebi:131408", name="glyoxime")
 
 R5 = NamedReference.from_curie("mesh:C027957", name="tyramine O-sulfate")
 R6 = NamedReference.from_curie("chebi:133530", name="tyramine sulfate")
+
+R7 = NamedReference.from_curie("chebi:10057", name="9H-xanthene")
+R8 = NamedReference.from_curie("mesh:C002563", name="xanthan gum")
+R9 = NamedReference.from_curie("cas:92-83-1", name="Xanthene")
 
 
 class ExampleMapping(BaseModel):
@@ -405,6 +410,40 @@ e10 = ExampleMapping(
         object=R1,
         justification=mapping_inversion,
         derived_from=[hash_triple_to_reference(simple, TEST_CONVERTER)],
+    ),
+)
+
+negative_inference_m1 = ExampleMapping(
+    description="used in the example of negative mapping chaining",
+    semantic_mapping=SemanticMapping(
+        subject=R7,
+        predicate=P1,
+        object=R8,
+        predicate_modifier="Not",
+        justification=manual_mapping_curation,
+    ),
+)
+negative_inference_m2 = ExampleMapping(
+    description="used in the example of negative mapping chaining",
+    semantic_mapping=SemanticMapping(
+        subject=R9,
+        predicate=P1,
+        object=R7,
+        justification=manual_mapping_curation,
+    ),
+)
+negative_inference_m3 = ExampleMapping(
+    description="shows a combination of mapping chaining with negative predicate",
+    semantic_mapping=SemanticMapping(
+        subject=R9,
+        predicate=P1,
+        predicate_modifier="Not",
+        object=R8,
+        justification=mapping_chaining,
+        derived_from=[
+            hash_triple_to_reference(negative_inference_m1.semantic_mapping, TEST_CONVERTER),
+            hash_triple_to_reference(negative_inference_m2.semantic_mapping, TEST_CONVERTER),
+        ],
     ),
 )
 
