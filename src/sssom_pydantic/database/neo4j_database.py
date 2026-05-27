@@ -32,7 +32,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
 
     def __init__(
         self,
-        uri: str | None = None,
+        uri: str,
         user: str | None = None,
         password: str | None = None,
         *,
@@ -213,13 +213,23 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
             query, limit=limit, offset=offset, order_by=order_by, count=False
         )
 
-        def _get_nodes(tx: neo4j.ManagedTransaction, **kwargs: Any) -> list[dict[str, Any]]:
-            result = tx.run(cypher, **kwargs)
-            return [record["p"] for record in result]
 
+        def _get_nodes(
+            tx: neo4j.ManagedTransaction, *args: Any, **kwargs: Any
+        ) -> list[SemanticMapping]:
+            result = list(tx.run(cypher, *args, **kwargs))
+            return [self._from_data(record["p"]) for record in result]
+
+        return self._read(_get_nodes, **params)
+
+    def _read(
+        self,
+        func: Callable[Concatenate[neo4j.ManagedTransaction, P], R],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> R:
         with self.driver.session(database="neo4j") as session:
-            nodes = session.execute_read(_get_nodes, **params)
-            return [self._from_data(node) for node in nodes]
+            return cast(R, session.execute_read(func, *args, **kwargs))
 
     @staticmethod
     def _construct(
@@ -319,7 +329,7 @@ def _clauses_from_query(
                 params[name] = value
     if not parts:
         return None
-    rv = "WHERE " + " AND ".join(parts)
+    rv = " WHERE " + " AND ".join(parts)
     return rv, params
 
 
