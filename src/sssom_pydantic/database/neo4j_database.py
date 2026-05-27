@@ -83,7 +83,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
             MERGE (object:Entity {curie: row.object})
               SET object.name = row.object_label
             WITH subject, object, row
-            MERGE (mapping:Mapping {curie: row.mapping_id})
+            MERGE (mapping:Mapping {curie: row.triple_id})
                 SET mapping.subject = row.subject
                 SET mapping.subject_label = row.subject_label
                 SET mapping.predicate = row.predicate
@@ -135,7 +135,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
             batch.append(
                 {
                     "curie": record_id.curie,
-                    "mapping_id": hash_triple_to_reference(mapping, self.converter).curie,
+                    "triple_id": hash_triple_to_reference(mapping, self.converter).curie,
                     "subject": mapping.subject.curie,
                     "subject_label": mapping.subject_name,
                     "predicate": mapping.predicate.curie,
@@ -357,7 +357,7 @@ QUERY_TO_CLAUSE: dict[str, Callable[[str | bool], str]] = {
         ")"
         # TODO also search over mapping tool name
     ),
-    "triple_id": lambda value: "p.mapping_id = $mapping_id",
+    "triple_id": lambda value: "p.triple_id = $triple_id",
     "subject_prefix": lambda value: "p.subject STARTS WITH $subject_prefix",
     "subject_query": lambda value: (
         "(toLower(p.subject) CONTAINS toLower($subject_query) "
