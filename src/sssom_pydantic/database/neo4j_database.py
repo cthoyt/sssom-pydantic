@@ -94,7 +94,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
             MERGE (subject)-[:subject_of]->(mapping)
             MERGE (object)-[:object_of]->(mapping)
 
-            MERGE (record:Record {curie: row.curie})
+            MERGE (record:SemanticMapping {curie: row.curie})
               SET record.subject = row.subject
               SET record.subject_label = row.subject_label
               SET record.predicate = row.predicate
@@ -104,7 +104,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
               SET record.object_label = row.object_label
               SET record.justification = row.justification
               SET record.rest = row.rest
-            MERGE (record)-[:record_of]->(mapping)
+            MERGE (record)-[:SemanticMapping_of]->(mapping)
             MERGE (subject)-[:subject_of]->(record)
             MERGE (object)-[:object_of]->(record)
 
@@ -185,7 +185,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         def _delete_node(tx: neo4j.ManagedTransaction, curie: str) -> int:
             result = tx.run(
                 """
-                MATCH (p:Record {curie: $curie})
+                MATCH (p:SemanticMapping {curie: $curie})
                 DETACH DELETE p
                 RETURN count(p) AS deleted
                 """,
@@ -213,7 +213,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         """Get a mapping."""
 
         def _get_node(tx: neo4j.ManagedTransaction, uid: str) -> dict[str, Any] | None:
-            result = tx.run("MATCH (p:Record {curie: $uid}) RETURN p", uid=uid)
+            result = tx.run("MATCH (p:SemanticMapping {curie: $uid}) RETURN p", uid=uid)
             record = result.single()
             return record["p"] if record else None
 
@@ -256,7 +256,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         count: bool,
     ) -> tuple[str, dict[str, str | int]]:
         params: dict[str, str | int] = {}
-        cypher = "MATCH (p:Record)"
+        cypher = "MATCH (p:SemanticMapping)"
         if query is not None and (where_val := _clauses_from_query(query)):
             cypher += where_val[0]
             params.update(where_val[1])
