@@ -103,6 +103,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
               SET record.object = row.object
               SET record.object_label = row.object_label
               SET record.justification = row.justification
+              SET record.derived_from = row.derived_from
               SET record.rest = row.rest
             MERGE (record)-[:record_of]->(mapping)
             MERGE (subject)-[:subject_of]->(record)
@@ -144,7 +145,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
                     "object": mapping.object.curie,
                     "object_label": mapping.object_name,
                     "justification": mapping.justification.curie,
-                    "derived_from": [x.curie for x in mapping.derived_from or []],
+                    "derived_from": [x.curie for x in mapping.derived_from or []] or None,
                     "rest": mapping.model_dump_json(
                         exclude=exclude_fields,
                         exclude_none=True,
@@ -295,7 +296,8 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
             model_update["object"] = NamableReference(
                 prefix=rv.object.prefix, identifier=rv.object.identifier, name=object_label
             )
-        # TODO reload the derived_from back in here
+        if derived_from := data.get("derived_from"):
+            model_update["derived_from"] = [NamableReference.from_curie(c) for c in derived_from]
         if model_update:
             rv = rv.model_copy(update=model_update)
         return rv
