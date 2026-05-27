@@ -32,7 +32,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
 
     def __init__(
         self,
-        uri: str | None = None,
+        uri: str,
         user: str | None = None,
         password: str | None = None,
         *,
@@ -79,18 +79,28 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
             MERGE (object:Entity {curie: row.object})
               SET object.name = row.object_label
             WITH subject, object, row
-            MERGE (m:SemanticMapping {curie: row.curie})
-              SET m.triple_id = row.triple_id
-              SET m.subject = row.subject
-              SET m.subject_label = row.subject_label
-              SET m.predicate = row.predicate
-              SET m.predicate_label = row.predicate_label
-              SET m.object = row.object
-              SET m.object_label = row.object_label
-              SET m.justification = row.justification
-              SET m.rest = row.rest
-            MERGE (subject)-[:subject_of]->(m)
-            MERGE (object)-[:object_of]->(m)
+            MERGE (mapping:Mapping {curie: row.triple_id})
+                SET mapping.predicate = row.predicate
+            MERGE (subject)-[:subject_of]->(mapping)
+            MERGE (object)-[:object_of]->(mapping)
+
+            MERGE (record:Record {curie: row.curie})
+              SET record.subject = row.subject
+              SET record.subject_label = row.subject_label
+              SET record.predicate = row.predicate
+              SET record.predicate_label = row.predicate_label
+              SET record.object = row.object
+              SET record.object_label = row.object_label
+              SET record.justification = row.justification
+              SET record.rest = row.rest
+            MERGE (record)-[:record_of]->(mapping)
+            MERGE (subject)-[:subject_of]->(record)
+            MERGE (object)-[:object_of]->(record)
+
+            WITH record, row
+            UNWIND row.derived_from AS derived_curie
+            MERGE (source_mapping:Entity {curie: derived_curie})
+            MERGE (record)-[:derived_from]->(source)
         """
         batch = []
         references = []
@@ -103,15 +113,16 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
             "object",
             "object_label",
             "justification",
+            "derived_from",
         }
         for mapping in tqdm(
             mappings, disable=not progress, leave=False, desc="Preparing mappings for Neo4j"
         ):
-            reference = self.hash_mapping(mapping)
-            references.append(reference)
+            record_id = self.hash_mapping(mapping)
+            references.append(record_id)
             batch.append(
                 {
-                    "curie": reference.curie,
+                    "curie": record_id.curie,
                     "triple_id": self.converter.hash_triple(mapping),
                     "subject": mapping.subject.curie,
                     "subject_label": mapping.subject_name,
@@ -120,6 +131,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
                     "object": mapping.object.curie,
                     "object_label": mapping.object_name,
                     "justification": mapping.justification.curie,
+                    "derived_from": [x.curie for x in mapping.derived_from or []],
                     "rest": mapping.model_dump_json(
                         exclude=exclude_fields,
                         exclude_none=True,
@@ -160,7 +172,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         def _delete_node(tx: neo4j.ManagedTransaction, curie: str) -> int:
             result = tx.run(
                 """
-                MATCH (p:SemanticMapping {curie: $curie})
+                MATCH (p:Record {curie: $curie})
                 DETACH DELETE p
                 RETURN count(p) AS deleted
                 """,
@@ -188,7 +200,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         """Get a mapping."""
 
         def _get_node(tx: neo4j.ManagedTransaction, uid: str) -> dict[str, Any] | None:
-            result = tx.run("MATCH (p:SemanticMapping {curie: $uid}) RETURN p", uid=uid)
+            result = tx.run("MATCH (p:Record {curie: $uid}) RETURN p", uid=uid)
             record = result.single()
             return record["p"] if record else None
 
@@ -231,7 +243,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         count: bool,
     ) -> tuple[str, dict[str, str | int]]:
         params: dict[str, str | int] = {}
-        cypher = "MATCH (p:SemanticMapping)"
+        cypher = "MATCH (p:Record)"
         if query is not None and (where_val := _clauses_from_query(query)):
             cypher += where_val[0]
             params.update(where_val[1])
