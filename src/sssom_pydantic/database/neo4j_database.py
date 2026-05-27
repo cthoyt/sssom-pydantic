@@ -94,6 +94,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
             MERGE (object)-[:object_of]->(mapping)
 
             MERGE (record:SemanticMapping {curie: row.curie})
+              SET record.triple_id = row.triple_id
               SET record.subject = row.subject
               SET record.subject_label = row.subject_label
               SET record.predicate = row.predicate
@@ -244,13 +245,24 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
             query, limit=limit, offset=offset, order_by=order_by, count=False
         )
 
-        def _get_nodes(tx: neo4j.ManagedTransaction, **kwargs: Any) -> list[dict[str, Any]]:
-            result = tx.run(cypher, **kwargs)
-            return [record["p"] for record in result]
 
+        def _get_nodes(
+            tx: neo4j.ManagedTransaction, *args: Any, **kwargs: Any
+        ) -> list[SemanticMapping]:
+            result = list(tx.run(cypher, *args, **kwargs))
+            print(cypher, args, kwargs, result)
+            return [self._from_data(record["p"]) for record in result]
+
+        return self._read(_get_nodes, **params)
+
+    def _read(
+        self,
+        func: Callable[Concatenate[neo4j.ManagedTransaction, P], R],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> R:
         with self.driver.session(database="neo4j") as session:
-            nodes = session.execute_read(_get_nodes, **params)
-            return [self._from_data(node) for node in nodes]
+            return cast(R, session.execute_read(func, *args, **kwargs))
 
     @staticmethod
     def _construct(
@@ -294,7 +306,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
             ]
 
         rv = SemanticMapping.model_validate(data)
-        model_update: dict[str, Any] = {}
+        model_update = {}
         if subject_label := data.get("subject_label"):
             model_update["subject"] = NamableReference(
                 prefix=rv.subject.prefix, identifier=rv.subject.identifier, name=subject_label
@@ -356,7 +368,7 @@ def _clauses_from_query(
                 params[name] = value
     if not parts:
         return None
-    rv = "WHERE " + " AND ".join(parts)
+    rv = " WHERE " + " AND ".join(parts)
     return rv, params
 
 
