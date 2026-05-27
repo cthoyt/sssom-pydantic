@@ -402,7 +402,7 @@ e9 = ExampleMapping(
     ),
 )
 
-e11 = ExampleMapping(
+e10 = ExampleMapping(
     description="Demonstrate the `derived_from` field",
     semantic_mapping=SemanticMapping(
         subject=R2,
