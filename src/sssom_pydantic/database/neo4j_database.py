@@ -99,7 +99,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
               SET record.subject_label = row.subject_label
               SET record.predicate = row.predicate
               SET record.predicate_label = row.predicate_label
-              SET mapping.predicate_modifier = row.predicate_modifier
+              SET record.predicate_modifier = row.predicate_modifier
               SET record.object = row.object
               SET record.object_label = row.object_label
               SET record.justification = row.justification
