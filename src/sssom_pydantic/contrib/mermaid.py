@@ -6,6 +6,7 @@ from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
 import curies
+from curies import vocabulary as v
 from typing_extensions import NotRequired, TypedDict, Unpack
 
 from sssom_pydantic.api import NOT, SemanticMapping, hash_mapping, hash_triple
@@ -27,6 +28,16 @@ class MermaidOptions(TypedDict):
 
     include_people: NotRequired[bool]
     include_sources: NotRequired[bool]
+
+
+JUSTIFICATION_LABELS = {
+    v.manual_mapping_curation.identifier: "manual curation",
+    v.lexical_matching_process.identifier: "lexical matching",
+    v.background_knowledge_based_matching_process.identifier: "background knowledge-based matching",
+    v.mapping_chaining.identifier: "chaining",
+    v.mapping_inversion.identifier: "inversion",
+    v.unspecified_matching_process.identifier: "unspecified",
+}
 
 
 def to_mermaid_ipython(
@@ -87,7 +98,10 @@ def to_mermaid(
         if record_id not in seen:
             seen.add(record_id)
             record_count += 1
-            label = f"{m.predicate.curie}\n{m.justification.identifier}"
+            justification_label = JUSTIFICATION_LABELS.get(
+                m.justification.identifier, m.justification.identifier
+            )
+            label = f"{m.predicate.curie}\n{justification_label}"
             if m.predicate_modifier == NOT:
                 label = "not " + label
             lines.append(f'{record_id}("{label}")')
