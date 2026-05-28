@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 import curies
 
-from sssom_pydantic.api import SemanticMapping, hash_mapping, hash_triple
+from sssom_pydantic.api import NOT, SemanticMapping, hash_mapping, hash_triple
 
 if TYPE_CHECKING:
     import IPython.display
@@ -61,7 +61,9 @@ def make_mermaid(mappings: Iterable[SemanticMapping], converter: curies.Converte
         if record_id not in seen:
             seen.add(record_id)
             record_count += 1
-            label = f"{m.justification.identifier}"
+            label = f"{m.predicate.curie}\n{m.justification.identifier}"
+            if m.predicate_modifier == NOT:
+                label = "not " + label
             lines.append(f'{record_id}("{label}")')
             lines.append(f"style {record_id} fill:#bbf")
 

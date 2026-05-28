@@ -6,12 +6,15 @@ import datetime
 
 from curies import Converter, NamableReference, NamedReference, Reference
 from curies.vocabulary import (
+    background_knowledge_based_matching_process,
     charlie,
+    has_dbxref,
     lexical_matching_process,
     manual_mapping_curation,
     mapping_chaining,
     mapping_inversion,
     semantic_similarity,
+    unspecified_matching_process,
 )
 from pydantic import BaseModel
 
@@ -48,6 +51,7 @@ TEST_PREFIX_MAP = {
     "mesh": "http://id.nlm.nih.gov/mesh/",
     "chebi": "http://purl.obolibrary.org/obo/CHEBI_",
     "VO": "http://purl.obolibrary.org/obo/VO_",
+    "obo": "http://purl.obolibrary.org/obo/",
     # the following are the default ones
     "owl": "http://www.w3.org/2002/07/owl#",
     "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
@@ -65,6 +69,7 @@ TEST_PREFIX_MAP = {
     "bioregistry": "https://bioregistry.io/",
     "orcid": "https://orcid.org/",
     "mapping": "https://w3id.org/mapping/",
+    "oboInOwl": "http://www.geneontology.org/formats/oboInOwl#",
 }
 TEST_CONVERTER = Converter.from_prefix_map(TEST_PREFIX_MAP)
 TEST_CONVERTER.add_prefix_synonym("chebi", "CHEBI")
@@ -460,6 +465,41 @@ CHAINING_WITH_NEGATIVES_EXAMPLES = [
     negative_inference_m1.semantic_mapping,
     negative_inference_m2.semantic_mapping,
     negative_inference_m3.semantic_mapping,
+]
+
+
+R7 = NamedReference.from_curie("chebi:10057", name="9H-xanthene")
+R8 = NamedReference.from_curie("mesh:C002563", name="xanthan gum")
+R9 = NamedReference.from_curie("cas:92-83-1", name="Xanthene")
+
+
+background_original = ExampleMapping(
+    description="the unmutated mapping from the background knowledge mapping",
+    semantic_mapping=SemanticMapping(
+        subject=R7,
+        predicate=has_dbxref,
+        object=R9,
+        justification=unspecified_matching_process,
+        source=Reference(prefix="obo", identifier="chebi"),
+    ),
+)
+background_derived = ExampleMapping(
+    description="the derived mapping from the background knowledge mapping",
+    semantic_mapping=SemanticMapping(
+        subject=R7,
+        predicate=P1,
+        object=R9,
+        justification=background_knowledge_based_matching_process,
+        derived_from=[
+            hash_triple_to_reference(background_original.semantic_mapping, TEST_CONVERTER),
+        ],
+    ),
+)
+
+
+BACKGROUND_MATCHING_EXAMPLES = [
+    background_original.semantic_mapping,
+    background_derived.semantic_mapping,
 ]
 
 EXAMPLES: list[ExampleMapping] = [v for v in locals().values() if isinstance(v, ExampleMapping)]

@@ -31,6 +31,7 @@ __all__ = [
     "MappingSet",
     "MappingSetRecord",
     "MappingTool",
+    "MappingTypeVar",
     "PredicateModifier",
     "SemanticMapping",
     "SemanticMappingHash",
