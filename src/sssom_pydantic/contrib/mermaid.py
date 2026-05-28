@@ -13,24 +13,32 @@ if TYPE_CHECKING:
     import IPython.display
 
 __all__ = [
-    "make_mermaid",
-    "make_mermaid_block",
-    "make_mermaid_ipython",
+    "copy_mermaid_markdown",
+    "to_mermaid",
+    "to_mermaid_ipython",
+    "to_mermaid_markdown",
 ]
 
 
-def make_mermaid_ipython(
+def to_mermaid_ipython(
     mappings: Iterable[SemanticMapping], converter: curies.Converter
 ) -> IPython.display.Markdown:
     """Make a Mermaid IPython display."""
     from IPython.display import Markdown
 
-    return Markdown(make_mermaid_block(mappings, converter))
+    return Markdown(to_mermaid_markdown(mappings, converter))
 
 
-def make_mermaid_block(mappings: Iterable[SemanticMapping], converter: curies.Converter) -> str:
+def copy_mermaid_markdown(mappings: Iterable[SemanticMapping], converter: curies.Converter) -> None:
+    """Copy a Mermaid block for Markdown to the clipboard with :mod:`pyperclip`."""
+    import pyperclip
+
+    pyperclip.copy(to_mermaid_markdown(mappings, converter))
+
+
+def to_mermaid_markdown(mappings: Iterable[SemanticMapping], converter: curies.Converter) -> str:
     """Make a Mermaid block for Markdown."""
-    mermaid = make_mermaid(mappings, converter)
+    mermaid = to_mermaid(mappings, converter)
     block = f"```mermaid\n{mermaid}\n```"
     return block
 
@@ -41,7 +49,7 @@ def _n(r: curies.Reference) -> str:
     return r.curie
 
 
-def make_mermaid(mappings: Iterable[SemanticMapping], converter: curies.Converter) -> str:
+def to_mermaid(mappings: Iterable[SemanticMapping], converter: curies.Converter) -> str:
     """Make a mermaid flowchart string."""
     lines = []
     edges = []
@@ -86,7 +94,7 @@ def make_mermaid(mappings: Iterable[SemanticMapping], converter: curies.Converte
                 lines.append(f"style {m.source.curie} fill:#feb")
             edges.append((record_id, "from", m.source.curie))
 
-        mapping_id = hash_triple(m, converter).replace("~", "N")
+        mapping_id = _clean_msi(hash_triple(m, converter))
         if mapping_id not in seen:
             mapping_count += 1
             seen.add(mapping_id)
@@ -102,7 +110,7 @@ def make_mermaid(mappings: Iterable[SemanticMapping], converter: curies.Converte
         edges.append((mapping_id, "has evidence", record_id))
 
         for derived_mapping_reference in m.derived_from or []:
-            derives.append((record_id, derived_mapping_reference.identifier.replace("~", "N")))
+            derives.append((record_id, _clean_msi(derived_mapping_reference.identifier)))
 
     for s, p, o in edges:
         lines.append(f"{s}-->|{p}|{o}")
@@ -114,3 +122,7 @@ def make_mermaid(mappings: Iterable[SemanticMapping], converter: curies.Converte
     # TODO prune mappings with no incoming relationships
 
     return "flowchart LR\n" + "\n".join("  " + line for line in lines)
+
+
+def _clean_msi(s: str) -> str:
+    return s.replace("~", "N")
