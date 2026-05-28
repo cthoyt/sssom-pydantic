@@ -51,6 +51,8 @@ TEST_PREFIX_MAP = {
     "mesh": "http://id.nlm.nih.gov/mesh/",
     "chebi": "http://purl.obolibrary.org/obo/CHEBI_",
     "VO": "http://purl.obolibrary.org/obo/VO_",
+    "BTO": "http://purl.obolibrary.org/obo/BTO_",
+    "CL": "http://purl.obolibrary.org/obo/CL_",
     "obo": "http://purl.obolibrary.org/obo/",
     # the following are the default ones
     "owl": "http://www.w3.org/2002/07/owl#",
@@ -432,8 +434,52 @@ e10 = ExampleMapping(
 
 MAPPING_INVERSION_EXAMPLES = [simple_with_author.semantic_mapping, e10.semantic_mapping]
 
+inference_r1 = NamedReference.from_curie("BTO:0006078", name="pluripotent stem cell")
+inference_r2 = NamedReference.from_curie("CL:0002248", name="pluripotent stem cell")
+inference_r3 = NamedReference.from_curie("mesh:D039904", name="Pluripotent Stem Cells")
 
 inference_m1 = ExampleMapping(
+    description="",
+    semantic_mapping=SemanticMapping(
+        subject=inference_r1,
+        predicate=P1,
+        object=inference_r2,
+        justification=manual_mapping_curation,
+        authors=[charlie],
+        source=BIOMAPPINGS_SOURCE,
+    ),
+)
+inference_m2 = ExampleMapping(
+    description="",
+    semantic_mapping=SemanticMapping(
+        subject=inference_r2,
+        predicate=P1,
+        object=inference_r3,
+        justification=manual_mapping_curation,
+        authors=[charlie],
+        source=BIOMAPPINGS_SOURCE,
+    ),
+)
+inference_m3 = ExampleMapping(
+    description="",
+    semantic_mapping=SemanticMapping(
+        subject=inference_r1,
+        predicate=P1,
+        object=inference_r3,
+        justification=mapping_chaining,
+        derived_from=[
+            hash_triple_to_reference(inference_m1.semantic_mapping, TEST_CONVERTER),
+            hash_triple_to_reference(inference_m2.semantic_mapping, TEST_CONVERTER),
+        ],
+    ),
+)
+CHAINING_EXAMPLES = [
+    inference_m1.semantic_mapping,
+    inference_m2.semantic_mapping,
+    inference_m3.semantic_mapping,
+]
+
+full_inference_m1 = ExampleMapping(
     description="",
     semantic_mapping=SemanticMapping(
         subject=R6,
@@ -443,17 +489,17 @@ inference_m1 = ExampleMapping(
         source=CHEBI_SOURCE,
     ),
 )
-inference_m2 = ExampleMapping(
+full_inference_m2 = ExampleMapping(
     description="",
     semantic_mapping=SemanticMapping(
         subject=R6,
         predicate=P1,
         object=R10,
         justification=background_knowledge_based_matching_process,
-        derived_from=[hash_triple_to_reference(inference_m1.semantic_mapping, TEST_CONVERTER)],
+        derived_from=[hash_triple_to_reference(full_inference_m1.semantic_mapping, TEST_CONVERTER)],
     ),
 )
-inference_m3 = ExampleMapping(
+full_inference_m3 = ExampleMapping(
     description="",
     semantic_mapping=SemanticMapping(
         subject=R6,
@@ -464,17 +510,17 @@ inference_m3 = ExampleMapping(
         authors=[charlie],
     ),
 )
-inference_m4 = ExampleMapping(
+full_inference_m4 = ExampleMapping(
     description="",
     semantic_mapping=SemanticMapping(
         subject=R5,
         predicate=P1,
         object=R6,
         justification=mapping_inversion,
-        derived_from=[hash_triple_to_reference(inference_m3.semantic_mapping, TEST_CONVERTER)],
+        derived_from=[hash_triple_to_reference(full_inference_m3.semantic_mapping, TEST_CONVERTER)],
     ),
 )
-inference_m5 = ExampleMapping(
+full_inference_m5 = ExampleMapping(
     description="",
     semantic_mapping=SemanticMapping(
         subject=R5,
@@ -482,20 +528,19 @@ inference_m5 = ExampleMapping(
         object=R10,
         justification=mapping_chaining,
         derived_from=[
-            hash_triple_to_reference(inference_m2.semantic_mapping, TEST_CONVERTER),
-            hash_triple_to_reference(inference_m4.semantic_mapping, TEST_CONVERTER),
+            hash_triple_to_reference(full_inference_m2.semantic_mapping, TEST_CONVERTER),
+            hash_triple_to_reference(full_inference_m4.semantic_mapping, TEST_CONVERTER),
         ],
     ),
 )
 
 FULL_INFERENCE_EXAMPLES = [
-    inference_m1.semantic_mapping,
-    inference_m2.semantic_mapping,
-    inference_m3.semantic_mapping,
-    inference_m4.semantic_mapping,
-    inference_m5.semantic_mapping,
+    full_inference_m1.semantic_mapping,
+    full_inference_m2.semantic_mapping,
+    full_inference_m3.semantic_mapping,
+    full_inference_m4.semantic_mapping,
+    full_inference_m5.semantic_mapping,
 ]
-
 
 negative_inference_m1 = ExampleMapping(
     description="used in the example of negative mapping chaining",
@@ -541,7 +586,6 @@ CHAINING_WITH_NEGATIVES_EXAMPLES = [
     negative_inference_m3.semantic_mapping,
 ]
 
-
 background_original = ExampleMapping(
     description="the unmutated mapping from the background knowledge mapping",
     semantic_mapping=SemanticMapping(
@@ -564,7 +608,6 @@ background_derived = ExampleMapping(
         ],
     ),
 )
-
 
 BACKGROUND_MATCHING_EXAMPLES = [
     background_original.semantic_mapping,

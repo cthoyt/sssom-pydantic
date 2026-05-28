@@ -550,6 +550,8 @@ class TestIO(cases.MappingTestCaseMixin):
         )
         self.assert_path(f"""\
             #curie_map:
+            #  BTO: http://purl.obolibrary.org/obo/BTO_
+            #  CL: http://purl.obolibrary.org/obo/CL_
             #  VO: http://purl.obolibrary.org/obo/VO_
             #  biolink: https://w3id.org/biolink/vocab/
             #  bioregistry: https://bioregistry.io/
