@@ -36,6 +36,9 @@ __all__ = [
     "R4",
     "R5",
     "R6",
+    "R7",
+    "R8",
+    "R9",
     "TEST_CONVERTER",
     "TEST_PREFIX_MAP",
 ]
@@ -413,6 +416,8 @@ e10 = ExampleMapping(
     ),
 )
 
+MAPPING_INVERSION_EXAMPLES = [simple, e10.semantic_mapping]
+
 negative_inference_m1 = ExampleMapping(
     description="used in the example of negative mapping chaining",
     semantic_mapping=SemanticMapping(
@@ -448,6 +453,12 @@ negative_inference_m3 = ExampleMapping(
         ],
     ),
 )
+
+CHAINING_WITH_NEGATIVES_EXAMPLES = [
+    negative_inference_m1.semantic_mapping,
+    negative_inference_m2.semantic_mapping,
+    negative_inference_m3.semantic_mapping,
+]
 
 EXAMPLES: list[ExampleMapping] = [v for v in locals().values() if isinstance(v, ExampleMapping)]
 
