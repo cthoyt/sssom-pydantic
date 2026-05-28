@@ -1,109 +1,24 @@
-"""A workflow for evaluating predicted mappings."""
+"""Automatically assess a lexical matching scenario."""
 
 import itertools as itt
-import logging
 from collections import defaultdict
 from collections.abc import Iterable
-from typing import NamedTuple, TypeAlias, TypeVar
 
+import biomappings
+import bioregistry
 import click
-import curies
-from curies.vocabulary import exact_match, lexical_matching_process, manual_mapping_curation
+import pyobo
+import pystow
+from curies.triples import keep_prefixes_both
+from curies.vocabulary import exact_match, lexical_matching_process
 from ssslm import GildaGrounder, Grounder, LiteralMapping
+from tabulate import tabulate
 from tqdm import tqdm
 
 import sssom_pydantic
 from sssom_pydantic import MappingSet, SemanticMapping
+from sssom_pydantic.evaluation.evaluation import evaluate_predictions
 from sssom_pydantic.process import invert_by_prefix_pair
-
-logger = logging.getLogger(__name__)
-
-X = TypeVar("X")
-
-
-def _get_v1(
-    positive_set: set[X], negative_set: set[X], predicted_set: set[X]
-) -> tuple[int, int, int, int]:
-    tp = len(positive_set.intersection(predicted_set))  # true positives
-    fp = len(negative_set.intersection(predicted_set))  # false positives
-    fn = len(positive_set - predicted_set)  # false negatives
-    tn = len(negative_set - predicted_set)  # true negatives
-    return tp, fp, fn, tn
-
-
-DD: TypeAlias = dict[str, set[SemanticMapping]]
-
-
-def stratify(mappings: Iterable[SemanticMapping], converter: curies.Converter) -> tuple[DD, DD, DD]:
-    """Stratify a set of mappings."""
-    positive, negative, predicted = defaultdict(set), defaultdict(set), defaultdict(set)
-    for mapping in mappings:
-        hsh = converter.hash_triple(mapping)
-        if mapping.justification == lexical_matching_process:
-            predicted[hsh].add(mapping)
-        elif (
-            mapping.justification == manual_mapping_curation and mapping.predicate_modifier is None
-        ):
-            positive[hsh].add(mapping)
-        elif (
-            mapping.justification == lexical_matching_process
-            and mapping.predicate_modifier is not None
-        ):
-            negative[hsh].add(mapping)
-        else:
-            pass  # TODO what to do with others?
-    return dict(positive), dict(negative), dict(predicted)
-
-
-class Evaluation(NamedTuple):
-    """An evaluation tuple."""
-
-    completion: float
-    accuracy: float
-    precision: float
-    recall: float
-    f1: float
-
-
-def evaluate_predictions(
-    mappings: Iterable[SemanticMapping],
-    converter: curies.Converter,
-    *,
-    tag: str | None = None,
-) -> Evaluation:
-    """Evaluate predicted mappings using ground truth positive and negative mappings."""
-    positive_set, negative_set, predicted_set = map(set, stratify(mappings, converter))
-
-    tp, fp, fn, tn = _get_v1(positive_set, negative_set, predicted_set)
-
-    predicted_only = len(predicted_set - positive_set - negative_set)
-    union_len = len(positive_set.union(predicted_set).union(negative_set))
-
-    msg = f"union={union_len:,}, intersection={tp:,}, curated={fn:,}, predicted={predicted_only:,}"
-    if tag is not None:
-        msg = f"[{tag}] {msg}"
-    logger.info(msg)
-
-    accuracy = (tp + tn) / (tp + tn + fp + fn)
-    recall = tp / (tp + fn)
-    precision = tp / (tp + fp)
-    f1 = 2 * tp / (2 * tp + fp + fn)
-    completion = 1 - predicted_only / len(predicted_set)
-
-    # what is the percentage of curated examples that are positive?
-    _positive_percentage = len(positive_set) / (len(positive_set) + len(negative_set))
-
-    return Evaluation(completion, accuracy, precision, recall, f1)
-
-
-def _get_text_to_literal_mappings(grounder: Grounder) -> dict[str, list[LiteralMapping]]:
-    if not isinstance(grounder, GildaGrounder):
-        raise NotImplementedError
-    dd = defaultdict(list)
-    for terms in grounder._grounder.entries.values():
-        for term in terms:
-            dd[term.text].append(LiteralMapping.from_gilda(term))
-    return dict(dd)
 
 
 def _grounder_to_mappings(grounders: dict[str, Grounder]) -> Iterable[SemanticMapping]:
@@ -130,16 +45,19 @@ def _grounder_to_mappings(grounders: dict[str, Grounder]) -> Iterable[SemanticMa
                 )
 
 
+def _get_text_to_literal_mappings(grounder: Grounder) -> dict[str, list[LiteralMapping]]:
+    if not isinstance(grounder, GildaGrounder):
+        raise NotImplementedError
+    dd = defaultdict(list)
+    for terms in grounder._grounder.entries.values():
+        for term in terms:
+            dd[term.text].append(LiteralMapping.from_gilda(term))
+    return dict(dd)
+
+
 @click.command()
 def main() -> None:
     """Run the workflow for evaluating predicted mappings."""
-    import biomappings
-    import bioregistry
-    import pyobo
-    import pystow
-    from curies.triples import keep_prefixes_both
-    from tabulate import tabulate
-
     converter = bioregistry.get_preferred_converter()
 
     positive_biomappings_mappings = biomappings.load_positive_mappings()
