@@ -125,7 +125,7 @@ e1_with_hash = ExampleMapping(
 
 simple_with_author = ExampleMapping(
     description="author",
-    semantic_mapping=simple.model_copy(update={"authors": [charlie], "source": BIOMAPPINGS_SOURCE}),
+    semantic_mapping=simple.model_copy(update={"authors": [charlie]}),
 )
 simple_with_reviewer = ExampleMapping(
     description="reviewer",
@@ -419,7 +419,11 @@ e9 = ExampleMapping(
     ),
 )
 
-e10 = ExampleMapping(
+mapping_inversion_original = ExampleMapping(
+    description="an example mapping for the inversion example",
+    semantic_mapping=simple.model_copy(update={"authors": [charlie], "source": BIOMAPPINGS_SOURCE}),
+)
+mapping_inversion_derived = ExampleMapping(
     description="Demonstrate the `derived_from` field",
     semantic_mapping=SemanticMapping(
         subject=R2,
@@ -427,12 +431,15 @@ e10 = ExampleMapping(
         object=R1,
         justification=mapping_inversion,
         derived_from=[
-            hash_triple_to_reference(simple_with_author.semantic_mapping, TEST_CONVERTER)
+            hash_triple_to_reference(mapping_inversion_original.semantic_mapping, TEST_CONVERTER)
         ],
     ),
 )
 
-MAPPING_INVERSION_EXAMPLES = [simple_with_author.semantic_mapping, e10.semantic_mapping]
+MAPPING_INVERSION_EXAMPLES = [
+    mapping_inversion_original.semantic_mapping,
+    mapping_inversion_derived.semantic_mapping,
+]
 
 inference_r1 = NamedReference.from_curie("BTO:0006078", name="pluripotent stem cell")
 inference_r2 = NamedReference.from_curie("CL:0002248", name="pluripotent stem cell")

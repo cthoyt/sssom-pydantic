@@ -111,9 +111,7 @@ class TestFilesystem(cases.TestRepository):
         """Set up the test with a SQL database."""
         self.directory = tempfile.TemporaryDirectory()
         self.path = Path(self.directory.name).joinpath("test.sssom.tsv")
-        self.repository = FileSystemSemanticMappingRepository(self.path)
-        for record in TEST_CONVERTER:
-            self.repository.converter.add_record(record, merge=True)
+        self.repository = FileSystemSemanticMappingRepository(self.path, converter=TEST_CONVERTER)
 
     def tearDown(self) -> None:
         """Tear down the test case."""
