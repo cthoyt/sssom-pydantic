@@ -558,6 +558,8 @@ class TestIO(cases.MappingTestCaseMixin):
             #  issue: https://github.com/cthoyt/sssom-pydantic/issues/
             #  mapping: https://w3id.org/mapping/
             #  mesh: http://id.nlm.nih.gov/mesh/
+            #  obo: http://purl.obolibrary.org/obo/
+            #  oboInOwl: http://www.geneontology.org/formats/oboInOwl#
             #  orcid: https://orcid.org/
             #  owl: http://www.w3.org/2002/07/owl#
             #  rdf: http://www.w3.org/1999/02/22-rdf-syntax-ns#
@@ -569,6 +571,7 @@ class TestIO(cases.MappingTestCaseMixin):
             #  sssom: https://w3id.org/sssom/
             #  sssom.record: https://w3id.org/sssom/record/
             #  w3id: https://w3id.org/
+            #  wikidata: http://www.wikidata.org/entity/
             #mapping_set_id: {TEST_MAPPING_SET_ID}
             subject_id	subject_label	predicate_id	object_id	object_label	mapping_justification
             mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	semapv:ManualMappingCuration
