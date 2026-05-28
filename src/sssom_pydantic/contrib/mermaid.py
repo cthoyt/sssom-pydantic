@@ -33,7 +33,7 @@ class MermaidOptions(TypedDict):
 JUSTIFICATION_LABELS = {
     v.manual_mapping_curation.identifier: "manual curation",
     v.lexical_matching_process.identifier: "lexical matching",
-    v.background_knowledge_based_matching_process.identifier: "background knowledge-based matching",
+    v.background_knowledge_based_matching_process.identifier: "background know.",
     v.mapping_chaining.identifier: "chaining",
     v.mapping_inversion.identifier: "inversion",
     v.unspecified_matching_process.identifier: "unspecified",
@@ -98,12 +98,16 @@ def to_mermaid(
         if record_id not in seen:
             seen.add(record_id)
             record_count += 1
+            if m.predicate_modifier == NOT:
+                label = f"{m.subject.curie}\nnot {m.predicate.curie}\n{m.object.curie}"
+            else:
+                label = f"{m.subject.curie}\n{m.predicate.curie}\n{m.object.curie}"
+
             justification_label = JUSTIFICATION_LABELS.get(
                 m.justification.identifier, m.justification.identifier
             )
-            label = f"{m.predicate.curie}\n{justification_label}"
-            if m.predicate_modifier == NOT:
-                label = "not " + label
+            label += f"\n{justification_label}"
+
             lines.append(f'{record_id}("{label}")')
             lines.append(f"style {record_id} fill:#bbf")
 
@@ -125,7 +129,7 @@ def to_mermaid(
                 seen.add(m.source.curie)
                 lines.append(f"{m.source.curie}[{_n(m.source)}]")
                 lines.append(f"style {m.source.curie} fill:#feb")
-            edges.append((record_id, "from", m.source.curie))
+            edges.append((record_id, "source", m.source.curie))
 
         mapping_id = _clean_msi(hash_triple(m, converter))
         if mapping_id not in seen:

@@ -87,6 +87,7 @@ R4 = NamedReference.from_curie("chebi:131408", name="glyoxime")
 
 R5 = NamedReference.from_curie("mesh:C027957", name="tyramine O-sulfate")
 R6 = NamedReference.from_curie("chebi:133530", name="tyramine sulfate")
+R10 = NamedReference.from_curie("cas:30223-92-8", name="Tyramine sulfate")
 
 R7 = NamedReference.from_curie("chebi:10057", name="9H-xanthene")
 R8 = NamedReference.from_curie("mesh:C002563", name="xanthan gum")
@@ -430,6 +431,71 @@ e10 = ExampleMapping(
 )
 
 MAPPING_INVERSION_EXAMPLES = [simple_with_author.semantic_mapping, e10.semantic_mapping]
+
+
+inference_m1 = ExampleMapping(
+    description="",
+    semantic_mapping=SemanticMapping(
+        subject=R6,
+        predicate=has_dbxref,
+        object=R10,
+        justification=unspecified_matching_process,
+        source=CHEBI_SOURCE,
+    ),
+)
+inference_m2 = ExampleMapping(
+    description="",
+    semantic_mapping=SemanticMapping(
+        subject=R6,
+        predicate=P1,
+        object=R10,
+        justification=background_knowledge_based_matching_process,
+        derived_from=[hash_triple_to_reference(inference_m1.semantic_mapping, TEST_CONVERTER)],
+    ),
+)
+inference_m3 = ExampleMapping(
+    description="",
+    semantic_mapping=SemanticMapping(
+        subject=R6,
+        predicate=P1,
+        object=R5,
+        justification=manual_mapping_curation,
+        source=BIOMAPPINGS_SOURCE,
+        authors=[charlie],
+    ),
+)
+inference_m4 = ExampleMapping(
+    description="",
+    semantic_mapping=SemanticMapping(
+        subject=R5,
+        predicate=P1,
+        object=R6,
+        justification=mapping_inversion,
+        derived_from=[hash_triple_to_reference(inference_m3.semantic_mapping, TEST_CONVERTER)],
+    ),
+)
+inference_m5 = ExampleMapping(
+    description="",
+    semantic_mapping=SemanticMapping(
+        subject=R5,
+        predicate=P1,
+        object=R10,
+        justification=mapping_chaining,
+        derived_from=[
+            hash_triple_to_reference(inference_m2.semantic_mapping, TEST_CONVERTER),
+            hash_triple_to_reference(inference_m4.semantic_mapping, TEST_CONVERTER),
+        ],
+    ),
+)
+
+FULL_INFERENCE_EXAMPLES = [
+    inference_m1.semantic_mapping,
+    inference_m2.semantic_mapping,
+    inference_m3.semantic_mapping,
+    inference_m4.semantic_mapping,
+    inference_m5.semantic_mapping,
+]
+
 
 negative_inference_m1 = ExampleMapping(
     description="used in the example of negative mapping chaining",
