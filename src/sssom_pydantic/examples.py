@@ -412,11 +412,13 @@ e10 = ExampleMapping(
         predicate=P1,
         object=R1,
         justification=mapping_inversion,
-        derived_from=[hash_triple_to_reference(simple, TEST_CONVERTER)],
+        derived_from=[
+            hash_triple_to_reference(simple_with_author.semantic_mapping, TEST_CONVERTER)
+        ],
     ),
 )
 
-MAPPING_INVERSION_EXAMPLES = [simple, e10.semantic_mapping]
+MAPPING_INVERSION_EXAMPLES = [simple_with_author.semantic_mapping, e10.semantic_mapping]
 
 negative_inference_m1 = ExampleMapping(
     description="used in the example of negative mapping chaining",
