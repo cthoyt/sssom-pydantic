@@ -6,12 +6,15 @@ import datetime
 
 from curies import Converter, NamableReference, NamedReference, Reference
 from curies.vocabulary import (
+    background_knowledge_based_matching_process,
     charlie,
+    has_dbxref,
     lexical_matching_process,
     manual_mapping_curation,
     mapping_chaining,
     mapping_inversion,
     semantic_similarity,
+    unspecified_matching_process,
 )
 from pydantic import BaseModel
 
@@ -36,6 +39,9 @@ __all__ = [
     "R4",
     "R5",
     "R6",
+    "R7",
+    "R8",
+    "R9",
     "TEST_CONVERTER",
     "TEST_PREFIX_MAP",
 ]
@@ -45,6 +51,9 @@ TEST_PREFIX_MAP = {
     "mesh": "http://id.nlm.nih.gov/mesh/",
     "chebi": "http://purl.obolibrary.org/obo/CHEBI_",
     "VO": "http://purl.obolibrary.org/obo/VO_",
+    "BTO": "http://purl.obolibrary.org/obo/BTO_",
+    "CL": "http://purl.obolibrary.org/obo/CL_",
+    "obo": "http://purl.obolibrary.org/obo/",
     # the following are the default ones
     "owl": "http://www.w3.org/2002/07/owl#",
     "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
@@ -62,6 +71,8 @@ TEST_PREFIX_MAP = {
     "bioregistry": "https://bioregistry.io/",
     "orcid": "https://orcid.org/",
     "mapping": "https://w3id.org/mapping/",
+    "oboInOwl": "http://www.geneontology.org/formats/oboInOwl#",
+    "wikidata": "http://www.wikidata.org/entity/",
 }
 TEST_CONVERTER = Converter.from_prefix_map(TEST_PREFIX_MAP)
 TEST_CONVERTER.add_prefix_synonym("chebi", "CHEBI")
@@ -78,10 +89,16 @@ R4 = NamedReference.from_curie("chebi:131408", name="glyoxime")
 
 R5 = NamedReference.from_curie("mesh:C027957", name="tyramine O-sulfate")
 R6 = NamedReference.from_curie("chebi:133530", name="tyramine sulfate")
+R10 = NamedReference.from_curie("cas:30223-92-8", name="Tyramine sulfate")
 
 R7 = NamedReference.from_curie("chebi:10057", name="9H-xanthene")
 R8 = NamedReference.from_curie("mesh:C002563", name="xanthan gum")
 R9 = NamedReference.from_curie("cas:92-83-1", name="Xanthene")
+
+BIOMAPPINGS_SOURCE = NamableReference(
+    prefix="wikidata", identifier="Q111239110", name="Biomappings"
+)
+CHEBI_SOURCE = NamableReference(prefix="obo", identifier="chebi", name="ChEBI Ontology")
 
 
 class ExampleMapping(BaseModel):
@@ -402,16 +419,135 @@ e9 = ExampleMapping(
     ),
 )
 
-e10 = ExampleMapping(
+mapping_inversion_original = ExampleMapping(
+    description="an example mapping for the inversion example",
+    semantic_mapping=simple.model_copy(update={"authors": [charlie], "source": BIOMAPPINGS_SOURCE}),
+)
+mapping_inversion_derived = ExampleMapping(
     description="Demonstrate the `derived_from` field",
     semantic_mapping=SemanticMapping(
         subject=R2,
         predicate=P1,
         object=R1,
         justification=mapping_inversion,
-        derived_from=[hash_triple_to_reference(simple, TEST_CONVERTER)],
+        derived_from=[
+            hash_triple_to_reference(mapping_inversion_original.semantic_mapping, TEST_CONVERTER)
+        ],
     ),
 )
+
+MAPPING_INVERSION_EXAMPLES = [
+    mapping_inversion_original.semantic_mapping,
+    mapping_inversion_derived.semantic_mapping,
+]
+
+inference_r1 = NamedReference.from_curie("BTO:0006078", name="pluripotent stem cell")
+inference_r2 = NamedReference.from_curie("CL:0002248", name="pluripotent stem cell")
+inference_r3 = NamedReference.from_curie("mesh:D039904", name="Pluripotent Stem Cells")
+
+inference_m1 = ExampleMapping(
+    description="",
+    semantic_mapping=SemanticMapping(
+        subject=inference_r1,
+        predicate=P1,
+        object=inference_r2,
+        justification=manual_mapping_curation,
+        authors=[charlie],
+        source=BIOMAPPINGS_SOURCE,
+    ),
+)
+inference_m2 = ExampleMapping(
+    description="",
+    semantic_mapping=SemanticMapping(
+        subject=inference_r2,
+        predicate=P1,
+        object=inference_r3,
+        justification=manual_mapping_curation,
+        authors=[charlie],
+        source=BIOMAPPINGS_SOURCE,
+    ),
+)
+inference_m3 = ExampleMapping(
+    description="",
+    semantic_mapping=SemanticMapping(
+        subject=inference_r1,
+        predicate=P1,
+        object=inference_r3,
+        justification=mapping_chaining,
+        derived_from=[
+            hash_triple_to_reference(inference_m1.semantic_mapping, TEST_CONVERTER),
+            hash_triple_to_reference(inference_m2.semantic_mapping, TEST_CONVERTER),
+        ],
+    ),
+)
+CHAINING_EXAMPLES = [
+    inference_m1.semantic_mapping,
+    inference_m2.semantic_mapping,
+    inference_m3.semantic_mapping,
+]
+
+full_inference_m1 = ExampleMapping(
+    description="",
+    semantic_mapping=SemanticMapping(
+        subject=R6,
+        predicate=has_dbxref,
+        object=R10,
+        justification=unspecified_matching_process,
+        source=CHEBI_SOURCE,
+    ),
+)
+full_inference_m2 = ExampleMapping(
+    description="",
+    semantic_mapping=SemanticMapping(
+        subject=R6,
+        predicate=P1,
+        object=R10,
+        justification=background_knowledge_based_matching_process,
+        derived_from=[hash_triple_to_reference(full_inference_m1.semantic_mapping, TEST_CONVERTER)],
+    ),
+)
+full_inference_m3 = ExampleMapping(
+    description="",
+    semantic_mapping=SemanticMapping(
+        subject=R6,
+        predicate=P1,
+        object=R5,
+        justification=manual_mapping_curation,
+        source=BIOMAPPINGS_SOURCE,
+        authors=[charlie],
+    ),
+)
+full_inference_m4 = ExampleMapping(
+    description="",
+    semantic_mapping=SemanticMapping(
+        subject=R5,
+        predicate=P1,
+        object=R6,
+        justification=mapping_inversion,
+        derived_from=[hash_triple_to_reference(full_inference_m3.semantic_mapping, TEST_CONVERTER)],
+    ),
+)
+full_inference_m5 = ExampleMapping(
+    description="",
+    semantic_mapping=SemanticMapping(
+        subject=R5,
+        predicate=P1,
+        object=R10,
+        justification=mapping_chaining,
+        derived_from=[
+            hash_triple_to_reference(full_inference_m2.semantic_mapping, TEST_CONVERTER),
+            hash_triple_to_reference(full_inference_m4.semantic_mapping, TEST_CONVERTER),
+        ],
+    ),
+)
+
+FULL_INFERENCE_EXAMPLES = [
+    full_inference_m1.semantic_mapping,
+    full_inference_m2.semantic_mapping,
+    full_inference_m3.semantic_mapping,
+    full_inference_m4.semantic_mapping,
+    full_inference_m5.semantic_mapping,
+]
 
 negative_inference_m1 = ExampleMapping(
     description="used in the example of negative mapping chaining",
@@ -421,6 +557,8 @@ negative_inference_m1 = ExampleMapping(
         object=R8,
         predicate_modifier="Not",
         justification=manual_mapping_curation,
+        authors=[charlie],
+        source=BIOMAPPINGS_SOURCE,
     ),
 )
 negative_inference_m2 = ExampleMapping(
@@ -430,6 +568,8 @@ negative_inference_m2 = ExampleMapping(
         predicate=P1,
         object=R7,
         justification=manual_mapping_curation,
+        authors=[charlie],
+        source=BIOMAPPINGS_SOURCE,
     ),
 )
 negative_inference_m3 = ExampleMapping(
@@ -446,6 +586,40 @@ negative_inference_m3 = ExampleMapping(
         ],
     ),
 )
+
+CHAINING_WITH_NEGATIVES_EXAMPLES = [
+    negative_inference_m1.semantic_mapping,
+    negative_inference_m2.semantic_mapping,
+    negative_inference_m3.semantic_mapping,
+]
+
+background_original = ExampleMapping(
+    description="the unmutated mapping from the background knowledge mapping",
+    semantic_mapping=SemanticMapping(
+        subject=R7,
+        predicate=has_dbxref,
+        object=R9,
+        justification=unspecified_matching_process,
+        source=CHEBI_SOURCE,
+    ),
+)
+background_derived = ExampleMapping(
+    description="the derived mapping from the background knowledge mapping",
+    semantic_mapping=SemanticMapping(
+        subject=R7,
+        predicate=P1,
+        object=R9,
+        justification=background_knowledge_based_matching_process,
+        derived_from=[
+            hash_triple_to_reference(background_original.semantic_mapping, TEST_CONVERTER),
+        ],
+    ),
+)
+
+BACKGROUND_MATCHING_EXAMPLES = [
+    background_original.semantic_mapping,
+    background_derived.semantic_mapping,
+]
 
 EXAMPLES: list[ExampleMapping] = [v for v in locals().values() if isinstance(v, ExampleMapping)]
 
