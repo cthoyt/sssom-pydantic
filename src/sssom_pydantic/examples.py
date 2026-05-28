@@ -70,6 +70,7 @@ TEST_PREFIX_MAP = {
     "orcid": "https://orcid.org/",
     "mapping": "https://w3id.org/mapping/",
     "oboInOwl": "http://www.geneontology.org/formats/oboInOwl#",
+    "wikidata": "http://www.wikidata.org/entity/",
 }
 TEST_CONVERTER = Converter.from_prefix_map(TEST_PREFIX_MAP)
 TEST_CONVERTER.add_prefix_synonym("chebi", "CHEBI")
@@ -90,6 +91,11 @@ R6 = NamedReference.from_curie("chebi:133530", name="tyramine sulfate")
 R7 = NamedReference.from_curie("chebi:10057", name="9H-xanthene")
 R8 = NamedReference.from_curie("mesh:C002563", name="xanthan gum")
 R9 = NamedReference.from_curie("cas:92-83-1", name="Xanthene")
+
+BIOMAPPINGS_SOURCE = NamableReference(
+    prefix="wikidata", identifier="Q111239110", name="Biomappings"
+)
+CHEBI_SOURCE = NamableReference(prefix="obo", identifier="chebi", name="ChEBI Ontology")
 
 
 class ExampleMapping(BaseModel):
@@ -116,7 +122,7 @@ e1_with_hash = ExampleMapping(
 
 simple_with_author = ExampleMapping(
     description="author",
-    semantic_mapping=simple.model_copy(update={"authors": [charlie]}),
+    semantic_mapping=simple.model_copy(update={"authors": [charlie], "source": BIOMAPPINGS_SOURCE}),
 )
 simple_with_reviewer = ExampleMapping(
     description="reviewer",
@@ -434,6 +440,7 @@ negative_inference_m1 = ExampleMapping(
         predicate_modifier="Not",
         justification=manual_mapping_curation,
         authors=[charlie],
+        source=BIOMAPPINGS_SOURCE,
     ),
 )
 negative_inference_m2 = ExampleMapping(
@@ -444,6 +451,7 @@ negative_inference_m2 = ExampleMapping(
         object=R7,
         justification=manual_mapping_curation,
         authors=[charlie],
+        source=BIOMAPPINGS_SOURCE,
     ),
 )
 negative_inference_m3 = ExampleMapping(
@@ -468,11 +476,6 @@ CHAINING_WITH_NEGATIVES_EXAMPLES = [
 ]
 
 
-R7 = NamedReference.from_curie("chebi:10057", name="9H-xanthene")
-R8 = NamedReference.from_curie("mesh:C002563", name="xanthan gum")
-R9 = NamedReference.from_curie("cas:92-83-1", name="Xanthene")
-
-
 background_original = ExampleMapping(
     description="the unmutated mapping from the background knowledge mapping",
     semantic_mapping=SemanticMapping(
@@ -480,7 +483,7 @@ background_original = ExampleMapping(
         predicate=has_dbxref,
         object=R9,
         justification=unspecified_matching_process,
-        source=Reference(prefix="obo", identifier="chebi"),
+        source=CHEBI_SOURCE,
     ),
 )
 background_derived = ExampleMapping(
