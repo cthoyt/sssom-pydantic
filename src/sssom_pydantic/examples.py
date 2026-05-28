@@ -421,6 +421,7 @@ negative_inference_m1 = ExampleMapping(
         object=R8,
         predicate_modifier="Not",
         justification=manual_mapping_curation,
+        authors=[charlie],
     ),
 )
 negative_inference_m2 = ExampleMapping(
@@ -430,6 +431,7 @@ negative_inference_m2 = ExampleMapping(
         predicate=P1,
         object=R7,
         justification=manual_mapping_curation,
+        authors=[charlie],
     ),
 )
 negative_inference_m3 = ExampleMapping(

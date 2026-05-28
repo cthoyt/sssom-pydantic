@@ -1,23 +1,48 @@
-from typing import Iterable
+"""Mermaid utilities."""
+
+from __future__ import annotations
+
+from collections.abc import Iterable
+from typing import TYPE_CHECKING
 
 import curies
+
 from sssom_pydantic.api import SemanticMapping, hash_mapping, hash_triple
 
-__all__ = ["make_mermaid", "make_mermaid_block"]
+if TYPE_CHECKING:
+    import IPython.display
+
+__all__ = [
+    "make_mermaid",
+    "make_mermaid_block",
+    "make_mermaid_ipython",
+]
+
+
+def make_mermaid_ipython(
+    mappings: Iterable[SemanticMapping], converter: curies.Converter
+) -> IPython.display.Markdown:
+    """Make a Mermaid IPython display."""
+    from IPython.display import Markdown
+
+    return Markdown(make_mermaid_block(mappings, converter))
 
 
 def make_mermaid_block(mappings: Iterable[SemanticMapping], converter: curies.Converter) -> str:
+    """Make a Mermaid block for Markdown."""
     mermaid = make_mermaid(mappings, converter)
     block = f"```mermaid\n{mermaid}\n```"
     return block
 
 
-def _n(r: curies.NamableReference) -> str:
-    if not r.name:
-        return r.curie
-    return f"{r.name}\n{r.curie}"
+def _n(r: curies.Reference) -> str:
+    if name := getattr(r, "name", None):
+        return f"{name}\n{r.curie}"
+    return r.curie
+
 
 def make_mermaid(mappings: Iterable[SemanticMapping], converter: curies.Converter) -> str:
+    """Make a mermaid flowchart string."""
     lines = []
     edges = []
     derives = []
@@ -36,18 +61,37 @@ def make_mermaid(mappings: Iterable[SemanticMapping], converter: curies.Converte
         if record_id not in seen:
             seen.add(record_id)
             record_count += 1
-            label = f"Record {record_count}"
-            lines.append(f"{record_id}({label})")
+            label = f"Record {record_count}\n{mapping.justification.identifier}"
+            lines.append(f'{record_id}("{label}")')
             lines.append(f"style {record_id} fill:#bbf")
+
+        for people, relationship in [
+            (mapping.authors, "has author"),
+            (mapping.reviewers, "has reviewer"),
+            (mapping.creators, "has creator"),
+        ]:
+            for person in people or []:
+                if person.curie not in seen:
+                    seen.add(person.curie)
+                    lines.append(f"{person.curie}[{_n(person)}]")
+                    lines.append(f"style {person.curie} fill:#bef")
+                edges.append((record_id, relationship, person.curie))
+
+        if mapping.source:
+            if mapping.source.curie not in seen:
+                seen.add(mapping.source.curie)
+                lines.append(f"{mapping.source.curie}[{_n(mapping.source)}]")
+                lines.append(f"style {mapping.source.curie} fill:#feb")
+            edges.append((record_id, "from", mapping.source.curie))
 
         mapping_id = hash_triple(mapping, converter).replace("~", "N")
         if mapping_id not in seen:
             mapping_count += 1
             seen.add(mapping_id)
             if mapping_id.endswith("N"):
-                label = f"\"not {mapping.predicate.curie}\nMapping {mapping_count}\""
+                label = f'"not {mapping.predicate.curie}\nMapping {mapping_count}"'
             else:
-                label = f"\"{mapping.predicate.curie}\nMapping {mapping_count}\""
+                label = f'"{mapping.predicate.curie}\nMapping {mapping_count}"'
             lines.append(f"{mapping_id}[[{label}]]")
             lines.append(f"style {mapping_id} fill:#f9f")
 
@@ -65,10 +109,6 @@ def make_mermaid(mappings: Iterable[SemanticMapping], converter: curies.Converte
         if mapping_id in seen:
             lines.append(f"{record_id}-->|derived from|{mapping_id}")
 
+    # TODO prune mappings with no incoming relationships
+
     return "flowchart LR\n" + "\n".join("  " + line for line in lines)
-
-
-if __name__ == '__main__':
-    from sssom_pydantic.examples import EXAMPLE_MAPPINGS, TEST_CONVERTER
-
-    print(make_mermaid(EXAMPLE_MAPPINGS, TEST_CONVERTER))
