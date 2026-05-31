@@ -459,22 +459,18 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
             similarity_score=self.similarity_score,
         )
 
-    def standardize(self, converter: curies.Converter) -> Self:
-        """Standardize."""
-        return self._mm(functools.partial(converter.standardize_reference, strict=True))
-
     def relabel(self) -> Self:
         """Label the entity."""
         import pyobo
 
-        def _label(r: Reference) -> Reference:
-            if name := pyobo.get_name(r):
-                return r.with_name(name)
-            return r
+        update = {}
+        if subject_label := pyobo.get_name(self.subject):
+            update["subject"] = self.subject.with_name(subject_label)
+        if object_label := pyobo.get_name(self.object):
+            update["object"] = self.object.with_name(object_label)
+        return self.model_copy(update=update)
 
-        return self._mm(_label)
-
-    def _mm(self, func: Callable[[Reference], Reference]) -> Self:
+    def standardize(self, converter: curies.Converter) -> Self:
         """Standardize."""
         update: dict[str, Reference | list[Reference]] = {}
         for name, field_info in self.__class__.model_fields.items():
@@ -487,9 +483,9 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
                 Reference,
                 Reference | None,
             }:
-                update[name] = func(value)
+                update[name] = converter.standardize_reference(value, strict=True)
             elif field_info.annotation in {list[Reference], list[Reference] | None}:
-                update[name] = [func(r) for r in value]
+                update[name] = [converter.standardize_reference(r, strict=True) for r in value]
         return self.model_copy(update=update)
 
     def negate(self) -> Self:
