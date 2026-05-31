@@ -899,7 +899,7 @@ def format(
     drop_duplicates: bool = False,
     drop_duplicates_key: Hasher[SemanticMapping, Y] | None = None,
     standardize: bool = False,
-    add_labels: bool = False,
+    relabel: bool = False,
 ) -> None:
     """Lint a file."""
     mappings, converter_processed, mapping_set = read(
@@ -910,7 +910,7 @@ def format(
         converter_processed = curies.chain([_get_preferred_converter(), converter_processed])
         mappings = list(standardize_mappings(mappings, converter=converter_processed))
 
-    if add_labels:
+    if relabel:
         mappings = [mapping.relabel() for mapping in mappings]
 
     write(
