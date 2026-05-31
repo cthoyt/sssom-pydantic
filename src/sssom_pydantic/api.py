@@ -460,7 +460,7 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
         )
 
     def relabel(self) -> Self:
-        """Label the entity."""
+        """Label the subject and object."""
         import pyobo
 
         update = {}
