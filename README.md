@@ -67,6 +67,8 @@ It does the following:
 6. Optionally, standardizes against
    [Bioregistry](https://github.com/biopragmatics/bioregistry) preferred CURIE
    prefixes and RDF URI prefixes if `--standardize` is passed
+7. Optionally, add subject and object labels via
+   [PyOBO](https://github.com/biopragmatics/pyobo) if `--relabel` is passed
 
 `sssom-pydantic` also has a subsetting mechanism for extracting all mappings for
 a given resource, e.g., to all mappings from CHMO:
