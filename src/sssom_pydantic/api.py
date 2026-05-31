@@ -461,6 +461,21 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
 
     def standardize(self, converter: curies.Converter) -> Self:
         """Standardize."""
+        return self._mm(functools.partial(converter.standardize_reference, strict=True))
+
+    def relabel(self) -> Self:
+        """Label the entity."""
+        import pyobo
+
+        def _label(r: Reference) -> Reference:
+            if name := pyobo.get_name(r):
+                return r.with_name(name)
+            return r
+
+        return self._mm(_label)
+
+    def _mm(self, func: Callable[[Reference], Reference]) -> Self:
+        """Standardize."""
         update: dict[str, Reference | list[Reference]] = {}
         for name, field_info in self.__class__.model_fields.items():
             value = getattr(self, name)
@@ -472,9 +487,9 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
                 Reference,
                 Reference | None,
             }:
-                update[name] = converter.standardize_reference(value, strict=True)
+                update[name] = func(value)
             elif field_info.annotation in {list[Reference], list[Reference] | None}:
-                update[name] = [converter.standardize_reference(r, strict=True) for r in value]
+                update[name] = [func(r) for r in value]
         return self.model_copy(update=update)
 
     def negate(self) -> Self:
