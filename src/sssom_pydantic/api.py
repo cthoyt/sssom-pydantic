@@ -459,6 +459,17 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
             similarity_score=self.similarity_score,
         )
 
+    def relabel(self) -> Self:
+        """Label the subject and object."""
+        import pyobo
+
+        update = {}
+        if subject_label := pyobo.get_name(self.subject):
+            update["subject"] = self.subject.with_name(subject_label)
+        if object_label := pyobo.get_name(self.object):
+            update["object"] = self.object.with_name(object_label)
+        return self.model_copy(update=update)
+
     def standardize(self, converter: curies.Converter) -> Self:
         """Standardize."""
         update: dict[str, Reference | list[Reference]] = {}

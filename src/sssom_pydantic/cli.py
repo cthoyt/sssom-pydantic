@@ -20,16 +20,25 @@ STANDARDIZE_FLAG = click.option(
     is_flag=True,
     help="Standardize against Bioregistry preferred CURIE prefixes and (RDF) URI prefixes",
 )
+RELABEL_FLAG = click.option(
+    "--relabel",
+    is_flag=True,
+    help="Re-label all subjects and objects using PyOBO",
+)
 
 
 @main.command(name="format")
 @click.argument("path", type=Path)
 @STANDARDIZE_FLAG
-def format_sssom_tsv(path: Path, standardize: bool) -> None:
+@RELABEL_FLAG
+@click.option("--drop-duplicates", is_flag=True)
+def format_sssom_tsv(path: Path, standardize: bool, relabel: bool, drop_duplicates: bool) -> None:
     """Lint a SSSOM TSV file."""
     import sssom_pydantic
 
-    sssom_pydantic.format(path, standardize=standardize)
+    sssom_pydantic.format(
+        path, standardize=standardize, relabel=relabel, drop_duplicates=drop_duplicates
+    )
 
 
 @main.command()
