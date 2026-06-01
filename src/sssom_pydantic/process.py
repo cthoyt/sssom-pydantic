@@ -47,6 +47,7 @@ __all__ = [
     "invert_by_object_prefix",
     "invert_by_prefix_pair",
     "invert_by_subject_prefix",
+    "merge_manual_curations",
     "publish",
     "remove_redundant_external",
     "remove_redundant_internal",
@@ -826,6 +827,86 @@ def _so_prefixes(source_prefix: str, object_prefix: str) -> SemanticMappingPredi
         return m.subject.prefix == source_prefix and m.object.prefix == object_prefix
 
     return _func
+
+
+def merge_manual_curations(
+    mappings: Iterable[MappingTypeVar],
+    *,
+    converter: curies.Converter,
+    precision: int | None = None,
+    confidence_model: ConfidenceModel | None = None,
+) -> Iterable[MappingTypeVar]:
+    r"""Merge manually curated mappings.
+
+    :param mappings: An iterable of semantic mappings
+    :param converter: A converter
+    :param precision: the precision to round newly calculated confidences
+    :param confidence_model: Which confidence model to use when aggregating mapping
+        confidences.
+
+        - mean aggregation is $\frac{1}{n} \sum_{i=1}^n c_i$
+        - binomial aggregation is $1 - \prod_{i=1}^n (1 - c_i)$
+
+    :returns: An iterable of semantic mappings, with manually curated mappings for the
+        same mapping triple merged together based on :func:`estimate_confidence`
+
+    .. note::
+
+        The confidence estimation algorithm properly handles negative predicate
+        modifiers as well as reviewer information.
+
+    .. warning::
+
+        This function partially scrambles the order of mappings. All non-merged mappings
+        come out in normal order, followed by merged mappings.
+    """
+    manual_curated_index = defaultdict(list)
+    for mapping in mappings:
+        if mapping.justification == manual_mapping_curation:
+            manual_curated_index[mapping.as_str_triple()].append(mapping)
+        else:
+            yield mapping
+    for mapping_group in manual_curated_index.values():
+        if len(mapping_group) == 1:
+            yield mapping_group[0]
+        else:
+            yield _merge(
+                mapping_group,
+                converter=converter,
+                precision=precision,
+                confidence_model=confidence_model,
+            )
+
+
+def _merge(
+    mappings: list[MappingTypeVar],
+    *,
+    converter: curies.Converter,
+    precision: int | None = None,
+    confidence_model: ConfidenceModel | None = None,
+) -> MappingTypeVar:
+    """Merge manually curated mappings with the same s-p-o triple."""
+    authors = {author for mapping in mappings for author in mapping.authors or []}
+    confidence = estimate_confidence(
+        mappings, precision=precision, check=False, confidence_model=confidence_model
+    )
+    mapping = mappings[0]
+    data = {
+        "subject": mapping.subject,
+        "predicate": mapping.predicate,
+        "object": mapping.object,
+        "justification": mapping.justification,  # will always be manual curation, by construction
+        "authors": sorted(authors),
+        "confidence": confidence,
+        # TODO CC0 license?
+        "derived_from": [hash_triple_to_reference(mapping, converter) for mapping in mappings],
+    }
+    # look for matching fields
+    for slot_name in ["subject_source", "object_source"]:
+        values = {getattr(mapping, slot_name) for mapping in mappings}
+        if len(values) == 1 and (value := values.pop()) is not None:
+            data[slot_name] = value
+    return mapping.model_validate(data)
 
 
 if __name__ == "__main__":
