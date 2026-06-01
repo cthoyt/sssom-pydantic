@@ -78,8 +78,9 @@ $ wget https://w3id.org/biopragmatics/biomappings/sssom/biomappings.sssom.tsv
 $ sssom_pydantic subset -i biomappings.sssom.tsv -p CHMO -o biomappings-chmo.sssom.tsv
 ```
 
-
-`sssom-pydantic` has a merge mechanism
+`sssom-pydantic` can merge multiple SSSOM documents together and optionally
+collapse manual curations for the same mapping triple together using the
+[SSSOM confidence model](https://mapping-commons.github.io/sssom/dev/confidence-model/):
 
 ```console
 $ sssom_pydantic merge \
