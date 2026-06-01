@@ -842,12 +842,15 @@ def merge_manual(
             manual_curated_index[mapping.as_str_triple()].append(mapping)
         else:
             yield mapping
-    for mm in manual_curated_index.values():
-        if len(mm) == 1:
-            yield mm[0]
+    for mapping_group in manual_curated_index.values():
+        if len(mapping_group) == 1:
+            yield mapping_group[0]
         else:
-            yield from merge_manual(
-                mm, converter=converter, precision=precision, confidence_model=confidence_model
+            yield _merge(
+                mapping_group,
+                converter=converter,
+                precision=precision,
+                confidence_model=confidence_model,
             )
 
 
@@ -871,8 +874,14 @@ def _merge(
         "justification": mapping.justification,  # will always be manual curation, by construction
         "authors": sorted(authors),
         "confidence": confidence,
+        # TODO CC0 license?
         "derived_from": [hash_triple_to_reference(mapping, converter) for mapping in mappings],
     }
+    # look for matching fields
+    for slot_name in ["subject_source", "object_source"]:
+        values = {getattr(mapping, slot_name) for mapping in mappings}
+        if len(values) == 1:
+            data[slot_name] = values.pop()
     return mapping.model_validate(data)
 
 

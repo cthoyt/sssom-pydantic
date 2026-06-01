@@ -212,7 +212,9 @@ def merge(
     if merge_manual:
         mappings = pr.merge_manual(mappings, converter=converter)
 
-    sssom_pydantic.write(mappings, output or sys.stdout, converter=converter, metadata=metadata)
+    sssom_pydantic.write(
+        mappings, output or sys.stdout, converter=converter, metadata=metadata, sort=True
+    )
 
 
 if __name__ == "__main__":
