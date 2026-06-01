@@ -158,12 +158,20 @@ def get_owl_bridge_axioms(
 
 DEFAULTS: dict[Reference, DeclarationType] = {
     v.exact_match: "Class",
+    v.broad_match: "Class",
+    v.narrow_match: "Class",
+    v.equivalent_class: "Class",
+    v.equivalent_property: "ObjectProperty",
+    v.subproperty_of: "ObjectProperty",
+    v.is_a: "Class",
+    v.rdf_type: "NamedIndividual",
+    v.same_as: "NamedIndividual",
 }
 
 
 def _type_to_declaration_type(t: Reference | None, p: Reference) -> DeclarationType:
     if t is None:
-        return DEFAULTS[p]
+        return DEFAULTS.get(p, "Class")
     return "Class"
 
 

@@ -20,6 +20,16 @@ A = NamableReference.from_curie("a:1")
 B = NamableReference.from_curie("b:1")
 
 
+def _mapping(predicate: NamableReference, **kwargs: Any) -> SemanticMapping:
+    return SemanticMapping(
+        subject=A,
+        predicate=predicate,
+        object=B,
+        justification=v.unspecified_matching_process,
+        **kwargs,
+    )
+
+
 def _sc_mapping(
     child: NamableReference, parent: NamableReference, **kwargs: Any
 ) -> SemanticMapping:
@@ -54,6 +64,10 @@ cases: list[tuple[Axiom | None, SemanticMapping]] = [
         f.SameIndividual([A, B]),
         SemanticMapping.exact(A, B, subject_type=v.owl_named_individual),
     ),
+    (
+        None,
+        SemanticMapping.exact(A, B, subject_type=v.composed_entity_expression),
+    ),
     # exact match + NOT
     (
         f.DisjointClasses([A, B]),
@@ -74,6 +88,12 @@ cases: list[tuple[Axiom | None, SemanticMapping]] = [
     (
         f.DifferentIndividuals([A, B]),
         SemanticMapping.exact(A, B, subject_type=v.owl_named_individual, predicate_modifier=NOT),
+    ),
+    (
+        None,
+        SemanticMapping.exact(
+            A, B, subject_type=v.composed_entity_expression, predicate_modifier=NOT
+        ),
     ),
     # broad match + no NOT
     (
@@ -100,59 +120,66 @@ cases: list[tuple[Axiom | None, SemanticMapping]] = [
         f.ClassAssertion(A, B),
         _sc_mapping(A, B, subject_type=v.owl_named_individual, object_type=v.owl_class),
     ),
-    # direct OWL relation usage
-    (
-        f.SubClassOf(A, B),
-        SemanticMapping(
-            subject=A, predicate=v.is_a, object=B, justification=v.unspecified_matching_process
-        ),
-    ),
-    (
-        f.ClassAssertion(B, A),
-        SemanticMapping(
-            subject=A, predicate=v.rdf_type, object=B, justification=v.unspecified_matching_process
-        ),
-    ),
-    (
-        f.EquivalentClasses([A, B]),
-        SemanticMapping(
-            subject=A,
-            predicate=v.equivalent_class,
-            object=B,
-            justification=v.unspecified_matching_process,
-        ),
-    ),
-    (
-        f.DisjointClasses([A, B]),
-        SemanticMapping(
-            subject=A,
-            predicate=v.equivalent_class,
-            object=B,
-            justification=v.unspecified_matching_process,
-            predicate_modifier=NOT,
-        ),
-    ),
-    (
-        f.SameIndividual([A, B]),
-        SemanticMapping(
-            subject=A, predicate=v.same_as, object=B, justification=v.unspecified_matching_process
-        ),
-    ),
-    (
-        f.DifferentIndividuals([A, B]),
-        SemanticMapping(
-            subject=A,
-            predicate=v.same_as,
-            object=B,
-            justification=v.unspecified_matching_process,
-            predicate_modifier=NOT,
-        ),
-    ),
     (
         None,
-        SemanticMapping(
-            subject=A, predicate=v.part_of, object=B, justification=v.unspecified_matching_process
+        _sc_mapping(A, B, subject_type=v.composite_matching_process),
+    ),
+    # direct OWL relation usage
+    (f.SubClassOf(A, B), _mapping(v.is_a)),
+    (f.ClassAssertion(B, A), _mapping(v.rdf_type)),
+    (f.EquivalentClasses([A, B]), _mapping(v.equivalent_class)),
+    (f.DisjointClasses([A, B]), _mapping(v.equivalent_class).negate()),
+    (f.SameIndividual([A, B]), _mapping(v.same_as)),
+    (f.DifferentIndividuals([A, B]), _mapping(v.same_as).negate()),
+    (None, _mapping(v.part_of)),
+    (f.EquivalentObjectProperties([A, B]), _mapping(v.equivalent_property)),
+    (
+        f.EquivalentObjectProperties([A, B]),
+        _mapping(
+            v.equivalent_property,
+            subject_type=v.owl_object_property,
         ),
+    ),
+    (
+        f.EquivalentDataProperties([A, B]),
+        _mapping(
+            v.equivalent_property,
+            subject_type=v.owl_data_property,
+        ),
+    ),
+    (
+        None,  # no concept of equivalent annotation property
+        _mapping(
+            v.equivalent_property,
+            subject_type=v.owl_annotation_property,
+        ),
+    ),
+    (
+        f.DisjointObjectProperties([A, B]),
+        _mapping(v.equivalent_property).negate(),
+    ),
+    (
+        f.DisjointObjectProperties([A, B]),
+        _mapping(v.equivalent_property, subject_type=v.owl_object_property).negate(),
+    ),
+    (
+        f.DisjointDataProperties([A, B]),
+        _mapping(v.equivalent_property, subject_type=v.owl_data_property).negate(),
+    ),
+    (
+        None,  # no concept of disjoint annotation property
+        _mapping(
+            v.equivalent_property,
+            subject_type=v.owl_annotation_property,
+        ).negate(),
+    ),
+    (f.SubObjectPropertyOf(A, B), _mapping(v.subproperty_of)),
+    (f.SubObjectPropertyOf(A, B), _mapping(v.subproperty_of, subject_type=v.owl_object_property)),
+    (f.SubDataPropertyOf(A, B), _mapping(v.subproperty_of, subject_type=v.owl_data_property)),
+    (None, _mapping(v.subproperty_of, subject_type=v.owl_class)),
+    (
+        f.SubAnnotationPropertyOf(A, B),
+        _mapping(v.subproperty_of, subject_type=v.owl_annotation_property),
     ),
 ]
 
