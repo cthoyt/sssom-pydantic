@@ -88,7 +88,7 @@ $ sssom_pydantic merge \
    --input https://github.com/nfdi-de/section-metadata-wg-onto/raw/refs/heads/main/sssom/data/positive.sssom.tsv \
    --standardize \
    --merge-manual \
-   --iri https://example.org/merged.sssom.tsv \
+   --mapping-set-id https://example.org/merged.sssom.tsv \
    --output merged.sssom.tsv
 ```
 

@@ -173,7 +173,7 @@ def _default_iri() -> str:
     type=Path,
     help="Path to a local file to output. If not given, will write to STDOUT",
 )
-@click.option("--iri", default=_default_iri, help="The ID for the merged mapping set")
+@click.option("--mapping-set-id", default=_default_iri, help="The ID for the merged mapping set")
 @click.option("--merge-manual", is_flag=True)
 @STANDARDIZE_FLAG
 def merge(
@@ -181,7 +181,7 @@ def merge(
     output: Path | None,
     merge_manual: bool,
     standardize: bool,
-    iri: str,
+    mapping_set_id: str,
 ) -> None:
     """Merge SSSOM documents."""
     import itertools as itt
@@ -197,7 +197,7 @@ def merge(
 
     parts = [sssom_pydantic.read(path) for path in input]
     metadata = MappingSet(
-        id=AnyUrl(iri),
+        id=AnyUrl(mapping_set_id),
         title="Merged Mapping Sets",
         source=[part.mapping_set.id for part in parts],
     )
