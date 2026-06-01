@@ -1,5 +1,6 @@
 """Command line interface for :mod:`sssom_pydantic`."""
 
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Literal
 
@@ -151,6 +152,69 @@ def subset(
         )
 
     sssom_pydantic.write(mappings, output or sys.stdout, converter=converter, metadata=metadata)
+
+
+def _default_iri() -> str:
+    import uuid
+
+    return f"https://example.org/{uuid.uuid4()}.sssom.tsv"
+
+
+@main.command()
+@click.option(
+    "-i",
+    "--input",
+    multiple=True,
+    help="Path to a local file or URL to a remote file. If not given, will get input from STDIN",
+)
+@click.option(
+    "-o",
+    "--output",
+    type=Path,
+    help="Path to a local file to output. If not given, will write to STDOUT",
+)
+@click.option("--mapping-set-id", default=_default_iri, help="The ID for the merged mapping set")
+@click.option("--merge-manual", is_flag=True)
+@STANDARDIZE_FLAG
+def merge(
+    input: Iterable[Path],
+    output: Path | None,
+    merge_manual: bool,
+    standardize: bool,
+    mapping_set_id: str,
+) -> None:
+    """Merge SSSOM documents."""
+    import itertools as itt
+    import sys
+
+    import curies
+    from pydantic import AnyUrl
+
+    import sssom_pydantic
+    from sssom_pydantic import MappingSet, SemanticMapping, standardize_mappings
+    from sssom_pydantic import process as pr
+    from sssom_pydantic.api import _get_preferred_converter
+
+    parts = [sssom_pydantic.read(path) for path in input]
+    metadata = MappingSet(
+        id=AnyUrl(mapping_set_id),
+        title="Merged Mapping Sets",
+        source=[part.mapping_set.id for part in parts],
+    )
+
+    converter = curies.chain([part.converter for part in parts])
+    mappings: Iterable[SemanticMapping] = itt.chain.from_iterable(part.mappings for part in parts)
+
+    if standardize:
+        converter = curies.chain([_get_preferred_converter(), converter])
+        mappings = standardize_mappings(mappings, converter=converter)
+
+    if merge_manual:
+        mappings = pr.merge_manual_curations(mappings, converter=converter)
+
+    sssom_pydantic.write(
+        mappings, output or sys.stdout, converter=converter, metadata=metadata, sort=True
+    )
 
 
 if __name__ == "__main__":
