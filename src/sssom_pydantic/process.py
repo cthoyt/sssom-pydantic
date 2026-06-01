@@ -835,7 +835,7 @@ def merge_manual_curations(
     precision: int | None = None,
     confidence_model: ConfidenceModel | None = None,
 ) -> Iterable[MappingTypeVar]:
-    """Merge manually curated mappings.
+    r"""Merge manually curated mappings.
 
     :param mappings: An iterable of semantic mappings
     :param converter: A converter
@@ -843,7 +843,7 @@ def merge_manual_curations(
     :param confidence_model: Which confidence model to use when aggregating mapping
         confidences.
 
-        - mean aggregation is $ rac{1}{n} \sum_{i=1}^n c_i$
+        - mean aggregation is $\frac{1}{n} \sum_{i=1}^n c_i$
         - binomial aggregation is $1 - \prod_{i=1}^n (1 - c_i)$
 
     :returns: An iterable of semantic mappings, with manually curated mappings for the
