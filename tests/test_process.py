@@ -422,6 +422,9 @@ class TestProcess(cases.MappingTestCaseMixin):
         l6 = [_m(confidence=0.99), _m(confidence=0.64)]
         self.assertAlmostEqual(0.815, estimate_confidence(l6, confidence_model="mean"))
         self.assertAlmostEqual(0.9964, estimate_confidence(l6, confidence_model="binomial"))
+        self.assertAlmostEqual(
+            0.996, estimate_confidence(l6, confidence_model="binomial", precision=3)
+        )
 
     def test_confidence(self) -> None:
         """Test confidence."""
@@ -429,6 +432,12 @@ class TestProcess(cases.MappingTestCaseMixin):
         _m(justification=manual, confidence=0.8)
         _m(justification=manual, confidence=0.9, reviewer_agreement=0.9)
         _m(justification=manual, confidence=0.9, reviewer_agreement=0.5)
+
+        mappings = [
+            _m(justification=manual, confidence=0.8, reviewer_agreement=0.6),
+            _m(justification=manual, confidence=0.9),
+        ]
+        self.assertEqual(0.85, estimate_confidence(mappings, precision=3))
 
         for x in range(100):
             i = x / 100
