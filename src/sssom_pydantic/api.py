@@ -920,12 +920,18 @@ def hash_triple(mapping: SemanticMapping, converter: curies.Converter) -> str:
     return converter.hash_triple(mapping, negate=mapping.negated)
 
 
+def _not_has_prefix(converter: curies.Converter, prefix: str) -> bool:
+    return prefix not in converter._prefix_to_record
+
+
 TRIPLE_CURIE_PREFIX = "mapping"
 TRIPLE_URI_PREFIX = "https://w3id.org/sssom/mapping/"
 
 
 def hash_triple_to_reference(mapping: SemanticMapping, converter: curies.Converter) -> Reference:
     """Return a mapping sameness identifier as a reference."""
+    if _not_has_prefix(converter, TRIPLE_HASH_CURIE_PREFIX):
+        converter.add_prefix(TRIPLE_HASH_CURIE_PREFIX, TRIPLE_HASH_URI_PREFIX)
     return Reference(prefix=TRIPLE_CURIE_PREFIX, identifier=hash_triple(mapping, converter))
 
 
