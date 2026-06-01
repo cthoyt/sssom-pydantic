@@ -27,6 +27,18 @@ RELABEL_FLAG = click.option(
     help="Re-label all subjects and objects using PyOBO",
 )
 
+INPUT_OPTION = click.option(
+    "-i",
+    "--input",
+    help="Path to a local file or URL to a remote file. If not given, will get input from STDIN",
+)
+OUTPUT_OPTION = click.option(
+    "-o",
+    "--output",
+    type=Path,
+    help="Path to a local file to output. If not given, will write to STDOUT",
+)
+
 
 @main.command(name="format")
 @click.argument("path", type=Path)
@@ -74,17 +86,8 @@ def web(add_examples: bool, tab: bool, host: str, port: int) -> None:
     help="The prefix that becomes the object of all mappings. If used in combination with "
     "--standardize, will get automatically standardized.",
 )
-@click.option(
-    "-i",
-    "--input",
-    help="Path to a local file or URL to a remote file. If not given, will get input from STDIN",
-)
-@click.option(
-    "-o",
-    "--output",
-    type=Path,
-    help="Path to a local file to output. If not given, will write to STDOUT",
-)
+@INPUT_OPTION
+@OUTPUT_OPTION
 @click.option(
     "--justification-policy",
     is_flag=True,
@@ -167,12 +170,7 @@ def _default_iri() -> str:
     multiple=True,
     help="Path to a local file or URL to a remote file. If not given, will get input from STDIN",
 )
-@click.option(
-    "-o",
-    "--output",
-    type=Path,
-    help="Path to a local file to output. If not given, will write to STDOUT",
-)
+@OUTPUT_OPTION
 @click.option("--mapping-set-id", default=_default_iri, help="The ID for the merged mapping set")
 @click.option("--merge-manual", is_flag=True)
 @STANDARDIZE_FLAG
