@@ -819,5 +819,24 @@ def _so_prefixes(source_prefix: str, object_prefix: str) -> SemanticMappingPredi
     return _func
 
 
+def merge_manual(mappings: Iterable[MappingTypeVar]) -> Iterable[MappingTypeVar]:
+    """Merge manually curated mappings."""
+    index = defaultdict(list)
+    for mapping in mappings:
+        if mapping.justification == manual_mapping_curation:
+            index[mapping.as_str_triple(), mapping.negated].append(mapping)
+        else:
+            yield mapping
+    for mappings in index.values():
+        if len(mappings) == 1:
+            yield mappings[0]
+        else:
+            yield from merge_manual(mappings)
+
+
+def _merge(mappings: list[MappingTypeVar]) -> Iterable[MappingTypeVar]:
+    raise NotImplementedError
+
+
 if __name__ == "__main__":
     plot2d()

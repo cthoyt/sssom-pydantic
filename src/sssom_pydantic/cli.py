@@ -1,5 +1,6 @@
 """Command line interface for :mod:`sssom_pydantic`."""
 
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Literal
 
@@ -153,10 +154,34 @@ def subset(
     sssom_pydantic.write(mappings, output or sys.stdout, converter=converter, metadata=metadata)
 
 
-def merge(paths, output, metadata, **kwargs) -> None:
+@main.command()
+@click.option(
+    "-i",
+    "--input",
+    multiple=True,
+    help="Path to a local file or URL to a remote file. If not given, will get input from STDIN",
+)
+@click.option(
+    "-o",
+    "--output",
+    type=Path,
+    help="Path to a local file to output. If not given, will write to STDOUT",
+)
+@click.option("--metadata")
+@click.option("--merge-manual", is_flag=True)
+def merge(paths: Iterable[Path], output: Path | None, metadata: str, merge_manual: bool) -> None:
+    import sys
+
     import curies
+    from pystow.utils import read_pydantic_yaml
 
     import sssom_pydantic
+    from sssom_pydantic import MappingSet
+
+    if metadata is not None:
+        metadata_x = read_pydantic_yaml(metadata, MappingSet)
+    else:
+        metadata_x = MappingSet(id=...)  # TODO add random ID
 
     parts = [sssom_pydantic.read(path) for path in paths]
     converter = curies.chain([part.converter for part in parts])
@@ -164,7 +189,7 @@ def merge(paths, output, metadata, **kwargs) -> None:
     for part in parts:
         mappings.extend(part.mappings)
 
-    sssom_pydantic.write(mappings, output, converter=converter, metadata=metadata)
+    sssom_pydantic.write(mappings, output or sys.stdout, converter=converter, metadata=metadata_x)
 
 
 if __name__ == "__main__":
