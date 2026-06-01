@@ -461,6 +461,7 @@ def estimate_confidence(
     *,
     confidence_model: ConfidenceModel | None = None,
     check: bool = True,
+    precision: int | None = None,
 ) -> float:
     r"""Estimate the confidence of a subject-predicate-triple based on multiple evidences.
 
@@ -517,7 +518,10 @@ def estimate_confidence(
                     reviewer_agreements.append(1.0)
 
     return _aggregate_confidences(
-        creator_confidences, reviewer_agreements, confidence_model=confidence_model
+        creator_confidences,
+        reviewer_agreements,
+        confidence_model=confidence_model,
+        precision=precision,
     )
 
 
@@ -526,6 +530,7 @@ def _aggregate_confidences(
     reviewer_agreements: list[float],
     *,
     confidence_model: ConfidenceModel | None = None,
+    precision: int | None = None,
 ) -> float:
     match confidence_model:
         case "mean" | None:
@@ -538,11 +543,15 @@ def _aggregate_confidences(
             )
 
     if not reviewer_agreements:
+        if precision:
+            c = round(c, precision)
         return c
 
     direction = statistics.mean(reviewer_agreements)  # R
     strength = statistics.mean(abs(a) for a in reviewer_agreements)  # W
     rv = (1 - strength) * c + strength * (1 + direction) / 2
+    if precision:
+        rv = round(rv, precision)
     return rv
 
 
