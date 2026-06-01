@@ -154,6 +154,12 @@ def subset(
     sssom_pydantic.write(mappings, output or sys.stdout, converter=converter, metadata=metadata)
 
 
+def _default_iri() -> str:
+    import uuid
+
+    return f"https://example.org/{uuid.uuid4()}.sssom.tsv"
+
+
 @main.command()
 @click.option(
     "-i",
@@ -167,7 +173,7 @@ def subset(
     type=Path,
     help="Path to a local file to output. If not given, will write to STDOUT",
 )
-@click.option("--iri")
+@click.option("--iri", default=_default_iri, help="The ID for the merged mapping set")
 @click.option("--merge-manual", is_flag=True)
 @STANDARDIZE_FLAG
 def merge(
@@ -175,12 +181,11 @@ def merge(
     output: Path | None,
     merge_manual: bool,
     standardize: bool,
-    iri: str | None,
+    iri: str,
 ) -> None:
     """Merge SSSOM documents."""
     import itertools as itt
     import sys
-    import uuid
 
     import curies
     from pydantic import AnyUrl
@@ -190,14 +195,9 @@ def merge(
     from sssom_pydantic import process as pr
     from sssom_pydantic.api import _get_preferred_converter
 
-    parts = []
-    for path in input:
-        click.echo(f"reading {path}")
-        part = sssom_pydantic.read(path)
-        parts.append(part)
-
+    parts = [sssom_pydantic.read(path) for path in input]
     metadata = MappingSet(
-        id=AnyUrl(iri or f"https://example.org/{uuid.uuid4()}.sssom.tsv"),
+        id=AnyUrl(iri),
         title="Merged Mapping Sets",
         source=[part.mapping_set.id for part in parts],
     )
