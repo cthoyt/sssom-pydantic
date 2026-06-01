@@ -157,6 +157,53 @@ def subset(
     sssom_pydantic.write(mappings, output or sys.stdout, converter=converter, metadata=metadata)
 
 
+@main.command()
+@INPUT_OPTION
+@OUTPUT_OPTION
+@click.option(
+    "--cutoff",
+    type=float,
+    help="Minimum confidence cutoff. Mappings w/o confidence are assumed to have 1.0 confidence",
+)
+@click.option(
+    "-a",
+    "--mapping-annotations",
+    is_flag=True,
+    help="If set, propagates annotations from mappings into bridge",
+)
+@click.option(
+    "-d",
+    "--declarations",
+    is_flag=True,
+    help="If set, adds declarations (and labels, when available)",
+)
+def bridge(
+    input: Path | None,
+    output: Path | None,
+    cutoff: float,
+    mapping_annotations: bool,
+    declarations: bool,
+) -> None:
+    """Write OWL bridge axioms in Functional OWL (OFN)."""
+    import sys
+
+    import sssom_pydantic
+    from sssom_pydantic.contrib.owl_bridge import write_owl_bridge
+
+    mappings, converter, metadata = sssom_pydantic.read(input or sys.stdin)
+
+    write_owl_bridge(
+        mappings,
+        output or sys.stdout,
+        converter=converter,
+        metadata=metadata,
+        iri=str(metadata.id),
+        minimum_confidence=cutoff,
+        mapping_annotations=mapping_annotations,
+        declarations=declarations,
+    )
+
+
 def _default_iri() -> str:
     import uuid
 
