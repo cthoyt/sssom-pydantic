@@ -119,6 +119,7 @@ def subset(
     import sssom_pydantic
     from sssom_pydantic import standardize_mappings
     from sssom_pydantic.api import _get_preferred_converter
+    from sssom_pydantic.io import print_errors
     from sssom_pydantic.process import (
         exclude_negative,
         exclude_unsure,
@@ -126,7 +127,12 @@ def subset(
         invert_by_prefix_pair,
     )
 
-    mappings_list, converter, metadata = sssom_pydantic.read(input or sys.stdin)
+    mappings_list, converter, metadata, errors = sssom_pydantic.read(
+        input or sys.stdin, return_errors=True
+    )
+    if errors:
+        print_errors(errors)
+        raise sys.exit(1)
 
     mappings = exclude_negative(mappings_list)
     mappings = exclude_unsure(mappings)

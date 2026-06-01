@@ -59,6 +59,7 @@ __all__ = [
     "append_unprocessed",
     "format",
     "lint",
+    "print_errors",
     "read",
     "read_iterable",
     "read_unprocessed",
@@ -98,6 +99,14 @@ def _get_exc(exc: Exception) -> str:
     traceback.print_exception(exc, file=file)
     file.seek(0)
     return file.read()
+
+
+def print_errors(errors: list[ParseError], verbose: bool = False) -> None:
+    """Write errors."""
+    for error in errors:
+        msg = f"[{error.line_number}; {error.stage}]: {type(error.exception).__name__}: "
+        msg += error.format_exception() if verbose else str(error.exception)
+        tqdm.write(msg)
 
 
 def _safe_dump_mapping_set(m: Metadata | MappingSet | MappingSetRecord) -> Metadata:
