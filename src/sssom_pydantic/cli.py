@@ -31,11 +31,8 @@ RELABEL_FLAG = click.option(
 @click.argument("path", type=Path)
 @STANDARDIZE_FLAG
 @RELABEL_FLAG
-@click.option("--strict", is_flag=True)
 @click.option("--drop-duplicates", is_flag=True)
-def format_sssom_tsv(
-    path: Path, standardize: bool, relabel: bool, drop_duplicates: bool, strict: bool
-) -> None:
+def format_sssom_tsv(path: Path, standardize: bool, relabel: bool, drop_duplicates: bool) -> None:
     """Lint a SSSOM TSV file."""
     import sssom_pydantic
 
@@ -44,7 +41,7 @@ def format_sssom_tsv(
         standardize=standardize,
         relabel=relabel,
         drop_duplicates=drop_duplicates,
-        strict=strict,
+        strict=True,
     )
 
 
