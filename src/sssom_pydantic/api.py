@@ -15,6 +15,7 @@ from curies.vocabulary import (
     broad_match,
     exact_match,
     matching_processes,
+    narrow_match,
     unspecified_matching_process,
 )
 from pydantic import AnyUrl, BaseModel, BeforeValidator, ConfigDict, Field
@@ -296,12 +297,24 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
 
         :returns: A semantic mapping
         """
-        return cls.from_triple(
-            subject=subject,
-            predicate=broad_match,
-            object=object,
-            **kwargs,
-        )
+        return cls.from_triple(subject=subject, predicate=broad_match, object=object, **kwargs)
+
+    @classmethod
+    def narrow(
+        cls,
+        subject: str | Reference,
+        object: str | Reference,
+        **kwargs: Any,
+    ) -> Self:
+        """Construct a ``skos:narrowMatch`` mapping from a subject-object pair.
+
+        :param subject: The subject of the mapping triple.
+        :param object: The object of the mapping triple.
+        :param kwargs: Additional fields to pass to the constructor
+
+        :returns: A semantic mapping
+        """
+        return cls.from_triple(subject=subject, predicate=narrow_match, object=object, **kwargs)
 
     @property
     def negated(self) -> bool:
