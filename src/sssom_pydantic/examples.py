@@ -21,6 +21,8 @@ from pydantic import BaseModel
 from sssom_pydantic.api import (
     MAPPING_HASH_CURIE_PREFIX,
     MAPPING_HASH_URI_PREFIX,
+    TRIPLE_HASH_CURIE_PREFIX,
+    TRIPLE_HASH_URI_PREFIX,
     MappingTool,
     SemanticMapping,
     hash_mapping_to_reference,
@@ -70,7 +72,7 @@ TEST_PREFIX_MAP = {
     "rule": "https://example.org/disease-rule/",
     "bioregistry": "https://bioregistry.io/",
     "orcid": "https://orcid.org/",
-    "mapping": "https://w3id.org/mapping/",
+    TRIPLE_HASH_CURIE_PREFIX: TRIPLE_HASH_URI_PREFIX,
     "oboInOwl": "http://www.geneontology.org/formats/oboInOwl#",
     "wikidata": "http://www.wikidata.org/entity/",
 }
