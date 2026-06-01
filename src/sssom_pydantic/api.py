@@ -11,7 +11,12 @@ from typing import Annotated, Any, Literal, TypeAlias
 import curies
 from curies import NamableReference, Reference, Triple
 from curies.mixins import SemanticallyStandardizable
-from curies.vocabulary import exact_match, matching_processes, unspecified_matching_process
+from curies.vocabulary import (
+    broad_match,
+    exact_match,
+    matching_processes,
+    unspecified_matching_process,
+)
 from pydantic import AnyUrl, BaseModel, BeforeValidator, ConfigDict, Field
 from typing_extensions import Self, TypeVar
 
@@ -273,6 +278,28 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
             predicate=exact_match,
             object=object,
             justification=justification,
+            **kwargs,
+        )
+
+    @classmethod
+    def broad(
+        cls,
+        subject: str | Reference,
+        object: str | Reference,
+        **kwargs: Any,
+    ) -> Self:
+        """Construct a ``skos:broadMatch`` mapping from a subject-object pair.
+
+        :param subject: The subject of the mapping triple.
+        :param object: The object of the mapping triple.
+        :param kwargs: Additional fields to pass to the constructor
+
+        :returns: A semantic mapping
+        """
+        return cls.from_triple(
+            subject=subject,
+            predicate=broad_match,
+            object=object,
             **kwargs,
         )
 
