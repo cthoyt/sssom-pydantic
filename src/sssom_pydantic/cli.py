@@ -170,13 +170,16 @@ def subset(
 @click.option("--metadata")
 @click.option("--merge-manual", is_flag=True)
 def merge(paths: Iterable[Path], output: Path | None, metadata: str, merge_manual: bool) -> None:
+    """Merge SSSOM documents."""
+    import itertools as itt
     import sys
 
     import curies
     from pystow.utils import read_pydantic_yaml
 
     import sssom_pydantic
-    from sssom_pydantic import MappingSet
+    from sssom_pydantic import MappingSet, SemanticMapping
+    from sssom_pydantic import process as pr
 
     if metadata is not None:
         metadata_x = read_pydantic_yaml(metadata, MappingSet)
@@ -185,9 +188,9 @@ def merge(paths: Iterable[Path], output: Path | None, metadata: str, merge_manua
 
     parts = [sssom_pydantic.read(path) for path in paths]
     converter = curies.chain([part.converter for part in parts])
-    mappings = []
-    for part in parts:
-        mappings.extend(part.mappings)
+    mappings: Iterable[SemanticMapping] = itt.chain.from_iterable(part.mappings for part in parts)
+    if merge_manual:
+        mappings = pr.merge_manual(mappings, converter=converter)
 
     sssom_pydantic.write(mappings, output or sys.stdout, converter=converter, metadata=metadata_x)
 

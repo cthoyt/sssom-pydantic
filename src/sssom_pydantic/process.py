@@ -543,6 +543,8 @@ def _aggregate_confidences(
             )
 
     if not reviewer_agreements:
+        if precision:
+            c = round(c, precision)
         return c
 
     direction = statistics.mean(reviewer_agreements)  # R
@@ -830,17 +832,17 @@ def merge_manual(
     mappings: Iterable[MappingTypeVar], *, converter: curies.Converter
 ) -> Iterable[MappingTypeVar]:
     """Merge manually curated mappings."""
-    index = defaultdict(list)
+    manual_curated_index = defaultdict(list)
     for mapping in mappings:
         if mapping.justification == manual_mapping_curation:
-            index[mapping.as_str_triple(), mapping.negated].append(mapping)
+            manual_curated_index[mapping.as_str_triple()].append(mapping)
         else:
             yield mapping
-    for mappings in index.values():
-        if len(mappings) == 1:
-            yield mappings[0]
+    for mm in manual_curated_index.values():
+        if len(mm) == 1:
+            yield mm[0]
         else:
-            yield from merge_manual(mappings, converter=converter)
+            yield from merge_manual(mm, converter=converter)
 
 
 def _merge(

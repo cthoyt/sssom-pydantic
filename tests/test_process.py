@@ -644,13 +644,13 @@ class TestMergeManual(cases.MappingTestCaseMixin):
         """Test merging manually curated mappings."""
         ambika = NamedReference.from_curie("orcid:0009-0009-1663-1003", name="Ambika Gupta ")
         mappings = [
-            _m(author=[charlie], confidence=0.9),
-            _m(author=[ambika], confidence=0.8, comment="something"),
+            _m(authors=[charlie], confidence=0.9),
+            _m(authors=[ambika], confidence=0.8, comment="something"),
         ]
         expected = _m(
-            author=[charlie, ambika],
+            authors=[charlie, ambika],
             confidence=0.85,
             derived_from=[hash_triple_to_reference(m, TEST_CONVERTER) for m in mappings],
         )
-        res = pr._merge(mappings, converter=TEST_CONVERTER, precision=3)
+        res = pr._merge(mappings, converter=TEST_CONVERTER, precision=4)
         self.assert_model_equal(expected, res)
