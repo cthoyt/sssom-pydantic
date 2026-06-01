@@ -774,6 +774,9 @@ class ExtensionDefinition(BaseModel):
 MAPPING_HASH_CURIE_PREFIX = "sssom.record"
 MAPPING_HASH_URI_PREFIX = "https://w3id.org/sssom/record/"
 
+TRIPLE_HASH_CURIE_PREFIX = "mapping"
+TRIPLE_HASH_URI_PREFIX = "https://w3id.org/mapping/"
+
 
 def hash_mapping_to_reference(mapping: SemanticMapping, converter: curies.Converter) -> Reference:
     """Hash a mapping into a reference."""
