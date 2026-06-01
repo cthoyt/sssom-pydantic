@@ -829,7 +829,11 @@ def _so_prefixes(source_prefix: str, object_prefix: str) -> SemanticMappingPredi
 
 
 def merge_manual(
-    mappings: Iterable[MappingTypeVar], *, converter: curies.Converter
+    mappings: Iterable[MappingTypeVar],
+    *,
+    converter: curies.Converter,
+    precision: int | None = None,
+    confidence_model: ConfidenceModel | None = None,
 ) -> Iterable[MappingTypeVar]:
     """Merge manually curated mappings."""
     manual_curated_index = defaultdict(list)
@@ -842,21 +846,34 @@ def merge_manual(
         if len(mm) == 1:
             yield mm[0]
         else:
-            yield from merge_manual(mm, converter=converter)
+            yield from merge_manual(
+                mm, converter=converter, precision=precision, confidence_model=confidence_model
+            )
 
 
 def _merge(
-    mappings: list[MappingTypeVar], *, converter: curies.Converter, precision: int | None = None
+    mappings: list[MappingTypeVar],
+    *,
+    converter: curies.Converter,
+    precision: int | None = None,
+    confidence_model: ConfidenceModel | None = None,
 ) -> MappingTypeVar:
-    authors = {author for m in mappings for author in m.authors or []}
-    confidence = estimate_confidence(mappings, precision=precision)
-    update = {
+    """Merge manually curated mappings with the same s-p-o triple."""
+    authors = {author for mapping in mappings for author in mapping.authors or []}
+    confidence = estimate_confidence(
+        mappings, precision=precision, check=False, confidence_model=confidence_model
+    )
+    mapping = mappings[0]
+    data = {
+        "subject": mapping.subject,
+        "predicate": mapping.predicate,
+        "object": mapping.object,
+        "justification": mapping.justification,  # will always be manual curation, by construction
         "authors": sorted(authors),
         "confidence": confidence,
         "derived_from": [hash_triple_to_reference(mapping, converter) for mapping in mappings],
-        # everything else to none?
     }
-    return mappings[0].model_copy(update=update)
+    return mapping.model_validate(data)
 
 
 if __name__ == "__main__":
