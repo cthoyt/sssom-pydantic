@@ -148,7 +148,7 @@ def get_owl_bridge_axioms(
             if m.authors:
                 authors.update(m.authors)
             yield axiom
-    if declarations:
+    if mapping_annotations and authors:
         yield f.Declaration(HUMAN_URI, "Class")
         yield f.LabelMacro(HUMAN_URI, "human")
         for author in authors:
