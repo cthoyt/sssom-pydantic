@@ -210,7 +210,7 @@ def merge(
         mappings = standardize_mappings(mappings, converter=converter)
 
     if merge_manual:
-        mappings = pr.merge_manual(mappings, converter=converter)
+        mappings = pr.merge_manual_curations(mappings, converter=converter)
 
     sssom_pydantic.write(
         mappings, output or sys.stdout, converter=converter, metadata=metadata, sort=True

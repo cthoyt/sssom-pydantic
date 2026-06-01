@@ -692,7 +692,7 @@ class TestMergeManual(cases.MappingTestCaseMixin):
                 R5, R6, justification=manual_mapping_curation
             ),  # wrong justification
         ]
-        actual = pr.merge_manual(mappings, converter=TEST_CONVERTER, precision=3)
+        actual = pr.merge_manual_curations(mappings, converter=TEST_CONVERTER, precision=3)
         expected = [
             _m(justification=lexical_matching_process, confidence=0.3),
             SemanticMapping.exact(R3, R4),

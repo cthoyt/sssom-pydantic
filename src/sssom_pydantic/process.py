@@ -828,14 +828,32 @@ def _so_prefixes(source_prefix: str, object_prefix: str) -> SemanticMappingPredi
     return _func
 
 
-def merge_manual(
+def merge_manual_curations(
     mappings: Iterable[MappingTypeVar],
     *,
     converter: curies.Converter,
     precision: int | None = None,
     confidence_model: ConfidenceModel | None = None,
 ) -> Iterable[MappingTypeVar]:
-    """Merge manually curated mappings."""
+    """Merge manually curated mappings.
+
+    :param mappings: An iterable of semantic mappings
+    :param converter: A converter
+    :param precision: the precision to round newly calculated confidences
+    :param confidence_model: Which confidence model to use when aggregating mapping
+        confidences.
+
+        - mean aggregation is $ rac{1}{n} \sum_{i=1}^n c_i$
+        - binomial aggregation is $1 - \prod_{i=1}^n (1 - c_i)$
+
+    :returns: An iterable of semantic mappings, with manually curated mappings for the
+        same mapping triple merged together based on :func:`estimate_confidence`
+
+    .. note::
+
+        The confidence estimation algorithm properly handles negative predicate
+        modifiers as well as reviewer information.
+    """
     manual_curated_index = defaultdict(list)
     for mapping in mappings:
         if mapping.justification == manual_mapping_curation:
