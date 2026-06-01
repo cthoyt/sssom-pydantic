@@ -880,8 +880,8 @@ def _merge(
     # look for matching fields
     for slot_name in ["subject_source", "object_source"]:
         values = {getattr(mapping, slot_name) for mapping in mappings}
-        if len(values) == 1:
-            data[slot_name] = values.pop()
+        if len(values) == 1 and (value := values.pop()) is not None:
+            data[slot_name] = value
     return mapping.model_validate(data)
 
 

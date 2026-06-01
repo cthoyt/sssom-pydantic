@@ -133,11 +133,19 @@ class MappingTestCaseMixin(unittest.TestCase):
         )
 
     def assert_model_sequence_equal(
-        self, expected: Iterable[SemanticMapping], actual: Iterable[SemanticMapping] | None
+        self,
+        expected: Iterable[SemanticMapping],
+        actual: Iterable[SemanticMapping] | None,
+        *,
+        sort: bool = False,
+        msg: str | None = None,
     ) -> None:
         """Assert two model sequences are equal."""
         if actual is None:
             raise self.fail()
+        if sort:
+            expected = sorted(expected)
+            actual = sorted(actual)
         return self.assertEqual(
             [
                 expected_mapping.model_dump(
@@ -155,6 +163,7 @@ class MappingTestCaseMixin(unittest.TestCase):
                 )
                 for actual_mapping in actual
             ],
+            msg=msg,
         )
 
 

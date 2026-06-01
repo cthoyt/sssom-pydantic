@@ -23,7 +23,7 @@ from curies.vocabulary import (
 from sssom_pydantic import SemanticMapping, hash_triple_to_reference
 from sssom_pydantic import process as pr
 from sssom_pydantic.api import NOT
-from sssom_pydantic.examples import TEST_CONVERTER
+from sssom_pydantic.examples import R3, R4, R5, R6, TEST_CONVERTER
 from sssom_pydantic.process import (
     InvalidExistsActionError,
     Mark,
@@ -646,12 +646,14 @@ class TestProcess(cases.MappingTestCaseMixin):
         )
 
 
+ambika = NamedReference.from_curie("orcid:0009-0009-1663-1003", name="Ambika Gupta ")
+
+
 class TestMergeManual(cases.MappingTestCaseMixin):
     """Test merging manually curated things."""
 
-    def test_1(self) -> None:
+    def test_merge_utility(self) -> None:
         """Test merging manually curated mappings."""
-        ambika = NamedReference.from_curie("orcid:0009-0009-1663-1003", name="Ambika Gupta ")
         mappings = [
             _m(authors=[charlie], confidence=0.9),
             _m(authors=[ambika], confidence=0.8, comment="something"),
@@ -663,3 +665,47 @@ class TestMergeManual(cases.MappingTestCaseMixin):
         )
         res = pr._merge(mappings, converter=TEST_CONVERTER, precision=4)
         self.assert_model_equal(expected, res)
+
+    def test_full(self) -> None:
+        """Test full workflow."""
+        a = _m(
+            authors=[charlie],
+            justification=manual_mapping_curation,
+            confidence=0.9,
+            subject_source="obo:mesh",
+        )
+        b = _m(
+            authors=[ambika],
+            justification=manual_mapping_curation,
+            confidence=0.8,
+            comment="something",
+            subject_source="obo:mesh",
+        )
+
+        mappings = [
+            # the first _m with lexical won't get counted
+            _m(justification=lexical_matching_process, confidence=0.3),
+            a,
+            b,
+            SemanticMapping.exact(R3, R4),  # wrong justification
+            SemanticMapping.exact(
+                R5, R6, justification=manual_mapping_curation
+            ),  # wrong justification
+        ]
+        actual = pr.merge_manual(mappings, converter=TEST_CONVERTER, precision=3)
+        expected = [
+            _m(justification=lexical_matching_process, confidence=0.3),
+            SemanticMapping.exact(R3, R4),
+            SemanticMapping.exact(R5, R6, justification=manual_mapping_curation),
+            _m(
+                authors=[charlie, ambika],
+                justification=manual_mapping_curation,
+                confidence=0.85,
+                derived_from=[
+                    hash_triple_to_reference(a, TEST_CONVERTER),
+                    hash_triple_to_reference(b, TEST_CONVERTER),
+                ],
+                subject_source="obo:mesh",
+            ),
+        ]
+        self.assert_model_sequence_equal(expected, actual, sort=True)
