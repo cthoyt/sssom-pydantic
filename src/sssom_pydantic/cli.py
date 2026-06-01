@@ -189,14 +189,8 @@ def bridge(
 
     import sssom_pydantic
     from sssom_pydantic.contrib.owl_bridge import write_owl_bridge
-    from sssom_pydantic.io import print_errors
 
-    mappings, converter, metadata, errors = sssom_pydantic.read(
-        input or sys.stdin, return_errors=True
-    )
-    if errors:
-        print_errors(errors)
-        raise sys.exit(1)
+    mappings, converter, metadata = sssom_pydantic.read(input or sys.stdin)
 
     write_owl_bridge(
         mappings,
