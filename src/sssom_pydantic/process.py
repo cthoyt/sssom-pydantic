@@ -47,6 +47,7 @@ __all__ = [
     "invert_by_object_prefix",
     "invert_by_prefix_pair",
     "invert_by_subject_prefix",
+    "merge_manual_curations",
     "publish",
     "remove_redundant_external",
     "remove_redundant_internal",
