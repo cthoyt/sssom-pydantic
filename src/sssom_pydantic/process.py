@@ -854,6 +854,11 @@ def merge_manual_curations(
 
         The confidence estimation algorithm properly handles negative predicate
         modifiers as well as reviewer information.
+
+    .. warning::
+
+        This function partially scrambles the order of mappings. All non-merged mappings
+        come out in normal order, followed by merged mappings.
     """
     manual_curated_index = defaultdict(list)
     for mapping in mappings:
