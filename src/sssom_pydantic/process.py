@@ -42,6 +42,7 @@ __all__ = [
     "estimate_confidence",
     "exclude_negative",
     "exclude_unsure",
+    "filter_by_confidence",
     "get_canonical_tuple",
     "invert",
     "invert_by_object_prefix",
