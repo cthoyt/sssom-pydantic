@@ -461,6 +461,7 @@ def estimate_confidence(
     *,
     confidence_model: ConfidenceModel | None = None,
     check: bool = True,
+    precision: int | None = None,
 ) -> float:
     r"""Estimate the confidence of a subject-predicate-triple based on multiple evidences.
 
@@ -517,7 +518,10 @@ def estimate_confidence(
                     reviewer_agreements.append(1.0)
 
     return _aggregate_confidences(
-        creator_confidences, reviewer_agreements, confidence_model=confidence_model
+        creator_confidences,
+        reviewer_agreements,
+        confidence_model=confidence_model,
+        precision=precision,
     )
 
 
@@ -526,6 +530,7 @@ def _aggregate_confidences(
     reviewer_agreements: list[float],
     *,
     confidence_model: ConfidenceModel | None = None,
+    precision: int | None = None,
 ) -> float:
     match confidence_model:
         case "mean" | None:
@@ -543,6 +548,8 @@ def _aggregate_confidences(
     direction = statistics.mean(reviewer_agreements)  # R
     strength = statistics.mean(abs(a) for a in reviewer_agreements)  # W
     rv = (1 - strength) * c + strength * (1 + direction) / 2
+    if precision:
+        rv = round(rv, precision)
     return rv
 
 
@@ -819,7 +826,9 @@ def _so_prefixes(source_prefix: str, object_prefix: str) -> SemanticMappingPredi
     return _func
 
 
-def merge_manual(mappings: Iterable[MappingTypeVar]) -> Iterable[MappingTypeVar]:
+def merge_manual(
+    mappings: Iterable[MappingTypeVar], *, converter: curies.Converter
+) -> Iterable[MappingTypeVar]:
     """Merge manually curated mappings."""
     index = defaultdict(list)
     for mapping in mappings:
@@ -831,11 +840,21 @@ def merge_manual(mappings: Iterable[MappingTypeVar]) -> Iterable[MappingTypeVar]
         if len(mappings) == 1:
             yield mappings[0]
         else:
-            yield from merge_manual(mappings)
+            yield from merge_manual(mappings, converter=converter)
 
 
-def _merge(mappings: list[MappingTypeVar]) -> Iterable[MappingTypeVar]:
-    raise NotImplementedError
+def _merge(
+    mappings: list[MappingTypeVar], *, converter: curies.Converter, precision: int | None = None
+) -> MappingTypeVar:
+    authors = {author for m in mappings for author in m.authors or []}
+    confidence = estimate_confidence(mappings, precision=precision)
+    update = {
+        "authors": sorted(authors),
+        "confidence": confidence,
+        "derived_from": [hash_triple_to_reference(mapping, converter) for mapping in mappings],
+        # everything else to none?
+    }
+    return mappings[0].model_copy(update=update)
 
 
 if __name__ == "__main__":
