@@ -32,7 +32,7 @@ def _sc_mapping(
     )
 
 
-cases: list[tuple[Axiom, SemanticMapping]] = [
+cases: list[tuple[Axiom | None, SemanticMapping]] = [
     # exact match + no NOT
     (
         f.EquivalentClasses([A, B]),
@@ -101,6 +101,59 @@ cases: list[tuple[Axiom, SemanticMapping]] = [
         _sc_mapping(A, B, subject_type=v.owl_named_individual, object_type=v.owl_class),
     ),
     # direct OWL relation usage
+    (
+        f.SubClassOf(A, B),
+        SemanticMapping(
+            subject=A, predicate=v.is_a, object=B, justification=v.unspecified_matching_process
+        ),
+    ),
+    (
+        f.ClassAssertion(B, A),
+        SemanticMapping(
+            subject=A, predicate=v.rdf_type, object=B, justification=v.unspecified_matching_process
+        ),
+    ),
+    (
+        f.EquivalentClasses([A, B]),
+        SemanticMapping(
+            subject=A,
+            predicate=v.equivalent_class,
+            object=B,
+            justification=v.unspecified_matching_process,
+        ),
+    ),
+    (
+        f.DisjointClasses([A, B]),
+        SemanticMapping(
+            subject=A,
+            predicate=v.equivalent_class,
+            object=B,
+            justification=v.unspecified_matching_process,
+            predicate_modifier=NOT,
+        ),
+    ),
+    (
+        f.SameIndividual([A, B]),
+        SemanticMapping(
+            subject=A, predicate=v.same_as, object=B, justification=v.unspecified_matching_process
+        ),
+    ),
+    (
+        f.DifferentIndividuals([A, B]),
+        SemanticMapping(
+            subject=A,
+            predicate=v.same_as,
+            object=B,
+            justification=v.unspecified_matching_process,
+            predicate_modifier=NOT,
+        ),
+    ),
+    (
+        None,
+        SemanticMapping(
+            subject=A, predicate=v.part_of, object=B, justification=v.unspecified_matching_process
+        ),
+    ),
 ]
 
 
@@ -112,9 +165,6 @@ class TestBridge(unittest.TestCase):
         for expected, mapping in cases:
             with self.subTest(x=str(mapping)):
                 actual = get_owl_bridge_axiom(mapping)
-                if actual is None:
-                    raise self.fail(msg="axiom shouldn't be None")
-                self.assertEqual(expected.annotations, actual.annotations)
                 self.assertEqual(expected, actual)
 
 
