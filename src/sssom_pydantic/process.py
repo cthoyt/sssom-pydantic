@@ -42,6 +42,7 @@ __all__ = [
     "estimate_confidence",
     "exclude_negative",
     "exclude_unsure",
+    "filter_by_confidence",
     "get_canonical_tuple",
     "invert",
     "invert_by_object_prefix",
@@ -907,6 +908,16 @@ def _merge(
         if len(values) == 1 and (value := values.pop()) is not None:
             data[slot_name] = value
     return mapping.model_validate(data)
+
+
+def filter_by_confidence(
+    mappings: Iterable[MappingTypeVar], cutoff: float
+) -> Iterable[MappingTypeVar]:
+    """Filter by confidence."""
+    for mapping in mappings:
+        if mapping.confidence is not None and mapping.confidence < cutoff:
+            continue
+        yield mapping
 
 
 if __name__ == "__main__":
