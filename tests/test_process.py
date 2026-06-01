@@ -645,6 +645,16 @@ class TestProcess(cases.MappingTestCaseMixin):
             ),
         )
 
+    def test_filter_by_confidence(self) -> None:
+        """Test filtering by confidence."""
+        m1 = SemanticMapping.exact(R1, R2)
+        m2 = SemanticMapping.exact(R3, R4, confidence=0.9)
+        m3 = SemanticMapping.exact(R5, R6, confidence=0.8)
+        self.assert_model_sequence_equal([m1, m2, m3], pr.filter_by_confidence([m1, m2, m3], 0.5))
+        self.assert_model_sequence_equal([m1, m2], pr.filter_by_confidence([m1, m2, m3], 0.85))
+        self.assert_model_sequence_equal([m1, m2], pr.filter_by_confidence([m1, m2, m3], 0.9))
+        self.assert_model_sequence_equal([m1], pr.filter_by_confidence([m1, m2, m3], 0.95))
+
 
 ambika = NamedReference.from_curie("orcid:0009-0009-1663-1003", name="Ambika Gupta ")
 
