@@ -20,16 +20,25 @@ STANDARDIZE_FLAG = click.option(
     is_flag=True,
     help="Standardize against Bioregistry preferred CURIE prefixes and (RDF) URI prefixes",
 )
+RELABEL_FLAG = click.option(
+    "--relabel",
+    is_flag=True,
+    help="Re-label all subjects and objects using PyOBO",
+)
 
 
 @main.command(name="format")
 @click.argument("path", type=Path)
 @STANDARDIZE_FLAG
-def format_sssom_tsv(path: Path, standardize: bool) -> None:
+@RELABEL_FLAG
+@click.option("--drop-duplicates", is_flag=True)
+def format_sssom_tsv(path: Path, standardize: bool, relabel: bool, drop_duplicates: bool) -> None:
     """Lint a SSSOM TSV file."""
     import sssom_pydantic
 
-    sssom_pydantic.format(path, standardize=standardize)
+    sssom_pydantic.format(
+        path, standardize=standardize, relabel=relabel, drop_duplicates=drop_duplicates
+    )
 
 
 @main.command()
@@ -129,12 +138,16 @@ def subset(
         target_prefix = converter.standardize_prefix(target_prefix, strict=True)
         mappings = keep_prefixes_both(mappings, {prefix, target_prefix})
         mappings = invert_by_prefix_pair(
-            mappings, target_prefix, prefix, justification_policy=justification_policy
+            mappings,
+            target_prefix,
+            prefix,
+            converter=converter,
+            justification_policy=justification_policy,
         )
     else:
         mappings = keep_prefixes_either(mappings, prefix)
         mappings = invert_by_object_prefix(
-            mappings, prefix, justification_policy=justification_policy
+            mappings, prefix, converter=converter, justification_policy=justification_policy
         )
 
     sssom_pydantic.write(mappings, output or sys.stdout, converter=converter, metadata=metadata)

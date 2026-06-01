@@ -31,6 +31,7 @@ __all__ = [
     "MappingSet",
     "MappingSetRecord",
     "MappingTool",
+    "MappingTypeVar",
     "PredicateModifier",
     "SemanticMapping",
     "SemanticMappingHash",
@@ -197,6 +198,7 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
     match_string: list[str] | None = None
 
     other: dict[str, str] | None = None
+    derived_from: list[Reference] | None = None
     see_also: list[str] | None = None
     similarity_measure: str | None = None
     similarity_score: Annotated[float | None, Field(ge=0.0, le=1.0)] = None
@@ -361,6 +363,7 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
             self.creators,
             self.reviewers,
             self.curation_rule,
+            self.derived_from,
         ]:
             if y is not None:
                 for z in y:
@@ -449,11 +452,23 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
             else None,
             match_string=self.match_string,
             #
+            derived_from=_safe_curies(self.derived_from),
             other=_dict_to_other(self.other) if self.other else None,
             see_also=self.see_also,
             similarity_measure=self.similarity_measure,
             similarity_score=self.similarity_score,
         )
+
+    def relabel(self) -> Self:
+        """Label the subject and object."""
+        import pyobo
+
+        update = {}
+        if subject_label := pyobo.get_name(self.subject):
+            update["subject"] = self.subject.with_name(subject_label)
+        if object_label := pyobo.get_name(self.object):
+            update["object"] = self.object.with_name(object_label)
+        return self.model_copy(update=update)
 
     def standardize(self, converter: curies.Converter) -> Self:
         """Standardize."""

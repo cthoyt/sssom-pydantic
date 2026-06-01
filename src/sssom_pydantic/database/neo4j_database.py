@@ -32,7 +32,7 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
 
     def __init__(
         self,
-        uri: str | None = None,
+        uri: str,
         user: str | None = None,
         password: str | None = None,
         *,
@@ -64,9 +64,18 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         cypher = "MATCH (n) DETACH DELETE n;"
         self._write(cypher)
 
-    def _write(self, cypher: LiteralString, *args: Any, **kwargs: Any) -> None:
+    def _write(self, cypher: LiteralString, /, *args: Any, **kwargs: Any) -> None:
         with closing(self.driver.session()) as session:
             session.execute_write(_get_worker(cypher), *args, **kwargs)
+
+    def _read(
+        self,
+        func: Callable[Concatenate[neo4j.ManagedTransaction, P], R],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> R:
+        with closing(self.driver.session()) as session:
+            return cast(R, session.execute_read(func, *args, **kwargs))
 
     def add_mappings(
         self, mappings: Iterable[SemanticMapping], *, progress: bool = False
@@ -79,18 +88,37 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
             MERGE (object:Entity {curie: row.object})
               SET object.name = row.object_label
             WITH subject, object, row
-            MERGE (m:SemanticMapping {curie: row.curie})
-              SET m.triple_id = row.triple_id
-              SET m.subject = row.subject
-              SET m.subject_label = row.subject_label
-              SET m.predicate = row.predicate
-              SET m.predicate_label = row.predicate_label
-              SET m.object = row.object
-              SET m.object_label = row.object_label
-              SET m.justification = row.justification
-              SET m.rest = row.rest
-            MERGE (subject)-[:subject_of]->(m)
-            MERGE (object)-[:object_of]->(m)
+            MERGE (mapping:Mapping {id: row.triple_id})
+                SET mapping.subject = row.subject
+                SET mapping.subject_label = row.subject_label
+                SET mapping.predicate = row.predicate
+                SET mapping.predicate_label = row.predicate_label
+                SET mapping.predicate_modifier = row.predicate_modifier
+                SET mapping.object = row.object
+                SET mapping.object_label = row.object_label
+            MERGE (subject)-[:subject_of]->(mapping)
+            MERGE (object)-[:object_of]->(mapping)
+
+            MERGE (record:SemanticMapping {curie: row.curie})
+              SET record.triple_id = row.triple_id
+              SET record.subject = row.subject
+              SET record.subject_label = row.subject_label
+              SET record.predicate = row.predicate
+              SET record.predicate_label = row.predicate_label
+              SET record.predicate_modifier = row.predicate_modifier
+              SET record.object = row.object
+              SET record.object_label = row.object_label
+              SET record.justification = row.justification
+              SET record.derived_from = row.derived_from
+              SET record.rest = row.rest
+            MERGE (record)-[:record_of]->(mapping)
+            MERGE (subject)-[:subject_of]->(record)
+            MERGE (object)-[:object_of]->(record)
+
+            WITH record, row
+            UNWIND row.derived_from AS triple_id
+            MERGE (source:Mapping {id: triple_id})
+            MERGE (record)-[:derived_from]->(source)
         """
         batch = []
         references = []
@@ -103,6 +131,8 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
             "object",
             "object_label",
             "justification",
+            "derived_from",
+            "predicate_modifier",
         }
         for mapping in tqdm(
             mappings, disable=not progress, leave=False, desc="Preparing mappings for Neo4j"
@@ -117,9 +147,17 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
                     "subject_label": mapping.subject_name,
                     "predicate": mapping.predicate.curie,
                     "predicate_label": mapping.predicate_name,
+                    "predicate_modifier": mapping.predicate_modifier,
                     "object": mapping.object.curie,
                     "object_label": mapping.object_name,
                     "justification": mapping.justification.curie,
+                    "derived_from": [
+                        reference.identifier
+                        for reference in mapping.derived_from
+                        if reference.prefix == "mapping"
+                    ]
+                    if mapping.derived_from
+                    else None,
                     "rest": mapping.model_dump_json(
                         exclude=exclude_fields,
                         exclude_none=True,
@@ -135,29 +173,27 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         """Count the mappings in the database."""
         cypher, params = self._construct(query, count=True)
 
-        def _count_nodes(tx: neo4j.ManagedTransaction, **kwargs: Any) -> int:
-            result = tx.run(cypher, **kwargs)
+        def _count_nodes(tx: neo4j.ManagedTransaction, /, *args: Any, **kwargs: Any) -> int:
+            result = tx.run(cypher, *args, **kwargs)
             return cast(int, result.single()["total"])
 
-        with closing(self.driver.session()) as session:
-            return cast(int, session.execute_read(_count_nodes, **params))
+        return self._read(_count_nodes, **params)
 
     def count_entities(self, query: Query | None = None) -> int:
         """Count the entities in the database."""
         if query is not None:
             raise NotImplementedError("need to implement filtering on entity counts for neo4j")
 
-        def _count_nodes(tx: neo4j.ManagedTransaction) -> int:
+        def _count_nodes(tx: neo4j.ManagedTransaction, /) -> int:
             result = tx.run("MATCH (n:Entity) RETURN count(n) AS total")
             return cast(int, result.single()["total"])
 
-        with closing(self.driver.session()) as session:
-            return cast(int, session.execute_read(_count_nodes))
+        return self._read(_count_nodes)
 
     def delete_mapping(self, reference: Reference | SemanticMapping) -> None:
         """Delete a mapping from the database."""
 
-        def _delete_node(tx: neo4j.ManagedTransaction, curie: str) -> int:
+        def _delete_node(tx: neo4j.ManagedTransaction, /, curie: str) -> int:
             result = tx.run(
                 """
                 MATCH (p:SemanticMapping {curie: $curie})
@@ -187,13 +223,13 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
     def get_mapping(self, reference: Reference, *, strict: bool = False) -> SemanticMapping | None:
         """Get a mapping."""
 
-        def _get_node(tx: neo4j.ManagedTransaction, uid: str) -> dict[str, Any] | None:
+        def _get_node(tx: neo4j.ManagedTransaction, /, uid: str) -> dict[str, Any] | None:
             result = tx.run("MATCH (p:SemanticMapping {curie: $uid}) RETURN p", uid=uid)
             record = result.single()
             return record["p"] if record else None
 
-        with self.driver.session() as session:
-            node = session.execute_read(_get_node, reference.curie)
+        node = self._read(_get_node, reference.curie)
+
         if node is not None:
             return self._from_data(node)
         elif strict:
@@ -213,13 +249,12 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
             query, limit=limit, offset=offset, order_by=order_by, count=False
         )
 
-        def _get_nodes(tx: neo4j.ManagedTransaction, **kwargs: Any) -> list[dict[str, Any]]:
-            result = tx.run(cypher, **kwargs)
-            return [record["p"] for record in result]
+        def _get_nodes(
+            tx: neo4j.ManagedTransaction, /, *args: Any, **kwargs: Any
+        ) -> list[SemanticMapping]:
+            return [self._from_data(record["p"]) for record in tx.run(cypher, *args, **kwargs)]
 
-        with self.driver.session(database="neo4j") as session:
-            nodes = session.execute_read(_get_nodes, **params)
-            return [self._from_data(node) for node in nodes]
+        return self._read(_get_nodes, **params)
 
     @staticmethod
     def _construct(
@@ -256,6 +291,12 @@ class Neo4jSemanticMappingRepository(SemanticMappingRepository):
         data = dict(node)
         data.update(json.loads(data.pop("rest")))
         data["record"] = data.pop("curie")
+        if derived_from := data.pop("derived_from", None):
+            data["derived_from"] = [
+                NamableReference(prefix="mapping", identifier=triple_id)
+                for triple_id in derived_from
+            ]
+
         rv = SemanticMapping.model_validate(data)
         model_update = {}
         if subject_label := data.get("subject_label"):
@@ -319,7 +360,7 @@ def _clauses_from_query(
                 params[name] = value
     if not parts:
         return None
-    rv = "WHERE " + " AND ".join(parts)
+    rv = " WHERE " + " AND ".join(parts)
     return rv, params
 
 

@@ -211,8 +211,11 @@ class TestRepository(MappingTestCaseMixin):
             self.assertEqual(lexical_matching_process, mappings[0].justification)
             self.assertEqual(lexical_matching_process, mappings[1].justification)
 
+        returned_mappings = db.get_mappings()
+        returned_mapping_ids = {db.converter.hash_triple(m) for m in returned_mappings}
+
         self.assertEqual(1, len(db.get_mappings(limit=1)))
-        self.assertEqual(4, len(db.get_mappings()))
+        self.assertEqual(4, len(returned_mappings))
         self.assertEqual(4, len(db.get_mappings(limit=1000)))
 
         if isinstance(db, SemanticMappingDatabase):
@@ -231,11 +234,14 @@ class TestRepository(MappingTestCaseMixin):
 
         self.assertIn("mesh", db.converter.get_prefixes())
 
+        mapping_1_triple_id = db.converter.hash_triple(mapping_1)
+        self.assertIn(mapping_1_triple_id, returned_mapping_ids)
+
         self.assertEqual(
             4,
             len(
                 db.get_mappings(
-                    query=Query(triple_id=db.converter.hash_triple(mapping_1)),
+                    query=Query(triple_id=mapping_1_triple_id),
                 )
             ),
         )

@@ -7,6 +7,7 @@ import importlib.util
 import tempfile
 import typing
 import unittest
+import urllib.error
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -64,7 +65,10 @@ class TestSchema(unittest.TestCase):
         else:
             with tempfile.TemporaryDirectory() as d:
                 path = Path(d).joinpath("schema.yml")
-                urlretrieve(SSSOM_SCHEMA_URL, path)  # noqa:S310
+                try:
+                    urlretrieve(SSSOM_SCHEMA_URL, path)  # noqa:S310
+                except urllib.error.URLError:
+                    raise unittest.SkipTest("test requires internet connection") from None
                 cls.view = SchemaView(path)
 
         cls.mapping_slots = set(cls.view.get_class("mapping").slots)

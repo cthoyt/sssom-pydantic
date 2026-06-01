@@ -218,6 +218,7 @@ def record_to_semantic_mapping(
         provider=record.mapping_provider,
         source=_parse_curie_or_uri(record.mapping_source),
         match_string=record.match_string,
+        derived_from=_parse_curies_or_uris(record.derived_from),
         other=_other_to_dict(record.other, line_number=line_number) if record.other else None,
         see_also=record.see_also,
         similarity_measure=record.similarity_measure,
@@ -898,6 +899,7 @@ def format(
     drop_duplicates: bool = False,
     drop_duplicates_key: Hasher[SemanticMapping, Y] | None = None,
     standardize: bool = False,
+    relabel: bool = False,
 ) -> None:
     """Lint a file."""
     mappings, converter_processed, mapping_set = read(
@@ -907,6 +909,9 @@ def format(
     if standardize:
         converter_processed = curies.chain([_get_preferred_converter(), converter_processed])
         mappings = list(standardize_mappings(mappings, converter=converter_processed))
+
+    if relabel:
+        mappings = [mapping.relabel() for mapping in mappings]
 
     write(
         mappings,

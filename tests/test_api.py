@@ -179,9 +179,15 @@ class TestIO(cases.MappingTestCaseMixin):
                 sssom_pydantic.write(
                     [example.semantic_mapping], path, converter=converter, metadata=TEST_METADATA
                 )
-                mappings, _, _ = sssom_pydantic.read(path)
+                mappings, _, _, errors = sssom_pydantic.read(path, return_errors=True)
                 self.assertEqual(
-                    1, len(mappings), msg=f"Failed, file contents:\n\n{path.read_text()}"
+                    0, len(errors), msg="errors when reading, file contents:\n\n{path.read_text()}"
+                )
+                self.assertEqual(
+                    1,
+                    len(mappings),
+                    msg=f"round trip writing and reading failed, "
+                    f"file contents:\n\n{path.read_text()}",
                 )
                 self.assert_model_equal(example.semantic_mapping, mappings[0])
 
@@ -544,12 +550,18 @@ class TestIO(cases.MappingTestCaseMixin):
         )
         self.assert_path(f"""\
             #curie_map:
+            #  BTO: http://purl.obolibrary.org/obo/BTO_
+            #  CL: http://purl.obolibrary.org/obo/CL_
+            #  VO: http://purl.obolibrary.org/obo/VO_
             #  biolink: https://w3id.org/biolink/vocab/
             #  bioregistry: https://bioregistry.io/
             #  cas: https://commonchemistry.cas.org/detail?cas_rn=
             #  chebi: http://purl.obolibrary.org/obo/CHEBI_
             #  issue: https://github.com/cthoyt/sssom-pydantic/issues/
+            #  mapping: https://w3id.org/mapping/
             #  mesh: http://id.nlm.nih.gov/mesh/
+            #  obo: http://purl.obolibrary.org/obo/
+            #  oboInOwl: http://www.geneontology.org/formats/oboInOwl#
             #  orcid: https://orcid.org/
             #  owl: http://www.w3.org/2002/07/owl#
             #  rdf: http://www.w3.org/1999/02/22-rdf-syntax-ns#
@@ -561,6 +573,7 @@ class TestIO(cases.MappingTestCaseMixin):
             #  sssom: https://w3id.org/sssom/
             #  sssom.record: https://w3id.org/sssom/record/
             #  w3id: https://w3id.org/
+            #  wikidata: http://www.wikidata.org/entity/
             #mapping_set_id: {TEST_MAPPING_SET_ID}
             subject_id	subject_label	predicate_id	object_id	object_label	mapping_justification
             mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	semapv:ManualMappingCuration

@@ -19,9 +19,10 @@ from curies.vocabulary import (
     manual_mapping_curation as manual,
 )
 
-from sssom_pydantic import SemanticMapping
+from sssom_pydantic import SemanticMapping, hash_triple_to_reference
 from sssom_pydantic import process as pr
 from sssom_pydantic.api import NOT
+from sssom_pydantic.examples import TEST_CONVERTER
 from sssom_pydantic.process import (
     InvalidExistsActionError,
     Mark,
@@ -441,7 +442,11 @@ class TestProcess(cases.MappingTestCaseMixin):
         """Test invert error."""
         m1 = SemanticMapping.exact("CHEBI:28646", "mesh:C000089", justification=mapping_inversion)
         with self.assertRaises(ValueError):
-            invert(m1, justification_policy=pr.InversionJustificationPolicy.derive)
+            invert(
+                m1,
+                converter=TEST_CONVERTER,
+                justification_policy=pr.InversionJustificationPolicy.derive,
+            )
 
     def test_invert(self) -> None:
         """Test inverting a mapping."""
@@ -465,6 +470,7 @@ class TestProcess(cases.MappingTestCaseMixin):
                     "mesh:C000089",
                     "CHEBI:28646",
                     justification=mapping_inversion,
+                    derived_from=[hash_triple_to_reference(m1, TEST_CONVERTER)],
                 ),
                 m1,
             ),
@@ -474,6 +480,7 @@ class TestProcess(cases.MappingTestCaseMixin):
                     "CHEBI:28646",
                     subject_source="bioregistry:mesh",
                     justification=mapping_inversion,
+                    derived_from=[hash_triple_to_reference(m2, TEST_CONVERTER)],
                 ),
                 m2,
             ),
@@ -483,6 +490,7 @@ class TestProcess(cases.MappingTestCaseMixin):
                     "CHEBI:28646",
                     object_source="bioregistry:chebi",
                     justification=mapping_inversion,
+                    derived_from=[hash_triple_to_reference(m3, TEST_CONVERTER)],
                 ),
                 m3,
             ),
@@ -493,6 +501,7 @@ class TestProcess(cases.MappingTestCaseMixin):
                     subject_source="bioregistry:mesh",
                     object_source="bioregistry:chebi",
                     justification=mapping_inversion,
+                    derived_from=[hash_triple_to_reference(m4, TEST_CONVERTER)],
                 ),
                 m4,
             ),
@@ -502,6 +511,7 @@ class TestProcess(cases.MappingTestCaseMixin):
                     predicate=narrow_match,
                     subject="mesh:D014404",
                     justification=mapping_inversion,
+                    derived_from=[hash_triple_to_reference(m5, TEST_CONVERTER)],
                 ),
                 m5,
             ),
@@ -510,7 +520,11 @@ class TestProcess(cases.MappingTestCaseMixin):
             with self.subTest(index=str(i)):
                 self.assert_model_equal(
                     expected,
-                    invert(initial, justification_policy=pr.InversionJustificationPolicy.derive),
+                    invert(
+                        initial,
+                        converter=TEST_CONVERTER,
+                        justification_policy=pr.InversionJustificationPolicy.derive,
+                    ),
                 )
 
     def test_exclude_negative(self) -> None:
@@ -530,9 +544,16 @@ class TestProcess(cases.MappingTestCaseMixin):
         """Test inverting mappings with given S/O prefix pairs."""
         m1 = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
         m1_inv_derive = SemanticMapping.exact(
-            "CHEBI:28646", "mesh:C000089", justification=mapping_inversion
+            "CHEBI:28646",
+            "mesh:C000089",
+            justification=mapping_inversion,
+            derived_from=[hash_triple_to_reference(m1, TEST_CONVERTER)],
         )
-        m1_inv_retain = SemanticMapping.exact("CHEBI:28646", "mesh:C000089")
+        m1_inv_retain = SemanticMapping.exact(
+            "CHEBI:28646",
+            "mesh:C000089",
+            derived_from=[hash_triple_to_reference(m1, TEST_CONVERTER)],
+        )
         m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
         assert_semantic_mappings_equal(
             self,
@@ -541,6 +562,7 @@ class TestProcess(cases.MappingTestCaseMixin):
                 [m1, m2],
                 "mesh",
                 "CHEBI",
+                converter=TEST_CONVERTER,
                 justification_policy=pr.InversionJustificationPolicy.derive,
             ),
         )
@@ -551,6 +573,7 @@ class TestProcess(cases.MappingTestCaseMixin):
                 [m1, m2],
                 "mesh",
                 "CHEBI",
+                converter=TEST_CONVERTER,
                 justification_policy=pr.InversionJustificationPolicy.retain,
             ),
         )
@@ -559,22 +582,35 @@ class TestProcess(cases.MappingTestCaseMixin):
         """Test inverting mappings with given subject prefix pairs."""
         m1 = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
         m1_inv_derive = SemanticMapping.exact(
-            "CHEBI:28646", "mesh:C000089", justification=mapping_inversion
+            "CHEBI:28646",
+            "mesh:C000089",
+            justification=mapping_inversion,
+            derived_from=[hash_triple_to_reference(m1, TEST_CONVERTER)],
         )
-        m1_inv_retain = SemanticMapping.exact("CHEBI:28646", "mesh:C000089")
+        m1_inv_retain = SemanticMapping.exact(
+            "CHEBI:28646",
+            "mesh:C000089",
+            derived_from=[hash_triple_to_reference(m1, TEST_CONVERTER)],
+        )
         m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
         assert_semantic_mappings_equal(
             self,
             [m1_inv_derive, m2],
             pr.invert_by_subject_prefix(
-                [m1, m2], "mesh", justification_policy=pr.InversionJustificationPolicy.derive
+                [m1, m2],
+                "mesh",
+                converter=TEST_CONVERTER,
+                justification_policy=pr.InversionJustificationPolicy.derive,
             ),
         )
         assert_semantic_mappings_equal(
             self,
             [m1_inv_retain, m2],
             pr.invert_by_subject_prefix(
-                [m1, m2], "mesh", justification_policy=pr.InversionJustificationPolicy.retain
+                [m1, m2],
+                "mesh",
+                converter=TEST_CONVERTER,
+                justification_policy=pr.InversionJustificationPolicy.retain,
             ),
         )
 
@@ -582,13 +618,19 @@ class TestProcess(cases.MappingTestCaseMixin):
         """Test inverting mappings with given object prefix pairs."""
         m1 = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
         m1_inv = SemanticMapping.exact(
-            "CHEBI:28646", "mesh:C000089", justification=mapping_inversion
+            "CHEBI:28646",
+            "mesh:C000089",
+            justification=mapping_inversion,
+            derived_from=[hash_triple_to_reference(m1, TEST_CONVERTER)],
         )
         m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
         assert_semantic_mappings_equal(
             self,
             [m1_inv, m2],
             pr.invert_by_object_prefix(
-                [m1, m2], "CHEBI", justification_policy=pr.InversionJustificationPolicy.derive
+                [m1, m2],
+                "CHEBI",
+                converter=TEST_CONVERTER,
+                justification_policy=pr.InversionJustificationPolicy.derive,
             ),
         )

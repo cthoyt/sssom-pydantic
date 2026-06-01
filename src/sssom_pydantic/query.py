@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections import Counter
 from collections.abc import Callable, Collection, Iterable, Sequence
-from typing import TYPE_CHECKING, Any, Literal, NamedTuple, TypeAlias
+from typing import TYPE_CHECKING, Annotated, Any, Literal, NamedTuple, TypeAlias
 
 from curies.triples import keep_references_either, keep_triples_by_hash
 from pydantic import BaseModel, Field
@@ -30,46 +30,60 @@ __all__ = [
 class Query(BaseModel):
     """A query over semantic mappings."""
 
-    triple_id: str | None = Field(
-        None,
-        description="The subject-predicate-object identifier, see https://curies.readthedocs.io/en/latest/api/curies.Converter.html#curies.Converter.hash_triple",
-    )
-    query: str | None = Field(
-        None,
-        description="If given, show only mappings that have it appearing as a substring "
-        "in one of the source or target fields.",
-    )
-    subject_query: str | None = Field(
-        None,
-        description="If given, show only mappings that have it appearing as a substring "
-        "in one of the source fields.",
-    )
-    subject_prefix: str | None = Field(
-        None,
-        description="If given, show only mappings that have it appearing in the "
-        "source prefix field",
-    )
-    object_query: str | None = Field(
-        None,
-        description="If given, show only mappings that have it appearing as a substring "
-        "in one of the target fields.",
-    )
-    object_prefix: str | None = Field(
-        None,
-        description="If given, show only mappings that have it appearing in the "
-        "target prefix field",
-    )
-    mapping_tool: str | None = Field(
-        None, description="If given, filters to mapping tool names matching this"
-    )
-    prefix: str | None = Field(
-        None,
-        description="If given, show only mappings that have it appearing as a "
-        "substring in one of the prefixes.",
-    )
-    same_text: bool | None = Field(
-        None, description="If true, filter to predictions with the same label"
-    )
+    triple_id: Annotated[
+        str | None,
+        Field(
+            description="The subject-predicate-object identifier, see https://curies.readthedocs.io/en/latest/api/curies.Converter.html#curies.Converter.hash_triple",
+        ),
+    ] = None
+    query: Annotated[
+        str | None,
+        Field(
+            description="If given, show only mappings that have it appearing as a substring "
+            "in one of the source or target fields.",
+        ),
+    ] = None
+    subject_query: Annotated[
+        str | None,
+        Field(
+            description="If given, show only mappings that have it appearing as a substring "
+            "in one of the source fields.",
+        ),
+    ] = None
+    subject_prefix: Annotated[
+        str | None,
+        Field(
+            description="If given, show only mappings that have it appearing in the "
+            "source prefix field",
+        ),
+    ] = None
+    object_query: Annotated[
+        str | None,
+        Field(
+            description="If given, show only mappings that have it appearing as a substring "
+            "in one of the target fields.",
+        ),
+    ] = None
+    object_prefix: Annotated[
+        str | None,
+        Field(
+            description="If given, show only mappings that have it appearing in the "
+            "target prefix field",
+        ),
+    ] = None
+    mapping_tool: Annotated[
+        str | None, Field(description="If given, filters to mapping tool names matching this")
+    ] = None
+    prefix: Annotated[
+        str | None,
+        Field(
+            description="If given, show only mappings that have it appearing as a "
+            "substring in one of the prefixes.",
+        ),
+    ] = None
+    same_text: Annotated[
+        bool | None, Field(description="If true, filter to predictions with the same label")
+    ] = None
 
 
 def filter_mappings(
