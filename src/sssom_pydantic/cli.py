@@ -37,7 +37,11 @@ def format_sssom_tsv(path: Path, standardize: bool, relabel: bool, drop_duplicat
     import sssom_pydantic
 
     sssom_pydantic.format(
-        path, standardize=standardize, relabel=relabel, drop_duplicates=drop_duplicates
+        path,
+        standardize=standardize,
+        relabel=relabel,
+        drop_duplicates=drop_duplicates,
+        strict=True,
     )
 
 
