@@ -16,8 +16,10 @@ import curies
 from curies import Converter, Reference
 from curies.vocabulary import (
     SemanticMappingScope,
+    broad_match,
     manual_mapping_curation,
     mapping_inversion,
+    narrow_match,
     semantic_mapping_inversions,
     semantic_mapping_scopes,
 )
@@ -45,9 +47,11 @@ __all__ = [
     "filter_by_confidence",
     "get_canonical_tuple",
     "invert",
+    "invert_broad_matches",
     "invert_by_object_prefix",
     "invert_by_prefix_pair",
     "invert_by_subject_prefix",
+    "invert_narrow_matches",
     "merge_manual_curations",
     "publish",
     "remove_redundant_external",
@@ -659,6 +663,69 @@ def invert_by_predicate(
             yield invert(mapping, converter=converter, justification_policy=justification_policy)
         else:
             yield mapping
+
+
+def invert_narrow_matches(
+    mappings: Iterable[MappingTypeVar],
+    *,
+    converter: curies.Converter,
+    justification_policy: InversionJustificationPolicy | str | None = None,
+) -> Iterable[MappingTypeVar]:
+    """Invert narrow matches into broad matches.
+
+    :param mappings: An iterable of semantic mappings
+    :param converter: A converter function hashing the mapping to fill the
+        "derives_from" field
+    :param justification_policy: The policy for how the original evidence is mutated
+        during inversion. Defaults to :class:`InversionDerivationPolicy.retain`, where
+        the original justification is retained
+
+    :returns: An iterable of semantic mappings, with the narrow matches inverted into
+        broad ones
+
+    This is useful when creating OWL bridging axioms.
+    """
+    yield from _invert_by_mapping_predicate(
+        mappings, narrow_match, converter=converter, justification_policy=justification_policy
+    )
+
+
+def invert_broad_matches(
+    mappings: Iterable[MappingTypeVar],
+    *,
+    converter: curies.Converter,
+    justification_policy: InversionJustificationPolicy | str | None = None,
+) -> Iterable[MappingTypeVar]:
+    """Invert broad matches into narrow matches.
+
+    :param mappings: An iterable of semantic mappings
+    :param converter: A converter function hashing the mapping to fill the
+        "derives_from" field
+    :param justification_policy: The policy for how the original evidence is mutated
+        during inversion. Defaults to :class:`InversionDerivationPolicy.retain`, where
+        the original justification is retained
+
+    :returns: An iterable of semantic mappings, with the narrow matches inverted into
+        broad ones
+    """
+    yield from _invert_by_mapping_predicate(
+        mappings, broad_match, converter=converter, justification_policy=justification_policy
+    )
+
+
+def _invert_by_mapping_predicate(
+    mappings: Iterable[MappingTypeVar],
+    predicate: Reference,
+    *,
+    converter: curies.Converter,
+    justification_policy: InversionJustificationPolicy | str | None = None,
+) -> Iterable[MappingTypeVar]:
+    yield from invert_by_predicate(
+        mappings,
+        predicate=lambda mapping: mapping.predicate == predicate,
+        converter=converter,
+        justification_policy=justification_policy,
+    )
 
 
 def invert_by_subject_prefix(

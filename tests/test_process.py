@@ -645,6 +645,24 @@ class TestProcess(cases.MappingTestCaseMixin):
             ),
         )
 
+    def test_invert_narrow(self) -> None:
+        """Test inverting narrow mappings."""
+        m0 = SemanticMapping.exact(R1, R2)
+        m1 = SemanticMapping.narrow(R1, R2)
+        m2 = SemanticMapping.broad(R2, R1)
+        m1_derived = SemanticMapping.narrow(
+            R1, R2, derived_from=[hash_triple_to_reference(m2, TEST_CONVERTER)]
+        )
+        m2_derived = SemanticMapping.broad(
+            R2, R1, derived_from=[hash_triple_to_reference(m1, TEST_CONVERTER)]
+        )
+        self.assert_model_sequence_equal(
+            [m0, m2_derived], pr.invert_narrow_matches([m0, m1], converter=TEST_CONVERTER)
+        )
+        self.assert_model_sequence_equal(
+            [m0, m1_derived], pr.invert_broad_matches([m0, m2], converter=TEST_CONVERTER)
+        )
+
     def test_filter_by_confidence(self) -> None:
         """Test filtering by confidence."""
         m1 = SemanticMapping.exact(R1, R2)
