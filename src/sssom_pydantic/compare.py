@@ -40,13 +40,18 @@ def compare(
     right_mappings: list[SemanticMapping],
     left_label: str,
     right_label: str,
-    venn_type: Literal["svg", "mermaid"] = "mermaid",
+    venn_type: Literal["svg", "mermaid"] | None = None,
 ) -> str:
     """Compare two sets of mappings.
 
     :param left_mappings: left mappings
     :param right_mappings: right mappings
+    :param left_label: The label for the left mapping source
+    :param right_label: The label for the right mapping source
+    :param venn_type: The mechanism for producing a venn diagram
     """
+    if venn_type is None:
+        venn_type = "mermaid"
     left_mappings = [m for m in left_mappings if m.justification == manual_mapping_curation]
     right_mappings = [m for m in right_mappings if m.justification == manual_mapping_curation]
 
@@ -77,29 +82,26 @@ def compare(
     rv += f"- {len(right_only)} subject-object pairs {right_label} only\n"
     rv += f"- {len(both)} subject-object pairs both\n"
 
+    rv += "\n\n"
     if venn_type == "svg":
-        import matplotlib.pyplot as plt
-        from matplotlib_venn import venn2
-
-        fig = plt.figure(figsize=(4, 2.5))
-        venn2(
-            subsets=(len(left_only), len(right_only), len(both)),
-            set_labels=(left_label, right_label),
+        rv += get_matplotlib_venn2(
+            left=len(left_only),
+            right=len(right_only),
+            both=len(both),
+            left_label=left_label,
+            right_label=right_label,
         )
-        rv += "\n\n" + fig_to_markdown_svg(fig) + "\n\n"
     elif venn_type == "mermaid":
-        rv += (
-            "\n\n"
-            + dedent(f"""\
-            ```mermaid
-            venn-beta
-              set A["{left_label}"]:{len(left_only)}
-              set B["{right_label}"]:{len(right_only)}
-              union A,B["Overlap"]:{len(both)}
-            ```
-        """)
-            + "\n\n"
+        rv += get_mermaid_venn2_markdown(
+            left=len(left_only),
+            right=len(right_only),
+            both=len(both),
+            left_label=left_label,
+            right_label=right_label,
         )
+    else:
+        raise ValueError(f"Unknown venn_type: {venn_type}")
+    rv += "\n\n"
 
     rows = []
 
@@ -150,6 +152,48 @@ def compare(
             + "\n"
         )
     return rv
+
+
+def get_mermaid_venn2_markdown(
+    left: int, right: int, both: int, left_label: str | None = None, right_label: str | None = None
+) -> str:
+    """Get a mermaid venn diagram."""
+    return dedent(f"""\
+    ```mermaid
+    {get_mermaid_venn2(left, right, both, left_label=left_label, right_label=right_label)}
+    ```
+    """)
+
+
+def get_mermaid_venn2(
+    left: int, right: int, both: int, left_label: str | None = None, right_label: str | None = None
+) -> str:
+    """Get a mermaid venn diagram."""
+    if left_label is None:
+        left_label = "left"
+    if right_label is None:
+        right_label = "right"
+    return dedent(f"""\
+        venn-beta
+          set A["{left_label}"]:{left}
+          set B["{right_label}"]:{right}
+          union A,B["Overlap"]:{both}
+    """)
+
+
+def get_matplotlib_venn2(
+    left: int, right: int, both: int, left_label: str | None = None, right_label: str | None = None
+) -> str:
+    """Get SVG from matplotlib."""
+    import matplotlib.pyplot as plt
+    from matplotlib_venn import venn2
+
+    fig = plt.figure(figsize=(4, 2.5))
+    venn2(
+        subsets=(left, right, both),
+        set_labels=(left_label, right_label),
+    )
+    return fig_to_markdown_svg(fig)
 
 
 def fig_to_markdown_svg(fig: matplotlib.figure.Figure) -> str:
