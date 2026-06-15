@@ -112,7 +112,6 @@ def subset(
     """
     import sys
 
-    import curies
     from curies.triples import keep_predicates, keep_prefixes_both, keep_prefixes_either
     from curies.vocabulary import exact_match
 
@@ -133,7 +132,7 @@ def subset(
     mappings = keep_predicates(mappings, exact_match)
 
     if standardize:
-        converter = curies.chain([_get_preferred_converter(), converter])
+        converter = _get_preferred_converter(converter)
         mappings = standardize_mappings(mappings_list, converter=converter)
 
     prefix = converter.standardize_prefix(prefix, strict=True)
@@ -251,7 +250,7 @@ def merge(
     mappings: Iterable[SemanticMapping] = itt.chain.from_iterable(part.mappings for part in parts)
 
     if standardize:
-        converter = curies.chain([_get_preferred_converter(), converter])
+        converter = _get_preferred_converter(converter)
         mappings = standardize_mappings(mappings, converter=converter)
 
     if merge_manual:
