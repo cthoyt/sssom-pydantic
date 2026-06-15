@@ -14,11 +14,9 @@
         --right-label Charlie
 """  # noqa:E501
 
-import io
 from collections import defaultdict
 from collections.abc import Collection, Iterable
-from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Generic, Literal, NamedTuple, TypeAlias, TypeVar
+from typing import Any, Generic, Literal, NamedTuple, TypeAlias, TypeVar
 
 from curies import NamableReference
 from curies.vocabulary import manual_mapping_curation
@@ -26,9 +24,6 @@ from tabulate import tabulate
 from typing_extensions import Self
 
 from sssom_pydantic import SemanticMapping
-
-if TYPE_CHECKING:
-    import matplotlib.figure
 
 __all__ = ["get_comparison_markdown"]
 
@@ -173,17 +168,6 @@ def get_comparison_markdown(
     rv += f"- {len(venn.right)} subject-object pairs {right_label} only\n"
     rv += f"- {len(venn.both)} subject-object pairs both\n"
 
-    if venn_type is None:
-        pass
-    elif venn_type == "svg":
-        rv += "\n\n"
-        rv += get_matplotlib_venn2(venn, left_label=left_label, right_label=right_label)
-        rv += "\n\n"
-    elif venn_type == "mermaid":
-        rv += "\n\n"
-        rv += get_mermaid_venn2_markdown(venn, left_label=left_label, right_label=right_label)
-        rv += "\n\n"
-
     subject_object_rows = []
 
     for k in venn.both:
@@ -253,64 +237,3 @@ def _get_nested_index_venns(
 ) -> Iterable[tuple[X, VennSets[X]]]:
     for element in set(right).intersection(left):
         yield element, VennSets.from_collections(left[element], right[element])
-
-
-def get_mermaid_venn2_markdown(
-    venn: VennCounts | VennSets, left_label: str | None = None, right_label: str | None = None
-) -> str:
-    """Get a mermaid venn diagram."""
-    rv = "```mermaid\n"
-    rv += get_mermaid_venn2(venn, left_label=left_label, right_label=right_label)
-    rv += "```"
-    return rv
-
-
-def get_mermaid_venn2(
-    venn: VennSets | VennCounts,
-    *,
-    left_label: str | None = None,
-    right_label: str | None = None,
-) -> str:
-    """Get a mermaid venn diagram."""
-    if left_label is None:
-        left_label = "left"
-    if right_label is None:
-        right_label = "right"
-    if isinstance(venn, VennSets):
-        venn = venn.get_counts()
-    return dedent(f"""\
-        venn-beta
-          set A["{left_label}"]:{venn.left}
-          set B["{right_label}"]:{venn.right}
-          union A,B["Overlap"]:{venn.both}
-    """)
-
-
-def get_matplotlib_venn2(
-    venn: VennSets | VennCounts,
-    *,
-    left_label: str | None = None,
-    right_label: str | None = None,
-) -> str:
-    """Get SVG from matplotlib."""
-    import matplotlib.pyplot as plt
-    from matplotlib_venn import venn2
-
-    if isinstance(venn, VennCounts):
-        subsets = venn.left, venn.right, venn.both
-    else:
-        subsets = len(venn.left), len(venn.right), len(venn.both)
-
-    fig = plt.figure(figsize=(4, 2.5))
-    venn2(subsets=subsets, set_labels=(left_label, right_label))
-    return fig_to_markdown_svg(fig)
-
-
-def fig_to_markdown_svg(fig: matplotlib.figure.Figure) -> str:
-    """Convert a matplotlib figure to an embedded SVG markdown string."""
-    buf = io.StringIO()
-    fig.savefig(buf, format="svg", bbox_inches="tight")
-    svg_string = buf.getvalue()
-    buf.close()
-    # Raw SVG can be dropped directly into Markdown (e.g., in HTML-capable renderers)
-    return svg_string
