@@ -945,7 +945,7 @@ def standardize_mappings(
     return curies.standardize(mappings, converter, return_iterator=True)
 
 
-def _get_preferred_converter() -> curies.Converter:
+def _get_preferred_converter(*others: curies.Converter) -> curies.Converter:
     try:
         import bioregistry
     except ImportError:
@@ -953,4 +953,5 @@ def _get_preferred_converter() -> curies.Converter:
             "Standardization of semantic mappings without an explicitly passed "
             "converter requires `pip install bioregistry`"
         ) from None
-    return bioregistry.get_preferred_converter()
+    rv = bioregistry.get_preferred_converter()
+    return curies.chain([rv, *others])

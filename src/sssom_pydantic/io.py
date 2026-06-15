@@ -907,7 +907,7 @@ def format(
     )
 
     if standardize:
-        converter_processed = curies.chain([_get_preferred_converter(), converter_processed])
+        converter_processed = _get_preferred_converter(converter_processed)
         mappings = list(standardize_mappings(mappings, converter=converter_processed))
 
     if relabel:

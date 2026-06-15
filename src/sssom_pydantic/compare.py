@@ -7,7 +7,7 @@
         --target-prefix FIX \
         --standardize \
         --output nfdi-chmo-fix.sssom.tsv
-    $ python -m sssom_pydantic.compare \
+    $ sssom_pydantic compare \
         https://github.com/NFDI4Chem/rsc-cmo/raw/refs/heads/Add-tsv-files/src/mappings/fix-mappings.sssom.tsv \
         nfdi-chmo-fix.sssom.tsv \
         --left-label Ambika \
@@ -17,81 +17,43 @@
 import io
 from collections import defaultdict
 from collections.abc import Collection, Iterable
-from pathlib import Path
 from textwrap import dedent
 from typing import TYPE_CHECKING, Any, Generic, Literal, NamedTuple, TypeAlias, TypeVar
 
-import click
 from curies import NamableReference
-from curies.triples import keep_prefixes_both
 from curies.vocabulary import manual_mapping_curation
 from tabulate import tabulate
 from typing_extensions import Self
 
-import sssom_pydantic
 from sssom_pydantic import SemanticMapping
-from sssom_pydantic.process import invert_by_prefix_pair
 
 if TYPE_CHECKING:
     import matplotlib.figure
 
-__all__ = ["compare"]
+__all__ = ["get_comparison_markdown"]
 
 X = TypeVar("X")
 Y = TypeVar("Y")
 NestedIndex: TypeAlias = defaultdict[X, defaultdict[X, list[Y]]]
 PairIndex: TypeAlias = defaultdict[tuple[X, X], list[Y]]
 
-ZZ = ["subject_id", "subject_label", "object_id", "object_label"]
+SUBJECT_OBJECT_CELL_HEADER = ["subject_id", "subject_label", "object_id", "object_label"]
 
 
-def _zz(k: tuple[NamableReference, NamableReference]) -> tuple[str, str, str, str]:
+def _subject_object_cells(
+    k: tuple[NamableReference, NamableReference],
+) -> tuple[str, str, str, str]:
     return k[0].curie, k[0].name or "", k[1].curie, k[1].name or ""
 
 
-class VennSets(NamedTuple, Generic[X]):
-    """Represents the elements unique to a left and right set, and their shared elements."""
-
-    left: set[X]
-    both: set[X]
-    right: set[X]
-
-    @classmethod
-    def from_collections(cls, left: Collection[X], right: Collection[X]) -> Self:
-        """Construct from two collections."""
-        left = set(left)
-        right = set(right)
-        return cls(left - right, left & right, right - left)
-
-
-def _get_nested_index_venns(
-    left: NestedIndex[X, Any], right: NestedIndex[X, Any]
-) -> Iterable[tuple[X, VennSets[X]]]:
-    for element in set(right).intersection(left):
-        yield element, VennSets.from_collections(left[element], right[element])
-
-
-class Venn(NamedTuple):
-    """A representation of the counts in a venn diagram."""
-
-    left: int
-    both: int
-    right: int
-
-
-def _venn_counts(ll: Collection[X], rr: Collection[X]) -> Venn:
-    left, both, right = VennSets.from_collections(ll, rr)
-    return Venn(len(left), len(both), len(right))
-
-
-def compare(
-    left_mappings: list[SemanticMapping],
-    right_mappings: list[SemanticMapping],
+def get_comparison_markdown(
+    left_mappings: Iterable[SemanticMapping],
+    right_mappings: Iterable[SemanticMapping],
     left_label: str,
     right_label: str,
     venn_type: Literal["svg", "mermaid"] | None = None,
 ) -> str:
-    """Compare two sets of mappings.
+    """Compare two sets of mappings and get Markdown.
 
     :param left_mappings: left mappings
     :param right_mappings: right mappings
@@ -102,13 +64,13 @@ def compare(
     .. warning:: This function assumes that the mappings are only from a
         one prefix to another prefix
     """
-    left_mappings = [m for m in left_mappings if m.justification == manual_mapping_curation]
-    right_mappings = [m for m in right_mappings if m.justification == manual_mapping_curation]
+    left_mappings_ = [m for m in left_mappings if m.justification == manual_mapping_curation]
+    right_mappings_ = [m for m in right_mappings if m.justification == manual_mapping_curation]
 
-    left_subject_prefixes = {m.subject.prefix for m in left_mappings}
-    left_object_prefixes = {m.object.prefix for m in left_mappings}
-    right_subject_prefixes = {m.subject.prefix for m in right_mappings}
-    right_object_prefixes = {m.object.prefix for m in right_mappings}
+    left_subject_prefixes = {m.subject.prefix for m in left_mappings_}
+    left_object_prefixes = {m.object.prefix for m in left_mappings_}
+    right_subject_prefixes = {m.subject.prefix for m in right_mappings_}
+    right_object_prefixes = {m.object.prefix for m in right_mappings_}
     if len(left_subject_prefixes) != 1:
         raise ValueError
     if len(left_object_prefixes) != 1:
@@ -135,11 +97,11 @@ def compare(
     left_dd: PairIndex[NamableReference, SemanticMapping] = defaultdict(list)
     right_dd: PairIndex[NamableReference, SemanticMapping] = defaultdict(list)
 
-    for mapping in left_mappings:
+    for mapping in left_mappings_:
         left_subject_index[mapping.subject][mapping.object].append(mapping)
         left_object_index[mapping.object][mapping.subject].append(mapping)
         left_dd[mapping.subject, mapping.object].append(mapping)
-    for mapping in right_mappings:
+    for mapping in right_mappings_:
         right_subject_index[mapping.subject][mapping.object].append(mapping)
         right_object_index[mapping.object][mapping.subject].append(mapping)
         right_dd[mapping.subject, mapping.object].append(mapping)
@@ -147,14 +109,14 @@ def compare(
     duplicates = []
     for k, values in left_dd.items():
         if len(values) > 1:
-            duplicates.append((left_label, *_zz(k)))
+            duplicates.append((left_label, *_subject_object_cells(k)))
     for k, values in right_dd.items():
         if len(values) > 1:
-            duplicates.append((right_label, *_zz(k)))
+            duplicates.append((right_label, *_subject_object_cells(k)))
 
     if duplicates:
         rv += "\n\n## Duplicates\n\n"
-        rv += tabulate(duplicates, headers=["side", *ZZ], tablefmt="github")
+        rv += tabulate(duplicates, headers=["side", *SUBJECT_OBJECT_CELL_HEADER], tablefmt="github")
         rv += "\n\n"
 
     left_d = {so: values[0] for so, values in left_dd.items() if len(values) == 1}
@@ -229,11 +191,18 @@ def compare(
         right = right_d[k]
         if left.predicate != right.predicate:
             msg = "different predicate"
-            subject_object_rows.append((*_zz(k), msg, left.predicate.curie, right.predicate.curie))
+            subject_object_rows.append(
+                (*_subject_object_cells(k), msg, left.predicate.curie, right.predicate.curie)
+            )
         elif left.predicate_modifier != right.predicate_modifier:
             msg = "different predicate modifier"
             subject_object_rows.append(
-                (*_zz(k), msg, left.predicate_modifier or "", right.predicate_modifier or "")
+                (
+                    *_subject_object_cells(k),
+                    msg,
+                    left.predicate_modifier or "",
+                    right.predicate_modifier or "",
+                )
             )
 
     if subject_object_rows:
@@ -241,7 +210,7 @@ def compare(
         rv += (
             tabulate(
                 subject_object_rows,
-                headers=[*ZZ, "warning", left_label, right_label],
+                headers=[*SUBJECT_OBJECT_CELL_HEADER, "warning", left_label, right_label],
                 tablefmt="github",
             )
             + "\n"
@@ -249,8 +218,45 @@ def compare(
     return rv
 
 
+class VennCounts(NamedTuple):
+    """A representation of the counts in a venn diagram."""
+
+    left: int
+    both: int
+    right: int
+
+
+V = TypeVar("V", default=Any)
+
+
+class VennSets(NamedTuple, Generic[V]):
+    """Represents the elements unique to a left and right set, and their shared elements."""
+
+    left: set[V]
+    both: set[V]
+    right: set[V]
+
+    @classmethod
+    def from_collections(cls, left: Collection[V], right: Collection[V]) -> Self:
+        """Construct from two collections."""
+        left = set(left)
+        right = set(right)
+        return cls(left - right, left & right, right - left)
+
+    def get_counts(self) -> VennCounts:
+        """Get counts."""
+        return VennCounts(len(self.left), len(self.both), len(self.right))
+
+
+def _get_nested_index_venns(
+    left: NestedIndex[X, Any], right: NestedIndex[X, Any]
+) -> Iterable[tuple[X, VennSets[X]]]:
+    for element in set(right).intersection(left):
+        yield element, VennSets.from_collections(left[element], right[element])
+
+
 def get_mermaid_venn2_markdown(
-    venn: Venn | VennSets[Any], left_label: str | None = None, right_label: str | None = None
+    venn: VennCounts | VennSets, left_label: str | None = None, right_label: str | None = None
 ) -> str:
     """Get a mermaid venn diagram."""
     rv = "```mermaid\n"
@@ -260,7 +266,10 @@ def get_mermaid_venn2_markdown(
 
 
 def get_mermaid_venn2(
-    venn: VennSets[Any] | Venn, left_label: str | None = None, right_label: str | None = None
+    venn: VennSets | VennCounts,
+    *,
+    left_label: str | None = None,
+    right_label: str | None = None,
 ) -> str:
     """Get a mermaid venn diagram."""
     if left_label is None:
@@ -268,7 +277,7 @@ def get_mermaid_venn2(
     if right_label is None:
         right_label = "right"
     if isinstance(venn, VennSets):
-        venn = Venn(len(venn.left), len(venn.both), len(venn.right))
+        venn = venn.get_counts()
     return dedent(f"""\
         venn-beta
           set A["{left_label}"]:{venn.left}
@@ -278,13 +287,16 @@ def get_mermaid_venn2(
 
 
 def get_matplotlib_venn2(
-    venn: VennSets[Any] | Venn, left_label: str | None = None, right_label: str | None = None
+    venn: VennSets | VennCounts,
+    *,
+    left_label: str | None = None,
+    right_label: str | None = None,
 ) -> str:
     """Get SVG from matplotlib."""
     import matplotlib.pyplot as plt
     from matplotlib_venn import venn2
 
-    if isinstance(venn, Venn):
+    if isinstance(venn, VennCounts):
         subsets = venn.left, venn.right, venn.both
     else:
         subsets = len(venn.left), len(venn.right), len(venn.both)
@@ -302,66 +314,3 @@ def fig_to_markdown_svg(fig: matplotlib.figure.Figure) -> str:
     buf.close()
     # Raw SVG can be dropped directly into Markdown (e.g., in HTML-capable renderers)
     return svg_string
-
-
-def _do_it(o: str | Path, p: Path, target_prefix: str) -> tuple[list[SemanticMapping], str | None]:
-    if p.is_file() and False:
-        rr = sssom_pydantic.read(p)
-        return rr.mappings, rr.mapping_set.title
-    mappings_l, converter, metadata = sssom_pydantic.read(o)
-    mappings = sssom_pydantic.standardize_mappings(mappings_l)
-    mappings = keep_prefixes_both(mappings, {"CHMO", target_prefix})
-    mappings = list(
-        invert_by_prefix_pair(
-            mappings,
-            target_prefix,
-            "CHMO",
-            converter=converter,
-        )
-    )
-    click.echo(f"got {len(mappings)} mappings for {target_prefix} from {o}")
-    sssom_pydantic.write(mappings, p, converter=converter, metadata=metadata)
-    return mappings, metadata.title
-
-
-DEMO_RIGHT = "https://github.com/nfdi-de/section-metadata-wg-onto/raw/refs/heads/main/sssom/data/positive.sssom.tsv"
-DEMO_RIGHT_NAME = "Charlie"
-DEMO_LEFT = "https://github.com/NFDI4Chem/rsc-cmo/raw/refs/heads/Add-tsv-files/src/mappings/fix-mappings.sssom.tsv"
-DEMO_LEFT_NAME = "Ambika"
-
-
-@click.command()
-@click.option("--left-url", default=DEMO_LEFT)
-@click.option("--right-url", default=DEMO_RIGHT)
-@click.option("--left-label", default=DEMO_LEFT_NAME)
-@click.option("--right-label", default=DEMO_RIGHT_NAME)
-@click.option("--output", type=Path)
-def _demo(
-    left_url: str, right_url: str, left_label: str, right_label: str, output: Path | None
-) -> None:
-    import sys
-
-    import pystow.utils
-
-    module = pystow.module("tmp")
-
-    target_prefix = "FIX"
-    internal_cache_path = module.join(name=f"{target_prefix}-rsc.sssom.tsv")
-    internal_mappings, internal_title = _do_it(left_url, internal_cache_path, target_prefix)
-    external_cache_path = module.join(name=f"{target_prefix}-wg-onto.sssom.tsv")
-    external_mappings, external_title = _do_it(right_url, external_cache_path, target_prefix)
-
-    markdown = compare(
-        internal_mappings,
-        external_mappings,
-        left_label or internal_title or "left",
-        right_label or external_title or "right",
-    )
-    import pyperclip
-
-    pyperclip.copy(markdown)
-    pystow.utils.safe_write_text(markdown, output or sys.stdout)
-
-
-if __name__ == "__main__":
-    _demo()

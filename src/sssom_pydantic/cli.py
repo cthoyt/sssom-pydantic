@@ -112,7 +112,6 @@ def subset(
     """
     import sys
 
-    import curies
     from curies.triples import keep_predicates, keep_prefixes_both, keep_prefixes_either
     from curies.vocabulary import exact_match
 
@@ -133,7 +132,7 @@ def subset(
     mappings = keep_predicates(mappings, exact_match)
 
     if standardize:
-        converter = curies.chain([_get_preferred_converter(), converter])
+        converter = _get_preferred_converter(converter)
         mappings = standardize_mappings(mappings_list, converter=converter)
 
     prefix = converter.standardize_prefix(prefix, strict=True)
@@ -251,7 +250,7 @@ def merge(
     mappings: Iterable[SemanticMapping] = itt.chain.from_iterable(part.mappings for part in parts)
 
     if standardize:
-        converter = curies.chain([_get_preferred_converter(), converter])
+        converter = _get_preferred_converter(converter)
         mappings = standardize_mappings(mappings, converter=converter)
 
     if merge_manual:
@@ -260,6 +259,49 @@ def merge(
     sssom_pydantic.write(
         mappings, output or sys.stdout, converter=converter, metadata=metadata, sort=True
     )
+
+
+@main.command(name="compare")
+@click.argument("left")
+@click.argument("right")
+@click.option("--left-label")
+@click.option("--right-label")
+@OUTPUT_OPTION
+@STANDARDIZE_FLAG
+def compare_it(
+    left: str,
+    right: str,
+    output: Path | None,
+    standardize: bool,
+    left_label: str | None,
+    right_label: str | None,
+) -> None:
+    """Compare manual curations in two SSSOM files."""
+    import sys
+
+    from pystow.utils import safe_write_text
+
+    import sssom_pydantic
+    from sssom_pydantic import standardize_mappings
+    from sssom_pydantic.api import _get_preferred_converter
+
+    from .compare import get_comparison_markdown
+
+    left_mappings, left_converter, left_metadata = sssom_pydantic.read(left)
+    right_mappings, right_converter, right_metadata = sssom_pydantic.read(right)
+
+    if standardize:
+        converter = _get_preferred_converter(left_converter, right_converter)
+        left_mappings = list(standardize_mappings(left_mappings, converter=converter))
+        right_mappings = list(standardize_mappings(right_mappings, converter=converter))
+
+    markdown = get_comparison_markdown(
+        left_mappings,
+        right_mappings,
+        left_label or left_metadata.title or "left",
+        right_label or right_metadata.title or "right",
+    )
+    safe_write_text(markdown, output or sys.stdout)
 
 
 if __name__ == "__main__":
