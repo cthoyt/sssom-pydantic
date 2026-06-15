@@ -133,7 +133,7 @@ def subset(
 
     if standardize:
         converter = _get_preferred_converter(converter)
-        mappings = standardize_mappings(mappings_list, converter=converter)
+        mappings = standardize_mappings(mappings, converter=converter)
 
     prefix = converter.standardize_prefix(prefix, strict=True)
 
