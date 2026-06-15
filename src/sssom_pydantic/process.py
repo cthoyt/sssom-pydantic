@@ -418,7 +418,7 @@ def invert(
     >>> mapping_inv.derived_from
     [Reference(prefix='mapping', identifier='36a1f9244ea7641a90987c82f33c25c0c13712ee8f48207b2a0825f8a4e4e26a')]
     """  # noqa:E501
-    new_predicate = semantic_mapping_inversions.get(mapping.predicate)  # type:ignore
+    new_predicate: curies.Reference | None = semantic_mapping_inversions.get(mapping.predicate)
     if new_predicate is None:
         raise NotImplementedError(
             f"inversion is not implemented for predicate: {mapping.predicate}"
