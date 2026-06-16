@@ -413,7 +413,11 @@ def invert(
     ... )
     >>> hash_triple_to_reference(mapping, converter)
     Reference(prefix='mapping', identifier='36a1f9244ea7641a90987c82f33c25c0c13712ee8f48207b2a0825f8a4e4e26a')
-    >>> mapping_inv = invert(mapping, converter=converter)
+    >>> mapping_inv = invert(
+    ...     mapping,
+    ...     converter=converter,
+    ...     justification_policy=InversionJustificationPolicy.derive,
+    ... )
     >>> mapping_inv.subject
     NamableReference(prefix='CHEBI', identifier='28646', name='ammeline')
     >>> mapping_inv.object
@@ -781,13 +785,20 @@ def invert_by_subject_prefix(
     ...     }
     ... )
     >>> m1 = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
-    >>> m1_inv = SemanticMapping.exact(
-    ...     "CHEBI:28646",
-    ...     "mesh:C000089",
-    ...     derived_from=[hash_triple_to_reference(m1, converter)],
-    ... )
+    >>> m1_inv = SemanticMapping.exact("CHEBI:28646", "mesh:C000089")
     >>> m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
     >>> assert [m1_inv, m2] == list(invert_by_subject_prefix([m1, m2], "mesh", converter=converter))
+    >>> m1_inv_derive = SemanticMapping.exact(
+    ...     "CHEBI:28646",
+    ...     "mesh:C000089",
+    ...     justification=mapping_inversion,
+    ...     derived_from=[hash_triple_to_reference(m1, converter)],
+    ... )
+    >>> assert [m1_inv_derive, m2] == list(
+    ...     invert_by_subject_prefix(
+    ...         [m1, m2], "mesh", converter=converter, justification_policy="derive"
+    ...     )
+    ... )
     """
     yield from invert_by_predicate(
         mappings,
@@ -836,13 +847,20 @@ def invert_by_object_prefix(
     ...     }
     ... )
     >>> m1 = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
-    >>> m1_inv = SemanticMapping.exact(
-    ...     "CHEBI:28646",
-    ...     "mesh:C000089",
-    ...     derived_from=[hash_triple_to_reference(m1, converter)],
-    ... )
+    >>> m1_inv = SemanticMapping.exact("CHEBI:28646", "mesh:C000089")
     >>> m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
     >>> assert [m1_inv, m2] == list(invert_by_object_prefix([m1, m2], "CHEBI", converter=converter))
+    >>> m1_inv_derive = SemanticMapping.exact(
+    ...     "CHEBI:28646",
+    ...     "mesh:C000089",
+    ...     justification=mapping_inversion,
+    ...     derived_from=[hash_triple_to_reference(m1, converter)],
+    ... )
+    >>> assert [m1_inv_derive, m2] == list(
+    ...     invert_by_object_prefix(
+    ...         [m1, m2], "CHEBI", converter=converter, justification_policy="derive"
+    ...     )
+    ... )
     """
     yield from invert_by_predicate(
         mappings,
@@ -896,11 +914,21 @@ def invert_by_prefix_pair(
     >>> m1_inv = SemanticMapping.exact(
     ...     "CHEBI:28646",
     ...     "mesh:C000089",
-    ...     derived_from=[hash_triple_to_reference(m1, converter)],
     ... )
     >>> m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
     >>> assert [m1_inv, m2] == list(
     ...     invert_by_prefix_pair([m1, m2], "mesh", "CHEBI", converter=converter)
+    ... )
+    >>> m1_inv_derive = SemanticMapping.exact(
+    ...     "CHEBI:28646",
+    ...     "mesh:C000089",
+    ...     justification=mapping_inversion,
+    ...     derived_from=[hash_triple_to_reference(m1, converter)],
+    ... )
+    >>> assert [m1_inv_derive, m2] == list(
+    ...     invert_by_prefix_pair(
+    ...         [m1, m2], "mesh", "CHEBI", converter=converter, justification_policy="derive"
+    ...     )
     ... )
     """
     yield from invert_by_predicate(

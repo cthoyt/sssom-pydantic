@@ -642,13 +642,11 @@ class TestProcess(cases.MappingTestCaseMixin):
         m0 = SemanticMapping.exact(R1, R2)
         m1 = SemanticMapping.narrow(R1, R2)
         m2 = SemanticMapping.broad(R2, R1)
-        m1_derived = SemanticMapping.narrow(R1, R2)
-        m2_derived = SemanticMapping.broad(R2, R1)
         self.assert_model_sequence_equal(
-            [m0, m2_derived], pr.invert_narrow_matches([m0, m1], converter=TEST_CONVERTER)
+            [m0, m2], pr.invert_narrow_matches([m0, m1], converter=TEST_CONVERTER)
         )
         self.assert_model_sequence_equal(
-            [m0, m1_derived], pr.invert_broad_matches([m0, m2], converter=TEST_CONVERTER)
+            [m0, m1], pr.invert_broad_matches([m0, m2], converter=TEST_CONVERTER)
         )
 
     def test_invert_unordered(self) -> None:
