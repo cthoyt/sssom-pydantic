@@ -74,14 +74,14 @@ def get_comparison_markdown(
     """Get prefix indexes."""
     ll = _strat(left_mappings)
     rr = _strat(right_mappings)
-    markdown = ""
+    markdown = f"# Comparison between {left_label} and {right_label}\n\n"
     pairs = set(ll).union(set(rr))
     for pair in pairs:
         ll_sub = ll.get(pair, [])
         rr_sub = rr.get(pair, [])
         if (not ll_sub or not rr_sub) and not show_missing:
             continue
-        markdown += f"\n\n# {pair[0]} to {pair[1]}\n\n"
+        markdown += f"\n\n## {pair[0]} to {pair[1]}\n\n"
         markdown += _get_comparison_markdown(
             left_prefix=pair[0],
             right_prefix=pair[1],
@@ -185,7 +185,7 @@ def _get_comparison_markdown(
             duplicates.append((right_label, *_subject_object_cells(k)))
 
     if duplicates:
-        rv += "\n\n## Duplicates\n\n"
+        rv += "\n\n### Duplicates\n\n"
         rv += tabulate(duplicates, headers=["side", *SUBJECT_OBJECT_CELL_HEADER], tablefmt="github")
         rv += "\n\n"
 
@@ -206,7 +206,7 @@ def _get_comparison_markdown(
             )
     if subject_rows:
         subject_venn = VennSets.from_collections(left_subject_index, right_subject_index)
-        rv += "\n\n## Subject Comparison\n\n"
+        rv += "\n\n### Subject Comparison\n\n"
         rv += f"- {len(subject_venn.left)} subjects in {left_label} only\n"
         rv += f"- {len(subject_venn.right)} subject in {right_label} only\n"
         rv += f"- {len(subject_venn.both)} subjects in both\n\n"
@@ -225,7 +225,7 @@ def _get_comparison_markdown(
             object_rows.append((obj.curie, obj.name, _yyyy(l_only), _yyyy(b_both), _yyyy(r_only)))
     if object_rows:
         object_venn = VennSets.from_collections(left_object_index, right_object_index)
-        rv += "\n\n## Object Comparison\n\n"
+        rv += "\n\n### Object Comparison\n\n"
         rv += f"- {len(object_venn.left)} objects in {left_label} only\n"
         rv += f"- {len(object_venn.right)} objects in {right_label} only\n"
         rv += f"- {len(object_venn.both)} objects in both\n\n"
@@ -238,7 +238,7 @@ def _get_comparison_markdown(
 
     venn = VennSets.from_collections(left_d, right_d)
 
-    rv += "\n\n## Subject-Object Pair Comparison\n\n"
+    rv += "\n\n### Subject-Object Pair Comparison\n\n"
     rv += f"- {len(venn.left)} subject-object pairs {left_label} only\n"
     rv += f"- {len(venn.right)} subject-object pairs {right_label} only\n"
     rv += f"- {len(venn.both)} subject-object pairs both\n"

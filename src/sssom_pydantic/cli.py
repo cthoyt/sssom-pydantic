@@ -344,6 +344,12 @@ def compare_it(
         show_missing=show_missing,
     )
     safe_write_text(markdown, output or sys.stdout)
+    if output:
+        import os
+
+        os.system(  # noqa:S605
+            f"npx --yes prettier --check --log-level=silent --prose-wrap always --write {output}"
+        )
 
 
 if __name__ == "__main__":
