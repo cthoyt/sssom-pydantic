@@ -311,19 +311,17 @@ def compare_it(
     import curies
     from pystow.utils import safe_write_text
 
-    import sssom_pydantic
-    from sssom_pydantic import SemanticMapping, standardize_mappings
-    from sssom_pydantic.api import _get_preferred_converter
-    from sssom_pydantic.process import invert_on_unordered
-
+    from .api import SemanticMapping, _get_preferred_converter, standardize_mappings
     from .compare import get_comparison_markdown
+    from .io import read
+    from .process import invert_on_unordered
 
     # define them as iterables to avoid confusion later
     left_mappings: Iterable[SemanticMapping]
     right_mappings: Iterable[SemanticMapping]
 
-    left_mappings, left_converter, left_metadata = sssom_pydantic.read(left)
-    right_mappings, right_converter, right_metadata = sssom_pydantic.read(right)
+    left_mappings, left_converter, left_metadata = read(left)
+    right_mappings, right_converter, right_metadata = read(right)
 
     if standardize:
         converter = _get_preferred_converter(left_converter, right_converter)
