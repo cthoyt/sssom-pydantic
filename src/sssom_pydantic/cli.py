@@ -10,6 +10,8 @@ __all__ = [
     "main",
 ]
 
+from sssom_pydantic import SemanticMapping
+
 
 @click.group()
 def main() -> None:
@@ -218,7 +220,11 @@ def _default_iri() -> str:
 )
 @OUTPUT_OPTION
 @click.option("--mapping-set-id", default=_default_iri, help="The ID for the merged mapping set")
-@click.option("--mapping-set-title", default="Merged Mapping Sets", help="The title for the merged mapping set")
+@click.option(
+    "--mapping-set-title",
+    default="Merged Mapping Sets",
+    help="The title for the merged mapping set",
+)
 @click.option("--merge-manual", is_flag=True)
 @STANDARDIZE_FLAG
 def merge(
@@ -237,7 +243,7 @@ def merge(
     from pydantic import AnyUrl
 
     import sssom_pydantic
-    from sssom_pydantic import MappingSet, SemanticMapping, standardize_mappings
+    from sssom_pydantic import MappingSet, standardize_mappings
     from sssom_pydantic import process as pr
     from sssom_pydantic.api import _get_preferred_converter
 
@@ -268,6 +274,8 @@ def merge(
 @click.argument("right")
 @click.option("--left-label")
 @click.option("--right-label")
+@click.option("--show-missing", is_flag=True)
+@click.option("--standardize-flip", is_flag=True)
 @OUTPUT_OPTION
 @STANDARDIZE_FLAG
 def compare_it(
@@ -277,31 +285,46 @@ def compare_it(
     standardize: bool,
     left_label: str | None,
     right_label: str | None,
+    standardize_flip: bool,
+    show_missing: bool,
 ) -> None:
     """Compare manual curations in two SSSOM files."""
     import sys
 
+    import curies
     from pystow.utils import safe_write_text
 
     import sssom_pydantic
     from sssom_pydantic import standardize_mappings
     from sssom_pydantic.api import _get_preferred_converter
+    from sssom_pydantic.process import invert_on_unordered
 
     from .compare import get_comparison_markdown
+
+    # define them as iterables to avoid confusion later
+    left_mappings: Iterable[SemanticMapping]
+    right_mappings: Iterable[SemanticMapping]
 
     left_mappings, left_converter, left_metadata = sssom_pydantic.read(left)
     right_mappings, right_converter, right_metadata = sssom_pydantic.read(right)
 
     if standardize:
         converter = _get_preferred_converter(left_converter, right_converter)
-        left_mappings = list(standardize_mappings(left_mappings, converter=converter))
-        right_mappings = list(standardize_mappings(right_mappings, converter=converter))
+        left_mappings = standardize_mappings(left_mappings, converter=converter)
+        right_mappings = standardize_mappings(right_mappings, converter=converter)
+    else:
+        converter = curies.chain([left_converter, right_converter])
+
+    if standardize_flip:
+        left_mappings = invert_on_unordered(left_mappings, converter=converter)
+        right_mappings = invert_on_unordered(right_mappings, converter=converter)
 
     markdown = get_comparison_markdown(
         left_mappings,
         right_mappings,
         left_label or left_metadata.title or "left",
         right_label or right_metadata.title or "right",
+        show_missing=show_missing,
     )
     safe_write_text(markdown, output or sys.stdout)
 

@@ -52,6 +52,7 @@ __all__ = [
     "invert_by_prefix_pair",
     "invert_by_subject_prefix",
     "invert_narrow_matches",
+    "invert_on_unordered",
     "merge_manual_curations",
     "publish",
     "remove_redundant_external",
@@ -339,12 +340,12 @@ def publish(
     return rv
 
 
-EXCHANGABLE_FIELDS = set()
+EXCHANGEABLE_FIELDS: set[str] = set()
 for key in SemanticMapping.model_fields:
     if key.startswith("subject_"):
-        EXCHANGABLE_FIELDS.add(key[len("subject_") :])
+        EXCHANGEABLE_FIELDS.add(key[len("subject_") :])
     elif key.startswith("object_"):
-        EXCHANGABLE_FIELDS.add(key[len("object_") :])
+        EXCHANGEABLE_FIELDS.add(key[len("object_") :])
 
 
 class InversionJustificationPolicy(enum.Enum):
@@ -440,7 +441,7 @@ def invert(
     if justification_policy is InversionJustificationPolicy.derive:
         update["justification"] = mapping_inversion
 
-    for part in EXCHANGABLE_FIELDS:
+    for part in EXCHANGEABLE_FIELDS:
         subject_part = getattr(mapping, f"subject_{part}")
         object_part = getattr(mapping, f"object_{part}")
         if subject_part and object_part:
@@ -663,6 +664,25 @@ def invert_by_predicate(
             yield invert(mapping, converter=converter, justification_policy=justification_policy)
         else:
             yield mapping
+
+
+def _mapping_nonstandard_order(mapping: SemanticMapping) -> bool:
+    return mapping.subject.prefix.casefold() > mapping.object.prefix.casefold()
+
+
+def invert_on_unordered(
+    mappings: Iterable[MappingTypeVar],
+    *,
+    converter: curies.Converter,
+    justification_policy: InversionJustificationPolicy | str | None = None,
+) -> Iterable[SemanticMapping]:
+    """Invert mappings whose subject and object prefixes are not in lexicographic order."""
+    yield from invert_by_predicate(
+        mappings,
+        predicate=_mapping_nonstandard_order,
+        converter=converter,
+        justification_policy=justification_policy,
+    )
 
 
 def invert_narrow_matches(

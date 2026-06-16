@@ -1,5 +1,7 @@
 """Compare semantic mappings.
 
+You can subset towards the specific one you want:
+
 .. code-block:: console
 
     $ sssom_pydantic subset -i https://github.com/nfdi-de/section-metadata-wg-onto/raw/refs/heads/main/sssom/data/positive.sssom.tsv \
@@ -12,13 +14,33 @@
         nfdi-chmo-fix.sssom.tsv \
         --left-label Ambika \
         --right-label Charlie
+
+You can do a multi-comparison:
+
+.. code-block:: console
+
+    $ sssom_pydantic merge \
+        --input https://github.com/NFDI4Chem/rsc-cmo/raw/refs/heads/Add-tsv-files/src/mappings/fix-mappings.sssom.tsv \
+        --input https://github.com/NFDI4Chem/rsc-cmo/raw/refs/heads/Add-tsv-files/src/mappings/afo-mappings.sssom.tsv \
+        --input https://github.com/NFDI4Chem/rsc-cmo/raw/refs/heads/Add-tsv-files/src/mappings/rex-mappings.sssom.tsv \
+        --input https://github.com/NFDI4Chem/rsc-cmo/raw/refs/heads/Add-tsv-files/src/mappings/wikidata-mappings.sssom.tsv \
+        --standardize \
+        --output ambika.sssom.tsv
+    $ sssom_pydantic compare \
+        ambika.sssom.tsv \
+        https://github.com/nfdi-de/section-metadata-wg-onto/raw/refs/heads/main/sssom/data/positive.sssom.tsv \
+        --standardize \
+        --left-label Ambika \
+        --right-label Charlie
+
 """  # noqa:E501
 
 from collections import defaultdict
-from collections.abc import Collection, Iterable
-from typing import Any, Generic, Literal, NamedTuple, TypeAlias, TypeVar
+from collections.abc import Collection, Iterable, Mapping
+from typing import Any, Generic, NamedTuple, TypeAlias, TypeVar
 
 from curies import NamableReference
+from curies.triples.model import TripleType
 from curies.vocabulary import manual_mapping_curation
 from tabulate import tabulate
 from typing_extensions import Self
@@ -46,7 +68,45 @@ def get_comparison_markdown(
     right_mappings: Iterable[SemanticMapping],
     left_label: str,
     right_label: str,
-    venn_type: Literal["svg", "mermaid"] | None = None,
+    *,
+    show_missing: bool = False,
+) -> str:
+    """Get prefix indexes."""
+    ll = _strat(left_mappings)
+    rr = _strat(right_mappings)
+    markdown = ""
+    pairs = set(ll).union(set(rr))
+    for pair in pairs:
+        ll_sub = ll.get(pair, [])
+        rr_sub = rr.get(pair, [])
+        if (not ll_sub or not rr_sub) and not show_missing:
+            continue
+        markdown += f"\n\n# {pair[0]} to {pair[1]}\n\n"
+        markdown += _get_comparison_markdown(
+            left_prefix=pair[0],
+            right_prefix=pair[1],
+            left_mappings=ll_sub,
+            right_mappings=rr_sub,
+            left_label=left_label,
+            right_label=right_label,
+        )
+    return markdown
+
+
+def _strat(triples: Iterable[TripleType]) -> Mapping[tuple[str, str], list[TripleType]]:
+    rv: defaultdict[tuple[str, str], list[TripleType]] = defaultdict(list)
+    for triple in triples:
+        rv[triple.subject.prefix, triple.object.prefix].append(triple)
+    return dict(rv)
+
+
+def _get_comparison_markdown(
+    left_prefix: str,
+    right_prefix: str,
+    left_mappings: Iterable[SemanticMapping],
+    right_mappings: Iterable[SemanticMapping],
+    left_label: str,
+    right_label: str,
 ) -> str:
     """Compare two sets of mappings and get Markdown.
 
@@ -54,13 +114,28 @@ def get_comparison_markdown(
     :param right_mappings: right mappings
     :param left_label: The label for the left mapping source
     :param right_label: The label for the right mapping source
-    :param venn_type: The mechanism for producing a venn diagram
 
     .. warning:: This function assumes that the mappings are only from a
         one prefix to another prefix
     """
     left_mappings_ = [m for m in left_mappings if m.justification == manual_mapping_curation]
     right_mappings_ = [m for m in right_mappings if m.justification == manual_mapping_curation]
+
+    if not left_mappings_ and not right_mappings_:
+        return (
+            f"No manually curated mappings from {left_prefix} to {right_prefix} "
+            f"are available from either {left_label} or {right_label}"
+        )
+    elif not left_mappings_:
+        return (
+            f"No manually curated mappings from {left_prefix} to {right_prefix} "
+            f"are available from {left_label}"
+        )
+    elif not right_mappings_:
+        return (
+            f"No manually curated mappings from {left_prefix} to {right_prefix} "
+            f"are available from {right_label}"
+        )
 
     left_subject_prefixes = {m.subject.prefix for m in left_mappings_}
     left_object_prefixes = {m.object.prefix for m in left_mappings_}
