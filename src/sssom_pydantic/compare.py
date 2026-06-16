@@ -74,23 +74,30 @@ def get_comparison_markdown(
     """Get prefix indexes."""
     ll = _strat(left_mappings)
     rr = _strat(right_mappings)
-    markdown = f"# Comparison between {left_label} and {right_label}\n\n"
+
+    header = f"# Comparison between {left_label} and {right_label}\n\n"
+    body = ""
     pairs = sorted(set(ll).union(set(rr)), key=lambda p: (p[0].casefold(), p[1].casefold()))
-    for pair in pairs:
-        ll_sub = ll.get(pair, [])
-        rr_sub = rr.get(pair, [])
+    for left_prefix, right_prefix in pairs:
+        ll_sub = ll.get((left_prefix, right_prefix), [])
+        rr_sub = rr.get((left_prefix, right_prefix), [])
         if (not ll_sub or not rr_sub) and not show_missing:
             continue
-        markdown += f"\n\n## {pair[0]} to {pair[1]}\n\n"
-        markdown += _get_comparison_markdown(
-            left_prefix=pair[0],
-            right_prefix=pair[1],
+        header += (
+            f"1. [{left_prefix} to {right_prefix}]"
+            f"(#{left_prefix.lower()}-to-{right_prefix.lower()})\n"
+        )
+        body += f"\n\n## {left_prefix} to {right_prefix}\n\n"
+        body += _get_comparison_markdown(
+            left_prefix=left_prefix,
+            right_prefix=right_prefix,
             left_mappings=ll_sub,
             right_mappings=rr_sub,
             left_label=left_label,
             right_label=right_label,
         )
-    return markdown
+
+    return header + body
 
 
 def _strat(triples: Iterable[TripleType]) -> Mapping[tuple[str, str], list[TripleType]]:
@@ -192,9 +199,6 @@ def _get_comparison_markdown(
     left_d = {so: values[0] for so, values in left_dd.items() if len(values) == 1}
     right_d = {so: values[0] for so, values in right_dd.items() if len(values) == 1}
 
-    def _yyyy(x: set[NamableReference]) -> str:
-        return ", ".join(sorted(f"{a.curie} ({a.name})" for a in x))
-
     subject_rows = []
     # TODO check when entity in left set is mapped to different entity in right set
     for subject, (l_only, b_both, r_only) in _get_nested_index_venns(
@@ -202,16 +206,29 @@ def _get_comparison_markdown(
     ):
         if l_only or r_only:
             subject_rows.append(
-                (subject.curie, subject.name, _yyyy(l_only), _yyyy(b_both), _yyyy(r_only))
+                (
+                    subject.curie,
+                    subject.name,
+                    _reference_set_to_label(l_only),
+                    _reference_set_to_label(b_both),
+                    _reference_set_to_label(r_only),
+                )
             )
+
+    subject_venn = VennSets.from_collections(left_subject_index, right_subject_index)
+    rv += "\n\n### Subject Comparison\n\n"
+    rv += f"- {len(subject_venn.left):,} entities appear as subjects only in {left_label}\n"
+    rv += f"- {len(subject_venn.right):,} entities appear as subjects only in {right_label} only\n"
+    rv += f"- {len(subject_venn.both):,} entities appear as subjects in both\n\n"
+
     if subject_rows:
-        subject_venn = VennSets.from_collections(left_subject_index, right_subject_index)
-        rv += "\n\n### Subject Comparison\n\n"
-        rv += f"- {len(subject_venn.left)} subjects in {left_label} only\n"
-        rv += f"- {len(subject_venn.right)} subject in {right_label} only\n"
-        rv += f"- {len(subject_venn.both)} subjects in both\n\n"
+        rv += (
+            f"The following {len(subject_rows):,} subjects "
+            f"({len(subject_rows) / len(subject_venn.both):.1%}) appearing "
+            f"in both have conflicting objects:\n\n"
+        )
         rv += tabulate(
-            subject_rows,
+            sorted(subject_rows),
             headers=["subject_id", "subject_label", left_label, "both", right_label],
             tablefmt="github",
         )
@@ -222,15 +239,29 @@ def _get_comparison_markdown(
         left_object_index, right_object_index
     ):
         if l_only or r_only:
-            object_rows.append((obj.curie, obj.name, _yyyy(l_only), _yyyy(b_both), _yyyy(r_only)))
+            object_rows.append(
+                (
+                    obj.curie,
+                    obj.name,
+                    _reference_set_to_label(l_only),
+                    _reference_set_to_label(b_both),
+                    _reference_set_to_label(r_only),
+                )
+            )
+
+    object_venn = VennSets.from_collections(left_object_index, right_object_index)
+    rv += "\n\n### Object Comparison\n\n"
+    rv += f"- {len(object_venn.left):,} entities appear as objects only in {left_label}\n"
+    rv += f"- {len(object_venn.right):,} entities appear as objects only in {right_label}\n"
+    rv += f"- {len(object_venn.both):,} entities appear as objects in both\n\n"
     if object_rows:
-        object_venn = VennSets.from_collections(left_object_index, right_object_index)
-        rv += "\n\n### Object Comparison\n\n"
-        rv += f"- {len(object_venn.left)} objects in {left_label} only\n"
-        rv += f"- {len(object_venn.right)} objects in {right_label} only\n"
-        rv += f"- {len(object_venn.both)} objects in both\n\n"
+        rv += (
+            f"The following {len(object_rows):,} objects "
+            f"({len(object_rows) / len(object_venn.both):.1%}) appearing in both "
+            f"have conflicting subjects:\n\n"
+        )
         rv += tabulate(
-            object_rows,
+            sorted(object_rows),
             headers=["object_id", "object_label", left_label, "both", right_label],
             tablefmt="github",
         )
@@ -239,12 +270,10 @@ def _get_comparison_markdown(
     venn = VennSets.from_collections(left_d, right_d)
 
     rv += "\n\n### Subject-Object Pair Comparison\n\n"
-    rv += f"- {len(venn.left)} subject-object pairs {left_label} only\n"
-    rv += f"- {len(venn.right)} subject-object pairs {right_label} only\n"
-    rv += f"- {len(venn.both)} subject-object pairs both\n"
-
+    rv += f"- {len(venn.left):,} subject-object pairs only appear in {left_label}\n"
+    rv += f"- {len(venn.right):,} subject-object pairs only appear in {right_label}\n"
+    rv += f"- {len(venn.both):,} subject-object pairs appear in both\n"
     subject_object_rows = []
-
     for k in venn.both:
         left = left_d[k]
         right = right_d[k]
@@ -265,16 +294,28 @@ def _get_comparison_markdown(
             )
 
     if subject_object_rows:
-        rv += "\n\n"
+        rv += (
+            f"\n\nThe following {len(subject_object_rows):,} subject-object pairs "
+            f"({len(subject_object_rows) / len(venn.both):.1%}) appearing in have"
+            f" conflicting predicates or predicate modifiers:\n\n"
+        )
         rv += (
             tabulate(
-                subject_object_rows,
+                sorted(subject_object_rows),
                 headers=[*SUBJECT_OBJECT_CELL_HEADER, "warning", left_label, right_label],
                 tablefmt="github",
             )
             + "\n"
         )
     return rv
+
+
+def _reference_set_to_label(references: set[NamableReference]) -> str:
+    labels = sorted(
+        f"{reference.curie} ({reference.name})" if reference.name else reference.curie
+        for reference in references
+    )
+    return ", ".join(labels)
 
 
 class VennCounts(NamedTuple):
