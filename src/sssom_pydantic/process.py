@@ -440,6 +440,7 @@ def invert(
 
     if justification_policy is InversionJustificationPolicy.derive:
         update["justification"] = mapping_inversion
+        update["derived_from"] = [hash_triple_to_reference(mapping, converter)]
 
     for part in EXCHANGABLE_FIELDS:
         subject_part = getattr(mapping, f"subject_{part}")
@@ -453,8 +454,6 @@ def invert(
         else:  # elif object_part
             update[f"object_{part}"] = None
             update[f"subject_{part}"] = object_part
-
-    update["derived_from"] = [hash_triple_to_reference(mapping, converter)]
 
     return mapping.model_copy(update=update)
 
