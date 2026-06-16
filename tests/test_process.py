@@ -2,7 +2,7 @@
 
 import datetime
 
-from curies import NamedReference
+from curies import NamableReference, NamedReference
 from curies.vocabulary import (
     broad_match,
     charlie,
@@ -647,6 +647,25 @@ class TestProcess(cases.MappingTestCaseMixin):
         )
         self.assert_model_sequence_equal(
             [m0, m1], pr.invert_broad_matches([m0, m2], converter=TEST_CONVERTER)
+        )
+
+    def test_invert_unordered(self) -> None:
+        """Test inversion when s/o prefixes aren't lexicographically sorted."""
+        r1 = NamableReference.from_curie("chebi:1234")
+        r2 = NamableReference.from_curie("mesh:D1234")
+
+        # first example is already in order
+        m0 = SemanticMapping.exact(r1, r2)
+        self.assert_model_sequence_equal(
+            [m0],
+            pr.invert_on_unordered([m0], converter=TEST_CONVERTER),
+        )
+
+        # out of order, needs flipping
+        m1 = SemanticMapping.exact(r2, r1)
+        self.assert_model_sequence_equal(
+            [m0],
+            pr.invert_on_unordered([m1], converter=TEST_CONVERTER, justification_policy="retain"),
         )
 
     def test_filter_by_confidence(self) -> None:
