@@ -876,11 +876,21 @@ def invert_by_prefix_pair(
     >>> m1_inv = SemanticMapping.exact(
     ...     "CHEBI:28646",
     ...     "mesh:C000089",
-    ...     derived_from=[hash_triple_to_reference(m1, converter)],
     ... )
     >>> m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
     >>> assert [m1_inv, m2] == list(
     ...     invert_by_prefix_pair([m1, m2], "mesh", "CHEBI", converter=converter)
+    ... )
+    >>> m1_inv_derive = SemanticMapping.exact(
+    ...     "CHEBI:28646",
+    ...     "mesh:C000089",
+    ...     justification=mapping_inversion,
+    ...     derived_from=[hash_triple_to_reference(m1, converter)],
+    ... )
+    >>> assert [m1_inv_derive, m2] == list(
+    ...     invert_by_prefix_pair(
+    ...         [m1, m2], "mesh", "CHEBI", converter=converter, justification_policy="derive"
+    ...     )
     ... )
     """
     yield from invert_by_predicate(
