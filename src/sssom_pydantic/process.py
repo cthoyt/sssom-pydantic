@@ -340,12 +340,14 @@ def publish(
     return rv
 
 
-EXCHANGABLE_FIELDS = set()
+#: A set of the stems of field names that
+#: should be swapped during inversion
+_EXCHANGEABLE_FIELDS: set[str] = set()
 for key in SemanticMapping.model_fields:
     if key.startswith("subject_"):
-        EXCHANGABLE_FIELDS.add(key[len("subject_") :])
+        _EXCHANGEABLE_FIELDS.add(key[len("subject_") :])
     elif key.startswith("object_"):
-        EXCHANGABLE_FIELDS.add(key[len("object_") :])
+        _EXCHANGEABLE_FIELDS.add(key[len("object_") :])
 
 
 class InversionJustificationPolicy(enum.Enum):
@@ -442,7 +444,7 @@ def invert(
         update["justification"] = mapping_inversion
         update["derived_from"] = [hash_triple_to_reference(mapping, converter)]
 
-    for part in EXCHANGABLE_FIELDS:
+    for part in _EXCHANGEABLE_FIELDS:
         subject_part = getattr(mapping, f"subject_{part}")
         object_part = getattr(mapping, f"object_{part}")
         if subject_part and object_part:
