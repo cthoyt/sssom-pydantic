@@ -75,7 +75,7 @@ def get_comparison_markdown(
     ll = _strat(left_mappings)
     rr = _strat(right_mappings)
     markdown = f"# Comparison between {left_label} and {right_label}\n\n"
-    pairs = set(ll).union(set(rr))
+    pairs = sorted(set(ll).union(set(rr)), key=lambda p: (p[0].casefold(), p[1].casefold()))
     for pair in pairs:
         ll_sub = ll.get(pair, [])
         rr_sub = rr.get(pair, [])
