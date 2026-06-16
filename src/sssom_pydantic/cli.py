@@ -270,10 +270,29 @@ def merge(
 @main.command(name="compare")
 @click.argument("left")
 @click.argument("right")
-@click.option("--left-label")
-@click.option("--right-label")
-@click.option("--show-missing", is_flag=True)
-@click.option("--standardize-flip", is_flag=True)
+@click.option(
+    "--left-label",
+    help="A short label for the left mapping set. If not given, falls "
+    "back to the left mapping set title.",
+)
+@click.option(
+    "--right-label",
+    help="A short label for the right mapping set. If not given, falls "
+    "back to the right mapping set title.",
+)
+@click.option(
+    "--show-missing",
+    is_flag=True,
+    help="When the left and right mapping set don't both have the same mappings, "
+    "should notes be shown in the output?",
+)
+@click.option(
+    "--standardize-flip",
+    is_flag=True,
+    help="Should subject/object order be automatically standardized by lexicographical order? "
+    "This is useful when combining arbitrary SSSOM files that might have curated with different "
+    "subject and object rules.",
+)
 @OUTPUT_OPTION
 @STANDARDIZE_FLAG
 def compare_it(
