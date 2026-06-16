@@ -761,13 +761,20 @@ def invert_by_subject_prefix(
     ...     }
     ... )
     >>> m1 = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
-    >>> m1_inv = SemanticMapping.exact(
-    ...     "CHEBI:28646",
-    ...     "mesh:C000089",
-    ...     derived_from=[hash_triple_to_reference(m1, converter)],
-    ... )
+    >>> m1_inv = SemanticMapping.exact("CHEBI:28646", "mesh:C000089")
     >>> m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
     >>> assert [m1_inv, m2] == list(invert_by_subject_prefix([m1, m2], "mesh", converter=converter))
+    >>> m1_inv_derive = SemanticMapping.exact(
+    ...     "CHEBI:28646",
+    ...     "mesh:C000089",
+    ...     justification=mapping_inversion,
+    ...     derived_from=[hash_triple_to_reference(m1, converter)],
+    ... )
+    >>> assert [m1_inv_derive, m2] == list(
+    ...     invert_by_subject_prefix(
+    ...         [m1, m2], "mesh", converter=converter, justification_policy="derive"
+    ...     )
+    ... )
     """
     yield from invert_by_predicate(
         mappings,
@@ -816,13 +823,20 @@ def invert_by_object_prefix(
     ...     }
     ... )
     >>> m1 = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
-    >>> m1_inv = SemanticMapping.exact(
-    ...     "CHEBI:28646",
-    ...     "mesh:C000089",
-    ...     derived_from=[hash_triple_to_reference(m1, converter)],
-    ... )
+    >>> m1_inv = SemanticMapping.exact("CHEBI:28646", "mesh:C000089")
     >>> m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
     >>> assert [m1_inv, m2] == list(invert_by_object_prefix([m1, m2], "CHEBI", converter=converter))
+    >>> m1_inv_derive = SemanticMapping.exact(
+    ...     "CHEBI:28646",
+    ...     "mesh:C000089",
+    ...     justification=mapping_inversion,
+    ...     derived_from=[hash_triple_to_reference(m1, converter)],
+    ... )
+    >>> assert [m1_inv_derive, m2] == list(
+    ...     invert_by_object_prefix(
+    ...         [m1, m2], "CHEBI", converter=converter, justification_policy="derive"
+    ...     )
+    ... )
     """
     yield from invert_by_predicate(
         mappings,
