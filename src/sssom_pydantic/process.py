@@ -412,7 +412,11 @@ def invert(
     ... )
     >>> hash_triple_to_reference(mapping, converter)
     Reference(prefix='mapping', identifier='36a1f9244ea7641a90987c82f33c25c0c13712ee8f48207b2a0825f8a4e4e26a')
-    >>> mapping_inv = invert(mapping, converter=converter)
+    >>> mapping_inv = invert(
+    ...     mapping,
+    ...     converter=converter,
+    ...     justification_policy=InversionJustificationPolicy.derive,
+    ... )
     >>> mapping_inv.subject
     NamableReference(prefix='CHEBI', identifier='28646', name='ammeline')
     >>> mapping_inv.object
