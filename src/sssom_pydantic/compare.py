@@ -66,12 +66,16 @@ def _subject_object_cells(
 def get_comparison_markdown(
     left_mappings: Iterable[SemanticMapping],
     right_mappings: Iterable[SemanticMapping],
-    left_label: str,
-    right_label: str,
+    left_label: str | None = None,
+    right_label: str | None = None,
     *,
     show_missing: bool = False,
 ) -> str:
     """Get prefix indexes."""
+    if left_label is None:
+        left_label = "left"
+    if right_label is None:
+        right_label = "right"
     ll = _strat(left_mappings)
     rr = _strat(right_mappings)
 

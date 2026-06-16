@@ -337,8 +337,8 @@ def compare_it(
     markdown = get_comparison_markdown(
         left_mappings,
         right_mappings,
-        left_label or left_metadata.title or "left",
-        right_label or right_metadata.title or "right",
+        left_label=left_label or left_metadata.title,
+        right_label=right_label or right_metadata.title,
         show_missing=show_missing,
     )
     safe_write_text(markdown, output or sys.stdout)
