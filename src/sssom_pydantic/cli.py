@@ -241,7 +241,7 @@ def merge(
     from pydantic import AnyUrl
 
     import sssom_pydantic
-    from sssom_pydantic import MappingSet, standardize_mappings
+    from sssom_pydantic import MappingSet, SemanticMapping, standardize_mappings
     from sssom_pydantic import process as pr
     from sssom_pydantic.api import _get_preferred_converter
 
