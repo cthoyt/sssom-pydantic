@@ -10,8 +10,6 @@ __all__ = [
     "main",
 ]
 
-from sssom_pydantic import SemanticMapping
-
 
 @click.group()
 def main() -> None:
@@ -243,7 +241,7 @@ def merge(
     from pydantic import AnyUrl
 
     import sssom_pydantic
-    from sssom_pydantic import MappingSet, standardize_mappings
+    from sssom_pydantic import MappingSet, SemanticMapping, standardize_mappings
     from sssom_pydantic import process as pr
     from sssom_pydantic.api import _get_preferred_converter
 
@@ -295,7 +293,7 @@ def compare_it(
     from pystow.utils import safe_write_text
 
     import sssom_pydantic
-    from sssom_pydantic import standardize_mappings
+    from sssom_pydantic import SemanticMapping, standardize_mappings
     from sssom_pydantic.api import _get_preferred_converter
     from sssom_pydantic.process import invert_on_unordered
 
