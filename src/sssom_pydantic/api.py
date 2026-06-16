@@ -375,13 +375,10 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
             self.object.prefix,
             self.justification.prefix,
         }
-        if self.record is not None:
-            rv.add(self.record.prefix)
-        for a in self.authors or []:
-            rv.add(a.prefix)
         if self.mapping_tool and self.mapping_tool.reference:
             rv.add(self.mapping_tool.reference.prefix)
-        for x in [
+        for reference in [
+            self.record,
             self.subject_source,
             self.subject_type,
             self.predicate_type,
@@ -392,9 +389,9 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
             self.subject_category,
             self.object_category,
         ]:
-            if x is not None:
-                rv.add(x.prefix)
-        for y in [
+            if reference is not None:
+                rv.add(reference.prefix)
+        for reference_list in [
             self.subject_match_field,
             self.subject_preprocessing,
             self.object_match_field,
@@ -405,9 +402,10 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
             self.curation_rule,
             self.derived_from,
         ]:
-            if y is not None:
-                for z in y:
-                    rv.add(z.prefix)
+            if reference_list is not None:
+                for reference in reference_list:
+                    if reference is not None:
+                        rv.add(reference.prefix)
         return rv
 
     def to_record(self) -> Record:
