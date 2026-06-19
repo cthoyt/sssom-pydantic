@@ -267,5 +267,88 @@ def merge(
     )
 
 
+@main.command(name="compare")
+@click.argument("left")
+@click.argument("right")
+@click.option(
+    "--left-label",
+    help="A short label for the left mapping set. If not given, falls "
+    "back to the left mapping set title.",
+)
+@click.option(
+    "--right-label",
+    help="A short label for the right mapping set. If not given, falls "
+    "back to the right mapping set title.",
+)
+@click.option(
+    "--show-missing",
+    is_flag=True,
+    help="When the left and right mapping set don't both have the same mappings, "
+    "should notes be shown in the output?",
+)
+@click.option(
+    "--standardize-flip",
+    is_flag=True,
+    help="Should subject/object order be automatically standardized by lexicographical order? "
+    "This is useful when combining arbitrary SSSOM files that might have curated with different "
+    "subject and object rules.",
+)
+@OUTPUT_OPTION
+@STANDARDIZE_FLAG
+def compare_it(
+    left: str,
+    right: str,
+    output: Path | None,
+    standardize: bool,
+    left_label: str | None,
+    right_label: str | None,
+    standardize_flip: bool,
+    show_missing: bool,
+) -> None:
+    """Compare manual curations in two SSSOM files."""
+    import sys
+
+    import curies
+    from pystow.utils import safe_write_text
+
+    from .api import SemanticMapping, _get_preferred_converter, standardize_mappings
+    from .compare import get_comparison_markdown
+    from .io import read
+    from .process import invert_on_unordered
+
+    # define them as iterables to avoid confusion later
+    left_mappings: Iterable[SemanticMapping]
+    right_mappings: Iterable[SemanticMapping]
+
+    left_mappings, left_converter, left_metadata = read(left)
+    right_mappings, right_converter, right_metadata = read(right)
+
+    if standardize:
+        converter = _get_preferred_converter(left_converter, right_converter)
+        left_mappings = standardize_mappings(left_mappings, converter=converter)
+        right_mappings = standardize_mappings(right_mappings, converter=converter)
+    else:
+        converter = curies.chain([left_converter, right_converter])
+
+    if standardize_flip:
+        left_mappings = invert_on_unordered(left_mappings, converter=converter)
+        right_mappings = invert_on_unordered(right_mappings, converter=converter)
+
+    markdown = get_comparison_markdown(
+        left_mappings,
+        right_mappings,
+        left_label=left_label or left_metadata.title,
+        right_label=right_label or right_metadata.title,
+        show_missing=show_missing,
+    )
+    safe_write_text(markdown, output or sys.stdout)
+    if output:
+        import os
+
+        os.system(  # noqa:S605
+            f"npx --yes prettier --check --log-level=silent --prose-wrap always --write {output}"
+        )
+
+
 if __name__ == "__main__":
     main()
