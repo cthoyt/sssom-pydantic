@@ -242,6 +242,7 @@ def write(
     exclude_prefixes: Collection[str] | None = None,
     condense: bool = True,
     reduce_prefix_map: bool = True,
+    progress: bool = False,
 ) -> None:
     """Write semantic mappings as SSSOM TSV.
 
@@ -269,6 +270,7 @@ def write(
     :param reduce_prefix_map: Should the prefix map be reduced based on prefixes
         appearing in mappings and the metadata? If used, streaming writing is not
         possible.
+    :param progress: Should a progress bar be shown?
     """
     if exclude_mappings is not None:
         mappings = remove_redundant_external(mappings, exclude_mappings, key=exclude_mappings_key)
@@ -278,7 +280,7 @@ def write(
         mappings = sorted(mappings)
 
     if reduce_prefix_map:
-        records, prefixes = _prepare_records(mappings)
+        records, prefixes = _prepare_records(mappings, progress=progress)
     else:
         records = (m.to_record() for m in mappings)
         prefixes = set()
@@ -299,6 +301,7 @@ def write(
         columns=columns,
         exclude_columns=exclude_columns,
         condense=condense,
+        progress=progress,
     )
 
 
@@ -332,10 +335,14 @@ def append(
     )
 
 
-def _prepare_records(mappings: Iterable[SemanticMapping]) -> tuple[Iterable[Record], set[str]]:
+def _prepare_records(
+    mappings: Iterable[SemanticMapping], *, progress: bool = False
+) -> tuple[Iterable[Record], set[str]]:
     records = []
     prefixes: set[str] = set()
-    for mapping in mappings:
+    for mapping in tqdm(
+        mappings, disable=not progress, desc="preparing mappings", unit_scale=True, leave=False
+    ):
         prefixes.update(mapping.get_prefixes())
         records.append(mapping.to_record())
     return records, prefixes
@@ -383,6 +390,7 @@ def write_unprocessed(
     columns: Sequence[str] | None = None,
     exclude_columns: Collection[str] | None = None,
     condense: bool = True,
+    progress: bool = False,
 ) -> None:
     """Write unprocessed records.
 
@@ -396,6 +404,7 @@ def write_unprocessed(
     :param exclude_columns: explicitly set what columns should not be output
     :param condense: condense mappings into mapping set metadata. Results in taking more
         than one pass over the mappings
+    :param progress: Should a progress bar be shown?
     """
     metadata = _get_metadata(metadata)
 
@@ -405,7 +414,7 @@ def write_unprocessed(
         records = list(records)
 
     if condense:
-        condensation = _get_condensation(records)
+        condensation = _get_condensation(records, progress=progress)
         for key, value in condensation.items():
             if key in metadata and metadata[key] != value:
                 logger.warning("mismatch between given metadata and observed. overwriting")
@@ -430,7 +439,7 @@ def write_unprocessed(
         metadata[PREFIX_MAP_KEY] = bimap
 
     if columns is None:
-        columns = _get_columns(records)
+        columns = _get_columns(records, progress=progress)
         exclude = set(condensation).union(exclude_columns or [])
         columns = [column for column in columns if column not in exclude]
     else:
@@ -440,7 +449,12 @@ def write_unprocessed(
         write_metadata(metadata, file)
         writer = csv.DictWriter(file, columns, delimiter="\t", extrasaction="ignore")
         writer.writeheader()
-        writer.writerows(_unprocess_row(record, exclude=exclude) for record in records)
+        writer.writerows(
+            _unprocess_row(record, exclude=exclude)
+            for record in tqdm(
+                records, disable=not progress, unit_scale=True, desc="writing SSSOM records"
+            )
+        )
 
 
 def write_metadata(metadata: MappingSetRecord | Metadata | MappingSet | None, file: TextIO) -> None:
@@ -457,9 +471,13 @@ def write_metadata(metadata: MappingSetRecord | Metadata | MappingSet | None, fi
 CondensationTypes: TypeAlias = str | float | None | datetime.date | tuple[str, ...]
 
 
-def _get_condensation(records: Iterable[Record]) -> dict[str, CondensationTypes]:
+def _get_condensation(
+    records: Iterable[Record], *, progress: bool = False
+) -> dict[str, CondensationTypes]:
     values: defaultdict[str, Counter[CondensationTypes]] = defaultdict(Counter)
-    for record in records:
+    for record in tqdm(
+        records, desc="preparing condensation", disable=not progress, unit_scale=True, leave=False
+    ):
         for key in PROPAGATABLE:
             value = getattr(record, key)
             if isinstance(value, list):
@@ -482,9 +500,11 @@ def _get_condensation(records: Iterable[Record]) -> dict[str, CondensationTypes]
     return condensed
 
 
-def _get_columns(records: Iterable[Record]) -> list[str]:
+def _get_columns(records: Iterable[Record], *, progress: bool = False) -> list[str]:
     columns = set()
-    for record in records:
+    for record in tqdm(
+        records, disable=not progress, unit_scale=True, desc="preparing columns", leave=False
+    ):
         for key in record.model_fields_set:
             if getattr(record, key) is not None:
                 columns.add(key)
