@@ -270,6 +270,7 @@ def write(
     :param reduce_prefix_map: Should the prefix map be reduced based on prefixes
         appearing in mappings and the metadata? If used, streaming writing is not
         possible.
+    :param progress: Should a progress bar be shown?
     """
     if exclude_mappings is not None:
         mappings = remove_redundant_external(mappings, exclude_mappings, key=exclude_mappings_key)
@@ -403,6 +404,7 @@ def write_unprocessed(
     :param exclude_columns: explicitly set what columns should not be output
     :param condense: condense mappings into mapping set metadata. Results in taking more
         than one pass over the mappings
+    :param progress: Should a progress bar be shown?
     """
     metadata = _get_metadata(metadata)
 
@@ -498,7 +500,7 @@ def _get_condensation(
     return condensed
 
 
-def _get_columns(records: Iterable[Record], *, progress=False) -> list[str]:
+def _get_columns(records: Iterable[Record], *, progress: bool = False) -> list[str]:
     columns = set()
     for record in tqdm(
         records, disable=not progress, unit_scale=True, desc="preparing columns", leave=False
