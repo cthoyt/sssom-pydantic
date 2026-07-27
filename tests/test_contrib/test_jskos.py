@@ -1,6 +1,6 @@
 """Test JSKOS export."""
 
-import importlib
+import importlib.util
 import unittest
 
 from sssom_pydantic.examples import EXAMPLES

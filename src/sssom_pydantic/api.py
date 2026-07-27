@@ -663,7 +663,10 @@ class MappingSetRecord(BaseModel):
             sssom_version=self.sssom_version,
             license=self.license,
             issue_tracker=self.issue_tracker,
-            extension_definitions=list(self.extension_definitions)
+            extension_definitions=[
+                extension_definition.process(converter)
+                for extension_definition in self.extension_definitions
+            ]
             if self.extension_definitions
             else None,
             creators=[converter.parse_curie(c, strict=True).to_pydantic() for c in self.creator_id]
@@ -685,11 +688,27 @@ class MappingSetRecord(BaseModel):
                 prop_value = [prop_value]
             propagatable[key] = prop_value
 
-        return functools.partial(row_to_record, propagatable=propagatable)
+        return functools.partial(
+            row_to_record,
+            propagatable=propagatable,
+        )
 
 
-def row_to_record(row: Row, *, propagatable: dict[str, str | list[str]] | None = None) -> Record:
-    """Parse a row from a SSSOM TSV file, unprocessed."""
+def row_to_record(
+    row: Row,
+    *,
+    propagatable: dict[str, str | list[str]] | None = None,
+    strict: bool = True,
+) -> Record:
+    """Parse a row from a SSSOM TSV file, unprocessed.
+
+    :param row: The raw row dictionary
+    :param propagatable: elements that should be propagated to all rows
+    :param strict: When true, will error on fields that
+        are not part of the SSSOM specification nor declared
+        as extension slots
+    :returns: A record object
+    """
     # Step 1: propagate values from the header if it's not explicit in the record
     if propagatable:
         row.update(propagatable)

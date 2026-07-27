@@ -511,7 +511,8 @@ def _get_columns(records: Iterable[Record], *, progress: bool = False) -> list[s
 
     # get them in the canonical order, based on how they appear in the
     # record, which mirrors https://w3id.org/sssom/Mapping
-    return [column for column in Record.model_fields if column in columns]
+    rv = [column for column in Record.model_fields if column in columns]
+    return rv
 
 
 def _unprocess_row(record: Record, *, exclude: set[str] | None = None) -> dict[str, Any]:

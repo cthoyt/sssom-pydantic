@@ -181,7 +181,9 @@ class TestIO(cases.MappingTestCaseMixin):
                 )
                 mappings, _, _, errors = sssom_pydantic.read(path, return_errors=True)
                 self.assertEqual(
-                    0, len(errors), msg="errors when reading, file contents:\n\n{path.read_text()}"
+                    0,
+                    len(errors),
+                    msg=f"errors when reading, file contents:\n\n{path.read_text()}\n\n{errors}",
                 )
                 self.assertEqual(
                     1,
