@@ -509,8 +509,8 @@ class TestIO(cases.MappingTestCaseMixin):
                 #  orcid: https://orcid.org/
                 #  semapv: https://w3id.org/semapv/vocab/
                 #  skos: http://www.w3.org/2004/02/skos/core#
-                #mapping_date: '2026-05-04'
                 #mapping_set_id: {TEST_MAPPING_SET_ID}
+                #mapping_date: '2026-05-04'
                 subject_id	subject_label	predicate_id	object_id	object_label	mapping_justification	author_id
                 mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	semapv:ManualMappingCuration	{AUTHOR.curie}
                 mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	semapv:ManualMappingCuration	

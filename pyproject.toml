@@ -61,7 +61,7 @@ tests = [
     "coverage[toml]",
     "linkml>=1.10.0",
     "linkml-runtime>=1.10.0",
-    "httpx",
+    "httpx2",
     "tabulate",
 ]
 docs = [
