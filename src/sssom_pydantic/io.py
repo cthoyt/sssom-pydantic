@@ -500,7 +500,7 @@ def _get_condensation(
 
 
 def _get_columns(records: Iterable[Record], *, progress: bool = False) -> list[str]:
-    columns = set()
+    columns: set[str] = set()
     for record in tqdm(
         records, disable=not progress, unit_scale=True, desc="preparing columns", leave=False
     ):
