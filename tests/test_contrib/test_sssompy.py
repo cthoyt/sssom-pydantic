@@ -88,7 +88,7 @@ class TestSSSOMPy(unittest.TestCase):
                 R2.curie,
                 R2.name,
                 manual_mapping_curation.curie,
-                "|".join((charlie.curie, charlie.curie)),
+                f"{charlie.curie}|{charlie.curie}",
             ],
         ]
         self.assertEqual(expected_rows, df.to_numpy().tolist())

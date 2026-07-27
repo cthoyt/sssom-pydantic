@@ -142,7 +142,6 @@ MAPPING_SLOT_SPECIFIC = {
     "mapping_set_source",
     "mapping_set_title",
     "mapping_set_version",
-    #
     "sssom_version",
     "extension_definitions",
     "issue_tracker",

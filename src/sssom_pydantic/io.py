@@ -464,11 +464,10 @@ def write_metadata(metadata: MappingSetRecord | Metadata | MappingSet | None, fi
         return
     # TODO add comment about being written with this software at a given time
     yaml_str = model_dump_yaml(mapping_set_record, exclude_none=True, exclude_unset=True)
-    for line in yaml_str.splitlines():
-        file.write(f"#{line}\n")
+    file.writelines(f"#{line}\n" for line in yaml_str.splitlines())
 
 
-CondensationTypes: TypeAlias = str | float | None | datetime.date | tuple[str, ...]
+CondensationTypes: TypeAlias = str | float | datetime.date | tuple[str, ...] | None
 
 
 def _get_condensation(
