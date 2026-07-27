@@ -430,7 +430,6 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
 
         return Record(
             record_id=_safe_curie(self.record),
-            #
             subject_id=self.subject.curie,
             subject_label=self.subject_name,
             subject_category=_safe_curie(self.subject_category),
@@ -439,12 +438,10 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
             subject_source=_safe_curie(self.subject_source),
             subject_source_version=self.subject_source_version,
             subject_type=_safe_entity_type(self.subject_type),
-            #
             predicate_id=self.predicate.curie,
             predicate_label=self.predicate_name,
             predicate_modifier=self.predicate_modifier,
             predicate_type=_safe_entity_type(self.predicate_type),
-            #
             object_id=self.object.curie,
             object_label=self.object_name,
             object_category=_safe_curie(self.object_category),
@@ -453,28 +450,23 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
             object_source=_safe_curie(self.object_source),
             object_source_version=self.object_source_version,
             object_type=_safe_entity_type(self.object_type),
-            #
             mapping_justification=self.justification.curie,
-            #
             author_id=_join(self.authors),
             author_label=None,  # FIXME
             creator_id=_join(self.creators),
             creator_label=None,  # FIXME
             reviewer_id=_join(self.reviewers),
             reviewer_label=None,  # FIXME
-            #
             publication_date=self.publication_date,
             mapping_date=self.mapping_date,
             review_date=self.review_date,
             reviewer_agreement=self.reviewer_agreement,
-            #
             comment=self.comment,
             confidence=self.confidence,
             curation_rule=_safe_curies(self.curation_rule),
             curation_rule_text=self.curation_rule_text,
             issue_tracker_item=_safe_curie(self.issue_tracker_item),
             license=self.license,
-            #
             mapping_cardinality=self.cardinality,
             cardinality_scope=self.cardinality_scope,
             mapping_provider=self.provider,
@@ -489,7 +481,6 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
             if self.mapping_tool is not None and self.mapping_tool.version is not None
             else None,
             match_string=self.match_string,
-            #
             derived_from=_safe_curies(self.derived_from),
             other=_dict_to_other(self.other) if self.other else None,
             see_also=self.see_also,
@@ -558,9 +549,9 @@ def _split_key_value(s: str, *, line_number: int | None = None) -> tuple[str, st
         left, right = s.split(OTHER_SECONDARY_SEP)
     except ValueError:
         if line_number is not None:
-            logging.debug("[line: %d] invalid value for `other`: %s", line_number, s)
+            logger.debug("[line: %d] invalid value for `other`: %s", line_number, s)
         else:
-            logging.debug("invalid value for `other`: %s", s)
+            logger.debug("invalid value for `other`: %s", s)
         return None
     return left, right
 
@@ -590,7 +581,7 @@ def _upgrade_list(x: X | list[X] | None) -> list[X] | None:
 def _fix_relative_url(s: str | AnyUrl) -> AnyUrl:
     if isinstance(s, AnyUrl):
         return s
-    if s.startswith("http://") or s.startswith("https://"):
+    if s.startswith(("http://", "https://")):
         return AnyUrl(s)
     url = f"https://w3id.org/sssom/mapping-set/{s}"
     logger.warning("mapping set has non-relative URL: %s. Formatted into %s", s, url)
@@ -655,7 +646,6 @@ class MappingSetRecord(BaseModel):
             source=self.mapping_set_source,
             title=self.mapping_set_title,
             version=self.mapping_set_version,
-            #
             publication_date=self.publication_date,
             see_also=self.see_also,
             other=_other_to_dict(self.other, line_number=line_number) if self.other else None,
@@ -663,7 +653,10 @@ class MappingSetRecord(BaseModel):
             sssom_version=self.sssom_version,
             license=self.license,
             issue_tracker=self.issue_tracker,
-            extension_definitions=list(self.extension_definitions)
+            extension_definitions=[
+                extension_definition.process(converter)
+                for extension_definition in self.extension_definitions
+            ]
             if self.extension_definitions
             else None,
             creators=[converter.parse_curie(c, strict=True).to_pydantic() for c in self.creator_id]
@@ -685,11 +678,26 @@ class MappingSetRecord(BaseModel):
                 prop_value = [prop_value]
             propagatable[key] = prop_value
 
-        return functools.partial(row_to_record, propagatable=propagatable)
+        return functools.partial(
+            row_to_record,
+            propagatable=propagatable,
+        )
 
 
-def row_to_record(row: Row, *, propagatable: dict[str, str | list[str]] | None = None) -> Record:
-    """Parse a row from a SSSOM TSV file, unprocessed."""
+def row_to_record(
+    row: Row,
+    *,
+    propagatable: dict[str, str | list[str]] | None = None,
+) -> Record:
+    """Parse a row from a SSSOM TSV file, unprocessed.
+
+    :param row: The raw row dictionary
+    :param propagatable: elements that should be propagated to all rows
+    :param strict: When true, will error on fields that
+        are not part of the SSSOM specification nor declared
+        as extension slots
+    :returns: A record object
+    """
     # Step 1: propagate values from the header if it's not explicit in the record
     if propagatable:
         row.update(propagatable)

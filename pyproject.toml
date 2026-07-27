@@ -61,7 +61,7 @@ tests = [
     "coverage[toml]",
     "linkml>=1.10.0",
     "linkml-runtime>=1.10.0",
-    "httpx",
+    "httpx2",
     "tabulate",
 ]
 docs = [
@@ -245,6 +245,7 @@ ignore = [
     "D105", # Missing docstring in magic method
     "E203", # Black conflicts with the following
     "C901", # too complex? not enough!
+    "DTZ",
 ]
 
 # See https://docs.astral.sh/ruff/settings/#per-file-ignores

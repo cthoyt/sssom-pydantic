@@ -66,7 +66,7 @@ class TestSchema(unittest.TestCase):
             with tempfile.TemporaryDirectory() as d:
                 path = Path(d).joinpath("schema.yml")
                 try:
-                    urlretrieve(SSSOM_SCHEMA_URL, path)  # noqa:S310
+                    urlretrieve(SSSOM_SCHEMA_URL, path)
                 except urllib.error.URLError:
                     raise unittest.SkipTest("test requires internet connection") from None
                 cls.view = SchemaView(path)
@@ -311,7 +311,7 @@ class TestExampleCompleteness(unittest.TestCase):
         """Test there's an example for all fields."""
         counter: Counter[str] = Counter()
         for example in EXAMPLES:
-            for k, _v in example.semantic_mapping.model_dump(exclude_none=True).items():
+            for k in example.semantic_mapping.model_dump(exclude_none=True):
                 counter[k] += 1
 
         for field in SemanticMapping.model_fields:

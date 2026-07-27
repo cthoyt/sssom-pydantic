@@ -63,7 +63,6 @@ TEST_PREFIX_MAP = {
     "semapv": "https://w3id.org/semapv/vocab/",
     "skos": "http://www.w3.org/2004/02/skos/core#",
     "sssom": "https://w3id.org/sssom/",
-    #
     "spdx": "https://spdx.org/licenses/",
     "w3id": "https://w3id.org/",
     MAPPING_HASH_CURIE_PREFIX: MAPPING_HASH_URI_PREFIX,

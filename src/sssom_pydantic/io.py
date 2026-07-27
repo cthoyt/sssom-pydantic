@@ -464,11 +464,10 @@ def write_metadata(metadata: MappingSetRecord | Metadata | MappingSet | None, fi
         return
     # TODO add comment about being written with this software at a given time
     yaml_str = model_dump_yaml(mapping_set_record, exclude_none=True, exclude_unset=True)
-    for line in yaml_str.splitlines():
-        file.write(f"#{line}\n")
+    file.writelines(f"#{line}\n" for line in yaml_str.splitlines())
 
 
-CondensationTypes: TypeAlias = str | float | None | datetime.date | tuple[str, ...]
+CondensationTypes: TypeAlias = str | float | datetime.date | tuple[str, ...] | None
 
 
 def _get_condensation(
@@ -511,7 +510,8 @@ def _get_columns(records: Iterable[Record], *, progress: bool = False) -> list[s
 
     # get them in the canonical order, based on how they appear in the
     # record, which mirrors https://w3id.org/sssom/Mapping
-    return [column for column in Record.model_fields if column in columns]
+    rv = [column for column in Record.model_fields if column in columns]
+    return rv
 
 
 def _unprocess_row(record: Record, *, exclude: set[str] | None = None) -> dict[str, Any]:
