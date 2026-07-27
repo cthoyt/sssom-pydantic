@@ -688,7 +688,6 @@ def row_to_record(
     row: Row,
     *,
     propagatable: dict[str, str | list[str]] | None = None,
-    strict: bool = True,
 ) -> Record:
     """Parse a row from a SSSOM TSV file, unprocessed.
 
