@@ -276,7 +276,7 @@ def expanded_record_to_box(record: ExpandedRecord) -> Box:
     return Box("mapping", boxes)
 
 
-Primitive = str | int | float | bool | datetime.date | datetime.datetime | AnyUrl
+Primitive = str | int | float | bool | datetime.datetime | datetime.date | AnyUrl
 
 
 def _get_box(name: str, value: Primitive) -> Box:
@@ -326,9 +326,12 @@ def _fmt_primitive(value: Primitive, *, max_precision: int = 4) -> str:
         case float():
             value = str(round(value, max_precision))
         case bool():
-            raise NotImplementedError
+            value = "true" if value else "false"
+        case datetime.datetime():
+            # YYYY-MM-DDThh:mm:ssTZ
+            value = value.strftime("%Y-%m-%dT%H:%M:%SZ")
         case datetime.date():
             value = value.strftime("%Y-%m-%d")
-        case datetime.datetime():
-            raise NotImplementedError
+        case _:
+            raise TypeError(f"invalid value: {value}")
     return f"{len(value)}:{value}"
