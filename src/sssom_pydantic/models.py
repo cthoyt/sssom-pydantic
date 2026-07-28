@@ -272,24 +272,11 @@ def expanded_record_to_box(record: ExpandedRecord) -> Box:
         value = getattr(record, name)
         if not value:
             continue
-        boxes.append(_get_box(name, value))
+        boxes.append(Box(name, value))
     return Box("mapping", boxes)
 
 
 Primitive = str | int | float | bool | datetime.datetime | datetime.date | AnyUrl
-
-
-def _get_box(name: str, value: Primitive) -> Box:
-    if not isinstance(value, list):
-        return Box(name, value)
-    if not value:
-        raise ValueError("list should not be empty")
-    if all(isinstance(v, str) for v in value):
-        return Box(name, value)
-    elif all(isinstance(v, AnyUrl) for v in value):
-        return Box(name, [str(v) for v in value])
-    else:
-        raise TypeError(f"invalid box value: {value}")
 
 
 class Box(NamedTuple):
