@@ -1,10 +1,14 @@
 """Test hashing."""
 
 import datetime
+import tempfile
 import unittest
+from pathlib import Path
+from textwrap import dedent
 
 from curies import Converter, Reference
 
+import sssom_pydantic
 from sssom_pydantic import SemanticMapping
 from sssom_pydantic.api import hash_mapping, hash_triple, mapping_to_sexpr_str
 from sssom_pydantic.examples import EXAMPLES
@@ -108,6 +112,38 @@ class TestSexpr(unittest.TestCase):
         for mapping, sexpr, digest in CASES:
             self.assertEqual(sexpr, mapping_to_sexpr_str(mapping, converter=CONVERTER))
             self.assertEqual(digest, hash_mapping(mapping, converter=CONVERTER))
+
+    def test_extension_slots(self) -> None:
+        """Test extension slots."""
+        ex = dedent("""\
+            #curie_map:
+            #  COMENT: https://example.com/entities/
+            #  EXPROP: https://example.org/properties/
+            #  ORGENT: https://example.org/entities2/
+            #  semapv: https://w3id.org/semapv/vocab/
+            #  skos: http://www.w3.org/2004/02/skos/core#
+            #  xsd: http://www.w3.org/2001/XMLSchema#
+            #  linkml: https://w3id.org/linkml/
+            #mapping_set_id: https://example.org/test.tsv
+            #extension_definitions:
+            #  - slot_name: ext_bar
+            #    property: EXPROP:barProperty
+            #    type_hint: xsd:integer
+            #  - slot_name: ext_baz
+            #    property: EXPROP:bazProperty
+            #    type_hint: linkml:uriOrCurie
+            subject_id	subject_label	predicate_id	object_id	object_label	mapping_justification	ext_bar	ext_baz
+            ORGENT:0001	alice	skos:closeMatch	COMENT:0011	alpha	semapv:ManualMappingCuration	111	ORGENT:BAZ_0001
+        """)  # noqa:E501
+        digest = "66BD0A57A976A109"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir).joinpath("test.tsv")
+            path.write_text(ex)
+            mappings, converter, _metadata, errors = sssom_pydantic.read(path, return_errors=True)
+        self.assertTrue(converter.has_prefix("ORGENT"))
+        self.assertEqual([], errors, msg="errors during reading SSSOM")
+        self.assertEqual(1, len(mappings), msg="reading failed")
+        self.assertEqual(digest, hash_mapping(mappings[0], converter=converter))
 
 
 class TestTripleHash(unittest.TestCase):

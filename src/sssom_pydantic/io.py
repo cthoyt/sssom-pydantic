@@ -23,7 +23,9 @@ from pystow.utils import model_dump_yaml, read_pydantic_yaml, safe_open
 from tqdm import tqdm
 from typing_extensions import TypeVar
 
+from ._semantic_datatypes import primitive_to_string
 from .api import (
+    ExtensionDefinitionRecord,
     MappingSet,
     MappingSetRecord,
     MappingTool,
@@ -115,6 +117,7 @@ def row_to_semantic_mapping(
     converter: curies.Converter,
     *,
     propagatable: dict[str, str | list[str]] | None = None,
+    extension_definitions: Collection[ExtensionDefinitionRecord] | None = None,
 ) -> SemanticMapping:
     """Get a semantic mapping from a row.
 
@@ -122,11 +125,14 @@ def row_to_semantic_mapping(
     :param converter: A converter for parsing CURIEs
     :param propagatable: Extra data coming from SSSOM TSV frontmatter to get propagated
         into each record
+    :param extension_definitions: A collection of extension definitions
 
     :returns: A semantic mapping
     """
     cleaned_row = _clean_row(row)
-    record = row_to_record(cleaned_row, propagatable=propagatable)
+    record = row_to_record(
+        cleaned_row, propagatable=propagatable, extension_definitions=extension_definitions
+    )
     return record_to_semantic_mapping(record, converter)
 
 
@@ -223,6 +229,7 @@ def record_to_semantic_mapping(
         see_also=record.see_also,
         similarity_measure=record.similarity_measure,
         similarity_score=record.similarity_score,
+        extensions=record.extensions,
     )
 
 
@@ -366,7 +373,8 @@ def append_unprocessed(
             f"can not append {len(records):,} mappings because no headers found in {path}"
         )
     exclude = {"mapping_set_id"}.union(exclude_columns or [])  # this is a hack...
-    columns = _get_columns(records)
+    metadata = _get_metadata(metadata)
+    columns = _get_columns(records, metadata)
     new_columns = set(columns).difference(original_columns).difference(exclude)
     if new_columns:
         raise NotImplementedError(
@@ -439,7 +447,7 @@ def write_unprocessed(
         metadata[PREFIX_MAP_KEY] = bimap
 
     if columns is None:
-        columns = _get_columns(records, progress=progress)
+        columns = _get_columns(records, metadata, progress=progress)
         exclude = set(condensation).union(exclude_columns or [])
         columns = [column for column in columns if column not in exclude]
     else:
@@ -499,18 +507,38 @@ def _get_condensation(
     return condensed
 
 
-def _get_columns(records: Iterable[Record], *, progress: bool = False) -> list[str]:
+def _get_columns(
+    records: Iterable[Record], metadata: Metadata, *, progress: bool = False
+) -> list[str]:
+    extension_slot_names = [
+        extension_definition["slot_name"]
+        for extension_definition in metadata.get("extension_definitions", [])
+    ]
+
+    used_extension_slots: set[str] = set()
     columns: set[str] = set()
     for record in tqdm(
         records, disable=not progress, unit_scale=True, desc="preparing columns", leave=False
     ):
         for key in record.model_fields_set:
-            if getattr(record, key) is not None:
-                columns.add(key)
+            if value := getattr(record, key):
+                if key != "extensions":
+                    columns.add(key)
+                else:
+                    for subkey in value:
+                        if subkey not in extension_slot_names:
+                            raise ValueError(f"undefined extension: {subkey}")
+                        used_extension_slots.add(subkey)
 
     # get them in the canonical order, based on how they appear in the
     # record, which mirrors https://w3id.org/sssom/Mapping
     rv = [column for column in Record.model_fields if column in columns]
+    # add extension slots based on the order they appear in the metadata
+    rv.extend(
+        extension_slot
+        for extension_slot in extension_slot_names
+        if extension_slot in used_extension_slots
+    )
     return rv
 
 
@@ -518,6 +546,11 @@ def _unprocess_row(record: Record, *, exclude: set[str] | None = None) -> dict[s
     rv = record.model_dump(
         exclude_none=True, exclude_unset=True, exclude_defaults=True, exclude=exclude
     )
+
+    # splat out all extensions
+    if extensions := rv.pop("extensions", None):
+        rv.update({key: primitive_to_string(value) for key, value in extensions.items()})
+
     for key in MULTIVALUED:
         if (value := rv.get(key)) and isinstance(value, list):
             rv[key] = "|".join(value)
@@ -822,6 +855,15 @@ def read_unprocessed_iterable(
         mapping_set_record = _chain_mapping_set_record(
             first_metadata, second_metadata, inline_metadata
         )
+
+        if mapping_set_record.extension_definitions:
+            for extension_definition in mapping_set_record.extension_definitions:
+                if extension_definition.slot_name in Record.model_fields:
+                    raise ValueError(
+                        f"extension_definition slot name conflicts with built-in field: "
+                        f"{extension_definition.slot_name}"
+                    )
+
         _row_to_record = mapping_set_record.get_parser()
         reader = csv.DictReader(file, fieldnames=columns, delimiter="\t")
         reader = tqdm(reader, **_tqdm_kwargs)

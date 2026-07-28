@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import datetime
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Annotated, Literal, NamedTuple, TypeAlias
 
 from curies.vocabulary import matching_processes
 from pydantic import AnyUrl, BaseModel, ConfigDict, Field
 
+from ._semantic_datatypes import SemanticPrimitive
 from .constants import EntityTypeLiteral
 
 if TYPE_CHECKING:
@@ -129,6 +130,8 @@ class Record(BaseModel):
     other: str | None = None
     comment: str | None = None
 
+    extensions: dict[str, SemanticPrimitive] | None = None
+
     def expand(
         self, converter: curies.Converter, exclude: set[str] | None = None
     ) -> ExpandedRecord:
@@ -243,6 +246,8 @@ class ExpandedRecord(BaseModel):
     other: str | None = None
     comment: str | None = None
 
+    extensions: dict[str, str] | None = None
+
     def compress(self, converter: curies.Converter) -> Record:
         """Compress expanded URIs into CURIEs."""
         data = self.model_dump(exclude_none=True, exclude_unset=True)
@@ -320,8 +325,7 @@ def box_to_str(box: Box, *, max_precision: int = 4, _debug: bool = False) -> str
     if _debug:
         inside = "\n".join(rr)
     else:
-        inside = "".join(rr)
-    return f"({start}({inside}))"
+        return f"({start}{_fmt_primitive(box.value, max_precision=max_precision)})"
 
 
 def _fmt_primitive(value: Primitive, *, max_precision: int = 4) -> str:

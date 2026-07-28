@@ -271,6 +271,31 @@ simple_with_similarity = ExampleMapping(
     ),
 )
 
+simple_with_str_extension = ExampleMapping(
+    description="simple mapping with string extension",
+    semantic_mapping=simple_predicted.model_copy(
+        update={
+            "extensions": {"count": 1},
+        }
+    ),
+)
+simple_with_int_extension = ExampleMapping(
+    description="simple mapping with integer extension",
+    semantic_mapping=simple_predicted.model_copy(
+        update={
+            "extensions": {"count": 1},
+        }
+    ),
+)
+simple_with_float_extension = ExampleMapping(
+    description="simple mapping with float extension",
+    semantic_mapping=simple_predicted.model_copy(
+        update={
+            "extensions": {"percentage": 0.85},
+        }
+    ),
+)
+
 e1 = ExampleMapping(
     description="source",
     semantic_mapping=SemanticMapping(
@@ -313,7 +338,7 @@ e4 = ExampleMapping(
         justification=manual_mapping_curation.curie,
         cardinality="1:1",
         comment="this record has 1:1 cardinality added, but this itself isn't enough to "
-        "change the hash so a comment is included",
+                "change the hash so a comment is included",
     ),
 )
 e4b = ExampleMapping(
@@ -325,7 +350,7 @@ e4b = ExampleMapping(
         justification=manual_mapping_curation.curie,
         cardinality="1:n",
         comment="this record has 1:n cardinality added, but this itself isn't enough to "
-        "change the hash so a comment is included",
+                "change the hash so a comment is included",
     ),
 )
 e4c = ExampleMapping(
@@ -337,7 +362,7 @@ e4c = ExampleMapping(
         justification=manual_mapping_curation.curie,
         cardinality="n:1",
         comment="this record has n:1 cardinality added, but this itself isn't enough to "
-        "change the hash so a comment is included",
+                "change the hash so a comment is included",
     ),
 )
 e4d = ExampleMapping(
@@ -349,7 +374,7 @@ e4d = ExampleMapping(
         justification=manual_mapping_curation.curie,
         cardinality="n:n",
         comment="this record has n:n cardinality added, but this itself isn't enough to "
-        "change the hash so a comment is included",
+                "change the hash so a comment is included",
     ),
 )
 e4d_scoped = ExampleMapping(

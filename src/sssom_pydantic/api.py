@@ -5,8 +5,9 @@ from __future__ import annotations
 import datetime
 import functools
 import logging
-from collections.abc import Callable, Iterable
-from typing import Annotated, Any, Literal, TypeAlias
+import typing
+from collections.abc import Callable, Collection, Iterable
+from typing import Annotated, Any, Literal, TypeAlias, cast
 
 import curies
 from curies import NamableReference, Reference, Triple
@@ -21,6 +22,12 @@ from curies.vocabulary import (
 from pydantic import AnyUrl, BaseModel, BeforeValidator, ConfigDict, Field
 from typing_extensions import Self, TypeVar
 
+from ._semantic_datatypes import (
+    SemanticPrimitive,
+    TypeHint,
+    primitive_from_string,
+    primitive_to_string,
+)
 from .constants import (
     ENTITY_TYPE_REFERENCE_TO_LITERAL,
     MULTIVALUED,
@@ -208,6 +215,9 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
     see_also: list[str] | None = None
     similarity_measure: str | None = None
     similarity_score: Annotated[float | None, Field(ge=0.0, le=1.0)] = None
+
+    # slot values
+    extensions: dict[str, SemanticPrimitive] | None = None
 
     @classmethod
     def from_triple(
@@ -406,6 +416,10 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
                 for reference in reference_list:
                     if reference is not None:
                         rv.add(reference.prefix)
+        if self.extensions:
+            for value in self.extensions.values():
+                if isinstance(value, Reference):
+                    rv.add(value.prefix)
         return rv
 
     def to_record(self) -> Record:
@@ -486,6 +500,10 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
             see_also=self.see_also,
             similarity_measure=self.similarity_measure,
             similarity_score=self.similarity_score,
+            # see https://mapping-commons.github.io/sssom/spec-model/#defined-extensions
+            extensions={k: primitive_to_string(v) for k, v in self.extensions.items()}
+            if self.extensions
+            else None,
         )
 
     def relabel(self) -> Self:
@@ -681,6 +699,7 @@ class MappingSetRecord(BaseModel):
         return functools.partial(
             row_to_record,
             propagatable=propagatable,
+            extension_definitions=self.extension_definitions,
         )
 
 
@@ -688,14 +707,13 @@ def row_to_record(
     row: Row,
     *,
     propagatable: dict[str, str | list[str]] | None = None,
+    extension_definitions: Collection[ExtensionDefinitionRecord] | None = None,
 ) -> Record:
     """Parse a row from a SSSOM TSV file, unprocessed.
 
     :param row: The raw row dictionary
     :param propagatable: elements that should be propagated to all rows
-    :param strict: When true, will error on fields that
-        are not part of the SSSOM specification nor declared
-        as extension slots
+    :param extension_definitions: extension slot definitions
     :returns: A record object
     """
     # Step 1: propagate values from the header if it's not explicit in the record
@@ -710,6 +728,21 @@ def row_to_record(
                 for subvalue in value.split("|")
                 if (stripped_subvalue := subvalue.strip())
             ]
+
+    # Step 3: handle extensions
+    if extension_definitions is not None:
+        extensions: dict[str, SemanticPrimitive] = {}
+        for extension in extension_definitions:
+            if extension_value := row.get(extension.slot_name):
+                if isinstance(extension_value, list):
+                    raise NotImplementedError(
+                        "lists in extension slots aren't yet part of the SSSOM spec"
+                    )
+                extensions[extension.slot_name] = primitive_from_string(
+                    extension.type_hint, extension_value
+                )
+        if extensions:
+            return Record.model_validate({**row, "extensions": extensions})
 
     rv = Record.model_validate(row)
     return rv
@@ -777,7 +810,9 @@ class ExtensionDefinitionRecord(BaseModel):
 
     slot_name: str
     property: str | None = None
-    type_hint: str | None = None
+    type_hint: TypeHint | None = None
+
+    # TODO what about multivalued? need to add to SSSOM spec
 
     def process(self, converter: curies.Converter) -> ExtensionDefinition:
         """Process the SSSOM data structure into a more idiomatic one."""
@@ -806,14 +841,18 @@ class ExtensionDefinition(BaseModel):
             rv.add(self.property.prefix)
         if self.type_hint is not None:
             rv.add(self.type_hint.prefix)
+        else:
+            rv.add("xsd")  # assumed xsd:string by default
         return rv
 
     def to_record(self) -> ExtensionDefinitionRecord:
         """Create a record object that can be readily dumped to SSSOM."""
+        if self.type_hint is not None and self.type_hint.curie not in typing.get_args(TypeHint):
+            raise ValueError
         return ExtensionDefinitionRecord(
             slot_name=self.slot_name,
             property=self.property.curie if self.property else None,
-            type_hint=self.type_hint.curie if self.type_hint else None,
+            type_hint=cast(TypeHint, self.type_hint.curie) if self.type_hint else None,
         )
 
 
