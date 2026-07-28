@@ -272,10 +272,16 @@ def expanded_record_to_box(record: ExpandedRecord) -> Box:
         match getattr(record, name, None):
             case None:
                 continue
-            case str() | int() | float() | bool() | datetime.datetime() | datetime.date() as value:
+            case (
+                str()
+                | int()
+                | float()
+                | bool()
+                | datetime.datetime()
+                | datetime.date()
+                | AnyUrl() as value
+            ):
                 boxes.append(Box(name, value))
-            case AnyUrl() as url:
-                boxes.append(Box(name, str(url)))
             case list(values):
                 if not values:
                     continue
@@ -290,7 +296,7 @@ def expanded_record_to_box(record: ExpandedRecord) -> Box:
     return Box("mapping", boxes)
 
 
-Primitive: TypeAlias = str | int | float | bool | datetime.datetime | datetime.date
+Primitive: TypeAlias = str | int | float | bool | datetime.datetime | datetime.date | AnyUrl
 
 
 class Box(NamedTuple):
@@ -322,7 +328,7 @@ def _fmt_primitive(value: Primitive, *, max_precision: int = 4) -> str:
     match value:
         case str():
             pass
-        case int():
+        case int() | AnyUrl():
             value = str(value)
         case float():
             value = str(round(value, max_precision))
