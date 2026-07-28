@@ -276,7 +276,7 @@ def expanded_record_to_box(record: ExpandedRecord) -> Box:
                 boxes.append(Box(name, value))
             case AnyUrl() as url:
                 boxes.append(Box(name, str(url)))
-            case list() as values:
+            case list(values):
                 if not values:
                     continue
                 if all(isinstance(v, str) for v in values):
@@ -303,24 +303,20 @@ class Box(NamedTuple):
 def box_to_str(box: Box, *, max_precision: int = 4, _debug: bool = False) -> str:
     """Convert a S-expression object to a string."""
     start = f"{len(box.label)}:{box.label}"
-    match box.value:
-        case str() | int() | float() | bool() | datetime.datetime() | datetime.date():
-            return f"({start}{_fmt_primitive(box.value, max_precision=max_precision)})"
-        case list():
-            rr = []
-            for value in box.value:
-                match value:
-                    case str() | float() | bool():
-                        rr.append(_fmt_primitive(value, max_precision=max_precision))
-                    case Box():
-                        rr.append(box_to_str(value, max_precision=max_precision, _debug=_debug))
-            if _debug:
-                inside = "\n".join(rr)
-            else:
-                inside = "".join(rr)
-            return f"({start}({inside}))"
-        case _:
-            raise TypeError(f"invalid box value: {box.value}")
+    if isinstance(box.value, str) or not isinstance(box.value, Sequence):
+        return f"({start}{_fmt_primitive(box.value, max_precision=max_precision)})"
+    rr = []
+    for value in box.value:
+        match value:
+            case str() | float() | bool():
+                rr.append(_fmt_primitive(value, max_precision=max_precision))
+            case Box():
+                rr.append(box_to_str(value, max_precision=max_precision, _debug=_debug))
+    if _debug:
+        inside = "\n".join(rr)
+    else:
+        inside = "".join(rr)
+    return f"({start}({inside}))"
 
 
 def _fmt_primitive(value: Primitive, *, max_precision: int = 4) -> str:
