@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import datetime
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Annotated, Literal, NamedTuple, TypeAlias
 
 from curies.vocabulary import matching_processes
@@ -269,59 +269,58 @@ def expanded_record_to_box(record: ExpandedRecord) -> Box:
     for name in ExpandedRecord.model_fields:
         if name in SKIP_SLOTS:
             continue
-        match getattr(record, name, None):
-            case None:
-                continue
-            case str() | float() | bool() | datetime.date() as value:
-                boxes.append(Box(name, value))
-            case AnyUrl() as url:
-                boxes.append(Box(name, str(url)))
-            case list() as values:
-                if not values:
-                    continue
-                if all(isinstance(v, str) for v in values):
-                    boxes.append(Box(name, values))
-                elif all(isinstance(v, AnyUrl) for v in values):
-                    boxes.append(Box(name, [str(v) for v in values]))
-                else:
-                    raise TypeError(f"invalid box value: {values}")
-            case _ as value:
-                raise NotImplementedError(f"not implemented for {type(value)}")
+        value = getattr(record, name)
+        if not value:
+            continue
+        boxes.append(_get_box(name, value))
     return Box("mapping", boxes)
+
+
+Primitive = str | int | float | bool | datetime.date | datetime.datetime | AnyUrl
+
+
+def _get_box(name: str, value: Primitive) -> Box:
+    if not isinstance(value, list):
+        return Box(name, value)
+    if not value:
+        raise ValueError("list should not be empty")
+    if all(isinstance(v, str) for v in value):
+        return Box(name, value)
+    elif all(isinstance(v, AnyUrl) for v in value):
+        return Box(name, [str(v) for v in value])
+    else:
+        raise TypeError(f"invalid box value: {value}")
 
 
 class Box(NamedTuple):
     """A value."""
 
     label: str
-    value: str | float | bool | datetime.date | Sequence[str | float | bool | datetime.date | Box]
+    value: Primitive | list[Primitive] | list[Box]
 
 
 def box_to_str(box: Box, *, max_precision: int = 4, _debug: bool = False) -> str:
     """Convert a S-expression object to a string."""
     start = f"{len(box.label)}:{box.label}"
-    match box.value:
-        case str() | float() | bool() | datetime.date():
-            return f"({start}{_fmt_primitive(box.value, max_precision=max_precision)})"
-        case list():
-            rr = []
-            for value in box.value:
-                match value:
-                    case str() | float() | bool():
-                        rr.append(_fmt_primitive(value, max_precision=max_precision))
-                    case Box():
-                        rr.append(box_to_str(value, max_precision=max_precision, _debug=_debug))
-            if _debug:
-                inside = "\n".join(rr)
-            else:
-                inside = "".join(rr)
-            return f"({start}({inside}))"
-        case _:
-            raise TypeError(f"invalid box value: {box.value}")
+    if not isinstance(box.value, list):
+        return f"({start}{_fmt_primitive(box.value, max_precision=max_precision)})"
+    rr = []
+    for value in box.value:
+        if isinstance(value, Box):
+            rr.append(box_to_str(value, max_precision=max_precision, _debug=_debug))
+        else:
+            rr.append(_fmt_primitive(value, max_precision=max_precision))
+    if _debug:
+        inside = "\n".join(rr)
+    else:
+        inside = "".join(rr)
+    return f"({start}({inside}))"
 
 
-def _fmt_primitive(value: str | float | bool | datetime.date, *, max_precision: int = 4) -> str:
+def _fmt_primitive(value: Primitive, *, max_precision: int = 4) -> str:
     match value:
+        case AnyUrl() | int():
+            value = str(value)
         case str():
             pass
         case float():
@@ -330,4 +329,6 @@ def _fmt_primitive(value: str | float | bool | datetime.date, *, max_precision: 
             raise NotImplementedError
         case datetime.date():
             value = value.strftime("%Y-%m-%d")
+        case datetime.datetime():
+            raise NotImplementedError
     return f"{len(value)}:{value}"
