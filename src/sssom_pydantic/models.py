@@ -274,34 +274,39 @@ def expanded_record_to_box(record: ExpandedRecord) -> Box:
     for name in ExpandedRecord.model_fields:
         if name in SKIP_SLOTS:
             continue
-        match getattr(record, name, None):
-            case None:
-                continue
-            case (
-                str()
-                | int()
-                | float()
-                | bool()
-                | datetime.datetime()
-                | datetime.date()
-                | AnyUrl() as value
-            ):
-                boxes.append(Box(name, value))
-            case list(values):
-                if not values:
-                    continue
-                if all(isinstance(v, str) for v in values):
-                    boxes.append(Box(name, values))
-                elif all(isinstance(v, AnyUrl) for v in values):
-                    boxes.append(Box(name, [str(v) for v in values]))
-                else:
-                    raise TypeError(f"invalid box value: {values}")
-            case _ as value:
-                raise NotImplementedError(f"not implemented for {type(value)}")
+        if box := _get_box(name, getattr(record, name, None)):  # type:ignore[arg-type]
+            boxes.append(box)
     return Box("mapping", boxes)
 
 
 Primitive: TypeAlias = str | int | float | bool | datetime.datetime | datetime.date | AnyUrl
+
+
+def _get_box(name: str, vvv: Primitive | Sequence[Primitive | Box]) -> Box | None:
+    match vvv:
+        case None:
+            return None
+        case (
+            str()
+            | int()
+            | float()
+            | bool()
+            | datetime.datetime()
+            | datetime.date()
+            | AnyUrl() as value
+        ):
+            return Box(name, value)
+        case list(values):
+            if not values:
+                raise ValueError
+            if all(isinstance(v, str) for v in values):
+                return Box(name, values)
+            elif all(isinstance(v, AnyUrl) for v in values):
+                return Box(name, [str(v) for v in values])
+            else:
+                raise TypeError(f"invalid box value: {values}")
+        case _ as value:
+            raise NotImplementedError(f"not implemented for {type(value)}")
 
 
 class Box(NamedTuple):
