@@ -323,9 +323,10 @@ def box_to_str(box: Box, *, max_precision: int = 4, _debug: bool = False) -> str
         else:
             rr.append(_fmt_primitive(value, max_precision=max_precision))
     if _debug:
-        inside = "\n".join(rr)
+        "\n".join(rr)
     else:
-        return f"({start}{_fmt_primitive(box.value, max_precision=max_precision)})"
+        inside = "".join(rr)
+    return f"({start}({inside}))"
 
 
 def _fmt_primitive(value: Primitive, *, max_precision: int = 4) -> str:
