@@ -18,6 +18,7 @@ from curies.vocabulary import (
     matching_processes,
     narrow_match,
     unspecified_matching_process,
+    xsd_string,
 )
 from pydantic import AnyUrl, BaseModel, BeforeValidator, ConfigDict, Field
 from typing_extensions import Self, TypeVar
@@ -805,6 +806,10 @@ class MappingSet(BaseModel):
         return rv
 
 
+SSSOM_INVALID_CURIE_PREFIX = "sssom.invalid"
+SSSOM_INVALID_URI_PREFIX = "http://sssom.invalid/"
+
+
 class ExtensionDefinitionRecord(BaseModel):
     """An extension definition that can be readily dumped to SSSOM."""
 
@@ -818,12 +823,13 @@ class ExtensionDefinitionRecord(BaseModel):
         """Process the SSSOM data structure into a more idiomatic one."""
         return ExtensionDefinition(
             slot_name=self.slot_name,
+            # see https://github.com/mapping-commons/sssom/issues/561#issuecomment-5105368113
             property=converter.parse(self.property, strict=True).to_pydantic()
             if self.property
-            else None,
+            else Reference(prefix=SSSOM_INVALID_CURIE_PREFIX, identifier=self.slot_name),
             type_hint=converter.parse(self.type_hint, strict=True).to_pydantic()
             if self.type_hint
-            else None,
+            else xsd_string,
         )
 
 
@@ -831,27 +837,31 @@ class ExtensionDefinition(BaseModel):
     """A processed extension definition."""
 
     slot_name: str
-    property: Reference | None = None
-    type_hint: Reference | None = None
+    property: Reference
+    type_hint: Reference
+
+    @classmethod
+    def default(cls, slot_name: str, *, type_hint: Reference | None = None) -> Self:
+        """Get a default extension."""
+        return cls(
+            slot_name=slot_name,
+            property=Reference(prefix=SSSOM_INVALID_URI_PREFIX, identifier=slot_name),
+            type_hint=type_hint or xsd_string,
+        )
 
     def get_prefixes(self) -> set[str]:
         """Get prefixes in the extension definition."""
-        rv: set[str] = set()
-        if self.property is not None:
-            rv.add(self.property.prefix)
-        if self.type_hint is not None:
-            rv.add(self.type_hint.prefix)
-        else:
-            rv.add("xsd")  # assumed xsd:string by default
-        return rv
+        return {self.property.prefix, self.type_hint.prefix}
 
     def to_record(self) -> ExtensionDefinitionRecord:
         """Create a record object that can be readily dumped to SSSOM."""
-        if self.type_hint is not None and self.type_hint.curie not in typing.get_args(TypeHint):
+        if self.type_hint.curie not in typing.get_args(TypeHint):
             raise ValueError
         return ExtensionDefinitionRecord(
             slot_name=self.slot_name,
-            property=self.property.curie if self.property else None,
+            property=self.property.curie
+            if self.property.prefix != SSSOM_INVALID_CURIE_PREFIX
+            else None,
             type_hint=cast(TypeHint, self.type_hint.curie) if self.type_hint else None,
         )
 

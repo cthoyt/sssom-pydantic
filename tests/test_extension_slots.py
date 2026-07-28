@@ -46,7 +46,7 @@ class TestExtensionSlots(unittest.TestCase):
         path.write_text(expected, encoding="utf-8")
         mappings, converter, metadata = sssom_pydantic.read(path)
         self.assertEqual(
-            [ExtensionDefinition(slot_name="test_slot")],
+            [ExtensionDefinition.default("test_slot")],
             metadata.extension_definitions,
         )
 
@@ -83,7 +83,12 @@ class TestExtensionSlots(unittest.TestCase):
 
         mappings, converter, metadata = sssom_pydantic.read(path)
         self.assertEqual(
-            [ExtensionDefinition(slot_name="test_slot_int", type_hint=xsd_integer)],
+            [
+                ExtensionDefinition.default(
+                    "test_slot_int",
+                    type_hint=xsd_integer
+                )
+            ],
             metadata.extension_definitions,
         )
         self.assertEqual(1, len(mappings))
@@ -118,7 +123,7 @@ class TestExtensionSlots(unittest.TestCase):
 
         mappings, converter, metadata = sssom_pydantic.read(path)
         self.assertEqual(
-            [ExtensionDefinition(slot_name="test_slot", type_hint=xsd_float)],
+            [ExtensionDefinition.default("test_slot", type_hint=xsd_float)],
             metadata.extension_definitions,
         )
         self.assertEqual(1, len(mappings))
@@ -155,7 +160,7 @@ class TestExtensionSlots(unittest.TestCase):
         mappings, converter, metadata = sssom_pydantic.read(path)
         self.assertEqual(
             [
-                ExtensionDefinition(
+                ExtensionDefinition.default(
                     slot_name="test_slot", type_hint=Reference.from_curie("sssom:curie")
                 )
             ],
@@ -197,7 +202,7 @@ class TestExtensionSlots(unittest.TestCase):
         path.write_text(expected, encoding="utf-8")
         mappings, _converter, metadata = sssom_pydantic.read(path)
         self.assertEqual(
-            [ExtensionDefinition(slot_name="test_slot")],
+            [ExtensionDefinition.default("test_slot")],
             metadata.extension_definitions,
         )
 
