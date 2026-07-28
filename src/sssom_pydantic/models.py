@@ -307,11 +307,10 @@ def box_to_str(box: Box, *, max_precision: int = 4, _debug: bool = False) -> str
         return f"({start}{_fmt_primitive(box.value, max_precision=max_precision)})"
     rr = []
     for value in box.value:
-        match value:
-            case str() | float() | bool():
-                rr.append(_fmt_primitive(value, max_precision=max_precision))
-            case Box():
-                rr.append(box_to_str(value, max_precision=max_precision, _debug=_debug))
+        if isinstance(value, Box):
+            rr.append(box_to_str(value, max_precision=max_precision, _debug=_debug))
+        else:
+            rr.append(_fmt_primitive(value, max_precision=max_precision))
     if _debug:
         inside = "\n".join(rr)
     else:
