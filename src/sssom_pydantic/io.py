@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import csv
 import datetime
+import functools
 import logging
 import traceback
 import warnings
@@ -25,7 +26,7 @@ from typing_extensions import TypeVar
 
 from ._semantic_datatypes import primitive_to_string
 from .api import (
-    ExtensionDefinitionRecord,
+    ExtensionDefinition,
     MappingSet,
     MappingSetRecord,
     MappingTool,
@@ -117,7 +118,7 @@ def row_to_semantic_mapping(
     converter: curies.Converter,
     *,
     propagatable: dict[str, str | list[str]] | None = None,
-    extension_definitions: Collection[ExtensionDefinitionRecord] | None = None,
+    extension_definitions: Collection[ExtensionDefinition] | None = None,
 ) -> SemanticMapping:
     """Get a semantic mapping from a row.
 
@@ -131,7 +132,10 @@ def row_to_semantic_mapping(
     """
     cleaned_row = _clean_row(row)
     record = row_to_record(
-        cleaned_row, propagatable=propagatable, extension_definitions=extension_definitions
+        cleaned_row,
+        propagatable=propagatable,
+        extension_definitions=extension_definitions,
+        converter=converter,
     )
     return record_to_semantic_mapping(record, converter)
 
@@ -864,7 +868,15 @@ def read_unprocessed_iterable(
                         f"{extension_definition.slot_name}"
                     )
 
-        _row_to_record = mapping_set_record.get_parser()
+        converter = _chain_converters(converter, mapping_set_record)
+        mapping_set = mapping_set_record.process(converter)
+
+        _row_to_record = functools.partial(
+            row_to_record,
+            converter=converter,
+            propagatable=mapping_set_record.get_propagatable(),
+            extension_definitions=mapping_set.extension_definitions,
+        )
         reader = csv.DictReader(file, fieldnames=columns, delimiter="\t")
         reader = tqdm(reader, **_tqdm_kwargs)
 
@@ -884,8 +896,6 @@ def read_unprocessed_iterable(
                     yield RecordTuple(line_number, record)
 
         records = _iterate_record_tuples()
-        converter = _chain_converters(converter, mapping_set_record)
-        mapping_set = mapping_set_record.process(converter)
         yield ReadUnprocessedStreamTuple(records, converter, mapping_set)
 
 

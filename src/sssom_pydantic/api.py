@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import datetime
-import functools
 import logging
 import typing
 from collections.abc import Callable, Collection, Iterable
@@ -23,12 +22,7 @@ from curies.vocabulary import (
 from pydantic import AnyUrl, BaseModel, BeforeValidator, ConfigDict, Field
 from typing_extensions import Self, TypeVar
 
-from ._semantic_datatypes import (
-    SemanticPrimitive,
-    TypeHint,
-    primitive_from_string,
-    primitive_to_string,
-)
+from ._semantic_datatypes import TypeHint, primitive_from_string
 from .constants import (
     ENTITY_TYPE_REFERENCE_TO_LITERAL,
     MULTIVALUED,
@@ -36,7 +30,7 @@ from .constants import (
     EntityTypeLiteral,
     Row,
 )
-from .models import Cardinality, Record, expanded_record_to_str
+from .models import Cardinality, Record, Slot, expanded_record_to_str
 
 __all__ = [
     "NOT",
@@ -218,7 +212,7 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
     similarity_score: Annotated[float | None, Field(ge=0.0, le=1.0)] = None
 
     # slot values
-    extensions: dict[str, SemanticPrimitive] | None = None
+    extensions: dict[str, Slot] | None = None
 
     @classmethod
     def from_triple(
@@ -502,9 +496,7 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
             similarity_measure=self.similarity_measure,
             similarity_score=self.similarity_score,
             # see https://mapping-commons.github.io/sssom/spec-model/#defined-extensions
-            extensions={k: primitive_to_string(v) for k, v in self.extensions.items()}
-            if self.extensions
-            else None,
+            extensions=self.extensions,
         )
 
     def relabel(self) -> Self:
@@ -684,8 +676,8 @@ class MappingSetRecord(BaseModel):
             creator_label=self.creator_label,
         )
 
-    def get_parser(self) -> Callable[[dict[str, str | list[str]]], Record]:
-        """Get a row parser function."""
+    def get_propagatable(self) -> dict[str, str | list[str]]:
+        """Get the propagation dict for row dict parsing."""
         propagatable = {}
         for key in PROPAGATABLE:
             prop_value = getattr(self, key)
@@ -696,19 +688,15 @@ class MappingSetRecord(BaseModel):
             if key in MULTIVALUED and isinstance(prop_value, str):
                 prop_value = [prop_value]
             propagatable[key] = prop_value
-
-        return functools.partial(
-            row_to_record,
-            propagatable=propagatable,
-            extension_definitions=self.extension_definitions,
-        )
+        return propagatable
 
 
 def row_to_record(
     row: Row,
     *,
+    converter: curies.Converter,
     propagatable: dict[str, str | list[str]] | None = None,
-    extension_definitions: Collection[ExtensionDefinitionRecord] | None = None,
+    extension_definitions: Collection[ExtensionDefinition] | None = None,
 ) -> Record:
     """Parse a row from a SSSOM TSV file, unprocessed.
 
@@ -732,15 +720,21 @@ def row_to_record(
 
     # Step 3: handle extensions
     if extension_definitions is not None:
-        extensions: dict[str, SemanticPrimitive] = {}
+        extensions: dict[str, Slot] = {}
         for extension in extension_definitions:
             if extension_value := row.get(extension.slot_name):
                 if isinstance(extension_value, list):
                     raise NotImplementedError(
                         "lists in extension slots aren't yet part of the SSSOM spec"
                     )
-                extensions[extension.slot_name] = primitive_from_string(
-                    extension.type_hint, extension_value
+                extensions[extension.slot_name] = Slot(
+                    predicate=extension.property,
+                    value=primitive_from_string(
+                        # TODO rewire to work on reference instead of CURIE string
+                        extension.type_hint.curie,  # type:ignore
+                        extension_value,
+                        converter=converter,
+                    ),
                 )
         if extensions:
             return Record.model_validate({**row, "extensions": extensions})

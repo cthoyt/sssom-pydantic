@@ -10,7 +10,7 @@ import curies
 from curies.vocabulary import matching_processes
 from pydantic import AnyUrl, BaseModel, ConfigDict, Field
 
-from ._semantic_datatypes import SemanticPrimitive
+from ._semantic_datatypes import SemanticPrimitive, primitive_to_string
 from .constants import EntityTypeLiteral
 
 __all__ = [
@@ -23,6 +23,24 @@ __all__ = [
 #: Cardinality annotations, which are valid within the scope of a mapping set
 #: but should not be saved as part of a mapping
 Cardinality: TypeAlias = Literal["1:1", "1:n", "n:1", "1:0", "0:1", "n:n", "0:0"]
+
+
+class Slot(BaseModel):
+    predicate: curies.Reference
+    value: SemanticPrimitive
+
+    def expand(self, converter: curies.Converter) -> ExpandedSlot:
+        predicate = converter.expand_reference(self.predicate, strict=True)
+        if isinstance(self.value, curies.Reference):
+            value = converter.expand_reference(self.value, strict=True)
+        else:
+            value = primitive_to_string(self.value)
+        return ExpandedSlot(predicate=predicate, value=value)
+
+
+class ExpandedSlot(BaseModel):
+    predicate: str
+    value: str
 
 
 class Record(BaseModel):
@@ -128,13 +146,17 @@ class Record(BaseModel):
     other: str | None = None
     comment: str | None = None
 
-    extensions: dict[str, SemanticPrimitive] | None = None
+    extensions: dict[str, Slot] | None = None
 
     def expand(
         self, converter: curies.Converter, exclude: set[str] | None = None
     ) -> ExpandedRecord:
         """Expand CURIEs to URIs in the record."""
-        data = self.model_dump(exclude_none=True, exclude_unset=True, exclude=exclude)
+        if exclude is None:
+            exclude = set()
+        data = self.model_dump(
+            exclude_none=True, exclude_unset=True, exclude=exclude | {"extensions"}
+        )
         for key in SINGLE_REFERENCE_FIELDS:
             if curie := data.get(key):
                 data[key] = converter.expand(curie, strict=True)
@@ -142,16 +164,10 @@ class Record(BaseModel):
             if curies_ := data.get(key):
                 data[key] = [converter.expand(curie, strict=True) for curie in curies_]
 
-        # expand all CURIEs into URIs
-        if extensions := data.pop("extensions", None):
-            ee = {}
-            for k, v in extensions.items():
-                if isinstance(v, curies.Reference):
-                    ee[k] = converter.expand_reference(v, strict=True)
-                else:
-                    ee[k] = v
-            data["extensions"] = ee
-
+        if self.extensions:
+            data["extensions"] = {
+                key: slot.expand(converter) for key, slot in self.extensions.items()
+            }
         return ExpandedRecord.model_validate(data)
 
 
@@ -184,6 +200,10 @@ MULTIPLE_REFERENCE_FIELDS = {
 
 #: A predicate for a record
 RecordPredicate: TypeAlias = Callable[[Record], bool]
+
+
+class ExpandedExpansion(BaseModel):
+    predicate: AnyUrl
 
 
 class ExpandedRecord(BaseModel):
@@ -255,7 +275,7 @@ class ExpandedRecord(BaseModel):
     other: str | None = None
     comment: str | None = None
 
-    extensions: dict[str, str] | None = None
+    extensions: dict[str, ExpandedSlot] | None = None
 
     def compress(self, converter: curies.Converter) -> Record:
         """Compress expanded URIs into CURIEs."""
@@ -266,6 +286,7 @@ class ExpandedRecord(BaseModel):
         for key in MULTIPLE_REFERENCE_FIELDS:
             if uris := data.get(key):
                 data[key] = [converter.compress(str(uri), strict=True) for uri in uris]
+        # TODO parsing of extensions
         return Record.model_validate(data)
 
 
@@ -287,7 +308,8 @@ def expanded_record_to_box(record: ExpandedRecord) -> Box:
             boxes.append(box)
     if record.extensions:
         extension_boxes = [
-            box for k, v in sorted(record.extensions.items()) if (box := _get_box(k, v)) is not None
+            Box(v.predicate, v.value)
+            for k, v in sorted(record.extensions.items(), key=lambda s: s[1].predicate)
         ]
         if extension_boxes:
             boxes.append(Box("extensions", extension_boxes))

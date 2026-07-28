@@ -9,6 +9,7 @@ import datetime
 from collections.abc import Callable
 from typing import Literal, TypeAlias
 
+import curies
 from curies import Reference
 
 __all__ = [
@@ -31,7 +32,9 @@ TypeHint: TypeAlias = Literal[
     "xsd:boolean",
     "xsd:anyURI",
 ]
-SemanticPrimitive: TypeAlias = str | int | float | datetime.date | datetime.datetime | Reference
+SemanticPrimitive: TypeAlias = (
+    str | int | float | bool | datetime.date | datetime.datetime | Reference
+)
 
 
 def _bool(v: str) -> bool:
@@ -57,10 +60,16 @@ XSD_TYPE_TO_FUNC: dict[TypeHint, Callable[[str], SemanticPrimitive]] = {
 }
 
 
-def primitive_from_string(type_hint: TypeHint | None, value: str) -> SemanticPrimitive:
+def primitive_from_string(
+    type_hint: TypeHint | None, value: str, converter: curies.Converter
+) -> SemanticPrimitive:
     """Parse a value via a type hint."""
     if type_hint is None:
         return value
+    if type_hint == "sssom:curie":
+        return converter.parse_curie(value, strict=True).to_pydantic()
+    if type_hint == "linkml:uriOrCurie":
+        return converter.parse(value, strict=True).to_pydantic()
     # TODO arbitrary type parsing registration?
     return XSD_TYPE_TO_FUNC[type_hint](value)
 
