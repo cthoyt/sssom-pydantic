@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import datetime
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Annotated, Literal, NamedTuple, TypeAlias
 
 from curies.vocabulary import matching_processes
@@ -272,7 +272,7 @@ def expanded_record_to_box(record: ExpandedRecord) -> Box:
         match getattr(record, name, None):
             case None:
                 continue
-            case str() | float() | bool() | datetime.date() as value:
+            case str() | int() | float() | bool() | datetime.datetime() | datetime.date() as value:
                 boxes.append(Box(name, value))
             case AnyUrl() as url:
                 boxes.append(Box(name, str(url)))
@@ -290,18 +290,21 @@ def expanded_record_to_box(record: ExpandedRecord) -> Box:
     return Box("mapping", boxes)
 
 
+Primitive: TypeAlias = str | int | float | bool | datetime.datetime | datetime.date
+
+
 class Box(NamedTuple):
     """A value."""
 
     label: str
-    value: str | float | bool | datetime.date | Sequence[str | float | bool | datetime.date | Box]
+    value: Primitive | list[Primitive] | list[Box]
 
 
 def box_to_str(box: Box, *, max_precision: int = 4, _debug: bool = False) -> str:
     """Convert a S-expression object to a string."""
     start = f"{len(box.label)}:{box.label}"
     match box.value:
-        case str() | float() | bool() | datetime.date():
+        case str() | int() | float() | bool() | datetime.datetime() | datetime.date():
             return f"({start}{_fmt_primitive(box.value, max_precision=max_precision)})"
         case list():
             rr = []
@@ -320,14 +323,18 @@ def box_to_str(box: Box, *, max_precision: int = 4, _debug: bool = False) -> str
             raise TypeError(f"invalid box value: {box.value}")
 
 
-def _fmt_primitive(value: str | float | bool | datetime.date, *, max_precision: int = 4) -> str:
+def _fmt_primitive(value: Primitive, *, max_precision: int = 4) -> str:
     match value:
         case str():
             pass
+        case int():
+            value = str(value)
         case float():
             value = str(round(value, max_precision))
         case bool():
-            raise NotImplementedError
+            value = "true" if value else "false"
+        case datetime.datetime():
+            value = value.strftime("%Y-%m-%dT%H:%M:%SZ")
         case datetime.date():
             value = value.strftime("%Y-%m-%d")
     return f"{len(value)}:{value}"
