@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import datetime
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING, Annotated, Literal, NamedTuple, TypeAlias
 
 from curies.vocabulary import matching_processes
