@@ -119,7 +119,7 @@ class TestSexpr(unittest.TestCase):
             #curie_map:
             #  COMENT: https://example.com/entities/
             #  EXPROP: https://example.org/properties/
-            #  ORGENT: https://example.org/entities2/
+            #  ORGENT: https://example.org/entities/
             #  semapv: https://w3id.org/semapv/vocab/
             #  skos: http://www.w3.org/2004/02/skos/core#
             #  xsd: http://www.w3.org/2001/XMLSchema#
@@ -136,6 +136,7 @@ class TestSexpr(unittest.TestCase):
             ORGENT:0001	alice	skos:closeMatch	COMENT:0011	alpha	semapv:ManualMappingCuration	111	ORGENT:BAZ_0001
         """)  # noqa:E501
         digest = "66BD0A57A976A109"
+        sexpr = "(7:mapping((10:subject_id33:https://example.org/entities/0001)(13:subject_label5:alice)(12:predicate_id46:http://www.w3.org/2004/02/skos/core#closeMatch)(9:object_id33:https://example.com/entities/0011)(12:object_label5:alpha)(21:mapping_justification51:https://w3id.org/semapv/vocab/ManualMappingCuration)(10:extensions((42:https://example.org/properties/barProperty3:111)(42:https://example.org/properties/bazProperty37:https://example.org/entities/BAZ_0001)))))"
         with tempfile.TemporaryDirectory() as tmpdir:
             path = Path(tmpdir).joinpath("test.tsv")
             path.write_text(ex)
@@ -143,6 +144,7 @@ class TestSexpr(unittest.TestCase):
         self.assertTrue(converter.has_prefix("ORGENT"))
         self.assertEqual([], errors, msg="errors during reading SSSOM")
         self.assertEqual(1, len(mappings), msg="reading failed")
+        self.assertEqual(sexpr, mapping_to_sexpr_str(mappings[0], converter=converter))
         self.assertEqual(digest, hash_mapping(mappings[0], converter=converter))
 
 
