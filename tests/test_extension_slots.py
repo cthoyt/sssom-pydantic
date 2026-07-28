@@ -83,12 +83,7 @@ class TestExtensionSlots(unittest.TestCase):
 
         mappings, converter, metadata = sssom_pydantic.read(path)
         self.assertEqual(
-            [
-                ExtensionDefinition.default(
-                    "test_slot_int",
-                    type_hint=xsd_integer
-                )
-            ],
+            [ExtensionDefinition.default("test_slot_int", type_hint=xsd_integer)],
             metadata.extension_definitions,
         )
         self.assertEqual(1, len(mappings))
