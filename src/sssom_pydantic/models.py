@@ -4,16 +4,14 @@ from __future__ import annotations
 
 import datetime
 from collections.abc import Callable, Sequence
-from typing import TYPE_CHECKING, Annotated, Literal, NamedTuple, TypeAlias
+from typing import Annotated, Literal, NamedTuple, TypeAlias
 
+import curies
 from curies.vocabulary import matching_processes
 from pydantic import AnyUrl, BaseModel, ConfigDict, Field
 
 from ._semantic_datatypes import SemanticPrimitive
 from .constants import EntityTypeLiteral
-
-if TYPE_CHECKING:
-    import curies
 
 __all__ = [
     "Cardinality",
@@ -143,6 +141,17 @@ class Record(BaseModel):
         for key in MULTIPLE_REFERENCE_FIELDS:
             if curies_ := data.get(key):
                 data[key] = [converter.expand(curie, strict=True) for curie in curies_]
+
+        # expand all CURIEs into URIs
+        if extensions := data.pop("extensions", None):
+            ee = {}
+            for k, v in extensions.items():
+                if isinstance(v, curies.Reference):
+                    ee[k] = converter.expand_reference(v, strict=True)
+                else:
+                    ee[k] = v
+            data["extensions"] = ee
+
         return ExpandedRecord.model_validate(data)
 
 
@@ -260,7 +269,7 @@ class ExpandedRecord(BaseModel):
         return Record.model_validate(data)
 
 
-SKIP_SLOTS = {"record_id", "mapping_cardinality"}
+SKIP_SLOTS = {"record_id", "mapping_cardinality", "extensions"}
 
 
 def expanded_record_to_str(mapping: ExpandedRecord, *, _debug: bool = False) -> str:
@@ -276,6 +285,12 @@ def expanded_record_to_box(record: ExpandedRecord) -> Box:
             continue
         if box := _get_box(name, getattr(record, name, None)):  # type:ignore[arg-type]
             boxes.append(box)
+    if record.extensions:
+        extension_boxes = [
+            box for k, v in sorted(record.extensions.items()) if (box := _get_box(k, v)) is not None
+        ]
+        if extension_boxes:
+            boxes.append(Box("extensions", extension_boxes))
     return Box("mapping", boxes)
 
 
