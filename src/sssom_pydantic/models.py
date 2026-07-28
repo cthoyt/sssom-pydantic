@@ -269,7 +269,7 @@ def expanded_record_to_box(record: ExpandedRecord) -> Box:
     for name in ExpandedRecord.model_fields:
         if name in SKIP_SLOTS:
             continue
-        if box := _get_box(name, getattr(record, name, None)):
+        if box := _get_box(name, getattr(record, name, None)):  # type:ignore[arg-type]
             boxes.append(box)
     return Box("mapping", boxes)
 
