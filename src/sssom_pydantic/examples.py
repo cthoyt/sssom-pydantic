@@ -275,7 +275,7 @@ simple_with_str_extension = ExampleMapping(
     description="simple mapping with string extension",
     semantic_mapping=simple_predicted.model_copy(
         update={
-            "extensions": {"count": 1},
+            "extensions": {"bar": "baz"},
         }
     ),
 )
