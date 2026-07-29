@@ -547,13 +547,18 @@ def _get_columns(
 
 
 def _unprocess_row(record: Record, *, exclude: set[str] | None = None) -> dict[str, Any]:
+    if exclude is None:
+        exclude = set()
     rv = record.model_dump(
-        exclude_none=True, exclude_unset=True, exclude_defaults=True, exclude=exclude
+        exclude_none=True,
+        exclude_unset=True,
+        exclude_defaults=True,
+        exclude=exclude | {"extensions"},
     )
 
     # splat out all extensions
-    if extensions := rv.pop("extensions", None):
-        rv.update({key: primitive_to_string(value) for key, value in extensions.items()})
+    if record.extensions is not None:
+        rv.update({key: primitive_to_string(slot.value) for key, slot in record.extensions.items()})
 
     for key in MULTIVALUED:
         if (value := rv.get(key)) and isinstance(value, list):

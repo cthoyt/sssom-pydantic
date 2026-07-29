@@ -15,19 +15,27 @@ from curies.vocabulary import (
     mapping_inversion,
     semantic_similarity,
     unspecified_matching_process,
+    xsd_float,
+    xsd_integer,
+    xsd_string,
 )
 from pydantic import BaseModel
 
 from sssom_pydantic.api import (
     MAPPING_HASH_CURIE_PREFIX,
     MAPPING_HASH_URI_PREFIX,
+    SSSOM_INVALID_CURIE_PREFIX,
+    SSSOM_INVALID_URI_PREFIX,
     TRIPLE_HASH_CURIE_PREFIX,
     TRIPLE_HASH_URI_PREFIX,
+    ExtensionDefinition,
+    ExtensionDefinitionRecord,
     MappingTool,
     SemanticMapping,
     hash_mapping_to_reference,
     hash_triple_to_reference,
 )
+from sssom_pydantic.models import Slot
 
 __all__ = [
     "EXAMPLES",
@@ -48,6 +56,18 @@ __all__ = [
     "TEST_PREFIX_MAP",
 ]
 
+EXT_PRED_BAR = Reference(prefix=SSSOM_INVALID_CURIE_PREFIX, identifier="bar")
+EXT_PRED_COUNT = Reference(prefix=SSSOM_INVALID_CURIE_PREFIX, identifier="count")
+EXT_PRED_PERC = Reference(prefix=SSSOM_INVALID_CURIE_PREFIX, identifier="percentage")
+
+EXT_BAR_REC = ExtensionDefinitionRecord(slot_name="bar", type_hint=xsd_string.curie)
+EXT_COUNT_REC = ExtensionDefinitionRecord(slot_name="count", type_hint=xsd_integer.curie)
+EXT_PERC_REC = ExtensionDefinitionRecord(slot_name="percentage", type_hint=xsd_float.curie)
+
+EXT_BAR = ExtensionDefinition(slot_name="bar", property=EXT_PRED_BAR, type_hint=xsd_string)
+EXT_COUNT = ExtensionDefinition(slot_name="count", property=EXT_PRED_COUNT, type_hint=xsd_integer)
+EXT_PERC = ExtensionDefinition(slot_name="percentage", property=EXT_PRED_PERC, type_hint=xsd_float)
+
 TEST_PREFIX_MAP = {
     "cas": "https://commonchemistry.cas.org/detail?cas_rn=",
     "mesh": "http://id.nlm.nih.gov/mesh/",
@@ -65,6 +85,7 @@ TEST_PREFIX_MAP = {
     "sssom": "https://w3id.org/sssom/",
     "spdx": "https://spdx.org/licenses/",
     "w3id": "https://w3id.org/",
+    SSSOM_INVALID_CURIE_PREFIX: SSSOM_INVALID_URI_PREFIX,
     MAPPING_HASH_CURIE_PREFIX: MAPPING_HASH_URI_PREFIX,
     "issue": "https://github.com/cthoyt/sssom-pydantic/issues/",
     "biolink": "https://w3id.org/biolink/vocab/",
@@ -74,6 +95,7 @@ TEST_PREFIX_MAP = {
     TRIPLE_HASH_CURIE_PREFIX: TRIPLE_HASH_URI_PREFIX,
     "oboInOwl": "http://www.geneontology.org/formats/oboInOwl#",
     "wikidata": "http://www.wikidata.org/entity/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
 }
 TEST_CONVERTER = Converter.from_prefix_map(TEST_PREFIX_MAP)
 TEST_CONVERTER.add_prefix_synonym("chebi", "CHEBI")
@@ -275,7 +297,7 @@ simple_with_str_extension = ExampleMapping(
     description="simple mapping with string extension",
     semantic_mapping=simple_predicted.model_copy(
         update={
-            "extensions": {"bar": "baz"},
+            "extensions": {"bar": Slot(predicate=EXT_PRED_BAR, value="baz")},
         }
     ),
 )
@@ -283,7 +305,7 @@ simple_with_int_extension = ExampleMapping(
     description="simple mapping with integer extension",
     semantic_mapping=simple_predicted.model_copy(
         update={
-            "extensions": {"count": 1},
+            "extensions": {"count": Slot(predicate=EXT_PRED_COUNT, value=1)},
         }
     ),
 )
@@ -291,7 +313,7 @@ simple_with_float_extension = ExampleMapping(
     description="simple mapping with float extension",
     semantic_mapping=simple_predicted.model_copy(
         update={
-            "extensions": {"percentage": 0.85},
+            "extensions": {"percentage": Slot(predicate=EXT_PRED_PERC, value=0.85)},
         }
     ),
 )

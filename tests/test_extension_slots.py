@@ -10,6 +10,8 @@ from curies.vocabulary import xsd_float, xsd_integer
 
 import sssom_pydantic
 from sssom_pydantic import ExtensionDefinition, SemanticMapping
+from sssom_pydantic.api import SSSOM_INVALID_CURIE_PREFIX
+from sssom_pydantic.models import Slot
 
 
 class TestExtensionSlots(unittest.TestCase):
@@ -29,7 +31,7 @@ class TestExtensionSlots(unittest.TestCase):
 
     def test_extension_slot_str(self) -> None:
         """Tests for extension slots."""
-        expected = dedent("""\
+        start = dedent("""\
             #curie_map:
             #  chebi: http://purl.obolibrary.org/obo/CHEBI_
             #  mesh: http://id.nlm.nih.gov/mesh/
@@ -42,8 +44,23 @@ class TestExtensionSlots(unittest.TestCase):
             subject_id	predicate_id	object_id	mapping_justification	test_slot
             mesh:C000089	skos:exactMatch	chebi:28646	semapv:ManualMappingCuration	v1
         """)
+        # add explicit type
+        expected = dedent("""\
+            #curie_map:
+            #  chebi: http://purl.obolibrary.org/obo/CHEBI_
+            #  mesh: http://id.nlm.nih.gov/mesh/
+            #  semapv: https://w3id.org/semapv/vocab/
+            #  skos: http://www.w3.org/2004/02/skos/core#
+            #  xsd: http://www.w3.org/2001/XMLSchema#
+            #mapping_set_id: https://example.org/test.tsv
+            #extension_definitions:
+            #- slot_name: test_slot
+            #  type_hint: xsd:string
+            subject_id	predicate_id	object_id	mapping_justification	test_slot
+            mesh:C000089	skos:exactMatch	chebi:28646	semapv:ManualMappingCuration	v1
+        """)
         path = self._get_path("test.tsv")
-        path.write_text(expected, encoding="utf-8")
+        path.write_text(start, encoding="utf-8")
         mappings, converter, metadata = sssom_pydantic.read(path)
         self.assertEqual(
             [ExtensionDefinition.default("test_slot")],
@@ -56,7 +73,13 @@ class TestExtensionSlots(unittest.TestCase):
         if mapping.extensions is None:
             raise self.fail()
         self.assertIn("test_slot", mapping.extensions)
-        self.assertEqual("v1", mapping.extensions["test_slot"])
+        self.assertEqual(
+            Slot(
+                predicate=Reference(prefix=SSSOM_INVALID_CURIE_PREFIX, identifier="test_slot"),
+                value="v1",
+            ),
+            mapping.extensions["test_slot"],
+        )
 
         rr_path = self._get_path("test-2.tsv")
         sssom_pydantic.write(mappings, rr_path, converter=converter, metadata=metadata)
@@ -91,7 +114,13 @@ class TestExtensionSlots(unittest.TestCase):
         if mapping.extensions is None:
             raise self.fail(msg="no extensions were set")
         self.assertIn("test_slot_int", mapping.extensions)
-        self.assertEqual(15, mapping.extensions["test_slot_int"])
+        self.assertEqual(
+            Slot(
+                predicate=Reference(prefix=SSSOM_INVALID_CURIE_PREFIX, identifier="test_slot_int"),
+                value=15,
+            ),
+            mapping.extensions["test_slot_int"],
+        )
 
         rr_path = self._get_path("test-2.tsv")
         sssom_pydantic.write(mappings, rr_path, converter=converter, metadata=metadata)
@@ -126,7 +155,13 @@ class TestExtensionSlots(unittest.TestCase):
         if mapping.extensions is None:
             raise self.fail(msg="no extensions were set")
         self.assertIn("test_slot", mapping.extensions)
-        self.assertEqual(0.11, mapping.extensions["test_slot"])
+        self.assertEqual(
+            Slot(
+                predicate=Reference(prefix=SSSOM_INVALID_CURIE_PREFIX, identifier="test_slot"),
+                value=0.11,
+            ),
+            mapping.extensions["test_slot"],
+        )
 
         rr_path = self._get_path("test-2.tsv")
         sssom_pydantic.write(mappings, rr_path, converter=converter, metadata=metadata)
@@ -167,7 +202,11 @@ class TestExtensionSlots(unittest.TestCase):
             raise self.fail(msg="no extensions were set")
         self.assertIn("test_slot", mapping.extensions)
         self.assertEqual(
-            Reference(prefix="ex", identifier="1234567"), mapping.extensions["test_slot"]
+            Slot(
+                predicate=Reference(prefix=SSSOM_INVALID_CURIE_PREFIX, identifier="test_slot"),
+                value=Reference(prefix="ex", identifier="1234567"),
+            ),
+            mapping.extensions["test_slot"],
         )
 
         rr_path = self._get_path("test-2.tsv")

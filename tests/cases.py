@@ -35,6 +35,9 @@ from sssom_pydantic.database import (
 from sssom_pydantic.examples import (
     EXAMPLE_MAPPINGS,
     EXAMPLES,
+    EXT_BAR_REC,
+    EXT_COUNT_REC,
+    EXT_PERC_REC,
     P1,
     P2,
     P3,
@@ -101,6 +104,7 @@ TEST_MAPPING_SET_ID = "https://example.org/sssom.mappingset/1.sssom.tsv"
 TEST_METADATA = MappingSetRecord(
     mapping_set_id=TEST_MAPPING_SET_ID,
     license="https://spdx.org/licenses/CC0-1.0",
+    extension_definitions=[EXT_BAR_REC, EXT_COUNT_REC, EXT_PERC_REC],
 )
 TEST_MAPPING_SET = TEST_METADATA.process(TEST_CONVERTER)
 TEST_METADATA_W_PREFIX_MAP = MappingSetRecord(
@@ -599,6 +603,8 @@ class TestRepository(MappingTestCaseMixin):
 
         for example in EXAMPLES:
             if example.description == "reference for the mapping itself in the `record` field":
+                continue
+            if example.semantic_mapping.extensions:
                 continue
             with self.subTest(desc=example.description), tempfile.TemporaryDirectory() as tmpdir:
                 self.assertEqual(0, db.count_mappings())

@@ -88,4 +88,4 @@ def primitive_to_string(primitive: SemanticPrimitive) -> str:
         case Reference():
             return primitive.curie
         case _:
-            raise TypeError
+            raise TypeError(f"unhandled type {type(primitive)} - {primitive}")

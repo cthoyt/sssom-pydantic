@@ -279,14 +279,15 @@ class ExpandedRecord(BaseModel):
 
     def compress(self, converter: curies.Converter) -> Record:
         """Compress expanded URIs into CURIEs."""
-        data = self.model_dump(exclude_none=True, exclude_unset=True)
+        data = self.model_dump(exclude_none=True, exclude_unset=True, exclude={"extensions"})
         for key in SINGLE_REFERENCE_FIELDS:
             if uri := data.get(key):
                 data[key] = converter.compress(str(uri), strict=True)
         for key in MULTIPLE_REFERENCE_FIELDS:
             if uris := data.get(key):
                 data[key] = [converter.compress(str(uri), strict=True) for uri in uris]
-        # TODO parsing of extensions
+        if self.extensions:
+            raise NotImplementedError
         return Record.model_validate(data)
 
 

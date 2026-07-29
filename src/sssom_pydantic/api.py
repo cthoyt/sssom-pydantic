@@ -412,9 +412,10 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
                     if reference is not None:
                         rv.add(reference.prefix)
         if self.extensions:
-            for value in self.extensions.values():
-                if isinstance(value, Reference):
-                    rv.add(value.prefix)
+            for slot in self.extensions.values():
+                rv.add(slot.predicate.prefix)
+                if isinstance(slot.value, Reference):
+                    rv.add(slot.value.prefix)
         return rv
 
     def to_record(self) -> Record:
@@ -839,7 +840,7 @@ class ExtensionDefinition(BaseModel):
         """Get a default extension."""
         return cls(
             slot_name=slot_name,
-            property=Reference(prefix=SSSOM_INVALID_URI_PREFIX, identifier=slot_name),
+            property=Reference(prefix=SSSOM_INVALID_CURIE_PREFIX, identifier=slot_name),
             type_hint=type_hint or xsd_string,
         )
 
