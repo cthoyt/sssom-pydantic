@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import datetime
-import functools
 import logging
 from collections.abc import Callable, Iterable
 from typing import Annotated, Any, Literal, TypeAlias
@@ -665,8 +664,8 @@ class MappingSetRecord(BaseModel):
             creator_label=self.creator_label,
         )
 
-    def get_parser(self) -> Callable[[dict[str, str | list[str]]], Record]:
-        """Get a row parser function."""
+    def get_propagatable(self) -> dict[str, str | list[str]]:
+        """Get the propagation dict for row dict parsing."""
         propagatable = {}
         for key in PROPAGATABLE:
             prop_value = getattr(self, key)
@@ -677,11 +676,7 @@ class MappingSetRecord(BaseModel):
             if key in MULTIVALUED and isinstance(prop_value, str):
                 prop_value = [prop_value]
             propagatable[key] = prop_value
-
-        return functools.partial(
-            row_to_record,
-            propagatable=propagatable,
-        )
+        return propagatable
 
 
 def row_to_record(
@@ -693,9 +688,7 @@ def row_to_record(
 
     :param row: The raw row dictionary
     :param propagatable: elements that should be propagated to all rows
-    :param strict: When true, will error on fields that
-        are not part of the SSSOM specification nor declared
-        as extension slots
+
     :returns: A record object
     """
     # Step 1: propagate values from the header if it's not explicit in the record

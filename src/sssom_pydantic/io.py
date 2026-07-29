@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import csv
 import datetime
+import functools
 import logging
 import traceback
 import warnings
@@ -126,7 +127,10 @@ def row_to_semantic_mapping(
     :returns: A semantic mapping
     """
     cleaned_row = _clean_row(row)
-    record = row_to_record(cleaned_row, propagatable=propagatable)
+    record = row_to_record(
+        cleaned_row,
+        propagatable=propagatable,
+    )
     return record_to_semantic_mapping(record, converter)
 
 
@@ -822,7 +826,13 @@ def read_unprocessed_iterable(
         mapping_set_record = _chain_mapping_set_record(
             first_metadata, second_metadata, inline_metadata
         )
-        _row_to_record = mapping_set_record.get_parser()
+        converter = _chain_converters(converter, mapping_set_record)
+        mapping_set = mapping_set_record.process(converter)
+
+        _row_to_record = functools.partial(
+            row_to_record,
+            propagatable=mapping_set_record.get_propagatable(),
+        )
         reader = csv.DictReader(file, fieldnames=columns, delimiter="\t")
         reader = tqdm(reader, **_tqdm_kwargs)
 
@@ -842,8 +852,6 @@ def read_unprocessed_iterable(
                     yield RecordTuple(line_number, record)
 
         records = _iterate_record_tuples()
-        converter = _chain_converters(converter, mapping_set_record)
-        mapping_set = mapping_set_record.process(converter)
         yield ReadUnprocessedStreamTuple(records, converter, mapping_set)
 
 
