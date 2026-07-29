@@ -298,7 +298,6 @@ class TestSchema(unittest.TestCase):
 
     def test_expansion(self) -> None:
         """Test expansion/compression are inverse operations for all examples."""
-        self.maxDiff = None
         for example in EXAMPLES:
             with self.subTest(example=example.description):
                 record = example.semantic_mapping.to_record()
