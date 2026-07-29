@@ -672,3 +672,4 @@ BACKGROUND_MATCHING_EXAMPLES = [
 EXAMPLES: list[ExampleMapping] = [v for v in locals().values() if isinstance(v, ExampleMapping)]
 
 EXAMPLE_MAPPINGS: list[SemanticMapping] = [e.semantic_mapping for e in EXAMPLES]
+EXAMPLE_MAPPINGS_NO_EXT: list[SemanticMapping] = [e for e in EXAMPLE_MAPPINGS if not e.extensions]

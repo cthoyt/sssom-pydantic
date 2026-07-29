@@ -33,7 +33,7 @@ from sssom_pydantic.database import (
     SemanticMappingRepository,
 )
 from sssom_pydantic.examples import (
-    EXAMPLE_MAPPINGS,
+    EXAMPLE_MAPPINGS_NO_EXT,
     EXAMPLES,
     EXT_BAR_REC,
     EXT_COUNT_REC,
@@ -304,8 +304,8 @@ class TestRepository(MappingTestCaseMixin):
     def test_queries(self) -> None:
         """Generate and execute variety of queries."""
         db = self.repository
-        db.add_mappings(EXAMPLE_MAPPINGS)
-        for mapping in EXAMPLE_MAPPINGS:
+        db.add_mappings(EXAMPLE_MAPPINGS_NO_EXT)
+        for mapping in EXAMPLE_MAPPINGS_NO_EXT:
             queries = [Query(query=mapping.subject.prefix)]
             for query in queries:
                 results = db.get_mappings(query)
