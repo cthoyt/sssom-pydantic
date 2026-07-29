@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import datetime
-import functools
 import logging
 from collections.abc import Callable, Iterable
 from typing import Annotated, Any, Literal, TypeAlias

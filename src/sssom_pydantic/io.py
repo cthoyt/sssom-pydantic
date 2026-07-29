@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import csv
 import datetime
+import functools
 import logging
 import traceback
 import warnings
@@ -129,8 +130,6 @@ def row_to_semantic_mapping(
     record = row_to_record(
         cleaned_row,
         propagatable=propagatable,
-        extension_definitions=extension_definitions,
-        converter=converter,
     )
     return record_to_semantic_mapping(record, converter)
 
@@ -832,9 +831,7 @@ def read_unprocessed_iterable(
 
         _row_to_record = functools.partial(
             row_to_record,
-            converter=converter,
             propagatable=mapping_set_record.get_propagatable(),
-            extension_definitions=mapping_set.extension_definitions,
         )
         reader = csv.DictReader(file, fieldnames=columns, delimiter="\t")
         reader = tqdm(reader, **_tqdm_kwargs)
