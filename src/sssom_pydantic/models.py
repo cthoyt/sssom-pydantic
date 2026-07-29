@@ -202,10 +202,6 @@ MULTIPLE_REFERENCE_FIELDS = {
 RecordPredicate: TypeAlias = Callable[[Record], bool]
 
 
-class ExpandedExpansion(BaseModel):
-    predicate: AnyUrl
-
-
 class ExpandedRecord(BaseModel):
     """Represents an SSSOM record (i.e., a row in a SSSOM TSV file) expanded with URIs."""
 
