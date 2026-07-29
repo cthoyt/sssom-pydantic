@@ -878,8 +878,8 @@ def read_unprocessed_iterable(
 
         _row_to_record = functools.partial(
             row_to_record,
-            converter=converter,
             propagatable=mapping_set_record.get_propagatable(),
+            converter=converter,
             extension_definitions=mapping_set.extension_definitions,
         )
         reader = csv.DictReader(file, fieldnames=columns, delimiter="\t")

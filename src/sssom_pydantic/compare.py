@@ -126,8 +126,10 @@ def _get_comparison_markdown(
     :param left_label: The label for the left mapping source
     :param right_label: The label for the right mapping source
 
-    .. warning:: This function assumes that the mappings are only from a
-        one prefix to another prefix
+    .. warning::
+
+        This function assumes that the mappings are only from a one prefix to another
+        prefix
     """
     left_mappings_ = [m for m in left_mappings if m.justification == manual_mapping_curation]
     right_mappings_ = [m for m in right_mappings if m.justification == manual_mapping_curation]

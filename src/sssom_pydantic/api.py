@@ -704,6 +704,7 @@ def row_to_record(
     :param row: The raw row dictionary
     :param propagatable: elements that should be propagated to all rows
     :param extension_definitions: extension slot definitions
+
     :returns: A record object
     """
     # Step 1: propagate values from the header if it's not explicit in the record
