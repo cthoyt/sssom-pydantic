@@ -27,10 +27,13 @@ Cardinality: TypeAlias = Literal["1:1", "1:n", "n:1", "1:0", "0:1", "n:n", "0:0"
 
 
 class Slot(BaseModel):
+    """An extension slot value."""
+
     predicate: curies.Reference
     value: SemanticPrimitive
 
     def expand(self, converter: curies.Converter) -> ExpandedSlot:
+        """Expand the slot."""
         predicate = converter.expand_reference(self.predicate, strict=True)
         if isinstance(self.value, curies.Reference):
             value = converter.expand_reference(self.value, strict=True)
@@ -40,6 +43,8 @@ class Slot(BaseModel):
 
 
 class ExpandedSlot(BaseModel):
+    """An extension slot that has been expanded into URIs."""
+
     predicate: str
     value: str
 
