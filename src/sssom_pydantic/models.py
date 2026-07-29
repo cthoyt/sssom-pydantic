@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime
 from collections.abc import Callable, Sequence
+from operator import attrgetter
 from typing import Annotated, Literal, NamedTuple, TypeAlias
 
 import curies
@@ -305,8 +306,8 @@ def expanded_record_to_box(record: ExpandedRecord) -> Box:
             boxes.append(box)
     if record.extensions:
         extension_boxes = [
-            Box(v.predicate, v.value)
-            for k, v in sorted(record.extensions.items(), key=lambda s: s[1].predicate)
+            Box(slot.predicate, slot.value)
+            for slot in sorted(record.extensions.values(), key=attrgetter("predicate"))
         ]
         if extension_boxes:
             boxes.append(Box("extensions", extension_boxes))
