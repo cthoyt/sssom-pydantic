@@ -874,11 +874,18 @@ def _chain_mapping_set_record(*mapping_set_records: MappingSetRecord | None) -> 
         for mapping_set_record in mapping_set_records
         if mapping_set_record is not None and mapping_set_record.curie_map
     )
-    # todo more detailed chain for other list members?
-    #  creator_id, creator_label, see_also, mapping_set_source, extension_definitions
+    # TODO more detailed chain for other list members?
+    #  creator_id, creator_label, see_also, mapping_set_source
+    chain_lists: defaultdict[str, list[str]] = defaultdict(list)
+    fields = ['extensions']
+    for field in fields:
+        for msr in mapping_set_records:
+            for value in getattr(msr, field, []):
+                chain_lists[field].append(value)
 
+    exclude = {"curie_map"}.union(fields)
     chained_metadata = _cm(
-        mapping_set_record.model_dump(exclude_none=True, exclude_unset=True, exclude={"curie_map"})
+        mapping_set_record.model_dump(exclude_none=True, exclude_unset=True, exclude=exclude)
         for mapping_set_record in mapping_set_records
         if mapping_set_record is not None
     )
