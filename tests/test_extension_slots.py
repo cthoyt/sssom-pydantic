@@ -1,12 +1,22 @@
 """Tests for extension slots."""
 
+import datetime
 import tempfile
 import unittest
 from pathlib import Path
 from textwrap import dedent
 
 from curies import Reference
-from curies.vocabulary import linkml_uri_or_curie, xsd_float, xsd_integer
+from curies.vocabulary import (
+    linkml_uri_or_curie,
+    xsd_boolean,
+    xsd_date,
+    xsd_datetime,
+    xsd_float,
+    xsd_integer,
+    xsd_uri,
+)
+from pydantic import AnyUrl
 
 import sssom_pydantic
 from sssom_pydantic import ExtensionDefinition, SemanticMapping
@@ -209,42 +219,74 @@ class TestExtensionSlots(unittest.TestCase):
         sssom_pydantic.write(mappings, rr_path, converter=converter, metadata=metadata)
         self.assertEqual(expected, rr_path.read_text())
 
-    @unittest.skip(reason="multivalued isn't in SSSOM yet")
-    def test_extension_slot_str_multivalued(self) -> None:
+    def test_extension_slot_combine(self) -> None:
         """Tests for extension slots."""
         expected = dedent("""\
             #curie_map:
-            #  chebi: http://purl.obolibrary.org/obo/CHEBI_
-            #  mesh: http://id.nlm.nih.gov/mesh/
+            #  COMENT: https://example.com/entities/
+            #  EXPROP: https://example.org/properties/
+            #  ORGENT: https://example.org/entities/
+            #  rdfs: http://www.w3.org/2000/01/rdf-schema#
             #  semapv: https://w3id.org/semapv/vocab/
             #  skos: http://www.w3.org/2004/02/skos/core#
             #  xsd: http://www.w3.org/2001/XMLSchema#
             #mapping_set_id: https://example.org/test.tsv
             #extension_definitions:
-            # - slot_name: test_slot
-            #   multivalued: true
-            subject_id	predicate_id	object_id	mapping_justification	test_slot
-            mesh:C000089	skos:exactMatch	chebi:28646	semapv:ManualMappingCuration
-            mesh:C000089	skos:exactMatch	chebi:28646	semapv:ManualMappingCuration	v1
-            mesh:C000089	skos:exactMatch	chebi:28646	semapv:ManualMappingCuration	v1|v2
-        """)
+            #- slot_name: ext_accuracy
+            #  property: EXPROP:accuracy
+            #  type_hint: xsd:float
+            #- slot_name: ext_verified
+            #  property: EXPROP:verified
+            #  type_hint: xsd:boolean
+            #- slot_name: ext_verification_date
+            #  type_hint: xsd:date
+            #- slot_name: ext_timestamp
+            #  property: EXPROP:timestamp
+            #  type_hint: xsd:dateTime
+            #- slot_name: ext_see_also
+            #  property: rdfs:seeAlso
+            #  type_hint: xsd:anyURI
+            subject_id	predicate_id	object_id	mapping_justification	ext_accuracy	ext_verified	ext_verification_date	ext_timestamp	ext_see_also
+            ORGENT:0002	skos:exactMatch	COMENT:0022	semapv:ManualMappingCuration	99.1234	true	2026-07-31	2026-07-31T11:11:11+01:00	https://example.org/
+        """)  # noqa:E501
         path = Path(self.tmpdir.name) / "test.tsv"
         path.write_text(expected, encoding="utf-8")
-        mappings, _converter, metadata = sssom_pydantic.read(path)
-        self.assertEqual(
-            [ExtensionDefinition.default("test_slot")],
-            metadata.extension_definitions,
-        )
 
-        self.assertEqual(3, len(mappings))
-        self.assertIsNone(mappings[0].extensions)
-
-        if mappings[1].extensions is None:
+        mappings, converter, metadata, errors = sssom_pydantic.read(path, return_errors=True)
+        self.assertEqual([], errors)
+        definitions = [
+            ExtensionDefinition(
+                name="ext_accuracy", predicate="EXPROP:accuracy", datatype=xsd_float
+            ),
+            ExtensionDefinition(
+                name="ext_verified", predicate="EXPROP:verified", datatype=xsd_boolean
+            ),
+            ExtensionDefinition.default("ext_verification_date", type_hint=xsd_date),
+            ExtensionDefinition(
+                name="ext_timestamp", predicate="EXPROP:timestamp", datatype=xsd_datetime
+            ),
+            ExtensionDefinition(name="ext_see_also", predicate="rdfs:seeAlso", datatype=xsd_uri),
+        ]
+        values = [
+            99.1234,
+            True,
+            datetime.date(2026, 7, 31),
+            datetime.datetime.fromisoformat("2026-07-31T11:11:11+01:00"),
+            AnyUrl("https://example.org/"),
+        ]
+        self.assertEqual(definitions, metadata.extension_definitions)
+        self.assertEqual(1, len(mappings))
+        mapping: SemanticMapping = mappings[0]
+        if mapping.extensions is None:
             raise self.fail(msg="no extensions were set")
-        self.assertIn("test_slot", mappings[1].extensions)
-        self.assertEqual(["v1"], mappings[1].extensions["test_slot"])
 
-        if mappings[2].extensions is None:
-            raise self.fail(msg="no extensions were set")
-        self.assertIn("test_slot", mappings[2].extensions)
-        self.assertEqual(["v1", "v2"], mappings[2].extensions["test_slot"])
+        for definition, value in zip(definitions, values, strict=False):
+            self.assertIn(definition.name, mapping.extensions)
+            self.assertEqual(
+                Slot(predicate=definition.predicate, value=value),
+                mapping.extensions[definition.name],
+            )
+
+        rr_path = self._get_path("test-2.tsv")
+        sssom_pydantic.write(mappings, rr_path, converter=converter, metadata=metadata)
+        self.assertEqual(expected, rr_path.read_text())

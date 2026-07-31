@@ -400,7 +400,7 @@ def primitive_to_string(primitive: SemanticPrimitive) -> str:
             return "true" if primitive else "false"
         case str():
             return primitive
-        case float() | int():
+        case float() | int() | AnyUrl():
             return str(primitive)
         case Reference():
             return primitive.curie

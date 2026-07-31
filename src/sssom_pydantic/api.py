@@ -16,6 +16,7 @@ from curies.vocabulary import (
     exact_match,
     matching_processes,
     narrow_match,
+    parse_xsd,
     unspecified_matching_process,
     xsd_string,
 )
@@ -746,7 +747,7 @@ def _parse_extensions(
         if extension.datatype == v.linkml_uri_or_curie:
             extension_value_parsed = converter.parse(extension_value, strict=True).to_pydantic()
         else:
-            extension_value_parsed = v.XSD_TO_PARSER[extension.datatype](extension_value)
+            extension_value_parsed = parse_xsd(extension_value, extension.datatype)
         extensions[extension.name] = Slot(
             predicate=extension.predicate, value=extension_value_parsed
         )
