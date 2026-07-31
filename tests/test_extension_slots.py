@@ -183,6 +183,7 @@ class TestExtensionSlots(unittest.TestCase):
             #curie_map:
             #  chebi: http://purl.obolibrary.org/obo/CHEBI_
             #  ex: https://example.org/
+            #  linkml: https://w3id.org/linkml/
             #  mesh: http://id.nlm.nih.gov/mesh/
             #  semapv: https://w3id.org/semapv/vocab/
             #  skos: http://www.w3.org/2004/02/skos/core#

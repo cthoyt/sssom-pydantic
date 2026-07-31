@@ -150,13 +150,14 @@ class TestSexpr(unittest.TestCase):
     def test_extension_slots_2(self) -> None:
         """Test extension slots."""
         ex = dedent("""\
-              #curie_map:
+            #curie_map:
             #  COMENT: https://example.com/entities/
             #  EXPROP: https://example.org/properties/
             #  ORGENT: https://example.org/entities/
             #  rdfs: http://www.w3.org/2000/01/rdf-schema#
             #  semapv: https://w3id.org/semapv/vocab/
             #  skos: http://www.w3.org/2004/02/skos/core#
+            #  sssom.invalid: http://sssom.invalid/
             #  xsd: http://www.w3.org/2001/XMLSchema#
             #mapping_set_id: https://example.org/test.tsv
             #extension_definitions:
@@ -177,8 +178,8 @@ class TestSexpr(unittest.TestCase):
             subject_id	predicate_id	object_id	mapping_justification	ext_accuracy	ext_verified	ext_verification_date	ext_timestamp	ext_see_also
             ORGENT:0002	skos:exactMatch	COMENT:0022	semapv:ManualMappingCuration	99.1234	true	2026-07-31	2026-07-31T11:11:11+01:00	https://example.org/
         """)  # noqa:E501
-        digest = "..."
-        sexpr = "..."
+        digest = "1058491DA22C623E"
+        sexpr = "(7:mapping((10:subject_id33:https://example.org/entities/0002)(12:predicate_id46:http://www.w3.org/2004/02/skos/core#exactMatch)(9:object_id33:https://example.com/entities/0022)(21:mapping_justification51:https://w3id.org/semapv/vocab/ManualMappingCuration)(10:extensions((42:http://sssom.invalid/ext_verification_date10:2026-07-31)(44:http://www.w3.org/2000/01/rdf-schema#seeAlso20:https://example.org/)(39:https://example.org/properties/accuracy6:99.123)(40:https://example.org/properties/timestamp25:2026-07-31T11:11:11+01:00)(39:https://example.org/properties/verified4:true)))))"
         with tempfile.TemporaryDirectory() as tmpdir:
             path = Path(tmpdir).joinpath("test.tsv")
             path.write_text(ex)
