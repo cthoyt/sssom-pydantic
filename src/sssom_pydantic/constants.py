@@ -19,6 +19,7 @@ __all__ = [
     "PROPAGATABLE",
     "EntityTypeLiteral",
     "Row",
+    "SemanticPrimitive",
 ]
 
 PREFIX_MAP_KEY = "curie_map"  # smh
@@ -161,3 +162,5 @@ MAPPING_SET_SLOTS_SKIP = {"mappings"}
 MAPPING_SET_SLOTS = PROPAGATABLE | MAPPING_SLOT_SPECIFIC
 
 Row: TypeAlias = dict[str, str | list[str]]
+
+SemanticPrimitive: TypeAlias = v.XSDPrimitive | curies.Reference

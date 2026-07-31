@@ -24,7 +24,6 @@ from pystow.utils import model_dump_yaml, read_pydantic_yaml, safe_open
 from tqdm import tqdm
 from typing_extensions import TypeVar
 
-from ._semantic_datatypes import primitive_to_string
 from .api import (
     ExtensionDefinition,
     MappingSet,
@@ -47,7 +46,7 @@ from .constants import (
     EntityTypeLiteral,
     Row,
 )
-from .models import Record, RecordPredicate
+from .models import Record, RecordPredicate, primitive_to_string
 from .process import Hasher, remove_redundant_external, remove_redundant_internal
 
 if TYPE_CHECKING:

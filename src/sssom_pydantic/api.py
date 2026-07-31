@@ -9,6 +9,7 @@ from typing import Annotated, Any, Literal, TypeAlias
 
 import curies
 from curies import NamableReference, Reference, Triple
+from curies import vocabulary as v
 from curies.mixins import SemanticallyStandardizable
 from curies.vocabulary import (
     broad_match,
@@ -21,13 +22,13 @@ from curies.vocabulary import (
 from pydantic import AnyUrl, BaseModel, BeforeValidator, ConfigDict, Field
 from typing_extensions import Self, TypeVar
 
-from ._semantic_datatypes import primitive_from_string
 from .constants import (
     ENTITY_TYPE_REFERENCE_TO_LITERAL,
     MULTIVALUED,
     PROPAGATABLE,
     EntityTypeLiteral,
     Row,
+    SemanticPrimitive,
 )
 from .models import Cardinality, Record, Slot, expanded_record_to_str
 
@@ -1003,3 +1004,16 @@ def _get_preferred_converter(*others: curies.Converter) -> curies.Converter:
         ) from None
     rv = bioregistry.get_preferred_converter()
     return curies.chain([rv, *others])
+
+
+def primitive_from_string(
+    type_hint: Reference | None, value: str, converter: curies.Converter
+) -> SemanticPrimitive:
+    """Parse a value via a type hint."""
+    if type_hint is None:
+        return value
+    elif type_hint == v.linkml_uri_or_curie:
+        return converter.parse(value, strict=True).to_pydantic()
+    else:
+        parser = v.XSD_TO_PARSER[type_hint]
+        return parser(value)

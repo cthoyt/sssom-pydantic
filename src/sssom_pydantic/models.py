@@ -8,11 +8,11 @@ from operator import attrgetter
 from typing import Annotated, Literal, NamedTuple, TypeAlias
 
 import curies
+from curies import Reference
 from curies.vocabulary import matching_processes
 from pydantic import AnyUrl, BaseModel, ConfigDict, Field
 
-from ._semantic_datatypes import SemanticPrimitive, primitive_to_string
-from .constants import EntityTypeLiteral
+from .constants import EntityTypeLiteral, SemanticPrimitive
 
 __all__ = [
     "Cardinality",
@@ -389,3 +389,20 @@ def _fmt_primitive(value: Primitive, *, max_precision: int = 4) -> str:
         case datetime.date():
             value = value.strftime("%Y-%m-%d")
     return f"{len(value)}:{value}"
+
+
+def primitive_to_string(primitive: SemanticPrimitive) -> str:
+    """Convert a primitive to string."""
+    match primitive:
+        case datetime.datetime() | datetime.date():
+            return primitive.isoformat()
+        case bool():
+            return "true" if primitive else "false"
+        case str():
+            return primitive
+        case float() | int():
+            return str(primitive)
+        case Reference():
+            return primitive.curie
+        case _:
+            raise TypeError(f"unhandled type {type(primitive)} - {primitive}")
