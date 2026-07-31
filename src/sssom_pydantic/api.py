@@ -722,28 +722,35 @@ def row_to_record(
 
     # Step 3: handle extensions
     if extension_definitions is not None:
-        extensions: dict[str, Slot] = {}
-        for extension in extension_definitions:
-            extension_value = row.get(extension.name)
-            if not extension_value:
-                continue
-            if isinstance(extension_value, list):
-                raise NotImplementedError(
-                    "lists in extension slots are explicitly disallowed by the SSSOM spec"
-                )
-            extension_value_parsed: SemanticPrimitive
-            if extension.datatype == v.linkml_uri_or_curie:
-                extension_value_parsed = converter.parse(extension_value, strict=True).to_pydantic()
-            else:
-                extension_value_parsed = v.XSD_TO_PARSER[extension.datatype](extension_value)
-            extensions[extension.name] = Slot(
-                predicate=extension.predicate, value=extension_value_parsed
-            )
+        extensions = _parse_extensions(row, extension_definitions, converter)
         if extensions:
             return Record.model_validate({**row, "extensions": extensions})
 
     rv = Record.model_validate(row)
     return rv
+
+
+def _parse_extensions(
+    row: Row, extension_definitions: Collection[ExtensionDefinition], converter: curies.Converter
+) -> dict[str, Slot]:
+    extensions: dict[str, Slot] = {}
+    for extension in extension_definitions:
+        extension_value = row.get(extension.name)
+        if not extension_value:
+            continue
+        if isinstance(extension_value, list):
+            raise NotImplementedError(
+                "lists in extension slots are explicitly disallowed by the SSSOM spec"
+            )
+        extension_value_parsed: SemanticPrimitive
+        if extension.datatype == v.linkml_uri_or_curie:
+            extension_value_parsed = converter.parse(extension_value, strict=True).to_pydantic()
+        else:
+            extension_value_parsed = v.XSD_TO_PARSER[extension.datatype](extension_value)
+        extensions[extension.name] = Slot(
+            predicate=extension.predicate, value=extension_value_parsed
+        )
+    return extensions
 
 
 class MappingSet(BaseModel):
