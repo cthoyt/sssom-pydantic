@@ -4,9 +4,8 @@ from __future__ import annotations
 
 import datetime
 import logging
-import typing
 from collections.abc import Callable, Collection, Iterable
-from typing import Annotated, Any, Literal, TypeAlias, cast
+from typing import Annotated, Any, Literal, TypeAlias
 
 import curies
 from curies import NamableReference, Reference, Triple
@@ -22,7 +21,7 @@ from curies.vocabulary import (
 from pydantic import AnyUrl, BaseModel, BeforeValidator, ConfigDict, Field
 from typing_extensions import Self, TypeVar
 
-from ._semantic_datatypes import TypeHint, primitive_from_string
+from ._semantic_datatypes import primitive_from_string
 from .constants import (
     ENTITY_TYPE_REFERENCE_TO_LITERAL,
     MULTIVALUED,
@@ -811,7 +810,7 @@ class ExtensionDefinitionRecord(BaseModel):
 
     slot_name: str
     property: str | None = None
-    type_hint: TypeHint | None = None
+    type_hint: str | None = None
 
     # TODO what about multivalued? need to add to SSSOM spec
 
@@ -851,14 +850,12 @@ class ExtensionDefinition(BaseModel):
 
     def to_record(self) -> ExtensionDefinitionRecord:
         """Create a record object that can be readily dumped to SSSOM."""
-        if self.type_hint.curie not in typing.get_args(TypeHint):
-            raise ValueError
         return ExtensionDefinitionRecord(
             slot_name=self.slot_name,
             property=self.property.curie
             if self.property.prefix != SSSOM_INVALID_CURIE_PREFIX
             else None,
-            type_hint=cast(TypeHint, self.type_hint.curie) if self.type_hint else None,
+            type_hint=self.type_hint.curie if self.type_hint else None,
         )
 
 
