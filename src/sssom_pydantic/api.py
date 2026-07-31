@@ -813,8 +813,6 @@ class ExtensionDefinitionRecord(BaseModel):
     property: str | None = None
     type_hint: str | None = None
 
-    # TODO what about multivalued? need to add to SSSOM spec
-
     def process(self, converter: curies.Converter) -> ExtensionDefinition:
         """Process the SSSOM data structure into a more idiomatic one."""
         return ExtensionDefinition(
