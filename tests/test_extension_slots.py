@@ -6,7 +6,7 @@ from pathlib import Path
 from textwrap import dedent
 
 from curies import Reference
-from curies.vocabulary import xsd_float, xsd_integer
+from curies.vocabulary import linkml_uri_or_curie, xsd_float, xsd_integer
 
 import sssom_pydantic
 from sssom_pydantic import ExtensionDefinition, SemanticMapping
@@ -180,7 +180,7 @@ class TestExtensionSlots(unittest.TestCase):
             #mapping_set_id: https://example.org/test.tsv
             #extension_definitions:
             #- slot_name: test_slot
-            #  type_hint: sssom:curie
+            #  type_hint: linkml:Uriorcurie
             subject_id	predicate_id	object_id	mapping_justification	test_slot
             mesh:C000089	skos:exactMatch	chebi:28646	semapv:ManualMappingCuration	ex:1234567
         """)
@@ -189,11 +189,7 @@ class TestExtensionSlots(unittest.TestCase):
 
         mappings, converter, metadata = sssom_pydantic.read(path)
         self.assertEqual(
-            [
-                ExtensionDefinition.default(
-                    slot_name="test_slot", type_hint=Reference.from_curie("sssom:curie")
-                )
-            ],
+            [ExtensionDefinition.default(slot_name="test_slot", type_hint=linkml_uri_or_curie)],
             metadata.extension_definitions,
         )
         self.assertEqual(1, len(mappings))
