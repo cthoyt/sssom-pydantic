@@ -729,15 +729,12 @@ def row_to_record(
                     raise NotImplementedError(
                         "lists in extension slots are explicitly disallowed by the SSSOM spec"
                     )
-                extensions[extension.slot_name] = Slot(
-                    predicate=extension.property,
-                    value=primitive_from_string(
-                        # TODO rewire to work on reference instead of CURIE string
-                        extension.type_hint.curie,  # type:ignore
-                        extension_value,
-                        converter=converter,
-                    ),
-                )
+                valuex: SemanticPrimitive
+                if extension.type_hint == v.linkml_uri_or_curie:
+                    valuex = converter.parse(extension_value, strict=True).to_pydantic()
+                else:
+                    valuex = v.XSD_TO_PARSER[extension.type_hint](extension_value)
+                extensions[extension.slot_name] = Slot(predicate=extension.property, value=valuex)
         if extensions:
             return Record.model_validate({**row, "extensions": extensions})
 
@@ -1002,16 +999,3 @@ def _get_preferred_converter(*others: curies.Converter) -> curies.Converter:
         ) from None
     rv = bioregistry.get_preferred_converter()
     return curies.chain([rv, *others])
-
-
-def primitive_from_string(
-    type_hint: Reference | None, value: str, converter: curies.Converter
-) -> SemanticPrimitive:
-    """Parse a value via a type hint."""
-    if type_hint is None:
-        return value
-    elif type_hint == v.linkml_uri_or_curie:
-        return converter.parse(value, strict=True).to_pydantic()
-    else:
-        parser = v.XSD_TO_PARSER[type_hint]
-        return parser(value)
