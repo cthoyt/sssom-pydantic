@@ -724,17 +724,21 @@ def row_to_record(
     if extension_definitions is not None:
         extensions: dict[str, Slot] = {}
         for extension in extension_definitions:
-            if extension_value := row.get(extension.slot_name):
-                if isinstance(extension_value, list):
-                    raise NotImplementedError(
-                        "lists in extension slots are explicitly disallowed by the SSSOM spec"
-                    )
-                valuex: SemanticPrimitive
-                if extension.type_hint == v.linkml_uri_or_curie:
-                    valuex = converter.parse(extension_value, strict=True).to_pydantic()
-                else:
-                    valuex = v.XSD_TO_PARSER[extension.type_hint](extension_value)
-                extensions[extension.slot_name] = Slot(predicate=extension.property, value=valuex)
+            extension_value = row.get(extension.name)
+            if not extension_value:
+                continue
+            if isinstance(extension_value, list):
+                raise NotImplementedError(
+                    "lists in extension slots are explicitly disallowed by the SSSOM spec"
+                )
+            extension_value_parsed: SemanticPrimitive
+            if extension.datatype == v.linkml_uri_or_curie:
+                extension_value_parsed = converter.parse(extension_value, strict=True).to_pydantic()
+            else:
+                extension_value_parsed = v.XSD_TO_PARSER[extension.datatype](extension_value)
+            extensions[extension.name] = Slot(
+                predicate=extension.predicate, value=extension_value_parsed
+            )
         if extensions:
             return Record.model_validate({**row, "extensions": extensions})
 
@@ -813,12 +817,12 @@ class ExtensionDefinitionRecord(BaseModel):
     def process(self, converter: curies.Converter) -> ExtensionDefinition:
         """Process the SSSOM data structure into a more idiomatic one."""
         return ExtensionDefinition(
-            slot_name=self.slot_name,
+            name=self.slot_name,
             # see https://github.com/mapping-commons/sssom/issues/561#issuecomment-5105368113
-            property=converter.parse(self.property, strict=True).to_pydantic()
+            predicate=converter.parse(self.property, strict=True).to_pydantic()
             if self.property
             else Reference(prefix=SSSOM_INVALID_CURIE_PREFIX, identifier=self.slot_name),
-            type_hint=converter.parse(self.type_hint, strict=True).to_pydantic()
+            datatype=converter.parse(self.type_hint, strict=True).to_pydantic()
             if self.type_hint
             else xsd_string,
         )
@@ -827,31 +831,31 @@ class ExtensionDefinitionRecord(BaseModel):
 class ExtensionDefinition(BaseModel):
     """A processed extension definition."""
 
-    slot_name: str
-    property: Reference
-    type_hint: Reference
+    name: str
+    predicate: Reference
+    datatype: Reference
 
     @classmethod
     def default(cls, slot_name: str, *, type_hint: Reference | None = None) -> Self:
         """Get a default extension."""
         return cls(
-            slot_name=slot_name,
-            property=Reference(prefix=SSSOM_INVALID_CURIE_PREFIX, identifier=slot_name),
-            type_hint=type_hint or xsd_string,
+            name=slot_name,
+            predicate=Reference(prefix=SSSOM_INVALID_CURIE_PREFIX, identifier=slot_name),
+            datatype=type_hint or xsd_string,
         )
 
     def get_prefixes(self) -> set[str]:
         """Get prefixes in the extension definition."""
-        return {self.property.prefix, self.type_hint.prefix}
+        return {self.predicate.prefix, self.datatype.prefix}
 
     def to_record(self) -> ExtensionDefinitionRecord:
         """Create a record object that can be readily dumped to SSSOM."""
         return ExtensionDefinitionRecord(
-            slot_name=self.slot_name,
-            property=self.property.curie
-            if self.property.prefix != SSSOM_INVALID_CURIE_PREFIX
+            slot_name=self.name,
+            property=self.predicate.curie
+            if self.predicate.prefix != SSSOM_INVALID_CURIE_PREFIX
             else None,
-            type_hint=self.type_hint.curie if self.type_hint else None,
+            type_hint=self.datatype.curie if self.datatype else None,
         )
 
 

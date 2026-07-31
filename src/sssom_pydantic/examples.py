@@ -64,9 +64,9 @@ EXT_BAR_REC = ExtensionDefinitionRecord(slot_name="bar", type_hint=xsd_string.cu
 EXT_COUNT_REC = ExtensionDefinitionRecord(slot_name="count", type_hint=xsd_integer.curie)
 EXT_PERC_REC = ExtensionDefinitionRecord(slot_name="percentage", type_hint=xsd_float.curie)
 
-EXT_BAR = ExtensionDefinition(slot_name="bar", property=EXT_PRED_BAR, type_hint=xsd_string)
-EXT_COUNT = ExtensionDefinition(slot_name="count", property=EXT_PRED_COUNT, type_hint=xsd_integer)
-EXT_PERC = ExtensionDefinition(slot_name="percentage", property=EXT_PRED_PERC, type_hint=xsd_float)
+EXT_BAR = ExtensionDefinition(name="bar", predicate=EXT_PRED_BAR, datatype=xsd_string)
+EXT_COUNT = ExtensionDefinition(name="count", predicate=EXT_PRED_COUNT, datatype=xsd_integer)
+EXT_PERC = ExtensionDefinition(name="percentage", predicate=EXT_PRED_PERC, datatype=xsd_float)
 
 TEST_PREFIX_MAP = {
     "cas": "https://commonchemistry.cas.org/detail?cas_rn=",
