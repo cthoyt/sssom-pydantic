@@ -727,7 +727,7 @@ def row_to_record(
             if extension_value := row.get(extension.slot_name):
                 if isinstance(extension_value, list):
                     raise NotImplementedError(
-                        "lists in extension slots aren't yet part of the SSSOM spec"
+                        "lists in extension slots are explicitly disallowed by the SSSOM spec"
                     )
                 extensions[extension.slot_name] = Slot(
                     predicate=extension.property,
