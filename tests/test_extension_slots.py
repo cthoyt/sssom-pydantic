@@ -187,7 +187,6 @@ class TestExtensionSlots(unittest.TestCase):
             #  mesh: http://id.nlm.nih.gov/mesh/
             #  semapv: https://w3id.org/semapv/vocab/
             #  skos: http://www.w3.org/2004/02/skos/core#
-            #  sssom: https://w3id.org/sssom/
             #mapping_set_id: https://example.org/test.tsv
             #extension_definitions:
             #- slot_name: test_slot
