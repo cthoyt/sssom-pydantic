@@ -9,7 +9,7 @@ from typing import Annotated, Literal, NamedTuple, TypeAlias
 
 import curies
 from curies import Reference
-from curies.vocabulary import matching_processes
+from curies.vocabulary import XSDPrimitive, matching_processes
 from pydantic import AnyUrl, BaseModel, ConfigDict, Field
 
 from .constants import EntityTypeLiteral, SemanticPrimitive
@@ -38,7 +38,7 @@ class Slot(BaseModel):
         if isinstance(self.value, curies.Reference):
             value = converter.expand_reference(self.value, strict=True)
         else:
-            value = primitive_to_string(self.value)
+            value = _fmt_primitive_helper(self.value)
         return ExpandedSlot(predicate=predicate, value=value)
 
 
@@ -319,10 +319,7 @@ def expanded_record_to_box(record: ExpandedRecord) -> Box:
     return Box("mapping", boxes)
 
 
-Primitive: TypeAlias = str | int | float | bool | datetime.datetime | datetime.date | AnyUrl
-
-
-def _get_box(name: str, vvv: Primitive | Sequence[Primitive | Box]) -> Box | None:
+def _get_box(name: str, vvv: XSDPrimitive | Sequence[XSDPrimitive | Box]) -> Box | None:
     match vvv:
         case None:
             return None
@@ -353,20 +350,20 @@ class Box(NamedTuple):
     """A value."""
 
     label: str
-    value: Primitive | Sequence[Primitive | Box]
+    value: XSDPrimitive | Sequence[XSDPrimitive | Box]
 
 
-def box_to_str(box: Box, *, max_precision: int = 4, _debug: bool = False) -> str:
+def box_to_str(box: Box, *, _debug: bool = False) -> str:
     """Convert a S-expression object to a string."""
     start = f"{len(box.label)}:{box.label}"
     if isinstance(box.value, str) or not isinstance(box.value, Sequence):
-        return f"({start}{_fmt_primitive(box.value, max_precision=max_precision)})"
+        return f"({start}{_fmt_primitive(box.value)})"
     rr = []
     for value in box.value:
         if isinstance(value, Box):
-            rr.append(box_to_str(value, max_precision=max_precision, _debug=_debug))
+            rr.append(box_to_str(value, _debug=_debug))
         else:
-            rr.append(_fmt_primitive(value, max_precision=max_precision))
+            rr.append(_fmt_primitive(value))
     if _debug:
         inside = "\n".join(rr)
     else:
@@ -374,35 +371,30 @@ def box_to_str(box: Box, *, max_precision: int = 4, _debug: bool = False) -> str
     return f"({start}({inside}))"
 
 
-def _fmt_primitive(value: Primitive, *, max_precision: int = 4) -> str:
+def _fmt_primitive(value: XSDPrimitive, round_float: bool = True) -> str:
+    v = _fmt_primitive_helper(value, round_float=round_float)
+    return f"{len(v)}:{v}"
+
+
+def _fmt_primitive_helper(value: XSDPrimitive, round_float: bool = True) -> str:
     match value:
-        case str():
-            pass
+        case bool():
+            return "true" if value else "false"
         case int() | AnyUrl():
-            value = str(value)
+            return str(value)
         case float():
-            value = str(round(value, max_precision))
-        case bool():
-            value = "true" if value else "false"
-        case datetime.datetime():
-            value = value.strftime("%Y-%m-%dT%H:%M:%SZ")
-        case datetime.date():
-            value = value.strftime("%Y-%m-%d")
-    return f"{len(value)}:{value}"
-
-
-def primitive_to_string(primitive: SemanticPrimitive) -> str:
-    """Convert a primitive to string."""
-    match primitive:
-        case datetime.datetime() | datetime.date():
-            return primitive.isoformat()
-        case bool():
-            return "true" if primitive else "false"
+            if round_float:
+                return str(round(value, 3))
+            else:
+                return str(value)
         case str():
-            return primitive
-        case float() | int() | AnyUrl():
-            return str(primitive)
-        case Reference():
-            return primitive.curie
-        case _:
-            raise TypeError(f"unhandled type {type(primitive)} - {primitive}")
+            return value
+        case datetime.datetime() | datetime.date():
+            return value.isoformat()
+
+
+def primitive_to_string(primitive: XSDPrimitive | Reference) -> str:
+    """Convert a primitive to string."""
+    if isinstance(primitive, Reference):
+        return primitive.curie
+    return _fmt_primitive_helper(primitive, round_float=False)
