@@ -11,6 +11,7 @@ from typing import Literal, TypeAlias
 
 import curies
 from curies import Reference
+from curies import vocabulary as v
 
 __all__ = [
     "XSD_TYPE_TO_FUNC",
@@ -23,15 +24,25 @@ __all__ = [
 TypeHint: TypeAlias = Literal[
     "xsd:string",
     "xsd:float",
-    "xsd:double",
     "xsd:integer",
     "xsd:date",
     "xsd:datetime",
-    "sssom:curie",
-    "linkml:uriOrCurie",
+    "linkml:Uriorcurie",
     "xsd:boolean",
     "xsd:anyURI",
 ]
+
+TypeHintToReference: dict[TypeHint, Reference] = {
+    "xsd:string": v.xsd_string,
+    "xsd:float": v.xsd_float,
+    "xsd:integer": v.xsd_integer,
+    "xsd:date": v.xsd_date,
+    "xsd:datetime": v.xsd_datetime,
+    "linkml:Uriorcurie": v.linkml_uri_or_curie,
+    "xsd:boolean": v.xsd_boolean,
+    "xsd:anyURI": v.xsd_uri,
+}
+
 SemanticPrimitive: TypeAlias = (
     str | int | float | bool | datetime.date | datetime.datetime | Reference
 )
@@ -54,8 +65,7 @@ XSD_TYPE_TO_FUNC: dict[TypeHint, Callable[[str], SemanticPrimitive]] = {
     "xsd:integer": int,
     "xsd:date": datetime.date.fromisoformat,
     "xsd:datetime": datetime.datetime.fromisoformat,
-    "sssom:curie": Reference.from_curie,
-    "linkml:uriOrCurie": Reference.from_curie,
+    "linkml:Uriorcurie": Reference.from_curie,
     "xsd:boolean": _bool,
 }
 
