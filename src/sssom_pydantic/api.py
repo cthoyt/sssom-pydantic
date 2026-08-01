@@ -212,7 +212,7 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
     similarity_measure: str | None = None
     similarity_score: Annotated[float | None, Field(ge=0.0, le=1.0)] = None
 
-    # slot values
+    # see https://mapping-commons.github.io/sssom/dev/spec-model/#non-standard-slots
     extensions: dict[str, Slot] | None = None
 
     @classmethod

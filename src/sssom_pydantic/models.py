@@ -151,6 +151,7 @@ class Record(BaseModel):
     other: str | None = None
     comment: str | None = None
 
+    # see https://mapping-commons.github.io/sssom/dev/spec-model/#non-standard-slots
     extensions: dict[str, Slot] | None = None
 
     def expand(
