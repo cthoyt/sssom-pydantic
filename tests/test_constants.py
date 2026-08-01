@@ -113,7 +113,7 @@ class TestSchema(unittest.TestCase):
         """Test that the Record class fully covers."""
         self.assertEqual(
             self.mapping_slots,
-            set(Record.model_fields),
+            set(Record.model_fields) - {"extensions"},
         )
 
     def test_mapping_set_keys(self) -> None:
@@ -286,8 +286,10 @@ class TestSchema(unittest.TestCase):
     def test_order(self) -> None:
         """Test the slots are in the order specified by the SSSOM schema."""
         slots: list[str] = self.view.get_class("mapping").slots
-        self.assertEqual(slots, list(Record.model_fields))
-        self.assertEqual(slots, list(ExpandedRecord.model_fields))
+        self.assertEqual(slots, [slot for slot in Record.model_fields if slot != "extensions"])
+        self.assertEqual(
+            slots, [slot for slot in ExpandedRecord.model_fields if slot != "extensions"]
+        )
 
     def test_model_mapping(self) -> None:
         """Test processed models can be mapped back into the other."""
@@ -300,6 +302,10 @@ class TestSchema(unittest.TestCase):
             with self.subTest(example=example.description):
                 record = example.semantic_mapping.to_record()
                 expanded = record.expand(TEST_CONVERTER)
+                if record.extensions:
+                    # TODO implement compression with slots, if ever
+                    #  motivated by a real use case
+                    continue
                 compressed = expanded.compress(TEST_CONVERTER)
                 self.assertEqual(record, compressed)
 
@@ -315,6 +321,8 @@ class TestExampleCompleteness(unittest.TestCase):
                 counter[k] += 1
 
         for field in SemanticMapping.model_fields:
+            if field == "extensions":
+                continue  # this is a special addition
             with self.subTest(field=field):
                 self.assertIn(field, set(counter), msg=f"\n\nthere's no example that uses {field}")
 

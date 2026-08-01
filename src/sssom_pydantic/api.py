@@ -4,18 +4,21 @@ from __future__ import annotations
 
 import datetime
 import logging
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Collection, Iterable
 from typing import Annotated, Any, Literal, TypeAlias
 
 import curies
 from curies import NamableReference, Reference, Triple
+from curies import vocabulary as v
 from curies.mixins import SemanticallyStandardizable
 from curies.vocabulary import (
     broad_match,
     exact_match,
     matching_processes,
     narrow_match,
+    parse_xsd,
     unspecified_matching_process,
+    xsd_string,
 )
 from pydantic import AnyUrl, BaseModel, BeforeValidator, ConfigDict, Field
 from typing_extensions import Self, TypeVar
@@ -26,8 +29,9 @@ from .constants import (
     PROPAGATABLE,
     EntityTypeLiteral,
     Row,
+    SemanticPrimitive,
 )
-from .models import Cardinality, Record, expanded_record_to_str
+from .models import Cardinality, Record, Slot, expanded_record_to_str
 
 __all__ = [
     "NOT",
@@ -207,6 +211,9 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
     see_also: list[str] | None = None
     similarity_measure: str | None = None
     similarity_score: Annotated[float | None, Field(ge=0.0, le=1.0)] = None
+
+    # see https://mapping-commons.github.io/sssom/dev/spec-model/#non-standard-slots
+    extensions: dict[str, Slot] | None = None
 
     @classmethod
     def from_triple(
@@ -405,6 +412,11 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
                 for reference in reference_list:
                     if reference is not None:
                         rv.add(reference.prefix)
+        if self.extensions:
+            for slot in self.extensions.values():
+                rv.add(slot.predicate.prefix)
+                if isinstance(slot.value, Reference):
+                    rv.add(slot.value.prefix)
         return rv
 
     def to_record(self) -> Record:
@@ -485,6 +497,8 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
             see_also=self.see_also,
             similarity_measure=self.similarity_measure,
             similarity_score=self.similarity_score,
+            # see https://mapping-commons.github.io/sssom/spec-model/#defined-extensions
+            extensions=self.extensions,
         )
 
     def relabel(self) -> Self:
@@ -682,12 +696,15 @@ class MappingSetRecord(BaseModel):
 def row_to_record(
     row: Row,
     *,
+    converter: curies.Converter,
     propagatable: dict[str, str | list[str]] | None = None,
+    extension_definitions: Collection[ExtensionDefinition] | None = None,
 ) -> Record:
     """Parse a row from a SSSOM TSV file, unprocessed.
 
     :param row: The raw row dictionary
     :param propagatable: elements that should be propagated to all rows
+    :param extension_definitions: extension slot definitions
 
     :returns: A record object
     """
@@ -704,8 +721,37 @@ def row_to_record(
                 if (stripped_subvalue := subvalue.strip())
             ]
 
+    # Step 3: handle extensions
+    if extension_definitions is not None:
+        extensions = _parse_extensions(row, extension_definitions, converter)
+        if extensions:
+            return Record.model_validate({**row, "extensions": extensions})
+
     rv = Record.model_validate(row)
     return rv
+
+
+def _parse_extensions(
+    row: Row, extension_definitions: Collection[ExtensionDefinition], converter: curies.Converter
+) -> dict[str, Slot]:
+    extensions: dict[str, Slot] = {}
+    for extension in extension_definitions:
+        extension_value = row.get(extension.name)
+        if not extension_value:
+            continue
+        if isinstance(extension_value, list):
+            raise NotImplementedError(
+                "lists in extension slots are explicitly disallowed by the SSSOM spec"
+            )
+        extension_value_parsed: SemanticPrimitive
+        if extension.datatype == v.linkml_uri_or_curie:
+            extension_value_parsed = converter.parse(extension_value, strict=True).to_pydantic()
+        else:
+            extension_value_parsed = parse_xsd(extension_value, extension.datatype)
+        extensions[extension.name] = Slot(
+            predicate=extension.predicate, value=extension_value_parsed
+        )
+    return extensions
 
 
 class MappingSet(BaseModel):
@@ -765,6 +811,10 @@ class MappingSet(BaseModel):
         return rv
 
 
+SSSOM_INVALID_CURIE_PREFIX = "sssom.invalid"
+SSSOM_INVALID_URI_PREFIX = "http://sssom.invalid/"
+
+
 class ExtensionDefinitionRecord(BaseModel):
     """An extension definition that can be readily dumped to SSSOM."""
 
@@ -775,38 +825,45 @@ class ExtensionDefinitionRecord(BaseModel):
     def process(self, converter: curies.Converter) -> ExtensionDefinition:
         """Process the SSSOM data structure into a more idiomatic one."""
         return ExtensionDefinition(
-            slot_name=self.slot_name,
-            property=converter.parse(self.property, strict=True).to_pydantic()
+            name=self.slot_name,
+            # see https://github.com/mapping-commons/sssom/issues/561#issuecomment-5105368113
+            predicate=converter.parse(self.property, strict=True).to_pydantic()
             if self.property
-            else None,
-            type_hint=converter.parse(self.type_hint, strict=True).to_pydantic()
+            else Reference(prefix=SSSOM_INVALID_CURIE_PREFIX, identifier=self.slot_name),
+            datatype=converter.parse(self.type_hint, strict=True).to_pydantic()
             if self.type_hint
-            else None,
+            else xsd_string,
         )
 
 
 class ExtensionDefinition(BaseModel):
     """A processed extension definition."""
 
-    slot_name: str
-    property: Reference | None = None
-    type_hint: Reference | None = None
+    name: str
+    predicate: Reference
+    datatype: Reference
+
+    @classmethod
+    def default(cls, slot_name: str, *, type_hint: Reference | None = None) -> Self:
+        """Get a default extension."""
+        return cls(
+            name=slot_name,
+            predicate=Reference(prefix=SSSOM_INVALID_CURIE_PREFIX, identifier=slot_name),
+            datatype=type_hint or xsd_string,
+        )
 
     def get_prefixes(self) -> set[str]:
         """Get prefixes in the extension definition."""
-        rv: set[str] = set()
-        if self.property is not None:
-            rv.add(self.property.prefix)
-        if self.type_hint is not None:
-            rv.add(self.type_hint.prefix)
-        return rv
+        return {self.predicate.prefix, self.datatype.prefix}
 
     def to_record(self) -> ExtensionDefinitionRecord:
         """Create a record object that can be readily dumped to SSSOM."""
         return ExtensionDefinitionRecord(
-            slot_name=self.slot_name,
-            property=self.property.curie if self.property else None,
-            type_hint=self.type_hint.curie if self.type_hint else None,
+            slot_name=self.name,
+            property=self.predicate.curie
+            if self.predicate.prefix != SSSOM_INVALID_CURIE_PREFIX
+            else None,
+            type_hint=self.datatype.curie if self.datatype else None,
         )
 
 

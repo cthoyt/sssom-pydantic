@@ -573,9 +573,11 @@ class TestIO(cases.MappingTestCaseMixin):
             #  skos: http://www.w3.org/2004/02/skos/core#
             #  spdx: https://spdx.org/licenses/
             #  sssom: https://w3id.org/sssom/
+            #  sssom.invalid: http://sssom.invalid/
             #  sssom.record: https://w3id.org/sssom/record/
             #  w3id: https://w3id.org/
             #  wikidata: http://www.wikidata.org/entity/
+            #  xsd: http://www.w3.org/2001/XMLSchema#
             #mapping_set_id: {TEST_MAPPING_SET_ID}
             subject_id	subject_label	predicate_id	object_id	object_label	mapping_justification
             mesh:C000089	ammeline	skos:exactMatch	chebi:28646	ammeline	semapv:ManualMappingCuration

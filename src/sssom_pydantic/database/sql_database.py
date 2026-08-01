@@ -187,6 +187,8 @@ class SemanticMappingModel(SQLModel, table=True):
         cls, mapping: SemanticMapping, *, converter: curies.Converter
     ) -> Self:
         """Get from a non-ORM mapping."""
+        if mapping.extensions:
+            raise NotImplementedError("SQL database does not support extensions")
         d = mapping.model_dump(exclude_none=True, exclude_unset=True, exclude_defaults=True)
         # do this explicitly since the model might not be smart enough
         # to fully dump a NamableReference, since it's only annotated

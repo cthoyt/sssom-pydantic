@@ -84,6 +84,8 @@ class TestSQL(cases.TestRepository):
         from sqlmodel import Session, SQLModel, create_engine, select
 
         for example in EXAMPLES:
+            if example.semantic_mapping.extensions:
+                continue
             with self.subTest(desc=example.description):
                 orm_model = SemanticMappingModel.from_semantic_mapping(
                     example.semantic_mapping, converter=TEST_CONVERTER

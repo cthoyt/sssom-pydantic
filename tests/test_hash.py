@@ -1,10 +1,14 @@
 """Test hashing."""
 
 import datetime
+import tempfile
 import unittest
+from pathlib import Path
+from textwrap import dedent
 
 from curies import Converter, Reference
 
+import sssom_pydantic
 from sssom_pydantic import SemanticMapping
 from sssom_pydantic.api import hash_mapping, hash_triple, mapping_to_sexpr_str
 from sssom_pydantic.examples import EXAMPLES
@@ -108,6 +112,83 @@ class TestSexpr(unittest.TestCase):
         for mapping, sexpr, digest in CASES:
             self.assertEqual(sexpr, mapping_to_sexpr_str(mapping, converter=CONVERTER))
             self.assertEqual(digest, hash_mapping(mapping, converter=CONVERTER))
+
+    def test_extension_slots(self) -> None:
+        """Test extension slots."""
+        ex = dedent("""\
+            #curie_map:
+            #  COMENT: https://example.com/entities/
+            #  EXPROP: https://example.org/properties/
+            #  ORGENT: https://example.org/entities/
+            #  semapv: https://w3id.org/semapv/vocab/
+            #  skos: http://www.w3.org/2004/02/skos/core#
+            #  xsd: http://www.w3.org/2001/XMLSchema#
+            #  linkml: https://w3id.org/linkml/
+            #mapping_set_id: https://example.org/test.tsv
+            #extension_definitions:
+            #  - slot_name: ext_bar
+            #    property: EXPROP:barProperty
+            #    type_hint: xsd:integer
+            #  - slot_name: ext_baz
+            #    property: EXPROP:bazProperty
+            #    type_hint: linkml:Uriorcurie
+            subject_id	subject_label	predicate_id	object_id	object_label	mapping_justification	ext_bar	ext_baz
+            ORGENT:0001	alice	skos:closeMatch	COMENT:0011	alpha	semapv:ManualMappingCuration	111	ORGENT:BAZ_0001
+        """)  # noqa:E501
+        digest = "66BD0A57A976A109"
+        sexpr = "(7:mapping((10:subject_id33:https://example.org/entities/0001)(13:subject_label5:alice)(12:predicate_id46:http://www.w3.org/2004/02/skos/core#closeMatch)(9:object_id33:https://example.com/entities/0011)(12:object_label5:alpha)(21:mapping_justification51:https://w3id.org/semapv/vocab/ManualMappingCuration)(10:extensions((42:https://example.org/properties/barProperty3:111)(42:https://example.org/properties/bazProperty37:https://example.org/entities/BAZ_0001)))))"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir).joinpath("test.tsv")
+            path.write_text(ex)
+            mappings, converter, _metadata, errors = sssom_pydantic.read(path, return_errors=True)
+        self.assertTrue(converter.has_prefix("ORGENT"))
+        self.assertEqual([], errors, msg="errors during reading SSSOM")
+        self.assertEqual(1, len(mappings), msg="reading failed")
+        self.assertEqual(sexpr, mapping_to_sexpr_str(mappings[0], converter=converter))
+        self.assertEqual(digest, hash_mapping(mappings[0], converter=converter))
+
+    def test_extension_slots_2(self) -> None:
+        """Test extension slots."""
+        ex = dedent("""\
+            #curie_map:
+            #  COMENT: https://example.com/entities/
+            #  EXPROP: https://example.org/properties/
+            #  ORGENT: https://example.org/entities/
+            #  rdfs: http://www.w3.org/2000/01/rdf-schema#
+            #  semapv: https://w3id.org/semapv/vocab/
+            #  skos: http://www.w3.org/2004/02/skos/core#
+            #  sssom.invalid: http://sssom.invalid/
+            #  xsd: http://www.w3.org/2001/XMLSchema#
+            #mapping_set_id: https://example.org/test.tsv
+            #extension_definitions:
+            #- slot_name: ext_accuracy
+            #  property: EXPROP:accuracy
+            #  type_hint: xsd:float
+            #- slot_name: ext_verified
+            #  property: EXPROP:verified
+            #  type_hint: xsd:boolean
+            #- slot_name: ext_verification_date
+            #  type_hint: xsd:date
+            #- slot_name: ext_timestamp
+            #  property: EXPROP:timestamp
+            #  type_hint: xsd:dateTime
+            #- slot_name: ext_see_also
+            #  property: rdfs:seeAlso
+            #  type_hint: xsd:anyURI
+            subject_id	predicate_id	object_id	mapping_justification	ext_accuracy	ext_verified	ext_verification_date	ext_timestamp	ext_see_also
+            ORGENT:0002	skos:exactMatch	COMENT:0022	semapv:ManualMappingCuration	99.1234	true	2026-07-31	2026-07-31T11:11:11+01:00	https://example.org/
+        """)  # noqa:E501
+        digest = "1058491DA22C623E"
+        sexpr = "(7:mapping((10:subject_id33:https://example.org/entities/0002)(12:predicate_id46:http://www.w3.org/2004/02/skos/core#exactMatch)(9:object_id33:https://example.com/entities/0022)(21:mapping_justification51:https://w3id.org/semapv/vocab/ManualMappingCuration)(10:extensions((42:http://sssom.invalid/ext_verification_date10:2026-07-31)(44:http://www.w3.org/2000/01/rdf-schema#seeAlso20:https://example.org/)(39:https://example.org/properties/accuracy6:99.123)(40:https://example.org/properties/timestamp25:2026-07-31T11:11:11+01:00)(39:https://example.org/properties/verified4:true)))))"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir).joinpath("test.tsv")
+            path.write_text(ex)
+            mappings, converter, _metadata, errors = sssom_pydantic.read(path, return_errors=True)
+        self.assertTrue(converter.has_prefix("ORGENT"))
+        self.assertEqual([], errors, msg="errors during reading SSSOM")
+        self.assertEqual(1, len(mappings), msg="reading failed")
+        self.assertEqual(sexpr, mapping_to_sexpr_str(mappings[0], converter=converter))
+        self.assertEqual(digest, hash_mapping(mappings[0], converter=converter))
 
 
 class TestTripleHash(unittest.TestCase):
