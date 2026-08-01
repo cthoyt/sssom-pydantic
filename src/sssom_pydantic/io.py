@@ -46,7 +46,7 @@ from .constants import (
     EntityTypeLiteral,
     Row,
 )
-from .models import Record, RecordPredicate, primitive_to_string
+from .models import Record, RecordPredicate, _fmt_primitive_helper
 from .process import Hasher, remove_redundant_external, remove_redundant_internal
 
 if TYPE_CHECKING:
@@ -557,7 +557,14 @@ def _unprocess_row(record: Record, *, exclude: set[str] | None = None) -> dict[s
 
     # splat out all extensions
     if record.extensions is not None:
-        rv.update({key: primitive_to_string(slot.value) for key, slot in record.extensions.items()})
+        rv.update(
+            {
+                key: slot.value.curie
+                if isinstance(slot.value, Reference)
+                else _fmt_primitive_helper(slot.value, round_float=False)
+                for key, slot in record.extensions.items()
+            }
+        )
 
     for key in MULTIVALUED:
         if (value := rv.get(key)) and isinstance(value, list):

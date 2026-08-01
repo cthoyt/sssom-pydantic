@@ -8,7 +8,6 @@ from operator import attrgetter
 from typing import Annotated, Literal, NamedTuple, TypeAlias
 
 import curies
-from curies import Reference
 from curies.vocabulary import XSDPrimitive, matching_processes
 from pydantic import AnyUrl, BaseModel, ConfigDict, Field
 
@@ -391,10 +390,3 @@ def _fmt_primitive_helper(value: XSDPrimitive, round_float: bool = True) -> str:
             return value
         case datetime.datetime() | datetime.date():
             return value.isoformat()
-
-
-def primitive_to_string(primitive: XSDPrimitive | Reference) -> str:
-    """Convert a primitive to string."""
-    if isinstance(primitive, Reference):
-        return primitive.curie
-    return _fmt_primitive_helper(primitive, round_float=False)
