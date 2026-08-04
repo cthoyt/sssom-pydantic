@@ -195,7 +195,7 @@ class TestBridge(unittest.TestCase):
         """Test axioms."""
         for expected, mapping in cases:
             with self.subTest(x=str(mapping)):
-                actual = get_owl_bridge_axiom(mapping)
+                actual = get_owl_bridge_axiom(mapping, not_implies_disjoint=True)
                 self.assertEqual(expected, actual)
 
 

@@ -1,4 +1,10 @@
-"""Create OWL bridges based on https://github.com/INCATools/ontology-development-kit/issues/626#issuecomment-3285032670."""
+"""Create OWL bridges based on https://github.com/INCATools/ontology-development-kit/issues/626#issuecomment-3285032670.
+
+Implemented in:
+
+- https://github.com/cthoyt/sssom-pydantic/pull/128
+- https://github.com/cthoyt/sssom-pydantic/pull/157
+"""
 
 from __future__ import annotations
 
@@ -15,6 +21,7 @@ from curies import vocabulary as v
 from functional_owl import (
     Annotation,
     Axiom,
+    Box,
     ClassAssertion,
     DeclarationType,
     DifferentIndividuals,
@@ -32,7 +39,6 @@ from functional_owl import (
     SubObjectPropertyOf,
     write_ontology,
 )
-from functional_owl.dsl import Box
 
 from ..api import MappingSet, SemanticMapping
 from ..process import filter_by_confidence, invert_narrow_matches
@@ -130,14 +136,41 @@ def get_owl_bridge_axioms(
     minimum_confidence: float | None = None,
     mapping_annotations: bool = False,
     declarations: bool = False,
+    not_implies_disjoint: bool = False,
 ) -> Iterable[Box]:
-    """Iterate over OWL bridge axioms from semantic mappings."""
+    """Iterate over OWL bridge axioms from semantic mappings.
+
+    :param mappings: An iterable of semantic mappings
+    :param converter: A converter
+    :param minimum_confidence: minimum confidence level to keep for exporting bridge
+        axioms
+    :param mapping_annotations: whether annotations should be added to bridge axioms,
+        defaults to false
+    :param declarations: whether to include declarations for subject and object entities
+    :param not_implies_disjoint: Whether to assume that the curation of a negative exact
+        match or equivalence mapping should be used to imply a disjointness axiom.
+
+        .. warning::
+
+            This can be problematic if a negative mapping is trivial, i.e., there exists
+            another mapping with a difference predicate between the same subject and
+            object that is true. If ``A not exact match B`` and ``A subClassOf B`` are
+            both asserted, then implying a disjointness axiom between A and B will cause
+            unsatisfiability. To ensure no such trivial negative mappings exist, first
+            invoke :func:`sssom_pydantic.process.remove_trivial_negative` on your
+            collection of mappings.
+
+
+    :yields: An iterable of functional OWL "boxes"
+    """
     if minimum_confidence is not None:
         mappings = filter_by_confidence(mappings, minimum_confidence)
     mappings = invert_narrow_matches(mappings, converter=converter)
     authors = set()
     for m in mappings:
-        if axiom := get_owl_bridge_axiom(m, mapping_annotations=mapping_annotations):
+        if axiom := get_owl_bridge_axiom(
+            m, mapping_annotations=mapping_annotations, not_implies_disjoint=not_implies_disjoint
+        ):
             if declarations:
                 yield f.Declaration(m.subject, _type_to_declaration_type(m.subject, m.predicate))
                 yield f.Declaration(m.object, _type_to_declaration_type(m.object, m.predicate))
@@ -175,8 +208,33 @@ def _type_to_declaration_type(t: Reference | None, p: Reference) -> DeclarationT
     return "Class"
 
 
-def get_owl_bridge_axiom(m: SemanticMapping, *, mapping_annotations: bool = False) -> Axiom | None:
-    """Get an OWL bridge axiom from a semantic mapping."""
+def get_owl_bridge_axiom(
+    m: SemanticMapping,
+    *,
+    mapping_annotations: bool = False,
+    not_implies_disjoint: bool = False,
+) -> Axiom | None:
+    """Get an OWL bridge axiom from a semantic mapping.
+
+    :param m: A semantic mapping
+    :param mapping_annotations: Whether to include SSSOM metadata as annotations on the
+        produced axioms
+    :param not_implies_disjoint: Whether to assume that the curation of a negative exact
+        match or equivalence mapping should be used to imply a disjointness axiom.
+
+        .. warning::
+
+            This can be problematic if a negative mapping is trivial, i.e., there exists
+            another mapping with a difference predicate between the same subject and
+            object that is true. If ``A not exact match B`` and ``A subClassOf B`` are
+            both asserted, then implying a disjointness axiom between A and B will cause
+            unsatisfiability. To ensure no such trivial negative mappings exist, first
+            invoke :func:`sssom_pydantic.process.remove_trivial_negative` on your
+            collection of mappings.
+
+
+    :returns: An OWL axiom, if one can be constructed.
+    """
     anns = _get_axiom_annotations(m) if mapping_annotations else None
     match m.predicate, m.predicate_modifier:
         case v.exact_match, None:
@@ -191,7 +249,8 @@ def get_owl_bridge_axiom(m: SemanticMapping, *, mapping_annotations: bool = Fals
             # note, there's no concept of EquivalentAnnotationProperties since
             # these aren't used for logical axioms
 
-        case v.exact_match, "Not":  # interestingly, a constant can't be used here
+        # interestingly, a constant can't be used here
+        case v.exact_match, "Not" if not_implies_disjoint:
             if _is_class(m.subject_type):
                 return DisjointClasses([m.subject, m.object], annotations=anns)
             elif m.subject_type == v.owl_named_individual:
@@ -229,12 +288,12 @@ def get_owl_bridge_axiom(m: SemanticMapping, *, mapping_annotations: bool = Fals
 
         case v.equivalent_class, None:
             return EquivalentClasses([m.subject, m.object], annotations=anns)
-        case v.equivalent_class, "Not":
+        case v.equivalent_class, "Not" if not_implies_disjoint:
             return DisjointClasses([m.subject, m.object], annotations=anns)
 
         case v.same_as, None:
             return SameIndividual([m.subject, m.object], annotations=anns)
-        case v.same_as, "Not":
+        case v.same_as, "Not" if not_implies_disjoint:
             return DifferentIndividuals([m.subject, m.object], annotations=anns)
 
         case v.equivalent_property, None:
@@ -244,7 +303,7 @@ def get_owl_bridge_axiom(m: SemanticMapping, *, mapping_annotations: bool = Fals
                 return EquivalentDataProperties([m.subject, m.object], annotations=anns)
             # note, there's no concept of EquivalentAnnotationProperties since
             # these aren't used for logical axioms
-        case v.equivalent_property, "Not":
+        case v.equivalent_property, "Not" if not_implies_disjoint:
             if m.subject_type is None or m.subject_type == v.owl_object_property:
                 return DisjointObjectProperties([m.subject, m.object], annotations=anns)
             elif m.subject_type == v.owl_data_property:

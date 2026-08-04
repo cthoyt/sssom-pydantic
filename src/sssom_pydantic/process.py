@@ -57,6 +57,7 @@ __all__ = [
     "publish",
     "remove_redundant_external",
     "remove_redundant_internal",
+    "remove_trivial_negative",
     "review",
 ]
 
@@ -1034,6 +1035,24 @@ def filter_by_confidence(
         if mapping.confidence is not None and mapping.confidence < cutoff:
             continue
         yield mapping
+
+
+def remove_trivial_negative(mappings: Iterable[MappingTypeVar]) -> Iterable[MappingTypeVar]:
+    """Remove trivial negative triples.
+
+    A negative mapping is trivial in the context of collection of mappings if there
+    exists another non-negative mapping with the same subject and object.
+
+    :param mappings: An iterable of semantic mappings
+
+    :yields: An iterable of semantic mappings (in the same order) with trivial negative
+        mappings removed
+    """
+    mappings = list(mappings)
+    positive_so_pairs = {(m.subject, m.object) for m in mappings if m.predicate_modifier is None}
+    for m in mappings:
+        if m.predicate_modifier is None or (m.subject, m.object) not in positive_so_pairs:
+            yield m
 
 
 if __name__ == "__main__":
