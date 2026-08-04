@@ -39,6 +39,7 @@ __all__ = [
     "ExistsAction",
     "Hasher",
     "InvalidExistsActionError",
+    "remove_trivial_negative",
     "Mark",
     "curate",
     "estimate_confidence",
@@ -1035,6 +1036,9 @@ def filter_by_confidence(
             continue
         yield mapping
 
+
+def remove_trivial_negative(mappings: Iterable[MappingTypeVar]) -> Iterable[MappingTypeVar]:
+    pass
 
 if __name__ == "__main__":
     plot2d()

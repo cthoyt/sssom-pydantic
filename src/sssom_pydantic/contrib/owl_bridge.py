@@ -1,4 +1,7 @@
-"""Create OWL bridges based on https://github.com/INCATools/ontology-development-kit/issues/626#issuecomment-3285032670."""
+"""Create OWL bridges based on https://github.com/INCATools/ontology-development-kit/issues/626#issuecomment-3285032670.
+
+.. addedin:: https://github.com/cthoyt/sssom-pydantic/pull/128
+"""
 
 from __future__ import annotations
 
@@ -15,6 +18,7 @@ from curies import vocabulary as v
 from functional_owl import (
     Annotation,
     Axiom,
+    Box,
     ClassAssertion,
     DeclarationType,
     DifferentIndividuals,
@@ -32,7 +36,6 @@ from functional_owl import (
     SubObjectPropertyOf,
     write_ontology,
 )
-from functional_owl.dsl import Box
 
 from ..api import MappingSet, SemanticMapping
 from ..process import filter_by_confidence, invert_narrow_matches
@@ -175,8 +178,29 @@ def _type_to_declaration_type(t: Reference | None, p: Reference) -> DeclarationT
     return "Class"
 
 
-def get_owl_bridge_axiom(m: SemanticMapping, *, mapping_annotations: bool = False) -> Axiom | None:
-    """Get an OWL bridge axiom from a semantic mapping."""
+def get_owl_bridge_axiom(
+    m: SemanticMapping,
+    *,
+    mapping_annotations: bool = False,
+    not_implies_disjoint: bool = False,
+) -> Axiom | None:
+    """Get an OWL bridge axiom from a semantic mapping.
+
+    :param m: A semantic mapping
+    :param mapping_annotations: Whether to include SSSOM metadata as annotations on the
+        produced axioms
+    :param not_implies_disjoint: If true, assumes that the curation of A not exact
+        match B implies a disjointness axiom between A and B. This can be problematic if
+        the actual case is that A subclassof B, but if you know that you don't have
+        trivial negative predicates between A and B in your dataset where it's known
+        their actual relation, then this can be safely applied.
+
+        to safely use this function, first invoke
+        :func:`sssom_pydantic.process.remove_trivial_negative` on your collection of
+        mappings.
+
+    :returns: An OWL axiom, if one can be constructed.
+    """
     anns = _get_axiom_annotations(m) if mapping_annotations else None
     match m.predicate, m.predicate_modifier:
         case v.exact_match, None:
@@ -191,7 +215,8 @@ def get_owl_bridge_axiom(m: SemanticMapping, *, mapping_annotations: bool = Fals
             # note, there's no concept of EquivalentAnnotationProperties since
             # these aren't used for logical axioms
 
-        case v.exact_match, "Not":  # interestingly, a constant can't be used here
+        # interestingly, a constant can't be used here
+        case v.exact_match, "Not" if not not_implies_disjoint:
             if _is_class(m.subject_type):
                 return DisjointClasses([m.subject, m.object], annotations=anns)
             elif m.subject_type == v.owl_named_individual:
@@ -229,12 +254,12 @@ def get_owl_bridge_axiom(m: SemanticMapping, *, mapping_annotations: bool = Fals
 
         case v.equivalent_class, None:
             return EquivalentClasses([m.subject, m.object], annotations=anns)
-        case v.equivalent_class, "Not":
+        case v.equivalent_class, "Not" if not_implies_disjoint:
             return DisjointClasses([m.subject, m.object], annotations=anns)
 
-        case v.same_as, None:
+        case v.same_as, None if not not_implies_disjoint:
             return SameIndividual([m.subject, m.object], annotations=anns)
-        case v.same_as, "Not":
+        case v.same_as, "Not" if not_implies_disjoint:
             return DifferentIndividuals([m.subject, m.object], annotations=anns)
 
         case v.equivalent_property, None:
@@ -244,7 +269,7 @@ def get_owl_bridge_axiom(m: SemanticMapping, *, mapping_annotations: bool = Fals
                 return EquivalentDataProperties([m.subject, m.object], annotations=anns)
             # note, there's no concept of EquivalentAnnotationProperties since
             # these aren't used for logical axioms
-        case v.equivalent_property, "Not":
+        case v.equivalent_property, "Not" if not_implies_disjoint:
             if m.subject_type is None or m.subject_type == v.owl_object_property:
                 return DisjointObjectProperties([m.subject, m.object], annotations=anns)
             elif m.subject_type == v.owl_data_property:
