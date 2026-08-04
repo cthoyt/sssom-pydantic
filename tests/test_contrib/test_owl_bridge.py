@@ -334,8 +334,14 @@ class TestEndToEnd(unittest.TestCase):
 
     def test_annotations(self) -> None:
         """Test end-to-end."""
+        unmappable = SemanticMapping(
+            subject="mesh:D12345",
+            predicate=v.close_match,
+            object="chebi:1234",
+            justification=v.unspecified_matching_process,
+        )
         write_owl_bridge(
-            [self.m],
+            [self.m, unmappable],
             self.path,
             converter=self.converter,
             metadata=TEST_MAPPING_SET,
