@@ -39,7 +39,6 @@ __all__ = [
     "ExistsAction",
     "Hasher",
     "InvalidExistsActionError",
-    "remove_trivial_negative",
     "Mark",
     "curate",
     "estimate_confidence",
@@ -58,6 +57,7 @@ __all__ = [
     "publish",
     "remove_redundant_external",
     "remove_redundant_internal",
+    "remove_trivial_negative",
     "review",
 ]
 
@@ -1049,13 +1049,10 @@ def remove_trivial_negative(mappings: Iterable[MappingTypeVar]) -> Iterable[Mapp
         mappings removed
     """
     mappings = list(mappings)
-    xx = set()
-    for mapping in mappings:
-        if mapping.predicate_modifier is None:
-            xx.add((mapping.subject, mapping.object))
-    for mapping in mappings:
-        if mapping.predicate_modifier is None or (mapping.subject, mapping.object) not in xx:
-            yield mapping
+    positive_so_pairs = {(m.subject, m.object) for m in mappings if m.predicate_modifier is None}
+    for m in mappings:
+        if m.predicate_modifier is None or (m.subject, m.object) not in positive_so_pairs:
+            yield m
 
 
 if __name__ == "__main__":
