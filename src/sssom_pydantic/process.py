@@ -1038,7 +1038,25 @@ def filter_by_confidence(
 
 
 def remove_trivial_negative(mappings: Iterable[MappingTypeVar]) -> Iterable[MappingTypeVar]:
-    pass
+    """Remove trivial negative triples.
+
+    A negative mapping is trivial in the context of collection of mappings if there
+    exists another non-negative mapping with the same subject and object.
+
+    :param mappings: An iterable of semantic mappings
+
+    :yields: An iterable of semantic mappings (in the same order) with trivial negative
+        mappings removed
+    """
+    mappings = list(mappings)
+    xx = set()
+    for mapping in mappings:
+        if mapping.predicate_modifier is None:
+            xx.add((mapping.subject, mapping.object))
+    for mapping in mappings:
+        if mapping.predicate_modifier is None or (mapping.subject, mapping.object) not in xx:
+            yield mapping
+
 
 if __name__ == "__main__":
     plot2d()

@@ -189,11 +189,11 @@ def get_owl_bridge_axiom(
     :param m: A semantic mapping
     :param mapping_annotations: Whether to include SSSOM metadata as annotations on the
         produced axioms
-    :param not_implies_disjoint: If true, assumes that the curation of A not exact
-        match B implies a disjointness axiom between A and B. This can be problematic if
-        the actual case is that A subclassof B, but if you know that you don't have
-        trivial negative predicates between A and B in your dataset where it's known
-        their actual relation, then this can be safely applied.
+    :param not_implies_disjoint: If true, assumes that the curation of A not exact match
+        B implies a disjointness axiom between A and B. This can be problematic if the
+        actual case is that A subclassof B, but if you know that you don't have trivial
+        negative predicates between A and B in your dataset where it's known their
+        actual relation, then this can be safely applied.
 
         to safely use this function, first invoke
         :func:`sssom_pydantic.process.remove_trivial_negative` on your collection of
