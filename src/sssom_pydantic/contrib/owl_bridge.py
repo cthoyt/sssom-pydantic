@@ -1,6 +1,9 @@
 """Create OWL bridges based on https://github.com/INCATools/ontology-development-kit/issues/626#issuecomment-3285032670.
 
-.. addedin:: https://github.com/cthoyt/sssom-pydantic/pull/128
+Implemented in:
+
+- https://github.com/cthoyt/sssom-pydantic/pull/128
+- https://github.com/cthoyt/sssom-pydantic/pull/157
 """
 
 from __future__ import annotations
