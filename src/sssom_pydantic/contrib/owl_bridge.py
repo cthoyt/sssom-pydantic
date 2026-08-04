@@ -101,16 +101,15 @@ def write_owl_bridge(
             )
         ),
         file=path,
-        annotations=_get_ontology_annotations(metadata, converter=converter)
+        annotations=get_metadata_annotations(metadata, converter=converter)
         if metadata is not None
         else None,
         **kwargs,
     )
 
 
-def _get_ontology_annotations(
-    metadata: MappingSet, converter: curies.Converter
-) -> list[Annotation]:
+def get_metadata_annotations(metadata: MappingSet, converter: curies.Converter) -> list[Annotation]:
+    """Get annotations from mapping set metadata."""
     today = datetime.date.today().isoformat()
     rv = [
         Annotation(
@@ -180,7 +179,7 @@ def get_owl_bridge_axioms(
     if minimum_confidence is not None:
         mappings = filter_by_confidence(mappings, minimum_confidence)
     mappings = invert_narrow_matches(mappings, converter=converter)
-    authors = set()
+    authors: set[Reference] = set()
     for m in mappings:
         axiom = get_owl_bridge_axiom(
             m,
@@ -204,9 +203,11 @@ def get_owl_bridge_axioms(
     if mapping_annotations and authors:
         yield f.Declaration(HUMAN_URI, "Class")
         yield f.LabelMacro(HUMAN_URI, "human")
-        for author in authors:
+        for author in sorted(authors):
             yield f.Declaration(author, "NamedIndividual")
             yield f.ClassAssertion(HUMAN_URI, author)
+            if author_name := getattr(author, "name", None):
+                yield f.LabelMacro(author, author_name)
 
 
 PREDICATE_TO_DEFAULT_DECLARATION_TYPE: dict[Reference, DeclarationType] = {
