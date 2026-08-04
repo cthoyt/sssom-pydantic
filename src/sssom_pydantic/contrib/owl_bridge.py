@@ -123,19 +123,19 @@ def get_metadata_annotations(metadata: MappingSet, converter: curies.Converter) 
     if metadata.version:
         rv.append(Annotation(v.owl_version_info, LiteralBox(metadata.version)))
     if metadata.license:
-        rv.append(Annotation(v.has_license, _xx(converter, str(metadata.license))))
+        rv.append(Annotation(v.has_license, _reference_or_anyuri(converter, str(metadata.license))))
     if metadata.comment:
         rv.append(Annotation(v.has_comment, LiteralBox(metadata.comment)))
     for source_url in metadata.source or []:
-        rv.append(Annotation(v.has_source, _xx(converter, str(source_url))))
+        rv.append(Annotation(v.has_source, _reference_or_anyuri(converter, str(source_url))))
     for see_also_url in metadata.see_also or []:
-        rv.append(Annotation(v.see_also, _xx(converter, str(see_also_url))))
+        rv.append(Annotation(v.see_also, _reference_or_anyuri(converter, str(see_also_url))))
     for creator in metadata.creators or []:
         rv.append(Annotation(v.has_creator, creator))
     return rv
 
 
-def _xx(converter: curies.Converter, value: str) -> rdflib.Literal | Reference:
+def _reference_or_anyuri(converter: curies.Converter, value: str) -> rdflib.Literal | Reference:
     if license_reference := converter.parse_uri(value):
         return license_reference.to_pydantic()
     else:
@@ -307,7 +307,7 @@ def _iter_annotations(
     if mapping.mapping_tool is not None:
         pass
     if mapping.license is not None:
-        yield Annotation(v.has_license, _xx(converter, mapping.license))
+        yield Annotation(v.has_license, _reference_or_anyuri(converter, mapping.license))
     for creator in mapping.creators or []:
         yield Annotation(v.has_creator, creator)
     for reviewer in mapping.reviewers or []:
@@ -319,7 +319,7 @@ def _iter_annotations(
     if mapping.comment:
         yield Annotation(v.has_comment, f.LiteralBox(mapping.comment))
     for see_also_uri in mapping.see_also or []:
-        yield Annotation(v.see_also, _xx(converter, see_also_uri))
+        yield Annotation(v.see_also, _reference_or_anyuri(converter, see_also_uri))
     # TODO remaining
 
 
