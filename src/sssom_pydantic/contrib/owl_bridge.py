@@ -247,7 +247,7 @@ def get_owl_bridge_axiom(
             # these aren't used for logical axioms
 
         # interestingly, a constant can't be used here
-        case v.exact_match, "Not" if not not_implies_disjoint:
+        case v.exact_match, "Not" if not_implies_disjoint:
             if _is_class(m.subject_type):
                 return DisjointClasses([m.subject, m.object], annotations=anns)
             elif m.subject_type == v.owl_named_individual:
