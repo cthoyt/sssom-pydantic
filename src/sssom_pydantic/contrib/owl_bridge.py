@@ -257,7 +257,7 @@ def get_owl_bridge_axiom(
         case v.equivalent_class, "Not" if not_implies_disjoint:
             return DisjointClasses([m.subject, m.object], annotations=anns)
 
-        case v.same_as, None if not not_implies_disjoint:
+        case v.same_as, None:
             return SameIndividual([m.subject, m.object], annotations=anns)
         case v.same_as, "Not" if not_implies_disjoint:
             return DifferentIndividuals([m.subject, m.object], annotations=anns)
