@@ -220,6 +220,11 @@ PREDICATE_TO_DEFAULT_DECLARATION_TYPE: dict[Reference, DeclarationType] = {
     v.is_a: "Class",
     v.rdf_type: "NamedIndividual",
     v.same_as: "NamedIndividual",
+    v.owl_different_from: "NamedIndividual",
+    v.owl_disjoint_with: "Class",
+    v.owl_complement_of: "Class",
+    v.owl_inverse_of: "ObjectProperty",
+    v.owl_property_disjoint_with: "ObjectProperty",
 }
 
 # see https://mapping-commons.github.io/sssom/dev/EntityTypeEnum/
@@ -229,11 +234,13 @@ SIDE_TYPE_REFERENCE_TO_DECLARATION_TYPE: dict[Reference, DeclarationType] = {
     v.owl_data_property: "DataProperty",
     v.owl_annotation_property: "AnnotationProperty",
     v.owl_named_individual: "NamedIndividual",
+    v.rdfs_datatype: "Datatype",
+    # the following are not perfect, but usually good enough
     v.skos_concept: "Class",
     v.rdfs_resource: "Class",
     v.rdfs_class: "Class",
+    # the following don't have obvious mappings
     # v.rdfs_literal,
-    # v.rdfs_datatype,
     # v.rdfs_property,
     # v.composed_entity_expression,
 }
