@@ -315,7 +315,7 @@ def _type_to_declaration_type(
 
 
 def get_owl_bridge_axiom(
-    m: SemanticMapping,
+    mapping: SemanticMapping,
     converter: curies.Converter,
     *,
     mapping_annotations: bool = False,
@@ -323,7 +323,7 @@ def get_owl_bridge_axiom(
 ) -> Box | None:
     """Get an OWL bridge axiom from a semantic mapping.
 
-    :param m: A semantic mapping
+    :param mapping: A semantic mapping
     :param converter: A converter
     :param mapping_annotations: whether to include annotations (extra metadata like
         mapping type, confidence, etc.) on the produced axioms, defaults to false
@@ -343,14 +343,14 @@ def get_owl_bridge_axiom(
 
     :returns: An OWL axiom, if one can be constructed.
     """
-    anns = get_mapping_annotations(m, converter) if mapping_annotations else None
-    if m.predicate_modifier is None:
-        logical_axiom = get_object_property_axiom(m, annotations=anns)
+    annotations = get_mapping_annotations(mapping, converter) if mapping_annotations else None
+    if mapping.predicate_modifier is None:
+        logical_axiom = get_object_property_axiom(mapping, annotations=annotations)
         if logical_axiom is not None:
             return logical_axiom
-        return get_upgraded_annotation_property(m, anns)
+        return get_upgraded_annotation_property(mapping, annotations=annotations)
     elif not_implies_disjoint:
-        return get_implied_negation_axiom(m, annotations=anns)
+        return get_implied_negation_axiom(mapping, annotations=annotations)
     return None
 
 
@@ -467,7 +467,7 @@ def get_implied_negation_axiom(
 
 
 def get_upgraded_annotation_property(
-    m: SemanticMapping, anns: list[Annotation] | None = None
+    mapping: SemanticMapping, *, annotations: list[Annotation] | None = None
 ) -> Box | None:
     """Construct a logical axiom from a less precise mapping.
 
@@ -498,31 +498,37 @@ def get_upgraded_annotation_property(
         ``skos:broadMatch`` is excluded because the :func:`invert_narrow_matches` should
         be run first
     """  # noqa:E501
-    match m.predicate:
+    match mapping.predicate:
         case v.exact_match:
-            if _is_class(m.subject_type):
-                return EquivalentClasses([m.subject, m.object], annotations=anns)
-            elif m.subject_type == v.owl_named_individual:
-                return SameIndividual([m.subject, m.object], annotations=anns)
-            elif m.subject_type == v.owl_object_property:
-                return EquivalentObjectProperties([m.subject, m.object], annotations=anns)
-            elif m.subject_type == v.owl_data_property:
-                return EquivalentDataProperties([m.subject, m.object], annotations=anns)
+            if _is_class(mapping.subject_type):
+                return EquivalentClasses([mapping.subject, mapping.object], annotations=annotations)
+            elif mapping.subject_type == v.owl_named_individual:
+                return SameIndividual([mapping.subject, mapping.object], annotations=annotations)
+            elif mapping.subject_type == v.owl_object_property:
+                return EquivalentObjectProperties(
+                    [mapping.subject, mapping.object], annotations=annotations
+                )
+            elif mapping.subject_type == v.owl_data_property:
+                return EquivalentDataProperties(
+                    [mapping.subject, mapping.object], annotations=annotations
+                )
             # note, there's no concept of EquivalentAnnotationProperties since
             # these aren't used for logical axioms
             else:
                 return None
         case v.broad_match:
-            if _is_class(m.subject_type):
-                return SubClassOf(m.subject, m.object, annotations=anns)
-            elif m.subject_type == v.owl_named_individual and _is_class(m.object_type):
-                return ClassAssertion(m.object, m.subject, annotations=anns)
-            elif m.subject_type == v.owl_object_property:
-                return SubObjectPropertyOf(m.subject, m.object, annotations=anns)
-            elif m.subject_type == v.owl_data_property:
-                return SubDataPropertyOf(m.subject, m.object, annotations=anns)
-            elif m.subject_type == v.owl_annotation_property:
-                return SubAnnotationPropertyOf(m.subject, m.object, annotations=anns)
+            if _is_class(mapping.subject_type):
+                return SubClassOf(mapping.subject, mapping.object, annotations=annotations)
+            elif mapping.subject_type == v.owl_named_individual and _is_class(mapping.object_type):
+                return ClassAssertion(mapping.object, mapping.subject, annotations=annotations)
+            elif mapping.subject_type == v.owl_object_property:
+                return SubObjectPropertyOf(mapping.subject, mapping.object, annotations=annotations)
+            elif mapping.subject_type == v.owl_data_property:
+                return SubDataPropertyOf(mapping.subject, mapping.object, annotations=annotations)
+            elif mapping.subject_type == v.owl_annotation_property:
+                return SubAnnotationPropertyOf(
+                    mapping.subject, mapping.object, annotations=annotations
+                )
             else:
                 return None
         # narrow match - excluded because inversion should be done before
@@ -651,11 +657,11 @@ def get_annotation_axiom(
 
     And so on, see :data:`curies.vocabulary.extended_match_typedefs`.
     """
-    anns = get_mapping_annotations(mapping, converter) if mapping_annotations else []
+    annotations = get_mapping_annotations(mapping, converter) if mapping_annotations else []
     if mapping.predicate_modifier is not None:
-        anns.append(Annotation("sssom:predicate_modifier", f.LiteralBox("Not")))
+        annotations.append(Annotation("sssom:predicate_modifier", f.LiteralBox("Not")))
 
-    if box := get_object_property_axiom(mapping, annotations=anns):
+    if box := get_object_property_axiom(mapping, annotations=annotations):
         if mapping.predicate_modifier is None:
             return box
         else:
@@ -666,5 +672,5 @@ def get_annotation_axiom(
         return None
     else:
         return AnnotationAssertion(
-            mapping.predicate, mapping.subject, mapping.object, annotations=anns
+            mapping.predicate, mapping.subject, mapping.object, annotations=annotations
         )
