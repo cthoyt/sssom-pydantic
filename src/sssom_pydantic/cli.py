@@ -1,10 +1,15 @@
 """Command line interface for :mod:`sssom_pydantic`."""
 
+from __future__ import annotations
+
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import click
+
+if TYPE_CHECKING:
+    from .contrib.owl import AxiomMode
 
 __all__ = [
     "main",
@@ -176,25 +181,28 @@ def subset(
     is_flag=True,
     help="If set, adds declarations (and labels, when available)",
 )
+@click.option("--mode", type=click.Choice(["bridge", "inline"]), default="bridge")
 def bridge(
     input: Path | None,
     output: Path | None,
     cutoff: float,
     mapping_annotations: bool,
     declarations: bool,
+    mode: AxiomMode,
 ) -> None:
     """Write OWL bridge axioms in Functional OWL (OFN)."""
     import sys
 
     import sssom_pydantic
-    from sssom_pydantic.contrib.owl_bridge import write_owl_bridge
+    from sssom_pydantic.contrib.owl import write_owl
 
     mappings, converter, metadata = sssom_pydantic.read(input or sys.stdin)
 
-    write_owl_bridge(
+    write_owl(
         mappings,
         output or sys.stdout,
         converter=converter,
+        mode=mode,
         metadata=metadata,
         iri=str(metadata.id),
         minimum_confidence=cutoff,

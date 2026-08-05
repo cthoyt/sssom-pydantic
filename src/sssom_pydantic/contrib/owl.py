@@ -11,10 +11,11 @@ from __future__ import annotations
 
 import datetime
 import logging
+import typing
 from collections.abc import Iterable
 from functools import partial
 from pathlib import Path
-from typing import Any, TextIO, TypedDict, NotRequired, TypeAlias, Literal
+from typing import Any, Literal, TextIO, TypeAlias
 
 import curies
 import functional_owl as f
@@ -23,13 +24,13 @@ from curies import Reference
 from curies import vocabulary as v
 from functional_owl import (
     Annotation,
+    AnnotationAssertion,
     Axiom,
     Box,
     ClassAssertion,
     DeclarationType,
     DifferentIndividuals,
     DisjointClasses,
-    AnnotationAssertion,
     DisjointDataProperties,
     DisjointObjectProperties,
     EquivalentClasses,
@@ -51,27 +52,30 @@ from ..process import filter_by_confidence, invert_narrow_matches
 from ..version import get_version
 
 __all__ = [
+    "get_annotation_axiom",
+    "get_axioms",
     "get_owl_bridge_axiom",
-    "get_owl_bridge_axioms",
-    "write_owl_bridge",
+    "write_owl",
 ]
 
 logger = logging.getLogger(__name__)
 
 HUMAN_URI = rdflib.URIRef("http://purl.obolibrary.org/obo/NCBITaxon_9606")
 
-Mechanism: TypeAlias = Literal["bridge", "annotation"]
+AxiomMode: TypeAlias = Literal["bridge", "inline"]
 
 
-def write_owl_bridge(
+def write_owl(
     mappings: Iterable[SemanticMapping],
     path: str | Path | TextIO,
     *,
     converter: curies.Converter,
+    mode: AxiomMode | None = None,
     metadata: MappingSet | None = None,
     minimum_confidence: float | None = None,
     mapping_annotations: bool = False,
     declarations: bool = False,
+    allow_arbitrary: bool = False,
     **kwargs: Any,
 ) -> None:
     """Write OWL bridge axioms as an OWL file.
@@ -84,6 +88,8 @@ def write_owl_bridge(
         bridge
     :param mapping_annotations: whether to include mapping annotations
     :param declarations: whether to include declarations (and labels, if available)
+    :param allow_arbitrary: When in ``inline`` mode, if set to true, skip mappings with
+        predicates that aren't in :data:`curies.vocabulary.extended_match_typedefs`
     :param kwargs: keyword arguments to pass to :func:`functional_owl.write_ontology`.
 
     .. note::
@@ -97,12 +103,14 @@ def write_owl_bridge(
     write_ontology(
         prefixes=converter,
         axioms=list(
-            get_owl_bridge_axioms(
+            get_axioms(
                 mappings,
                 converter=converter,
+                mode=mode,
                 minimum_confidence=minimum_confidence,
                 mapping_annotations=mapping_annotations,
                 declarations=declarations,
+                allow_arbitrary=allow_arbitrary,
             )
         ),
         file=path,
@@ -147,21 +155,26 @@ def _reference_or_anyuri(converter: curies.Converter, value: str) -> rdflib.Lite
         return rdflib.Literal(value, datatype=XSD.anyURI)
 
 
-def get_owl_bridge_axioms(
+def get_axioms(
     mappings: Iterable[SemanticMapping],
     converter: curies.Converter,
     *,
+    mode: AxiomMode | None = None,
     minimum_confidence: float | None = None,
     mapping_annotations: bool = False,
-    not_implies_disjoint: bool = False,
     declarations: bool = False,
+    not_implies_disjoint: bool = False,
     allow_arbitrary: bool = False,
-    mechanism: Mechanism | None = None,
 ) -> Iterable[Box]:
-    """Iterate over OWL bridge axioms from semantic mappings.
+    """Iterate over OWL axioms from semantic mappings.
 
     :param mappings: An iterable of semantic mappings
     :param converter: A converter
+    :param mode: Which kinds of axioms should be produced?
+
+        - ``inline`` produces annotation properties as is
+        - ``bridge`` applies transformation on SKOS matches to upgrade them to logical
+          axioms, where possible
     :param minimum_confidence: minimum confidence level to keep for exporting bridge
         axioms
     :param mapping_annotations: whether annotations should be added to bridge axioms,
@@ -180,26 +193,26 @@ def get_owl_bridge_axioms(
             invoke :func:`sssom_pydantic.process.remove_trivial_negative` on your
             collection of mappings.
 
+    :param allow_arbitrary: When in ``inline`` mode, if set to true, skip mappings with
+        predicates that aren't in :data:`curies.vocabulary.extended_match_typedefs`
 
     :yields: An iterable of functional OWL "boxes"
     """
     if minimum_confidence is not None:
         mappings = filter_by_confidence(mappings, minimum_confidence)
-    mappings = invert_narrow_matches(mappings, converter=converter)
     authors: set[Reference] = set()
 
-    if mechanism is None or mechanism == "bridge":
+    if mode is None or mode == "bridge":
+        mappings = invert_narrow_matches(mappings, converter=converter)
         func = partial(
             get_owl_bridge_axiom,
             mapping_annotations=mapping_annotations,
             not_implies_disjoint=not_implies_disjoint,
         )
-    elif mechanism == "annotation":
-        func = partial(
-            get_annotation_axioms, allow_arbitrary=allow_arbitrary
-        )
+    elif mode == "inline":
+        func = partial(get_annotation_axiom, allow_arbitrary=allow_arbitrary)
     else:
-        raise ValueError(f"Unknown mechanism {mechanism}")
+        raise ValueError(f"invalid mode {mode}. use one of {typing.get_args(AxiomMode)}")
 
     for m in mappings:
         axiom = func(m, converter)
@@ -460,11 +473,8 @@ def _to_logical_axiom(m: SemanticMapping, anns: list[Annotation] | None = None) 
     return None
 
 
-def get_annotation_axioms(
-    m: SemanticMapping,
-    converter: curies.Converter,
-    *,
-    allow_arbitrary: bool = False
+def get_annotation_axiom(
+    m: SemanticMapping, converter: curies.Converter, *, allow_arbitrary: bool = False
 ) -> Axiom | None:
     """Get an OWL bridge axiom from a semantic mapping."""
     anns = get_mapping_annotations(m, converter=converter)

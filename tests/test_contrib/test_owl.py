@@ -22,7 +22,7 @@ from sssom_pydantic.contrib.owl_bridge import (
     get_mapping_annotations,
     get_metadata_annotations,
     get_owl_bridge_axiom,
-    write_owl_bridge,
+    write_owl,
 )
 from sssom_pydantic.version import get_version
 from tests.cases import R1, R2, TEST_CONVERTER, TEST_MAPPING_SET, _m
@@ -260,7 +260,7 @@ class TestEndToEnd(unittest.TestCase):
 
     def test_simple(self) -> None:
         """Test end-to-end."""
-        write_owl_bridge([self.m], self.path, converter=self.converter, metadata=TEST_MAPPING_SET)
+        write_owl([self.m], self.path, converter=self.converter, metadata=TEST_MAPPING_SET)
         self.assertEqual(
             dedent(f"""\
             Prefix(chebi:=<http://purl.obolibrary.org/obo/CHEBI_>)
@@ -283,7 +283,7 @@ class TestEndToEnd(unittest.TestCase):
 
     def test_declarations(self) -> None:
         """Test end-to-end."""
-        write_owl_bridge(
+        write_owl(
             [self.m],
             self.path,
             converter=self.converter,
@@ -316,7 +316,7 @@ class TestEndToEnd(unittest.TestCase):
 
     def test_declarations_with_annotations(self) -> None:
         """Test end-to-end."""
-        write_owl_bridge(
+        write_owl(
             [self.m],
             self.path,
             converter=self.converter,
@@ -362,7 +362,7 @@ class TestEndToEnd(unittest.TestCase):
             justification=v.unspecified_matching_process,
         )
 
-        write_owl_bridge(
+        write_owl(
             [m],
             self.path,
             converter=self.converter,
@@ -401,7 +401,7 @@ class TestEndToEnd(unittest.TestCase):
             authors=[charlie.without_name()],
         )
 
-        write_owl_bridge(
+        write_owl(
             [m],
             self.path,
             converter=self.converter,
@@ -445,7 +445,7 @@ class TestEndToEnd(unittest.TestCase):
             authors=[charlie.without_name()],
         )
 
-        write_owl_bridge(
+        write_owl(
             [m],
             self.path,
             converter=self.converter,
@@ -560,7 +560,7 @@ class TestEndToEnd(unittest.TestCase):
             object="chebi:1234",
             justification=v.unspecified_matching_process,
         )
-        write_owl_bridge(
+        write_owl(
             [self.m, unmappable],
             self.path,
             converter=self.converter,
