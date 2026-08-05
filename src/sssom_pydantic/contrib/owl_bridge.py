@@ -301,6 +301,7 @@ def _is_class(r: curies.Reference | None) -> bool:
 def get_mapping_annotations(
     mapping: SemanticMapping, converter: curies.Converter
 ) -> list[Annotation]:
+    """Get annotations from a semantic mapping."""
     return list(_iter_annotations(mapping, converter))
 
 
