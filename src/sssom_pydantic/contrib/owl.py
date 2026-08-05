@@ -1,10 +1,13 @@
 """Create OWL bridges based on https://github.com/INCATools/ontology-development-kit/issues/626#issuecomment-3285032670.
 
+.. seealso:: https://mapping-commons.github.io/sssom/dev/spec-formats-owl/
+
 Implemented in:
 
 - https://github.com/cthoyt/sssom-pydantic/pull/128
 - https://github.com/cthoyt/sssom-pydantic/pull/157
 - https://github.com/cthoyt/sssom-pydantic/pull/158
+- https://github.com/cthoyt/sssom-pydantic/pull/159
 """
 
 from __future__ import annotations
@@ -25,7 +28,6 @@ from curies import vocabulary as v
 from functional_owl import (
     Annotation,
     AnnotationAssertion,
-    Axiom,
     Box,
     ClassAssertion,
     DeclarationType,
@@ -293,7 +295,7 @@ def get_owl_bridge_axiom(
     *,
     mapping_annotations: bool = False,
     not_implies_disjoint: bool = False,
-) -> Axiom | None:
+) -> Box | None:
     """Get an OWL bridge axiom from a semantic mapping.
 
     :param m: A semantic mapping
@@ -365,7 +367,7 @@ def _iter_annotations(
     # TODO remaining
 
 
-def _handle_logical_not(m: SemanticMapping, anns: list[Annotation] | None = None) -> Axiom | None:
+def _handle_logical_not(m: SemanticMapping, anns: list[Annotation] | None = None) -> Box | None:
     match m.predicate:
         case v.exact_match:
             if _is_class(m.subject_type):
@@ -396,7 +398,7 @@ def _handle_logical_not(m: SemanticMapping, anns: list[Annotation] | None = None
     return None
 
 
-def _bridge_annotation(m: SemanticMapping, anns: list[Annotation] | None = None) -> Axiom | None:
+def _bridge_annotation(m: SemanticMapping, anns: list[Annotation] | None = None) -> Box | None:
     match m.predicate:
         case v.exact_match:
             if _is_class(m.subject_type):
@@ -429,7 +431,7 @@ def _bridge_annotation(m: SemanticMapping, anns: list[Annotation] | None = None)
     return None
 
 
-def _to_logical_axiom(m: SemanticMapping, anns: list[Annotation] | None = None) -> Axiom | None:
+def _to_logical_axiom(m: SemanticMapping, anns: list[Annotation] | None = None) -> Box | None:
     match m.predicate:
         case v.is_a:
             return SubClassOf(m.subject, m.object, annotations=anns)
@@ -459,7 +461,7 @@ def _to_logical_axiom(m: SemanticMapping, anns: list[Annotation] | None = None) 
         case v.owl_complement_of:
             raise NotImplementedError(
                 "complement of predicate not implemented. Requires creating a more complex "
-                "class macro upstream in funowl"
+                "class macro upstream in funowl w/ ClassComplementMacro(m.subject, m.object)"
             )
         case v.owl_different_from:
             return DifferentIndividuals([m.subject, m.object], annotations=anns)
@@ -483,7 +485,7 @@ def get_annotation_axiom(
     *,
     allow_arbitrary: bool = False,
     mapping_annotations: bool = False,
-) -> Axiom | None:
+) -> Box | None:
     """Get an OWL bridge axiom from a semantic mapping."""
     anns = get_mapping_annotations(m, converter) if mapping_annotations else []
     if m.predicate_modifier is not None:
