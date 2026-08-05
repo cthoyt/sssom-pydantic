@@ -223,6 +223,16 @@ class TestBridge(unittest.TestCase):
                 )
                 self.assertEqual(expected, actual)
 
+    def test_no_implications(self) -> None:
+        """Test when negation implemention is turned off."""
+        self.assertIsNone(
+            get_owl_bridge_axiom(
+                _mapping(v.exact_match).negate(),
+                not_implies_disjoint=False,
+                converter=TEST_CONVERTER,
+            )
+        )
+
 
 class TestEndToEnd(unittest.TestCase):
     """Test end-to-end."""
