@@ -83,6 +83,12 @@ def write_owl(
     :param mappings: semantic mappings
     :param path: path to file or a file-like object
     :param converter: a converter
+    :param mode: Which kinds of axioms should be produced?
+
+        - ``inline`` produces annotation properties as is
+        - ``bridge`` applies transformation on SKOS matches to upgrade them to logical
+          axioms, where possible, based on
+          https://github.com/INCATools/ontology-development-kit/issues/626#issuecomment-3285032670.
     :param metadata: metadata to annotate to the "ontology"
     :param minimum_confidence: minimum confidence level to keep for exporting as a
         bridge
