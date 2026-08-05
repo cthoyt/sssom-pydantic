@@ -6,7 +6,7 @@ import unittest
 from collections.abc import Iterable
 from pathlib import Path
 from textwrap import dedent
-from typing import Any
+from typing import Any, cast
 
 import functional_owl as f
 import rdflib
@@ -19,6 +19,7 @@ from rdflib import XSD
 
 from sssom_pydantic import NOT, MappingSet, SemanticMapping
 from sssom_pydantic.contrib.owl import (
+    get_annotation_axiom,
     get_axioms,
     get_mapping_annotations,
     get_metadata_annotations,
@@ -211,12 +212,17 @@ bridge_cases: list[tuple[Axiom | None, SemanticMapping]] = [
     (None, _mapping(v.owl_inverse_of).negate()),
 ]
 
+inline_cases = [
+    (f.EquivalentClasses([A, B]), _mapping(v.equivalent_class)),
+    (None, _mapping(v.equivalent_class).negate()),
+]
+
 
 class TestBridge(unittest.TestCase):
     """Test bridge."""
 
     def test_all_cases(self) -> None:
-        """Test axioms."""
+        """Test briding axioms."""
         for expected, mapping in bridge_cases:
             with self.subTest(x=str(mapping)):
                 actual = get_owl_bridge_axiom(
@@ -232,6 +238,45 @@ class TestBridge(unittest.TestCase):
                 not_implies_disjoint=False,
                 converter=TEST_CONVERTER,
             )
+        )
+
+    def test_inline(self) -> None:
+        """Test inline axioms."""
+        for expected, mapping in inline_cases:
+            with self.subTest(x=str(mapping)):
+                actual = get_annotation_axiom(mapping, converter=TEST_CONVERTER)
+                self.assertEqual(expected, actual)
+
+    def test_custom_predicate_disallowed(self) -> None:
+        """Test arbitrary predicates."""
+        self.assertIsNone(
+            get_annotation_axiom(
+                _mapping(v.derives_from),
+                allow_arbitrary=False,
+                converter=TEST_CONVERTER,
+            )
+        )
+
+    def test_custom_predicate_allowed(self) -> None:
+        """Test arbitrary predicates."""
+        self.assertEqual(
+            f.AnnotationAssertion(
+                v.derives_from,
+                A,
+                B,
+                annotations=[
+                    f.Annotation("sssom:mapping_justification", v.unspecified_matching_process)
+                ],
+            ).to_funowl(),
+            cast(
+                f.Box,
+                get_annotation_axiom(
+                    _mapping(v.derives_from),
+                    allow_arbitrary=True,
+                    converter=TEST_CONVERTER,
+                    mapping_annotations=True,
+                ),
+            ).to_funowl(),
         )
 
 

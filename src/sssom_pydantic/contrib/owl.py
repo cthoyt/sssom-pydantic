@@ -490,8 +490,13 @@ def get_annotation_axiom(
     anns = get_mapping_annotations(m, converter) if mapping_annotations else []
     if m.predicate_modifier is not None:
         anns.append(Annotation("sssom:predicate_modifier", f.LiteralBox("Not")))
-    if m.predicate_modifier is None and (rv := _to_logical_axiom(m, anns)):
-        return rv
+
+    if box := _to_logical_axiom(m, anns):
+        if m.predicate_modifier is None:
+            return box
+        else:
+            logger.warning("logical axiom combine with negation %s", m.predicate)
+            return None
     elif m.predicate not in v.extended_match_typedefs and not allow_arbitrary:
         logger.warning("skipping unsupported predicate %s", m.predicate)
         return None
