@@ -70,10 +70,10 @@ from ..version import get_version
 __all__ = [
     "get_annotation_axiom",
     "get_axioms",
-    "get_upgraded_annotation_property",
     "get_implied_negation_axiom",
     "get_object_property_axiom",
     "get_owl_bridge_axiom",
+    "get_upgraded_annotation_property",
     "write_owl",
 ]
 
@@ -111,8 +111,9 @@ def write_owl(
     :param metadata: metadata to annotate to the "ontology"
     :param minimum_confidence: minimum confidence level to keep for exporting as a
         bridge
-    :param mapping_annotations: whether to include mapping annotations
-    :param declarations: whether to include declarations (and labels, if available)
+    :param mapping_annotations: whether to include annotations (extra metadata like
+        mapping type, confidence, etc.) on the produced axioms, defaults to false :param
+        declarations: whether to include declarations (and labels, if available)
     :param allow_arbitrary: When in ``inline`` mode, if set to true, skip mappings with
         predicates that aren't in :data:`curies.vocabulary.extended_match_typedefs`
     :param kwargs: keyword arguments to pass to :func:`functional_owl.write_ontology`.
@@ -203,8 +204,8 @@ def get_axioms(
           https://github.com/INCATools/ontology-development-kit/issues/626#issuecomment-3285032670.
     :param minimum_confidence: minimum confidence level to keep for exporting bridge
         axioms
-    :param mapping_annotations: whether annotations should be added to bridge axioms,
-        defaults to false
+    :param mapping_annotations: whether to include annotations (extra metadata like
+        mapping type, confidence, etc.) on the produced axioms, defaults to false
     :param declarations: whether to include declarations for subject and object entities
     :param not_implies_disjoint: Whether to assume that the curation of a negative exact
         match or equivalence mapping should be used to imply a disjointness axiom.
@@ -324,8 +325,8 @@ def get_owl_bridge_axiom(
 
     :param m: A semantic mapping
     :param converter: A converter
-    :param mapping_annotations: Whether to include SSSOM metadata as annotations on the
-        produced axioms
+    :param mapping_annotations: whether to include annotations (extra metadata like
+        mapping type, confidence, etc.) on the produced axioms, defaults to false
     :param not_implies_disjoint: Whether to assume that the curation of a negative exact
         match or equivalence mapping should be used to imply a disjointness axiom.
 
@@ -620,25 +621,50 @@ def get_object_property_axiom(
 
 
 def get_annotation_axiom(
-    m: SemanticMapping,
+    mapping: SemanticMapping,
     converter: curies.Converter,
     *,
     allow_arbitrary: bool = False,
     mapping_annotations: bool = False,
 ) -> Box | None:
-    """Get an OWL bridge axiom from a semantic mapping."""
-    anns = get_mapping_annotations(m, converter) if mapping_annotations else []
-    if m.predicate_modifier is not None:
+    """Get an OWL bridge axiom from a semantic mapping.
+
+    :param mapping: A semantic mapping
+    :param converter: A converter
+    :param allow_arbitrary: When in ``inline`` mode, if set to true, skip mappings with
+        predicates that aren't in :data:`curies.vocabulary.extended_match_typedefs`
+    :param mapping_annotations: whether to include annotations (extra metadata like
+        mapping type, confidence, etc.) on the produced axioms, defaults to false
+
+    :returns: A functional OWL axiom, if possible
+
+    ========================= ===============================================
+    Predicate                 Functional Expression
+    ========================= ===============================================
+    ``S skos:exactMatch O``   ``AnnotationAssertion(skos:exactMatch S, O)``
+    ``S skos:broadMatch O``   ``AnnotationAssertion(skos:broadMatch S, O)``
+    ``S skos:narrowMatch O``  ``AnnotationAssertion(skos:narrowMatch S, O)``
+    ``S skos:closeMatch O``   ``AnnotationAssertion(skos:closeMatch S, O)``
+    ``S skos:relatedMatch O`` ``AnnotationAssertion(skos:relatedMatch S, O)``
+    ``S rdfs:seeAlso O``      ``AnnotationAssertion(skos:seeAlso S, O)``
+    ========================= ===============================================
+
+    And so on, see :data:`curies.vocabulary.extended_match_typedefs`.
+    """
+    anns = get_mapping_annotations(mapping, converter) if mapping_annotations else []
+    if mapping.predicate_modifier is not None:
         anns.append(Annotation("sssom:predicate_modifier", f.LiteralBox("Not")))
 
-    if box := get_object_property_axiom(m, annotations=anns):
-        if m.predicate_modifier is None:
+    if box := get_object_property_axiom(mapping, annotations=anns):
+        if mapping.predicate_modifier is None:
             return box
         else:
-            logger.warning("logical axiom combine with negation %s", m.predicate)
+            logger.warning("logical axiom combine with negation %s", mapping.predicate)
             return None
-    elif m.predicate not in v.extended_match_typedefs and not allow_arbitrary:
-        logger.warning("skipping unsupported predicate %s", m.predicate)
+    elif mapping.predicate not in v.extended_match_typedefs and not allow_arbitrary:
+        logger.warning("skipping unsupported predicate %s", mapping.predicate)
         return None
     else:
-        return AnnotationAssertion(m.predicate, m.subject, m.object, annotations=anns)
+        return AnnotationAssertion(
+            mapping.predicate, mapping.subject, mapping.object, annotations=anns
+        )
