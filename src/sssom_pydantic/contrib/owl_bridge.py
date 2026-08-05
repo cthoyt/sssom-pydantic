@@ -236,13 +236,13 @@ SIDE_TYPE_REFERENCE_TO_DECLARATION_TYPE: dict[Reference, DeclarationType] = {
     v.owl_annotation_property: "AnnotationProperty",
     v.owl_named_individual: "NamedIndividual",
     v.rdfs_datatype: "Datatype",
+    v.rdfs_class: "Class",
     # the following are not perfect, but usually good enough
     v.skos_concept: "Class",
     v.rdfs_resource: "Class",
-    v.rdfs_class: "Class",
+    v.rdfs_property: "ObjectProperty",
     # the following don't have obvious mappings
     # v.rdfs_literal,
-    # v.rdfs_property,
     # v.composed_entity_expression,
 }
 
