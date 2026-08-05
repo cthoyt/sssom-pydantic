@@ -193,6 +193,19 @@ cases: list[tuple[Axiom | None, SemanticMapping]] = [
         f.SubAnnotationPropertyOf(A, B),
         _mapping(v.subproperty_of, subject_type=v.owl_annotation_property),
     ),
+    (f.DifferentIndividuals([A, B]), _mapping(v.owl_different_from)),
+    (f.DisjointClasses([A, B]), _mapping(v.owl_disjoint_with)),
+    (f.InverseObjectProperties(A, B), _mapping(v.owl_inverse_of)),
+    (f.DisjointObjectProperties([A, B]), _mapping(v.owl_property_disjoint_with)),
+    (
+        f.DisjointObjectProperties([A, B]),
+        _mapping(v.owl_property_disjoint_with, subject_type=v.owl_object_property),
+    ),
+    (
+        f.DisjointDataProperties([A, B]),
+        _mapping(v.owl_property_disjoint_with, subject_type=v.owl_data_property),
+    ),
+    (None, _mapping(v.owl_property_disjoint_with, subject_type=v.owl_annotation_property)),
 ]
 
 

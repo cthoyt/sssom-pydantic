@@ -344,6 +344,8 @@ def _handle_logical_not(m: SemanticMapping, anns: list[Annotation] | None = None
                 return DisjointDataProperties([m.subject, m.object], annotations=anns)
             # note, there's no concept of DisjointAnnotationProperties since
             # these aren't used for logical axioms
+            else:
+                return None
         case v.equivalent_class:
             return DisjointClasses([m.subject, m.object], annotations=anns)
         case v.same_as:
@@ -355,6 +357,8 @@ def _handle_logical_not(m: SemanticMapping, anns: list[Annotation] | None = None
                 return DisjointDataProperties([m.subject, m.object], annotations=anns)
             # note, there's no concept of DisjointAnnotationProperties since
             # these aren't used for logical axioms
+            else:
+                return None
     return None
 
 
@@ -371,6 +375,8 @@ def _bridge_annotation(m: SemanticMapping, anns: list[Annotation] | None = None)
                 return EquivalentDataProperties([m.subject, m.object], annotations=anns)
             # note, there's no concept of EquivalentAnnotationProperties since
             # these aren't used for logical axioms
+            else:
+                return None
         case v.broad_match:
             if _is_class(m.subject_type):
                 return SubClassOf(m.subject, m.object, annotations=anns)
@@ -382,7 +388,8 @@ def _bridge_annotation(m: SemanticMapping, anns: list[Annotation] | None = None)
                 return SubDataPropertyOf(m.subject, m.object, annotations=anns)
             elif m.subject_type == v.owl_annotation_property:
                 return SubAnnotationPropertyOf(m.subject, m.object, annotations=anns)
-
+            else:
+                return None
         # narrow match - excluded because inversion should be done before
         # close match, related match, see also, etc. - excluded because not logical
     return None
@@ -412,6 +419,8 @@ def _to_logical_axiom(m: SemanticMapping, anns: list[Annotation] | None = None) 
                 return EquivalentDataProperties([m.subject, m.object], annotations=anns)
             # note, there's no concept of EquivalentAnnotationProperties since
             # these aren't used for logical axioms
+            else:
+                return None
 
         case v.owl_complement_of:
             raise NotImplementedError(
@@ -429,5 +438,6 @@ def _to_logical_axiom(m: SemanticMapping, anns: list[Annotation] | None = None) 
                 return DisjointObjectProperties([m.subject, m.object], annotations=anns)
             elif m.subject_type == v.owl_data_property:
                 return DisjointDataProperties([m.subject, m.object], annotations=anns)
-
+            else:
+                return None
     return None
