@@ -431,7 +431,7 @@ class TestEndToEnd(unittest.TestCase):
             Declaration(NamedIndividual(orcid:0000-0003-4423-4370))
             ClassAssertion(<http://purl.obolibrary.org/obo/NCBITaxon_9606> orcid:0000-0003-4423-4370)
             )
-            """), # noqa:E501
+            """),  # noqa:E501
             self.path.read_text(),
         )
 
