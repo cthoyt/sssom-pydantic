@@ -146,7 +146,7 @@ wikidata = [
 cli = [
     "click",
 ]
-bridge = ["functional-owl>=0.1.4"]
+bridge = ["functional-owl>=0.1.5"]
 
 # See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#urls
 # and also https://packaging.python.org/en/latest/specifications/well-known-project-urls/
