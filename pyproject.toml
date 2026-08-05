@@ -48,7 +48,7 @@ license-files = ["LICENSE"]
 requires-python = ">=3.10"
 dependencies = [
     "pydantic",
-    "curies>=0.14.4",
+    "curies>=0.14.6",
     "pyyaml",
     "pystow>=0.8.6",
     "tqdm",
@@ -146,7 +146,7 @@ wikidata = [
 cli = [
     "click",
 ]
-bridge = ["functional-owl>=0.1.3"]
+bridge = ["functional-owl>=0.1.5"]
 
 # See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#urls
 # and also https://packaging.python.org/en/latest/specifications/well-known-project-urls/
@@ -194,7 +194,12 @@ omit = [
     "src/sssom_pydantic/version.py",
     "src/sssom_pydantic/__main__.py",
     "src/sssom_pydantic/cli.py",
-    "src/sssom_pydantic/contrib/*",
+    # TODO test contrib better
+    "src/sssom_pydantic/contrib/jskos_export.py",
+    "src/sssom_pydantic/contrib/mermaid.py",
+    "src/sssom_pydantic/contrib/ndex.py",
+    "src/sssom_pydantic/contrib/ontoportal.py",
+    "src/sssom_pydantic/contrib/wikidata.py",
 ]
 
 [tool.coverage.paths]
