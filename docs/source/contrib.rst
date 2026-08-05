@@ -10,7 +10,7 @@
 
 .. automodapi:: sssom_pydantic.contrib.ontoportal
 
-.. automodapi:: sssom_pydantic.contrib.owl_bridge
+.. automodapi:: sssom_pydantic.contrib.owl
 
 .. automodapi:: sssom_pydantic.contrib.sssompy
 

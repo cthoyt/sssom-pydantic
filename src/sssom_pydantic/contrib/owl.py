@@ -1,6 +1,4 @@
-"""Create OWL bridges based on https://github.com/INCATools/ontology-development-kit/issues/626#issuecomment-3285032670.
-
-.. seealso:: https://mapping-commons.github.io/sssom/dev/spec-formats-owl/
+"""Transform SSSOM to OWL based on https://mapping-commons.github.io/sssom/dev/spec-formats-owl/.
 
 Implemented in:
 
@@ -176,7 +174,8 @@ def get_axioms(
 
         - ``inline`` produces annotation properties as is
         - ``bridge`` applies transformation on SKOS matches to upgrade them to logical
-          axioms, where possible
+          axioms, where possible, based on
+          https://github.com/INCATools/ontology-development-kit/issues/626#issuecomment-3285032670.
     :param minimum_confidence: minimum confidence level to keep for exporting bridge
         axioms
     :param mapping_annotations: whether annotations should be added to bridge axioms,
