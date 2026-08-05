@@ -194,7 +194,12 @@ omit = [
     "src/sssom_pydantic/version.py",
     "src/sssom_pydantic/__main__.py",
     "src/sssom_pydantic/cli.py",
-    "src/sssom_pydantic/contrib/*",
+    # TODO test contrib better
+    "src/sssom_pydantic/contrib/jskos_export.py",
+    "src/sssom_pydantic/contrib/mermaid.py",
+    "src/sssom_pydantic/contrib/ndex.py",
+    "src/sssom_pydantic/contrib/ontoportal.py",
+    "src/sssom_pydantic/contrib/wikidata.py",
 ]
 
 [tool.coverage.paths]
