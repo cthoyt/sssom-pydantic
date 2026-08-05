@@ -11,6 +11,7 @@ OWL/RDF, and later, to OWL/XML.
 AnnotationAssertion(skos:exactMatch mesh:C000089 chebi:28646)
 
 - Object Properties from :func:`get_object_property_box`
+- Upgrades from :func:`get_upgraded_annotation_property`
 - Annotation Properties
 - Negation Algorithm from :func:`get_implied_negation`
 
@@ -69,6 +70,7 @@ from ..version import get_version
 __all__ = [
     "get_annotation_axiom",
     "get_axioms",
+    "get_upgraded_annotation_property",
     "get_implied_negation_axiom",
     "get_object_property_axiom",
     "get_owl_bridge_axiom",
@@ -405,21 +407,21 @@ def get_implied_negation_axiom(
 
     :returns: A logical axiom, if possible
 
-    ============================== ================================== ===============================================================================
-    Predicate                      Functional Expression              Condition
-    ============================== ================================== ===============================================================================
-    ``S not skos:exactMatch O``    ``DisjointClasses(S, O)``          ``S`` is ``rdfs:Class``, ``rdfs:Resource``, ``owl:Class``, ``skos:Concept``, or
-                                                                      undefined
-    ``S not skos:exactMatch O``    ``DifferentIndividuals(S, O)``     ``S`` is an ``owl:NamedIndividual``
-    ``S not skos:exactMatch O``    ``DisjointObjectProperties(S, O)`` ``S`` is a ``owl:ObjectProperty`` or undefined
-    ``S not skos:exactMatch O``    ``DisjointDataProperties(S, O)``   ``S`` is a ``owl:DataProperty``
-    ``S not skos:exactMatch O``    does not exist                     ``S`` is a ``owl:AnnotationProperty``
-    ``S owl:equivalentClass O``    ``DisjointClasses(S, O)``
-    ``S owl:sameAs O``             ``DifferentIndividuals(S, O)``
-    ``S owl:equivalentProperty O`` ``DisjointObjectProperties(S, O)`` ``S`` is an ``owl:ObjectProperty`` or undefined
-    ``S owl:equivalentProperty O`` ``DisjointDataProperties(S, O)``   ``S`` is an ``owl:DataProperty``
-    ``S owl:equivalentProperty O`` does not exist                     ``S`` is an ``owl:AnnotationProperty``
-    ============================== ================================== ===============================================================================
+    ================================== ================================== =================================================================================
+    Predicate                          Functional Expression              Condition
+    ================================== ================================== =================================================================================
+    ``S not skos:exactMatch O``        ``DisjointClasses(S, O)``          ``S`` is a ``rdfs:Class``, ``rdfs:Resource``, ``owl:Class``, ``skos:Concept``, or
+                                                                          undefined
+    ``S not skos:exactMatch O``        ``DifferentIndividuals(S, O)``     ``S`` is an ``owl:NamedIndividual``
+    ``S not skos:exactMatch O``        ``DisjointObjectProperties(S, O)`` ``S`` is a ``owl:ObjectProperty`` or undefined
+    ``S not skos:exactMatch O``        ``DisjointDataProperties(S, O)``   ``S`` is a ``owl:DataProperty``
+    ``S not skos:exactMatch O``        does not exist                     ``S`` is a ``owl:AnnotationProperty``
+    ``S not owl:equivalentClass O``    ``DisjointClasses(S, O)``
+    ``S not owl:sameAs O``             ``DifferentIndividuals(S, O)``
+    ``S not owl:equivalentProperty O`` ``DisjointObjectProperties(S, O)`` ``S`` is an ``owl:ObjectProperty`` or undefined
+    ``S not owl:equivalentProperty O`` ``DisjointDataProperties(S, O)``   ``S`` is an ``owl:DataProperty``
+    ``S not owl:equivalentProperty O`` does not exist                     ``S`` is an ``owl:AnnotationProperty``
+    ================================== ================================== =================================================================================
     """  # noqa:E501
     if mapping.predicate_modifier is None:
         return None  # don't even bother for non-negative mappings
@@ -466,6 +468,35 @@ def get_implied_negation_axiom(
 def get_upgraded_annotation_property(
     m: SemanticMapping, anns: list[Annotation] | None = None
 ) -> Box | None:
+    """Construct a logical axiom from a less precise mapping.
+
+    :param mapping: A semantic mapping
+    :param annotations: A list of annotations
+
+    :returns: A logical axiom, if possible
+
+    ======================= ==================================== =================================================================================
+    Predicate               Functional Expression                Condition
+    ======================= ==================================== =================================================================================
+    ``S skos:exactMatch O`` ``EquivalentClasses(S, O)``          ``S`` is a ``rdfs:Class``, ``rdfs:Resource``, ``owl:Class``, ``skos:Concept``, or
+                                                                 undefined
+    ``S skos:exactMatch O`` ``SameIndividual(S, O)``             ``S`` is an ``owl:NamedIndividual``
+    ``S skos:exactMatch O`` ``EquivalentObjectProperties(S, O)`` ``S`` is a ``owl:ObjectProperty`` or undefined
+    ``S skos:exactMatch O`` ``EquivalentDataProperties(S, O)``   ``S`` is a ``owl:DataProperty``
+    ``S skos:exactMatch O`` does not exist                       ``S`` is a ``owl:AnnotationProperty``
+    ``S skos:broadMatch O`` ``SubClassOf(S, O)``                 ``S`` is a ``rdfs:Class``, ``rdfs:Resource``, ``owl:Class``, ``skos:Concept``, or
+                                                                 undefined
+    ``S skos:broadMatch O`` ``ClassAssertion(O, S)``             ``S`` is an ``owl:NamedIndividual`` and ``O`` is a class
+    ``S skos:broadMatch O`` ``SubObjectPropertyOf(S, O)``        ``S`` is a ``owl:ObjectProperty`` or undefined
+    ``S skos:broadMatch O`` ``SubDataPropertyOf(S, O)``          ``S`` is a ``owl:DataProperty``
+    ``S skos:broadMatch O`` ``SubAnnotationPropertyOf(S, O)``    ``S`` is a ``owl:AnnotationProperty``
+    ======================= ==================================== =================================================================================
+
+    .. note::
+
+        ``skos:broadMatch`` is excluded because the :func:`invert_narrow_matches` should
+        be run first
+    """  # noqa:E501
     match m.predicate:
         case v.exact_match:
             if _is_class(m.subject_type):
