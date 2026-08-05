@@ -12,8 +12,9 @@ from __future__ import annotations
 import datetime
 import logging
 from collections.abc import Iterable
+from functools import partial
 from pathlib import Path
-from typing import Any, TextIO
+from typing import Any, TextIO, TypedDict, NotRequired, TypeAlias, Literal
 
 import curies
 import functional_owl as f
@@ -28,6 +29,7 @@ from functional_owl import (
     DeclarationType,
     DifferentIndividuals,
     DisjointClasses,
+    AnnotationAssertion,
     DisjointDataProperties,
     DisjointObjectProperties,
     EquivalentClasses,
@@ -57,6 +59,8 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 HUMAN_URI = rdflib.URIRef("http://purl.obolibrary.org/obo/NCBITaxon_9606")
+
+Mechanism: TypeAlias = Literal["bridge", "annotation"]
 
 
 def write_owl_bridge(
@@ -145,12 +149,14 @@ def _reference_or_anyuri(converter: curies.Converter, value: str) -> rdflib.Lite
 
 def get_owl_bridge_axioms(
     mappings: Iterable[SemanticMapping],
-    *,
     converter: curies.Converter,
+    *,
     minimum_confidence: float | None = None,
     mapping_annotations: bool = False,
-    declarations: bool = False,
     not_implies_disjoint: bool = False,
+    declarations: bool = False,
+    allow_arbitrary: bool = False,
+    mechanism: Mechanism | None = None,
 ) -> Iterable[Box]:
     """Iterate over OWL bridge axioms from semantic mappings.
 
@@ -181,13 +187,22 @@ def get_owl_bridge_axioms(
         mappings = filter_by_confidence(mappings, minimum_confidence)
     mappings = invert_narrow_matches(mappings, converter=converter)
     authors: set[Reference] = set()
-    for m in mappings:
-        axiom = get_owl_bridge_axiom(
-            m,
+
+    if mechanism is None or mechanism == "bridge":
+        func = partial(
+            get_owl_bridge_axiom,
             mapping_annotations=mapping_annotations,
             not_implies_disjoint=not_implies_disjoint,
-            converter=converter,
         )
+    elif mechanism == "annotation":
+        func = partial(
+            get_annotation_axioms, allow_arbitrary=allow_arbitrary
+        )
+    else:
+        raise ValueError(f"Unknown mechanism {mechanism}")
+
+    for m in mappings:
+        axiom = func(m, converter)
         if axiom is None:
             continue
         if declarations:
@@ -257,14 +272,15 @@ def _type_to_declaration_type(
 
 def get_owl_bridge_axiom(
     m: SemanticMapping,
+    converter: curies.Converter,
     *,
     mapping_annotations: bool = False,
     not_implies_disjoint: bool = False,
-    converter: curies.Converter,
 ) -> Axiom | None:
     """Get an OWL bridge axiom from a semantic mapping.
 
     :param m: A semantic mapping
+    :param converter: A converter
     :param mapping_annotations: Whether to include SSSOM metadata as annotations on the
         produced axioms
     :param not_implies_disjoint: Whether to assume that the curation of a negative exact
@@ -442,3 +458,21 @@ def _to_logical_axiom(m: SemanticMapping, anns: list[Annotation] | None = None) 
             else:
                 return None
     return None
+
+
+def get_annotation_axioms(
+    m: SemanticMapping,
+    converter: curies.Converter,
+    *,
+    allow_arbitrary: bool = False
+) -> Axiom | None:
+    """Get an OWL bridge axiom from a semantic mapping."""
+    anns = get_mapping_annotations(m, converter=converter)
+    if m.predicate_modifier is not None:
+        anns.append(Annotation("sssom:predicate_modifier", f.LiteralBox("Not")))
+    if m.predicate_modifier is None and (rv := _to_logical_axiom(m, anns)):
+        return rv
+    if m.predicate not in v.extended_match_typedefs and not allow_arbitrary:
+        logger.warning("skipping unsupported predicate %s", m.predicate)
+        return None
+    return AnnotationAssertion(m.predicate, m.subject, m.object, annotations=anns)
