@@ -7,7 +7,7 @@ OWL/RDF, and later, to OWL/XML.
 >>> from sssom_pydantic import SemanticMapping
 >>> from sssom_pydantic.examples import simple, TEST_CONVERTER
 >>> from sssom_pydantic.contrib.owl import get_annotation_axiom
->>> get_annotation_axiom(simple, TEST_CONVERTER)
+>>> get_annotation_axiom(simple, TEST_CONVERTER).to_funowl()
 AnnotationAssertion(skos:exactMatch mesh:C000089 chebi:28646)
 
 - Object Properties from :func:`get_object_property_box`
