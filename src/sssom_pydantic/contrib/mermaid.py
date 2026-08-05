@@ -26,7 +26,9 @@ __all__ = [
 class MermaidOptions(TypedDict):
     """Keyword arguments for Mermaid."""
 
+    #: Should authors, creators, and reviewers be included?
     include_people: NotRequired[bool]
+    #: Should mapping sources be included?
     include_sources: NotRequired[bool]
 
 
