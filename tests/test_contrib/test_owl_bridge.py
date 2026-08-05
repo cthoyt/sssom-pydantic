@@ -10,7 +10,7 @@ from typing import Any
 
 import functional_owl as f
 import rdflib
-from curies import NamableReference
+from curies import NamableReference, Reference
 from curies import vocabulary as v
 from curies.vocabulary import charlie
 from functional_owl import Axiom, Box
@@ -19,6 +19,7 @@ from rdflib import XSD
 
 from sssom_pydantic import NOT, MappingSet, SemanticMapping
 from sssom_pydantic.contrib.owl_bridge import (
+    get_mapping_annotations,
     get_metadata_annotations,
     get_owl_bridge_axiom,
     write_owl_bridge,
@@ -206,6 +207,7 @@ cases: list[tuple[Axiom | None, SemanticMapping]] = [
         _mapping(v.owl_property_disjoint_with, subject_type=v.owl_data_property),
     ),
     (None, _mapping(v.owl_property_disjoint_with, subject_type=v.owl_annotation_property)),
+    (None, _mapping(v.owl_inverse_of).negate()),
 ]
 
 
@@ -311,8 +313,43 @@ class TestEndToEnd(unittest.TestCase):
             [b.to_funowl() for b in actual],
         )
 
+    def test_mapping_annotations(self) -> None:
+        """Test construction of annotations for a semantic mapping."""
+        mapping_date = datetime.date(2026, 8, 5)
+        publication_date = datetime.date(2026, 8, 6)
+        mapping = SemanticMapping(
+            subject=A,
+            predicate=v.exact_match,
+            object=B,
+            justification=v.unspecified_matching_process,
+            confidence=0.8,
+            license="https://spdx.org/licenses/CC0-1.0",
+            creators=[charlie],
+            authors=[charlie],
+            mapping_date=mapping_date,
+            publication_date=publication_date,
+            comment="test comment",
+            see_also=["https://example.org/also.tsv"],
+        )
+        self.assert_boxes_equal(
+            [
+                f.Annotation("sssom:mapping_justification", v.unspecified_matching_process),
+                f.Annotation(v.has_author, charlie),
+                f.Annotation("sssom:confidence", 0.8),
+                f.Annotation(v.has_license, Reference(prefix="spdx", identifier="CC0-1.0")),
+                f.Annotation(v.has_creator, charlie),
+                f.Annotation("dcterms:created", mapping_date),
+                f.Annotation("dcterms:issued", publication_date),
+                f.Annotation(v.has_comment, f.LiteralBox("test comment")),
+                f.Annotation(
+                    v.see_also, rdflib.Literal("https://example.org/also.tsv", datatype=XSD.anyURI)
+                ),
+            ],
+            get_mapping_annotations(mapping, converter=self.converter),
+        )
+
     def test_mapping_set_annotations(self) -> None:
-        """Test construction of annotations from a mapping set."""
+        """Test construction of annotations for a mapping set."""
         ms = MappingSet(
             id=AnyUrl("https://example.org/test.tsv"),
             description="test description",
@@ -342,7 +379,7 @@ class TestEndToEnd(unittest.TestCase):
                 ),
                 f.Annotation(v.has_creator, charlie),
             ],
-            get_metadata_annotations(ms, converter=TEST_CONVERTER),
+            get_metadata_annotations(ms, converter=self.converter),
         )
 
     def test_annotations(self) -> None:

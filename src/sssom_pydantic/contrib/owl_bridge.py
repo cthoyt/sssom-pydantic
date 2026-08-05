@@ -283,7 +283,7 @@ def get_owl_bridge_axiom(
 
     :returns: An OWL axiom, if one can be constructed.
     """
-    anns = _get_axiom_annotations(m, converter) if mapping_annotations else None
+    anns = get_mapping_annotations(m, converter) if mapping_annotations else None
     if m.predicate_modifier is None:
         logical_axiom = _to_logical_axiom(m, anns)
         if logical_axiom is not None:
@@ -298,7 +298,7 @@ def _is_class(r: curies.Reference | None) -> bool:
     return r is None or r == v.owl_class or r == v.skos_concept
 
 
-def _get_axiom_annotations(
+def get_mapping_annotations(
     mapping: SemanticMapping, converter: curies.Converter
 ) -> list[Annotation]:
     return list(_iter_annotations(mapping, converter))
