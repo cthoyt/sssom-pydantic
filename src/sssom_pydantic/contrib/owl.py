@@ -200,7 +200,6 @@ def get_axioms(
     """
     if minimum_confidence is not None:
         mappings = filter_by_confidence(mappings, minimum_confidence)
-    authors: set[Reference] = set()
 
     if mode is None or mode == "bridge":
         mappings = invert_narrow_matches(mappings, converter=converter)
@@ -210,10 +209,15 @@ def get_axioms(
             not_implies_disjoint=not_implies_disjoint,
         )
     elif mode == "inline":
-        func = partial(get_annotation_axiom, allow_arbitrary=allow_arbitrary)
+        func = partial(
+            get_annotation_axiom,
+            mapping_annotations=mapping_annotations,
+            allow_arbitrary=allow_arbitrary,
+        )
     else:
         raise ValueError(f"invalid mode {mode}. use one of {typing.get_args(AxiomMode)}")
 
+    authors: set[Reference] = set()
     for m in mappings:
         axiom = func(m, converter)
         if axiom is None:
@@ -474,15 +478,20 @@ def _to_logical_axiom(m: SemanticMapping, anns: list[Annotation] | None = None) 
 
 
 def get_annotation_axiom(
-    m: SemanticMapping, converter: curies.Converter, *, allow_arbitrary: bool = False
+    m: SemanticMapping,
+    converter: curies.Converter,
+    *,
+    allow_arbitrary: bool = False,
+    mapping_annotations: bool = False,
 ) -> Axiom | None:
     """Get an OWL bridge axiom from a semantic mapping."""
-    anns = get_mapping_annotations(m, converter=converter)
+    anns = get_mapping_annotations(m, converter) if mapping_annotations else []
     if m.predicate_modifier is not None:
         anns.append(Annotation("sssom:predicate_modifier", f.LiteralBox("Not")))
     if m.predicate_modifier is None and (rv := _to_logical_axiom(m, anns)):
         return rv
-    if m.predicate not in v.extended_match_typedefs and not allow_arbitrary:
+    elif m.predicate not in v.extended_match_typedefs and not allow_arbitrary:
         logger.warning("skipping unsupported predicate %s", m.predicate)
         return None
-    return AnnotationAssertion(m.predicate, m.subject, m.object, annotations=anns)
+    else:
+        return AnnotationAssertion(m.predicate, m.subject, m.object, annotations=anns)
