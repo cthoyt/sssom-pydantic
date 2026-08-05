@@ -1,5 +1,19 @@
 """Transform SSSOM to OWL based on https://mapping-commons.github.io/sssom/dev/spec-formats-owl/.
 
+This module works by transforming individual mappings into OWL axioms with the
+:mod:`functional_owl` package, which can then be written as OWL functional notation,
+OWL/RDF, and later, to OWL/XML.
+
+>>> from sssom_pydantic import SemanticMapping
+>>> from sssom_pydantic.examples import simple, TEST_CONVERTER
+>>> from sssom_pydantic.contrib.owl import get_annotation_axiom
+>>> get_annotation_axiom(simple, TEST_CONVERTER)
+AnnotationAssertion(skos:exactMatch mesh:C000089 chebi:28646)
+
+- Object Properties from :func:`get_object_property_box`
+- Annotation Properties
+- Negation Algorithm from :func:`get_implied_negation`
+
 Implemented in:
 
 - https://github.com/cthoyt/sssom-pydantic/pull/128
@@ -28,6 +42,7 @@ from functional_owl import (
     AnnotationAssertion,
     Box,
     ClassAssertion,
+    ClassComplementMacro,
     DeclarationType,
     DifferentIndividuals,
     DisjointClasses,
@@ -54,6 +69,8 @@ from ..version import get_version
 __all__ = [
     "get_annotation_axiom",
     "get_axioms",
+    "get_implied_negation_axiom",
+    "get_object_property_axiom",
     "get_owl_bridge_axiom",
     "write_owl",
 ]
@@ -325,17 +342,23 @@ def get_owl_bridge_axiom(
     """
     anns = get_mapping_annotations(m, converter) if mapping_annotations else None
     if m.predicate_modifier is None:
-        logical_axiom = _to_logical_axiom(m, anns)
+        logical_axiom = get_object_property_axiom(m, annotations=anns)
         if logical_axiom is not None:
             return logical_axiom
-        return _bridge_annotation(m, anns)
+        return get_upgraded_annotation_property(m, anns)
     elif not_implies_disjoint:
-        return _handle_logical_not(m, anns=anns)
+        return get_implied_negation_axiom(m, annotations=anns)
     return None
 
 
 def _is_class(r: curies.Reference | None) -> bool:
-    return r is None or r == v.owl_class or r == v.skos_concept
+    return (
+        r is None
+        or r == v.owl_class
+        or r == v.skos_concept
+        or r == v.rdfs_class
+        or r == v.rdfs_datatype
+    )
 
 
 def get_mapping_annotations(
@@ -372,30 +395,67 @@ def _iter_annotations(
     # TODO remaining
 
 
-def _handle_logical_not(m: SemanticMapping, anns: list[Annotation] | None = None) -> Box | None:
-    match m.predicate:
+def get_implied_negation_axiom(
+    mapping: SemanticMapping, *, annotations: list[Annotation] | None = None
+) -> Box | None:
+    """Construct an implied negation.
+
+    :param mapping: A semantic mapping
+    :param annotations: A list of annotations
+
+    :returns: A logical axiom, if possible
+
+    ============================== ================================== ===============================================================================
+    Predicate                      Functional Expression              Condition
+    ============================== ================================== ===============================================================================
+    ``S not skos:exactMatch O``    ``DisjointClasses(S, O)``          ``S`` is ``rdfs:Class``, ``rdfs:Resource``, ``owl:Class``, ``skos:Concept``, or
+                                                                      undefined
+    ``S not skos:exactMatch O``    ``DifferentIndividuals(S, O)``     ``S`` is an ``owl:NamedIndividual``
+    ``S not skos:exactMatch O``    ``DisjointObjectProperties(S, O)`` ``S`` is a ``owl:ObjectProperty`` or undefined
+    ``S not skos:exactMatch O``    ``DisjointDataProperties(S, O)``   ``S`` is a ``owl:DataProperty``
+    ``S not skos:exactMatch O``    does not exist                     ``S`` is a ``owl:AnnotationProperty``
+    ``S owl:equivalentClass O``    ``DisjointClasses(S, O)``
+    ``S owl:sameAs O``             ``DifferentIndividuals(S, O)``
+    ``S owl:equivalentProperty O`` ``DisjointObjectProperties(S, O)`` ``S`` is an ``owl:ObjectProperty`` or undefined
+    ``S owl:equivalentProperty O`` ``DisjointDataProperties(S, O)``   ``S`` is an ``owl:DataProperty``
+    ``S owl:equivalentProperty O`` does not exist                     ``S`` is an ``owl:AnnotationProperty``
+    ============================== ================================== ===============================================================================
+    """  # noqa:E501
+    if mapping.predicate_modifier is None:
+        return None  # don't even bother for non-negative mappings
+    match mapping.predicate:
         case v.exact_match:
-            if _is_class(m.subject_type):
-                return DisjointClasses([m.subject, m.object], annotations=anns)
-            elif m.subject_type == v.owl_named_individual:
-                return DifferentIndividuals([m.subject, m.object], annotations=anns)
-            elif m.subject_type == v.owl_object_property:
-                return DisjointObjectProperties([m.subject, m.object], annotations=anns)
-            elif m.subject_type == v.owl_data_property:
-                return DisjointDataProperties([m.subject, m.object], annotations=anns)
+            if _is_class(mapping.subject_type):
+                return DisjointClasses([mapping.subject, mapping.object], annotations=annotations)
+            elif mapping.subject_type == v.owl_named_individual:
+                return DifferentIndividuals(
+                    [mapping.subject, mapping.object], annotations=annotations
+                )
+            elif mapping.subject_type == v.owl_object_property:
+                return DisjointObjectProperties(
+                    [mapping.subject, mapping.object], annotations=annotations
+                )
+            elif mapping.subject_type == v.owl_data_property:
+                return DisjointDataProperties(
+                    [mapping.subject, mapping.object], annotations=annotations
+                )
             # note, there's no concept of DisjointAnnotationProperties since
             # these aren't used for logical axioms
             else:
                 return None
         case v.equivalent_class:
-            return DisjointClasses([m.subject, m.object], annotations=anns)
+            return DisjointClasses([mapping.subject, mapping.object], annotations=annotations)
         case v.same_as:
-            return DifferentIndividuals([m.subject, m.object], annotations=anns)
+            return DifferentIndividuals([mapping.subject, mapping.object], annotations=annotations)
         case v.equivalent_property:
-            if m.subject_type is None or m.subject_type == v.owl_object_property:
-                return DisjointObjectProperties([m.subject, m.object], annotations=anns)
-            elif m.subject_type == v.owl_data_property:
-                return DisjointDataProperties([m.subject, m.object], annotations=anns)
+            if mapping.subject_type is None or mapping.subject_type == v.owl_object_property:
+                return DisjointObjectProperties(
+                    [mapping.subject, mapping.object], annotations=annotations
+                )
+            elif mapping.subject_type == v.owl_data_property:
+                return DisjointDataProperties(
+                    [mapping.subject, mapping.object], annotations=annotations
+                )
             # note, there's no concept of DisjointAnnotationProperties since
             # these aren't used for logical axioms
             else:
@@ -403,7 +463,9 @@ def _handle_logical_not(m: SemanticMapping, anns: list[Annotation] | None = None
     return None
 
 
-def _bridge_annotation(m: SemanticMapping, anns: list[Annotation] | None = None) -> Box | None:
+def get_upgraded_annotation_property(
+    m: SemanticMapping, anns: list[Annotation] | None = None
+) -> Box | None:
     match m.predicate:
         case v.exact_match:
             if _is_class(m.subject_type):
@@ -436,51 +498,93 @@ def _bridge_annotation(m: SemanticMapping, anns: list[Annotation] | None = None)
     return None
 
 
-def _to_logical_axiom(m: SemanticMapping, anns: list[Annotation] | None = None) -> Box | None:
-    match m.predicate:
-        case v.is_a:
-            return SubClassOf(m.subject, m.object, annotations=anns)
-        case v.rdf_type:
-            return ClassAssertion(m.object, m.subject, annotations=anns)
-        case v.subproperty_of:
-            if m.subject_type is None or m.subject_type == v.owl_object_property:
-                return SubObjectPropertyOf(m.subject, m.object, annotations=anns)
-            elif m.subject_type == v.owl_data_property:
-                return SubDataPropertyOf(m.subject, m.object, annotations=anns)
-            elif m.subject_type == v.owl_annotation_property:
-                return SubAnnotationPropertyOf(m.subject, m.object, annotations=anns)
+def get_object_property_axiom(
+    mapping: SemanticMapping, *, annotations: list[Annotation] | None = None
+) -> Box | None:
+    """Extract a logical axiom, isomorphically.
+
+    :param mapping: A semantic mapping
+    :param annotations: A list of annotations
+
+    :returns: A logical axiom, if possible
+
+    ================================ =============================================== ========================================
+    Predicate                        Functional Expression                           Condition
+    ================================ =============================================== ========================================
+    ``S owl:equivalentClass O``      ``EquivalentClasses(S, O)``
+    ``S rdfs:subClassOf O``          ``SubClassOf(S, O)``
+    ``S owl:complementOf O``         ``EquivalentClasses(S, ObjectComplementOf(O))``
+    ``S rdfs:type O``                ``ClassAssertion(O, S)``
+    ``S owl:sameAs O``               ``SameIndividual(S, O)``
+    ``S owl:differentFrom O``        ``DifferentIndividuals(S, O)``
+    ``S owl:equivalentProperty O``   ``EquivalentObjectProperties(S, O)``            ``S`` is an object property or undefined
+    ``S owl:equivalentProperty O``   ``EquivalentDataProperties(S, O)``              ``S`` is a data property
+    ``S owl:equivalentProperty O``   does not exist                                  ``S`` is an annotation property
+    ``S owl:propertyDisjointWith O`` ``DisjointObjectProperties(S, O)``              ``S`` is an object property or undefined
+    ``S owl:propertyDisjointWith O`` ``DisjointDataProperties(S, O)``                ``S`` is a data property
+    ``S owl:propertyDisjointWith O`` does not exist                                  ``S`` is an annotation property
+    ``S rdfs:subPropertyOf O``       ``SubObjectPropertyOf(S, O)``                   ``S`` is an object property or undefined
+    ``S rdfs:subPropertyOf O``       ``SubDataPropertyOf(S, O)``                     ``S`` is a data property
+    ``S rdfs:subPropertyOf O``       ``SubAnnotationPropertyOf(S, O)``               ``S`` is an annotation property
+    ``S owl:inverseOf O``            ``InverseObjectProperties(S, O)``               ``S`` is an object property or undefined
+    ``S owl:inverseOf O``            doesn't make sense                              ``S`` is a data property
+    ``S owl:inverseOf O``            does not exist                                  ``S`` is an annotation property
+    ================================ =============================================== ========================================
+    """  # noqa:E501
+    match mapping.predicate:
+        # Classes
         case v.equivalent_class:
-            return EquivalentClasses([m.subject, m.object], annotations=anns)
+            return EquivalentClasses([mapping.subject, mapping.object], annotations=annotations)
+        case v.owl_disjoint_with:
+            return DisjointClasses([mapping.subject, mapping.object], annotations=annotations)
+        case v.is_a:
+            return SubClassOf(mapping.subject, mapping.object, annotations=annotations)
+        case v.owl_complement_of:  # sort of like an inverse for classes
+            return ClassComplementMacro(mapping.subject, mapping.object, annotations=annotations)
+        case v.rdf_type:
+            return ClassAssertion(mapping.object, mapping.subject, annotations=annotations)
+        # Individuals
         case v.same_as:
-            return SameIndividual([m.subject, m.object], annotations=anns)
+            return SameIndividual([mapping.subject, mapping.object], annotations=annotations)
+        case v.owl_different_from:
+            return DifferentIndividuals([mapping.subject, mapping.object], annotations=annotations)
+        # Properties
         case v.equivalent_property:
-            if m.subject_type is None or m.subject_type == v.owl_object_property:
-                return EquivalentObjectProperties([m.subject, m.object], annotations=anns)
-            elif m.subject_type == v.owl_data_property:
-                return EquivalentDataProperties([m.subject, m.object], annotations=anns)
+            if mapping.subject_type is None or mapping.subject_type == v.owl_object_property:
+                return EquivalentObjectProperties(
+                    [mapping.subject, mapping.object], annotations=annotations
+                )
+            elif mapping.subject_type == v.owl_data_property:
+                return EquivalentDataProperties(
+                    [mapping.subject, mapping.object], annotations=annotations
+                )
             # note, there's no concept of EquivalentAnnotationProperties since
             # these aren't used for logical axioms
             else:
                 return None
-
-        case v.owl_complement_of:
-            raise NotImplementedError(
-                "complement of predicate not implemented. Requires creating a more complex "
-                "class macro upstream in funowl w/ ClassComplementMacro(m.subject, m.object)"
-            )
-        case v.owl_different_from:
-            return DifferentIndividuals([m.subject, m.object], annotations=anns)
-        case v.owl_disjoint_with:
-            return DisjointClasses([m.subject, m.object], annotations=anns)
-        case v.owl_inverse_of:
-            return InverseObjectProperties(m.subject, m.object, annotations=anns)
         case v.owl_property_disjoint_with:
-            if m.subject_type is None or m.subject_type == v.owl_object_property:
-                return DisjointObjectProperties([m.subject, m.object], annotations=anns)
-            elif m.subject_type == v.owl_data_property:
-                return DisjointDataProperties([m.subject, m.object], annotations=anns)
+            if mapping.subject_type is None or mapping.subject_type == v.owl_object_property:
+                return DisjointObjectProperties(
+                    [mapping.subject, mapping.object], annotations=annotations
+                )
+            elif mapping.subject_type == v.owl_data_property:
+                return DisjointDataProperties(
+                    [mapping.subject, mapping.object], annotations=annotations
+                )
             else:
                 return None
+        case v.subproperty_of:
+            if mapping.subject_type is None or mapping.subject_type == v.owl_object_property:
+                return SubObjectPropertyOf(mapping.subject, mapping.object, annotations=annotations)
+            elif mapping.subject_type == v.owl_data_property:
+                return SubDataPropertyOf(mapping.subject, mapping.object, annotations=annotations)
+            elif mapping.subject_type == v.owl_annotation_property:
+                return SubAnnotationPropertyOf(
+                    mapping.subject, mapping.object, annotations=annotations
+                )
+        case v.owl_inverse_of:
+            return InverseObjectProperties(mapping.subject, mapping.object, annotations=annotations)
+
     return None
 
 
@@ -496,7 +600,7 @@ def get_annotation_axiom(
     if m.predicate_modifier is not None:
         anns.append(Annotation("sssom:predicate_modifier", f.LiteralBox("Not")))
 
-    if box := _to_logical_axiom(m, anns):
+    if box := get_object_property_axiom(m, annotations=anns):
         if m.predicate_modifier is None:
             return box
         else:
