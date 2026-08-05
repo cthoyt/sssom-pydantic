@@ -18,7 +18,7 @@ from pydantic import AnyUrl
 from rdflib import XSD
 
 from sssom_pydantic import NOT, MappingSet, SemanticMapping
-from sssom_pydantic.contrib.owl_bridge import (
+from sssom_pydantic.contrib.owl import (
     get_mapping_annotations,
     get_metadata_annotations,
     get_owl_bridge_axiom,
