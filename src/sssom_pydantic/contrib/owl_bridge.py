@@ -33,6 +33,7 @@ from functional_owl import (
     EquivalentClasses,
     EquivalentDataProperties,
     EquivalentObjectProperties,
+    InverseObjectProperties,
     LiteralBox,
     SameIndividual,
     SubAnnotationPropertyOf,
@@ -411,4 +412,22 @@ def _to_logical_axiom(m: SemanticMapping, anns: list[Annotation] | None = None) 
                 return EquivalentDataProperties([m.subject, m.object], annotations=anns)
             # note, there's no concept of EquivalentAnnotationProperties since
             # these aren't used for logical axioms
+
+        case v.owl_complement_of:
+            raise NotImplementedError(
+                "complement of predicate not implemented. Requires creating a more complex "
+                "class macro upstream in funowl"
+            )
+        case v.owl_different_from:
+            return DifferentIndividuals([m.subject, m.object], annotations=anns)
+        case v.owl_disjoint_with:
+            return DisjointClasses([m.subject, m.object], annotations=anns)
+        case v.owl_inverse_of:
+            return InverseObjectProperties(m.subject, m.object, annotations=anns)
+        case v.owl_property_disjoint_with:
+            if m.subject_type is None or m.subject_type == v.owl_object_property:
+                return DisjointObjectProperties([m.subject, m.object], annotations=anns)
+            elif m.subject_type == v.owl_data_property:
+                return DisjointDataProperties([m.subject, m.object], annotations=anns)
+
     return None
