@@ -347,7 +347,7 @@ Semantic Mapping                   Functional OWL Expression         Condition
 - https://github.com/cthoyt/sssom-pydantic/pull/157
 - https://github.com/cthoyt/sssom-pydantic/pull/158
 - https://github.com/cthoyt/sssom-pydantic/pull/159
-"""
+"""  # noqa:E501
 
 from __future__ import annotations
 
