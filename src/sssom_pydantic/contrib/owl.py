@@ -8,7 +8,7 @@ ontology edit file during release, for example, using the `ROBOT
 
 This module implements the transformation into the `Functional OWL (OFN)
 <https://www.w3.org/TR/owl2-syntax/>`_ object model (implemented in
-:mod:`functional_owl`) that enables serialization with OWL Functional Syntax, OWL/RDF,
+:mod:`functional_owl`) that enables serialization with OWL Functional Notation, OWL/RDF,
 and OWL/XML (`upcoming <https://github.com/cthoyt/functional-owl/issues/5>`_).
 
 More specifically, this module implements the transformation from
@@ -53,9 +53,9 @@ A collection of semantic mappings and optional mapping set metadata can be writt
         creators=[Reference(prefix="orcid", identifier="0000-0003-4423-4370")],
     )
     mappings = [SemanticMapping.exact("mesh:C000089", "CHEBI:28646")]
-    write_owl(mappings, "test.sssom.tsv", metadata=metadata, converter=converter)
+    write_owl(mappings, "test.ofn", metadata=metadata, converter=converter)
 
-which outputs the following:
+which outputs the following OWL functional notation (OFN):
 
 .. code-block::
 
