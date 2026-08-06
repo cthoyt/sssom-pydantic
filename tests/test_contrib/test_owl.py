@@ -20,10 +20,10 @@ from rdflib import XSD
 from sssom_pydantic import NOT, MappingSet, SemanticMapping
 from sssom_pydantic.contrib.owl import (
     get_axiom,
+    get_axiom_bridge,
     get_axioms,
     get_mapping_annotations,
     get_metadata_annotations,
-    get_axiom_bridge,
     write_owl,
 )
 from sssom_pydantic.version import get_version
