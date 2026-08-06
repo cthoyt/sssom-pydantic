@@ -19,11 +19,11 @@ from rdflib import XSD
 
 from sssom_pydantic import NOT, MappingSet, SemanticMapping
 from sssom_pydantic.contrib.owl import (
-    get_annotation_axiom,
+    get_axiom,
     get_axioms,
     get_mapping_annotations,
     get_metadata_annotations,
-    get_owl_bridge_axiom,
+    get_axiom_bridge,
     write_owl,
 )
 from sssom_pydantic.version import get_version
@@ -225,7 +225,7 @@ class TestBridge(unittest.TestCase):
         """Test briding axioms."""
         for expected, mapping in bridge_cases:
             with self.subTest(x=str(mapping)):
-                actual = get_owl_bridge_axiom(
+                actual = get_axiom_bridge(
                     mapping, not_implies_disjoint=True, converter=TEST_CONVERTER
                 )
                 self.assertEqual(expected, actual)
@@ -233,7 +233,7 @@ class TestBridge(unittest.TestCase):
     def test_no_implications(self) -> None:
         """Test when negation implementation is turned off."""
         self.assertIsNone(
-            get_owl_bridge_axiom(
+            get_axiom_bridge(
                 _mapping(v.exact_match).negate(),
                 not_implies_disjoint=False,
                 converter=TEST_CONVERTER,
@@ -244,13 +244,13 @@ class TestBridge(unittest.TestCase):
         """Test inline axioms."""
         for expected, mapping in inline_cases:
             with self.subTest(x=str(mapping)):
-                actual = get_annotation_axiom(mapping, converter=TEST_CONVERTER)
+                actual = get_axiom(mapping, converter=TEST_CONVERTER)
                 self.assertEqual(expected, actual)
 
     def test_custom_predicate_disallowed(self) -> None:
         """Test arbitrary predicates."""
         self.assertIsNone(
-            get_annotation_axiom(
+            get_axiom(
                 _mapping(v.derives_from),
                 allow_arbitrary=False,
                 converter=TEST_CONVERTER,
@@ -270,7 +270,7 @@ class TestBridge(unittest.TestCase):
             ).to_funowl(),
             cast(
                 f.Box,
-                get_annotation_axiom(
+                get_axiom(
                     _mapping(v.derives_from),
                     allow_arbitrary=True,
                     converter=TEST_CONVERTER,

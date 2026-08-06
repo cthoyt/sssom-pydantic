@@ -10,6 +10,7 @@
     installation
     usage
     cli
+    owl
     contrib
 
 ********************
