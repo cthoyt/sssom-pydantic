@@ -202,9 +202,9 @@ Semantic Mapping                 Functional OWL Expression           Condition
 .. [#f3] Literals don't appear as subjects in triples in OWL, so having an inverse for a data
     property doesn't make sense
 
-.. [#f4] Annotation properties can meaningfully be inverted, so this seems like an oversight.
-    OWL probably didn't include this since it's only informative and not part of a
-    logical definition of an entity.
+.. [#f4] Annotation properties can meaningfully be inverted if their range isn't a literal, so
+    this seems like an oversight. OWL probably didn't include this since it's only
+    informative and not part of a logical definition of an entity.
 
 **********
  Bridging
@@ -212,7 +212,8 @@ Semantic Mapping                 Functional OWL Expression           Condition
 
 When preparing reusable *bridge* ontologies, it is sometimes advantageous to upgrade
 weaker semantic mapping predicates like ``skos:exactMatch``, ``skos:narrowMatch``, and
-``skos:broadMatch`` to stronger logical axioms. This behavior is not part of the SSSOM
+``skos:broadMatch`` to stronger logical axioms to allow them to be used in ontology
+integration, merging, and reasoning. This behavior is not part of the SSSOM
 specification, but rather is extended from `rules initially proposed by Damien
 Goutte-Gattat
 <https://github.com/INCATools/ontology-development-kit/issues/626#issuecomment-3285032670>`_.
@@ -233,7 +234,7 @@ Semantic Mapping        Functional OWL Expression           Condition
                                                             ``owl:ObjectProperty`` or
                                                             undefined
 ``S skos:exactMatch O`` ``EquivalentDataProperties(S O)``   ``S`` is a
-                                                            `owl:DataProperty``
+                                                            ``owl:DataProp`erty``
 ``S skos:exactMatch O`` does not exist                      ``S`` is a
                                                             ``owl:AnnotationProperty``
 ``S skos:broadMatch O`` ``SubClassOf(S O)``                 ``S`` is a ``rdfs:Class``,
@@ -243,7 +244,7 @@ Semantic Mapping        Functional OWL Expression           Condition
                                                             undefined
 ``S skos:broadMatch O`` ``ClassAssertion(O, S)``            ``S`` is an
                                                             ``owl:NamedIndividual`` and
-                                                            `O`` is a class
+                                                            ``O`` is a class
 ``S skos:broadMatch O`` ``SubObjectPropertyOf(S O)``        ``S`` is a
                                                             ``owl:ObjectProperty`` or
                                                             undefined
@@ -252,6 +253,13 @@ Semantic Mapping        Functional OWL Expression           Condition
 ``S skos:broadMatch O`` ``SubAnnotationPropertyOf(S O)``    ``S`` is a
                                                             ``owl:AnnotationProperty``
 ======================= =================================== ===========================
+
+.. note::
+
+    The rules for ``skos:narrowMatch`` are omitted for brevity. The implementation
+    requries applying :func:`sssom_pydantic.process.invert_narrow_matches` before
+    applying this logic. Later, the functionality here will be upstreamed to be a more
+    generic mapping transformation which could be considered as preprocessing.
 
 Adding the ``mode="bridge"`` parameter to :func:`write_owl` opts into this upgrading
 behavior, such as:
