@@ -86,7 +86,7 @@ Semantic mappings whose predicates are annotation properties, such as those orig
 from SKOS, are transformed using the ``AnnotationAssertion()`` axioms as follows:
 
 ========================= ===============================================
-Predicate                 Functional Expression
+Semantic Mapping          Functional OWL Expression
 ========================= ===============================================
 ``S skos:exactMatch O``   ``AnnotationAssertion(skos:exactMatch S, O)``
 ``S skos:broadMatch O``   ``AnnotationAssertion(skos:broadMatch S, O)``
@@ -102,7 +102,7 @@ annotated onto the annotation assertion using ``Annotation(sssom:predicate_modif
 "Not")`` as in:
 
 ============================= =========================================================
-Predicate                     Functional Expression
+Semantic Mapping              Functional Expression
 ============================= =========================================================
 ``S not skos:exactMatch O``   ``AnnotationAssertion(Annotation(sssom:predicate_modifier
                               "Not") skos:exactMatch S O)``
@@ -127,7 +127,7 @@ describing classes. Any semantic mapping using these predicates have their subje
 object types interpreted as classes.
 
 =========================== ==============================================
-Mapping                     Functional Expression
+Semantic Mapping            Functional OWL Expression
 =========================== ==============================================
 ``S owl:equivalentClass O`` ``EquivalentClasses(S O)``
 ``S rdfs:subClassOf O``     ``SubClassOf(S O)``
@@ -145,7 +145,7 @@ subject and object types interpreted as named indiduals, with the exception bein
 ``rdfs:type`` which infers the object is a class.
 
 ========================= =============================
-Predicate                 Functional Expression
+Semantic Mapping          Functional OWL Expression
 ========================= =============================
 ``S rdfs:type O``         ``ClassAssertion(O S)``
 ``S owl:sameAs O``        ``SameIndividual(S O)``
@@ -168,7 +168,7 @@ OWL expression. When ``subject_type`` is unavailable, this implementation assume
 the property is an object property.
 
 ================================ =================================== ========================
-Predicate                        Functional Expression               Condition
+Semantic Mapping                 Functional OWL Expression           Condition
 ================================ =================================== ========================
 ``S owl:equivalentProperty O``   ``EquivalentObjectProperties(S O)`` ``S`` is an object
                                                                      property or undefined
@@ -220,7 +220,7 @@ The following table describes rules for doing this which are implemented in
 :func:`get_upgraded_annotation_property`.
 
 ======================= =================================== ===========================
-Predicate               Functional Expression               Condition
+Semantic Mapping        Functional OWL Expression           Condition
 ======================= =================================== ===========================
 ``S skos:exactMatch O`` ``EquivalentClasses(S O)``          ``S`` is a ``rdfs:Class``,
                                                             ``rdfs:Resource``,
@@ -289,7 +289,7 @@ The following table describes rules for doing this which are implemented in
 :func:`get_implied_negation_axiom`.
 
 ================================== ================================= =================================================================================
-Predicate                          Functional Expression             Condition
+Semantic Mapping                   Functional OWL Expression         Condition
 ================================== ================================= =================================================================================
 ``S not skos:exactMatch O``        ``DisjointClasses(S O)``          ``S`` is a ``rdfs:Class``, ``rdfs:Resource``, ``owl:Class``, ``skos:Concept``, or
                                                                      undefined
@@ -702,7 +702,7 @@ def get_implied_negation_axiom(
     :returns: A logical axiom, if possible
 
     ================================== ================================= =================================================================================
-    Predicate                          Functional Expression             Condition
+    Semantic Mapping                   Functional OWL Expression         Condition
     ================================== ================================= =================================================================================
     ``S not skos:exactMatch O``        ``DisjointClasses(S O)``          ``S`` is a ``rdfs:Class``, ``rdfs:Resource``, ``owl:Class``, ``skos:Concept``, or
                                                                          undefined
@@ -770,7 +770,7 @@ def get_upgraded_annotation_property(
     :returns: A logical axiom, if possible
 
     ======================= =================================== =================================================================================
-    Predicate               Functional Expression               Condition
+    Semantic Mapping        Functional OWL Expression           Condition
     ======================= =================================== =================================================================================
     ``S skos:exactMatch O`` ``EquivalentClasses(S O)``          ``S`` is a ``rdfs:Class``, ``rdfs:Resource``, ``owl:Class``, ``skos:Concept``, or
                                                                 undefined
@@ -842,7 +842,7 @@ def get_object_property_axiom(
     :returns: A logical axiom, if possible
 
     ================================ ============================================== ========================================
-    Predicate                        Functional Expression                          Condition
+    Semantic Mapping                 Functional OWL Expression                      Condition
     ================================ ============================================== ========================================
     ``S owl:equivalentClass O``      ``EquivalentClasses(S O)``
     ``S rdfs:subClassOf O``          ``SubClassOf(S O)``
@@ -941,7 +941,7 @@ def get_axiom(
     :returns: A functional OWL axiom, if possible
 
     ========================= ==============================================
-    Predicate                 Functional Expression
+    Semantic Mapping          Functional OWL Expression
     ========================= ==============================================
     ``S skos:exactMatch O``   ``AnnotationAssertion(skos:exactMatch S O)``
     ``S skos:broadMatch O``   ``AnnotationAssertion(skos:broadMatch S O)``
