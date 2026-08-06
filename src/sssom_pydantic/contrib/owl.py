@@ -121,6 +121,30 @@ Semantic Mapping              Functional Expression
                               "Not") skos:seeAlso S O)``
 ============================= =========================================================
 
+Here's an example SSSOM table containing annotation properties (both positive and
+negative) transformed to OWL functional notation (metadata omitted).
+
+=========== ============= =============== ================== ============ ============ ============================
+subject_id  subject_label predicate_id    predicate_modifier object_id    object_label mapping_justification
+=========== ============= =============== ================== ============ ============ ============================
+CHEBI:28646 ammeline      skos:exactMatch                    mesh:C000089 ammeline     semapv:ManualMappingCuration
+CHEBI:10057 9H-xanthene   skos:exactMatch Not                mesh:C002563 xanthan gum  semapv:ManualMappingCuration
+=========== ============= =============== ================== ============ ============ ============================
+
+produces the following OWL functional notation (abridged for clarity)
+
+.. code-block::
+
+    Ontology(
+        Declaration(Class(CHEBI:28646))
+        Declaration(Class(CHEBI:10057))
+        Declaration(Class(mesh:C000089))
+        Declaration(Class(mesh:C002563))
+
+        AnnotationAssertion(skos:exactMatch CHEBI:28646 mesh:C000089)
+        AnnotationAssertion(Annotation(sssom:predicate_modifier "Not") skos:exactMatch CHEBI:10057 mesh:C002563)
+    )
+
 ****************************
  Logical Axioms for Classes
 ****************************
