@@ -64,6 +64,7 @@ from functional_owl import (
 from rdflib import XSD
 
 from ..api import MappingSet, SemanticMapping
+from ..constants import guess_class
 from ..process import filter_by_confidence, invert_narrow_matches
 from ..version import get_version
 
@@ -354,16 +355,6 @@ def get_owl_bridge_axiom(
     return None
 
 
-def _is_class(r: curies.Reference | None) -> bool:
-    return (
-        r is None
-        or r == v.owl_class
-        or r == v.skos_concept
-        or r == v.rdfs_class
-        or r == v.rdfs_datatype
-    )
-
-
 def get_mapping_annotations(
     mapping: SemanticMapping, converter: curies.Converter
 ) -> list[Annotation]:
@@ -428,7 +419,7 @@ def get_implied_negation_axiom(
         return None  # don't even bother for non-negative mappings
     match mapping.predicate:
         case v.exact_match:
-            if _is_class(mapping.subject_type):
+            if guess_class(mapping.subject_type):
                 return DisjointClasses([mapping.subject, mapping.object], annotations=annotations)
             elif mapping.subject_type == v.owl_named_individual:
                 return DifferentIndividuals(
@@ -500,7 +491,7 @@ def get_upgraded_annotation_property(
     """  # noqa:E501
     match mapping.predicate:
         case v.exact_match:
-            if _is_class(mapping.subject_type):
+            if guess_class(mapping.subject_type):
                 return EquivalentClasses([mapping.subject, mapping.object], annotations=annotations)
             elif mapping.subject_type == v.owl_named_individual:
                 return SameIndividual([mapping.subject, mapping.object], annotations=annotations)
@@ -517,9 +508,11 @@ def get_upgraded_annotation_property(
             else:
                 return None
         case v.broad_match:
-            if _is_class(mapping.subject_type):
+            if guess_class(mapping.subject_type):
                 return SubClassOf(mapping.subject, mapping.object, annotations=annotations)
-            elif mapping.subject_type == v.owl_named_individual and _is_class(mapping.object_type):
+            elif mapping.subject_type == v.owl_named_individual and guess_class(
+                mapping.object_type
+            ):
                 return ClassAssertion(mapping.object, mapping.subject, annotations=annotations)
             elif mapping.subject_type == v.owl_object_property:
                 return SubObjectPropertyOf(mapping.subject, mapping.object, annotations=annotations)
