@@ -96,6 +96,9 @@ Semantic Mapping          Functional OWL Expression
 ``S rdfs:seeAlso O``      ``AnnotationAssertion(skos:seeAlso S, O)``
 ========================= ===============================================
 
+In practice, any semantic mapping predicate that doesn't have another transformation
+rule associated with it will get serialized as a ``AnnotationAssertion()``.
+
 OWL does not have a generic notion of negations, inversions, or complements. Therefore,
 the first-class predicate modifier field in SSSOM that represents false information is
 annotated onto the annotation assertion using ``Annotation(sssom:predicate_modifier
