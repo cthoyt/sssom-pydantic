@@ -173,7 +173,7 @@ Predicate                        Functional Expression               Condition
 ``S owl:equivalentProperty O``   ``EquivalentObjectProperties(S O)`` ``S`` is an object
                                                                      property or undefined
 ``S owl:equivalentProperty O``   ``EquivalentDataProperties(S O)``   ``S`` is a data property
-``S owl:equivalentProperty O``   does not exist [#f2]_               ``S`` is an annotation
+``S owl:equivalentProperty O``   does not exist [#f1]_               ``S`` is an annotation
                                                                      property
 ``S owl:propertyDisjointWith O`` ``DisjointObjectProperties(S O)``   ``S`` is an object
                                                                      property or undefined
@@ -206,12 +206,55 @@ Predicate                        Functional Expression               Condition
     OWL probably didn't include this since it's only informative and not part of a
     logical definition of an entity.
 
-Bridging
-========
+**********
+ Bridging
+**********
 
-Adding the ``mode="bridge"`` parameter causes some mappings using annotation property
-predicates (``skos:exactMatch``, ``skos:broadMatch``, and ``skos:narrowMatch``) to get
-upgraded into logical axioms:
+When preparing reusable *bridge* ontologies, it is sometimes advantageous to upgrade
+weaker semantic mapping predicates like ``skos:exactMatch``, ``skos:narrowMatch``, and
+``skos:broadMatch`` to stronger logical axioms. This behavior is not part of the SSSOM
+specification, but rather is extended from `rules initially proposed by Damien
+Goutte-Gattat
+<https://github.com/INCATools/ontology-development-kit/issues/626#issuecomment-3285032670>`_.
+The following table describes rules for doing this which are implemented in
+:func:`get_upgraded_annotation_property`.
+
+======================= =================================== ===========================
+Predicate               Functional Expression               Condition
+======================= =================================== ===========================
+``S skos:exactMatch O`` ``EquivalentClasses(S O)``          ``S`` is a ``rdfs:Class``,
+                                                            ``rdfs:Resource``,
+                                                            ``owl:Class``,
+                                                            ``skos:Concept``, or
+                                                            undefined
+``S skos:exactMatch O`` ``SameIndividual(S O)``             ``S`` is an
+                                                            ``owl:NamedIndividual``
+``S skos:exactMatch O`` ``EquivalentObjectProperties(S O)`` ``S`` is a
+                                                            ``owl:ObjectProperty`` or
+                                                            undefined
+``S skos:exactMatch O`` ``EquivalentDataProperties(S O)``   ``S`` is a
+                                                            `owl:DataProperty``
+``S skos:exactMatch O`` does not exist                      ``S`` is a
+                                                            ``owl:AnnotationProperty``
+``S skos:broadMatch O`` ``SubClassOf(S O)``                 ``S`` is a ``rdfs:Class``,
+                                                            ``rdfs:Resource``,
+                                                            ``owl:Class``,
+                                                            ``skos:Concept``, or
+                                                            undefined
+``S skos:broadMatch O`` ``ClassAssertion(O, S)``            ``S`` is an
+                                                            ``owl:NamedIndividual`` and
+                                                            `O`` is a class
+``S skos:broadMatch O`` ``SubObjectPropertyOf(S O)``        ``S`` is a
+                                                            ``owl:ObjectProperty`` or
+                                                            undefined
+``S skos:broadMatch O`` ``SubDataPropertyOf(S O)``          ``S`` is a
+                                                            ``owl:DataProperty``
+``S skos:broadMatch O`` ``SubAnnotationPropertyOf(S O)``    ``S`` is a
+                                                            ``owl:AnnotationProperty``
+======================= =================================== ===========================
+
+Adding the ``mode="bridge"`` parameter to :func:`write_owl` opts into this upgrading
+behavior, such as:
 
 .. code-block::
 
@@ -226,8 +269,44 @@ upgraded into logical axioms:
     EquivalentClasses(mesh:C000089 CHEBI:28646)
     )
 
-Implementation History
-======================
+***********
+ Negations
+***********
+
+When preparing reusable *bridge* ontologies, it is sometimes permissible to use negative
+semantic mappings to infer stronger logical axioms. However, note that there are some
+impedance issues, and usage of the following transformation depends on your
+interpretation of negation.
+
+This can be problematic if a negative mapping is trivial, i.e., there exists another
+mapping with a difference predicate between the same subject and object that is true. If
+``A not exact match B`` and ``A subClassOf B`` are both asserted, then implying a
+disjointness axiom between A and B will cause unsatisfiability. To ensure no such
+trivial negative mappings exist, first invoke
+:func:`sssom_pydantic.process.remove_trivial_negative` on your collection of mappings.
+
+The following table describes rules for doing this which are implemented in
+:func:`get_implied_negation_axiom`.
+
+================================== ================================= =================================================================================
+Predicate                          Functional Expression             Condition
+================================== ================================= =================================================================================
+``S not skos:exactMatch O``        ``DisjointClasses(S O)``          ``S`` is a ``rdfs:Class``, ``rdfs:Resource``, ``owl:Class``, ``skos:Concept``, or
+                                                                     undefined
+``S not skos:exactMatch O``        ``DifferentIndividuals(S O)``     ``S`` is an ``owl:NamedIndividual``
+``S not skos:exactMatch O``        ``DisjointObjectProperties(S O)`` ``S`` is a ``owl:ObjectProperty`` or undefined
+``S not skos:exactMatch O``        ``DisjointDataProperties(S O)``   ``S`` is a ``owl:DataProperty``
+``S not skos:exactMatch O``        does not exist                    ``S`` is a ``owl:AnnotationProperty``
+``S not owl:equivalentClass O``    ``DisjointClasses(S O)``
+``S not owl:sameAs O``             ``DifferentIndividuals(S O)``
+``S not owl:equivalentProperty O`` ``DisjointObjectProperties(S O)`` ``S`` is an ``owl:ObjectProperty`` or undefined
+``S not owl:equivalentProperty O`` ``DisjointDataProperties(S O)``   ``S`` is an ``owl:DataProperty``
+``S not owl:equivalentProperty O`` does not exist                    ``S`` is an ``owl:AnnotationProperty``
+================================== ================================= =================================================================================
+
+########################
+ Implementation History
+########################
 
 - https://github.com/cthoyt/sssom-pydantic/pull/128
 - https://github.com/cthoyt/sssom-pydantic/pull/157
