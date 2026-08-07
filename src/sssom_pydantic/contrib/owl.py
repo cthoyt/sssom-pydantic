@@ -77,6 +77,10 @@ which outputs the following OWL functional notation (OFN):
         AnnotationAssertion(skos:exactMatch mesh:C000089 CHEBI:28646)
     )
 
+The ``mapping_annotations`` argument can also be used to add all SSSOM metadata as
+``Annotations`` in the annotation assertions. See the documentation for
+:func:`write_owl` for more options.
+
 This can also be accomplished from the command line with:
 
 .. code-block:: console
