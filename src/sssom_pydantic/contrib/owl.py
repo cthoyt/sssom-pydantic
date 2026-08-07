@@ -82,7 +82,7 @@ This can also be accomplished from the command line with:
 
 .. code-block:: console
 
-    $ sssom_pydantic owl -i test.sssom.tsv -o test.ofn
+    sssom_pydantic owl -i test.sssom.tsv -o test.ofn
 
 ######################
  Transformation Rules
@@ -376,7 +376,7 @@ when in bridge mode.
 
 .. code-block:: console
 
-    $ sssom_pydantic owl --mode bridge --not-implies-disjoint -i test.sssom.tsv -o test.ofn
+    sssom_pydantic owl --mode bridge --not-implies-disjoint -i test.sssom.tsv -o test.ofn
 """  # noqa:E501
 
 from __future__ import annotations
