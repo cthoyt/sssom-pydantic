@@ -213,7 +213,7 @@ def owl(
         mapping_annotations=mapping_annotations,
         declarations=declarations,
         generation_comment=not no_generation_comment,
-        not_implies_disjoint=not_implies_disjoint,
+        negation_workflow=not_implies_disjoint,
     )
 
 

@@ -251,42 +251,55 @@ Semantic Mapping                 Functional OWL Expression           Subject Typ
  Bridging
 **********
 
-When preparing reusable *bridge* ontologies, it is sometimes advantageous to upgrade
-weaker semantic mapping predicates like ``skos:exactMatch``, ``skos:narrowMatch``, and
-``skos:broadMatch`` to stronger logical axioms to allow them to be used in ontology
-integration, merging, and reasoning. This behavior is not part of the SSSOM
-specification, but rather is extended from `rules initially proposed by Damien
-Goutte-Gattat
+A bridge ontology is an ontology with logical axioms for merging two or more other
+ontologies and enabling joint inference and reasoning. This fits neatly with the notion
+of transforming SSSOM to OWL, however, bridge ontologies do not make use of annotation
+assertions. Therefore, when preparing a bridge ontology, it is sometimes advantageous to
+ascribe stronger logical axioms to weaker semantic mapping predicates like
+``skos:exactMatch``, ``skos:narrowMatch``, and ``skos:broadMatch`` that would normally
+produce annotation assertions.
+
+This behavior is not part of the SSSOM specification, but was pioneered by `Damien
+Goutte-Gattat <https://github.com/gouttegd/>`_ in the incorporation of SSSOM with
+Ontology Development Kit (ODK) release workflows and briefly described `here
 <https://github.com/INCATools/ontology-development-kit/issues/626#issuecomment-3285032670>`_.
-The following table describes rules for doing this which are implemented in
-:func:`get_upgraded_annotation_property`.
-
-In the following table, ``class`` is shorthand for ``rdfs:Class``, ``rdfs:Resource``,
-``owl:Class``, or ``skos:Concept``.
-
-======================= =================================== ==========================
-Semantic Mapping        Functional OWL Expression           Subject Type
-======================= =================================== ==========================
-``S skos:exactMatch O`` ``EquivalentClasses(S O)``          class or undefined
-``S skos:exactMatch O`` ``SameIndividual(S O)``             ``owl:NamedIndividual``
-``S skos:exactMatch O`` ``EquivalentObjectProperties(S O)`` ``owl:ObjectProperty`` or
-                                                            undefined
-``S skos:exactMatch O`` ``EquivalentDataProperties(S O)``   ``owl:DataProperty``
-``S skos:exactMatch O`` does not exist                      ``owl:AnnotationProperty``
-``S skos:broadMatch O`` ``SubClassOf(S O)``                 class or undefined
-``S skos:broadMatch O`` ``ClassAssertion(O, S)``            ``owl:NamedIndividual``
-``S skos:broadMatch O`` ``SubObjectPropertyOf(S O)``        ``owl:ObjectProperty`` or
-                                                            undefined
-``S skos:broadMatch O`` ``SubDataPropertyOf(S O)``          ``owl:DataProperty``
-``S skos:broadMatch O`` ``SubAnnotationPropertyOf(S O)``    ``owl:AnnotationProperty``
-======================= =================================== ==========================
+SSSOM Pydantic extends Damien's original idea with additional rules described in the
+following table, which are implemented in :func:`get_upgraded_annotation_property`.
 
 .. note::
 
-    The rules for ``skos:narrowMatch`` are omitted for brevity. The implementation
-    requires applying :func:`sssom_pydantic.process.invert_narrow_matches` before
-    applying this logic. Later, the functionality here will be upstreamed to be a more
-    generic mapping transformation which could be considered as preprocessing.
+    In the following table, ``class`` is shorthand for ``rdfs:Class``,
+    ``rdfs:Resource``, ``owl:Class``, or ``skos:Concept``.
+
+======================== =================================== ==========================
+Semantic Mapping         Functional OWL Expression           Subject Type
+======================== =================================== ==========================
+``S skos:exactMatch O``  ``EquivalentClasses(S O)``          class or undefined
+``S skos:exactMatch O``  ``SameIndividual(S O)``             ``owl:NamedIndividual``
+``S skos:exactMatch O``  ``EquivalentObjectProperties(S O)`` ``owl:ObjectProperty`` or
+                                                             undefined
+``S skos:exactMatch O``  ``EquivalentDataProperties(S O)``   ``owl:DataProperty``
+``S skos:exactMatch O``  does not exist                      ``owl:AnnotationProperty``
+``S skos:broadMatch O``  ``SubClassOf(S O)``                 class or undefined
+``S skos:broadMatch O``  ``ClassAssertion(O, S)``            ``owl:NamedIndividual``
+``S skos:broadMatch O``  ``SubObjectPropertyOf(S O)``        ``owl:ObjectProperty`` or
+                                                             undefined
+``S skos:broadMatch O``  ``SubDataPropertyOf(S O)``          ``owl:DataProperty``
+``S skos:broadMatch O``  ``SubAnnotationPropertyOf(S O)``    ``owl:AnnotationProperty``
+``O skos:narrowMatch S`` ``SubClassOf(S O)``                 class or undefined
+``O skos:narrowMatch S`` ``ClassAssertion(O, S)``            ``owl:NamedIndividual``
+``O skos:narrowMatch S`` ``SubObjectPropertyOf(S O)``        ``owl:ObjectProperty`` or
+                                                             undefined
+``O skos:broadMatch S``  ``SubDataPropertyOf(S O)``          ``owl:DataProperty``
+``O skos:broadMatch S``  ``SubAnnotationPropertyOf(S O)``    ``owl:AnnotationProperty``
+======================== =================================== ==========================
+
+.. warning::
+
+    The rules between ``skos:broadMatch`` and ``skos:narrowMatch`` are complementary,
+    which is why the ``S`` and ``O`` are flipped. In practice, the implementation
+    requires applying :func:`sssom_pydantic.process.invert_narrow_matches` to flip all
+    narrow matches into broad matches before transforing to OWL.
 
 Adding the ``mode="bridge"`` parameter to :func:`write_owl` opts into this upgrading
 behavior, such as:
@@ -308,7 +321,7 @@ upgrades.
 
 .. code-block:: console
 
-    $ sssom_pydantic owl --mode bridge -i test.sssom.tsv -o test.ofn
+    sssom_pydantic owl --mode bridge -i test.sssom.tsv -o test.ofn
 
 ***********
  Negations
@@ -329,25 +342,25 @@ trivial negative mappings exist, first invoke
 The following table describes rules for doing this which are implemented in
 :func:`get_implied_negation_axiom`.
 
-==================================== ================================= ===================================
-Semantic Mapping                     Functional OWL Expression         Subject Type
-==================================== ================================= ===================================
-``S not skos:exactMatch O``          ``DisjointClasses(S O)``          class or undefined
-``S not skos:exactMatch O``          ``DifferentIndividuals(S O)``     ``owl:NamedIndividual``
-``S not skos:exactMatch O``          ``DisjointObjectProperties(S O)`` ``owl:ObjectProperty``
-``S not skos:exactMatch O``          ``DisjointDataProperties(S O)``   ``owl:DataProperty``
-``S not skos:exactMatch O``          does not exist                    ``owl:AnnotationProperty``
+==================================== =================================== ===================================
+Semantic Mapping                     Functional OWL Expression           Subject Type
+==================================== =================================== ===================================
+``S not skos:exactMatch O``          ``DisjointClasses(S O)``            class or undefined
+``S not skos:exactMatch O``          ``DifferentIndividuals(S O)``       ``owl:NamedIndividual``
+``S not skos:exactMatch O``          ``DisjointObjectProperties(S O)``   ``owl:ObjectProperty``
+``S not skos:exactMatch O``          ``DisjointDataProperties(S O)``     ``owl:DataProperty``
+``S not skos:exactMatch O``          does not exist                      ``owl:AnnotationProperty``
 ``S not owl:equivalentClass O``      ``DisjointClasses(S O)``
 ``S not owl:disjointWith O``         ``EquivalentClasses(S O)``
 ``S not owl:differentFrom O``        ``SameIndividual(S O)``
 ``S not owl:sameAs O``               ``DifferentIndividuals(S O)``
-``S not owl:equivalentProperty O``   ``DisjointObjectProperties(S O)`` ``owl:ObjectProperty`` or undefined
-``S not owl:equivalentProperty O``   ``DisjointDataProperties(S O)``   ``owl:DataProperty``
-``S not owl:equivalentProperty O``   does not exist                    ``owl:AnnotationProperty``
-``S not owl:propertyDisjointWith O`` EquivalentObjectProperties(S O)   ``owl:ObjectProperty`` or undefined
-``S not owl:propertyDisjointWith O`` EquivalentDataProperties(S O)     ``owl:DataProperty``
-``S not owl:propertyDisjointWith O`` does not exist                    ``owl:AnnotationProperty``
-==================================== ================================= ===================================
+``S not owl:equivalentProperty O``   ``DisjointObjectProperties(S O)``   ``owl:ObjectProperty`` or undefined
+``S not owl:equivalentProperty O``   ``DisjointDataProperties(S O)``     ``owl:DataProperty``
+``S not owl:equivalentProperty O``   does not exist                      ``owl:AnnotationProperty``
+``S not owl:propertyDisjointWith O`` ``EquivalentObjectProperties(S O)`` ``owl:ObjectProperty`` or undefined
+``S not owl:propertyDisjointWith O`` ``EquivalentDataProperties(S O)``   ``owl:DataProperty``
+``S not owl:propertyDisjointWith O`` does not exist                      ``owl:AnnotationProperty``
+==================================== =================================== ===================================
 
 For example, not being disjoint doesn't necessarily mean they are equivalent. If A and B
 are not disjoint, then A could also be a subclass of B.
@@ -358,11 +371,12 @@ equivalent, then A could still be a subclass of B.
 However, the negatition of the ``owl:differentFrom`` relation always means that they are
 the same, and the negation of ``owl:sameAs`` always means they are different.
 
-The ``--not-implies-disjoint`` option can be passed to the CLI to enable this workflow.
+The ``--not-implies-disjoint`` option can be passed to the CLI to enable this workflow
+when in bridge mode.
 
 .. code-block:: console
 
-    $ sssom_pydantic owl --not-implies-disjoint -i test.sssom.tsv -o test.ofn
+    $ sssom_pydantic owl --mode bridge --not-implies-disjoint -i test.sssom.tsv -o test.ofn
 """  # noqa:E501
 
 from __future__ import annotations
@@ -440,7 +454,7 @@ def write_owl(
     allow_arbitrary: bool = False,
     generation_comment: bool = True,
     iri: str | None = None,
-    not_implies_disjoint: bool = False,
+    negation_workflow: bool = False,
     **kwargs: Any,
 ) -> None:
     """Write OWL bridge axioms as an OWL file.
@@ -467,7 +481,7 @@ def write_owl(
         date when this was generated
     :param iri: the IRI for the resulting ontology. if not given, reuses the metadata's
         ID, if available.
-    :param not_implies_disjoint: Whether to assume that the curation of a negative exact
+    :param negation_workflow: Whether to assume that the curation of a negative exact
         match or equivalence mapping should be used to imply a disjointness axiom.
     :param kwargs: keyword arguments to pass to :func:`functional_owl.write_ontology`.
     """
@@ -486,7 +500,7 @@ def write_owl(
                 mapping_annotations=mapping_annotations,
                 declarations=declarations,
                 allow_arbitrary=allow_arbitrary,
-                not_implies_disjoint=not_implies_disjoint,
+                negation_workflow=negation_workflow,
             )
         ),
         file=file,
@@ -547,7 +561,7 @@ def get_axioms(
     minimum_confidence: float | None = None,
     mapping_annotations: bool = False,
     declarations: bool = False,
-    not_implies_disjoint: bool = False,
+    negation_workflow: bool = False,
     allow_arbitrary: bool = False,
 ) -> Iterable[Box]:
     """Iterate over OWL axioms from semantic mappings.
@@ -565,7 +579,7 @@ def get_axioms(
     :param mapping_annotations: whether to include annotations (extra metadata like
         mapping type, confidence, etc.) on the produced axioms, defaults to false
     :param declarations: whether to include declarations for subject and object entities
-    :param not_implies_disjoint: Whether to assume that the curation of a negative exact
+    :param negation_workflow: Whether to assume that the curation of a negative exact
         match or equivalence mapping should be used to imply a disjointness axiom.
 
         .. warning::
@@ -591,7 +605,7 @@ def get_axioms(
         func = partial(
             get_axiom_bridge,
             mapping_annotations=mapping_annotations,
-            not_implies_disjoint=not_implies_disjoint,
+            not_implies_disjoint=negation_workflow,
         )
     elif mode == "inline" or mode is None:
         func = partial(
@@ -755,22 +769,7 @@ def get_implied_negation_axiom(
     :param annotations: A list of annotations
 
     :returns: A logical axiom, if possible
-
-    ================================== ================================= ================================================================================
-    Semantic Mapping                   Functional OWL Expression         Subject Type
-    ================================== ================================= ================================================================================
-    ``S not skos:exactMatch O``        ``DisjointClasses(S O)``          ``rdfs:Class``, ``rdfs:Resource``, ``owl:Class``, ``skos:Concept``, or undefined
-    ``S not skos:exactMatch O``        ``DifferentIndividuals(S O)``     ``owl:NamedIndividual``
-    ``S not skos:exactMatch O``        ``DisjointObjectProperties(S O)`` ``owl:ObjectProperty`` or undefined
-    ``S not skos:exactMatch O``        ``DisjointDataProperties(S O)``   ``owl:DataProperty``
-    ``S not skos:exactMatch O``        does not exist                    ``owl:AnnotationProperty``
-    ``S not owl:equivalentClass O``    ``DisjointClasses(S O)``
-    ``S not owl:sameAs O``             ``DifferentIndividuals(S O)``
-    ``S not owl:equivalentProperty O`` ``DisjointObjectProperties(S O)`` ``owl:ObjectProperty`` or undefined
-    ``S not owl:equivalentProperty O`` ``DisjointDataProperties(S O)``   ``owl:DataProperty``
-    ``S not owl:equivalentProperty O`` does not exist                    ``owl:AnnotationProperty``
-    ================================== ================================= ================================================================================
-    """  # noqa:E501
+    """
     if mapping.predicate_modifier is None:
         return None  # don't even bother for non-negative mappings
     match mapping.predicate:
@@ -795,8 +794,12 @@ def get_implied_negation_axiom(
                 return None
         case v.equivalent_class:
             return DisjointClasses([mapping.subject, mapping.object], annotations=annotations)
+        case v.owl_disjoint_with:
+            return EquivalentClasses([mapping.subject, mapping.object], annotations=annotations)
         case v.same_as:
             return DifferentIndividuals([mapping.subject, mapping.object], annotations=annotations)
+        case v.owl_different_from:
+            return SameIndividual([mapping.subject, mapping.object], annotations=annotations)
         case v.equivalent_property:
             if mapping.subject_type is None or mapping.subject_type == v.owl_object_property:
                 return DisjointObjectProperties(
@@ -807,6 +810,19 @@ def get_implied_negation_axiom(
                     [mapping.subject, mapping.object], annotations=annotations
                 )
             # note, there's no concept of DisjointAnnotationProperties since
+            # these aren't used for logical axioms
+            else:
+                return None
+        case v.owl_property_disjoint_with:
+            if mapping.subject_type is None or mapping.subject_type == v.owl_object_property:
+                return EquivalentObjectProperties(
+                    [mapping.subject, mapping.object], annotations=annotations
+                )
+            elif mapping.subject_type == v.owl_data_property:
+                return EquivalentDataProperties(
+                    [mapping.subject, mapping.object], annotations=annotations
+                )
+            # note, there's no concept of EquivalentAnnotationProperties since
             # these aren't used for logical axioms
             else:
                 return None
