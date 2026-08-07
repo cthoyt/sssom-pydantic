@@ -20,6 +20,7 @@ __all__ = [
     "EntityTypeLiteral",
     "Row",
     "SemanticPrimitive",
+    "guess_class",
 ]
 
 PREFIX_MAP_KEY = "curie_map"  # smh
@@ -164,3 +165,14 @@ MAPPING_SET_SLOTS = PROPAGATABLE | MAPPING_SLOT_SPECIFIC
 Row: TypeAlias = dict[str, str | list[str]]
 
 SemanticPrimitive: TypeAlias = v.XSDPrimitive | curies.Reference
+
+
+def guess_class(reference: curies.Reference | None) -> bool:
+    """Guess if the reference is for a class."""
+    return (
+        reference is None
+        or reference == v.owl_class
+        or reference == v.skos_concept
+        or reference == v.rdfs_class
+        or reference == v.rdfs_datatype
+    )

@@ -1,10 +1,15 @@
 """Command line interface for :mod:`sssom_pydantic`."""
 
+from __future__ import annotations
+
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import click
+
+if TYPE_CHECKING:
+    from .contrib.owl import AxiomMode
 
 __all__ = [
     "main",
@@ -168,7 +173,7 @@ def subset(
     "-a",
     "--mapping-annotations",
     is_flag=True,
-    help="If set, propagates annotations from mappings into bridge",
+    help="If set, propagates annotations from mappings into OWL",
 )
 @click.option(
     "-d",
@@ -176,31 +181,47 @@ def subset(
     is_flag=True,
     help="If set, adds declarations (and labels, when available)",
 )
-def bridge(
+@click.option("--mode", type=click.Choice(["bridge", "inline"]), default="inline")
+@click.option("--no-generation-comment", is_flag=True)
+@click.option("--negation-workflow", is_flag=True)
+def owl(
     input: Path | None,
     output: Path | None,
     cutoff: float,
     mapping_annotations: bool,
     declarations: bool,
+    mode: AxiomMode,
+    no_generation_comment: bool,
+    negation_workflow: bool,
 ) -> None:
-    """Write OWL bridge axioms in Functional OWL (OFN)."""
+    """Convert SSSOM to OWL, serialized as Functional OWL (OFN)."""
     import sys
 
     import sssom_pydantic
-    from sssom_pydantic.contrib.owl_bridge import write_owl_bridge
+    from sssom_pydantic.contrib.owl import write_owl
 
     mappings, converter, metadata = sssom_pydantic.read(input or sys.stdin)
 
-    write_owl_bridge(
+    write_owl(
         mappings,
         output or sys.stdout,
         converter=converter,
+        mode=mode,
         metadata=metadata,
         iri=str(metadata.id),
         minimum_confidence=cutoff,
         mapping_annotations=mapping_annotations,
         declarations=declarations,
+        generation_comment=not no_generation_comment,
+        negation_workflow=negation_workflow,
     )
+
+
+@main.command(params=[p for p in owl.params if p.name != "mode"])
+@click.pass_context
+def bridge(context: click.Context, **kwargs: Any) -> None:
+    """Convert SSSOM to OWL in bridge mode, serialized as Functional OWL (OFN)."""
+    context.invoke(owl, mode="bridge", **kwargs)
 
 
 def _default_iri() -> str:
