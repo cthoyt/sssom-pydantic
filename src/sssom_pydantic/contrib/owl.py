@@ -538,7 +538,7 @@ def write_owl(
     file: str | Path | TextIO | None = None,
     *,
     converter: curies.Converter,
-    mode: AxiomMode | None,
+    mode: AxiomMode | None = None,
     metadata: MappingSet | None = None,
     minimum_confidence: float | None = None,
     mapping_annotations: bool = False,
