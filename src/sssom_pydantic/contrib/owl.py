@@ -261,24 +261,19 @@ Goutte-Gattat
 The following table describes rules for doing this which are implemented in
 :func:`get_upgraded_annotation_property`.
 
+In the following table, ``class`` is shorthand for ``rdfs:Class``, ``rdfs:Resource``,
+``owl:Class``, or ``skos:Concept``.
+
 ======================= =================================== ==========================
 Semantic Mapping        Functional OWL Expression           Subject Type
 ======================= =================================== ==========================
-``S skos:exactMatch O`` ``EquivalentClasses(S O)``          ``rdfs:Class``,
-                                                            ``rdfs:Resource``,
-                                                            ``owl:Class``,
-                                                            ``skos:Concept``, or
-                                                            undefined
+``S skos:exactMatch O`` ``EquivalentClasses(S O)``          class or undefined
 ``S skos:exactMatch O`` ``SameIndividual(S O)``             ``owl:NamedIndividual``
 ``S skos:exactMatch O`` ``EquivalentObjectProperties(S O)`` ``owl:ObjectProperty`` or
                                                             undefined
 ``S skos:exactMatch O`` ``EquivalentDataProperties(S O)``   ``owl:DataProperty``
 ``S skos:exactMatch O`` does not exist                      ``owl:AnnotationProperty``
-``S skos:broadMatch O`` ``SubClassOf(S O)``                 ``rdfs:Class``,
-                                                            ``rdfs:Resource``,
-                                                            ``owl:Class``,
-                                                            ``skos:Concept``, or
-                                                            undefined
+``S skos:broadMatch O`` ``SubClassOf(S O)``                 class or undefined
 ``S skos:broadMatch O`` ``ClassAssertion(O, S)``            ``owl:NamedIndividual``
 ``S skos:broadMatch O`` ``SubObjectPropertyOf(S O)``        ``owl:ObjectProperty`` or
                                                             undefined
@@ -334,10 +329,10 @@ trivial negative mappings exist, first invoke
 The following table describes rules for doing this which are implemented in
 :func:`get_implied_negation_axiom`.
 
-==================================== ================================= ================================================================================
+==================================== ================================= ===================================
 Semantic Mapping                     Functional OWL Expression         Subject Type
-==================================== ================================= ================================================================================
-``S not skos:exactMatch O``          ``DisjointClasses(S O)``          ``rdfs:Class``, ``rdfs:Resource``, ``owl:Class``, ``skos:Concept``, or undefined
+==================================== ================================= ===================================
+``S not skos:exactMatch O``          ``DisjointClasses(S O)``          class or undefined
 ``S not skos:exactMatch O``          ``DifferentIndividuals(S O)``     ``owl:NamedIndividual``
 ``S not skos:exactMatch O``          ``DisjointObjectProperties(S O)`` ``owl:ObjectProperty``
 ``S not skos:exactMatch O``          ``DisjointDataProperties(S O)``   ``owl:DataProperty``
@@ -352,7 +347,7 @@ Semantic Mapping                     Functional OWL Expression         Subject T
 ``S not owl:propertyDisjointWith O`` EquivalentObjectProperties(S O)   ``owl:ObjectProperty`` or undefined
 ``S not owl:propertyDisjointWith O`` EquivalentDataProperties(S O)     ``owl:DataProperty``
 ``S not owl:propertyDisjointWith O`` does not exist                    ``owl:AnnotationProperty``
-==================================== ================================= ================================================================================
+==================================== ================================= ===================================
 
 For example, not being disjoint doesn't necessarily mean they are equivalent. If A and B
 are not disjoint, then A could also be a subclass of B.
