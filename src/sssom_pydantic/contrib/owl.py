@@ -261,20 +261,30 @@ Goutte-Gattat
 The following table describes rules for doing this which are implemented in
 :func:`get_upgraded_annotation_property`.
 
-======================= =================================== ================================================================================
+======================= =================================== ==========================
 Semantic Mapping        Functional OWL Expression           Subject Type
-======================= =================================== ================================================================================
-``S skos:exactMatch O`` ``EquivalentClasses(S O)``          ``rdfs:Class``, ``rdfs:Resource``, ``owl:Class``, ``skos:Concept``, or undefined
+======================= =================================== ==========================
+``S skos:exactMatch O`` ``EquivalentClasses(S O)``          ``rdfs:Class``,
+                                                            ``rdfs:Resource``,
+                                                            ``owl:Class``,
+                                                            ``skos:Concept``, or
+                                                            undefined
 ``S skos:exactMatch O`` ``SameIndividual(S O)``             ``owl:NamedIndividual``
-``S skos:exactMatch O`` ``EquivalentObjectProperties(S O)`` ``owl:ObjectProperty`` or undefined
+``S skos:exactMatch O`` ``EquivalentObjectProperties(S O)`` ``owl:ObjectProperty`` or
+                                                            undefined
 ``S skos:exactMatch O`` ``EquivalentDataProperties(S O)``   ``owl:DataProperty``
 ``S skos:exactMatch O`` does not exist                      ``owl:AnnotationProperty``
-``S skos:broadMatch O`` ``SubClassOf(S O)``                 ``rdfs:Class``, ``rdfs:Resource``, ``owl:Class``, ``skos:Concept``, or undefined
+``S skos:broadMatch O`` ``SubClassOf(S O)``                 ``rdfs:Class``,
+                                                            ``rdfs:Resource``,
+                                                            ``owl:Class``,
+                                                            ``skos:Concept``, or
+                                                            undefined
 ``S skos:broadMatch O`` ``ClassAssertion(O, S)``            ``owl:NamedIndividual``
-``S skos:broadMatch O`` ``SubObjectPropertyOf(S O)``        ``owl:ObjectProperty`` or undefined
+``S skos:broadMatch O`` ``SubObjectPropertyOf(S O)``        ``owl:ObjectProperty`` or
+                                                            undefined
 ``S skos:broadMatch O`` ``SubDataPropertyOf(S O)``          ``owl:DataProperty``
 ``S skos:broadMatch O`` ``SubAnnotationPropertyOf(S O)``    ``owl:AnnotationProperty``
-======================= =================================== ================================================================================
+======================= =================================== ==========================
 
 .. note::
 
@@ -324,20 +334,34 @@ trivial negative mappings exist, first invoke
 The following table describes rules for doing this which are implemented in
 :func:`get_implied_negation_axiom`.
 
-================================== ================================= ================================================================================
-Semantic Mapping                   Functional OWL Expression         Subject Type
-================================== ================================= ================================================================================
-``S not skos:exactMatch O``        ``DisjointClasses(S O)``          ``rdfs:Class``, ``rdfs:Resource``, ``owl:Class``, ``skos:Concept``, or undefined
-``S not skos:exactMatch O``        ``DifferentIndividuals(S O)``     ``owl:NamedIndividual``
-``S not skos:exactMatch O``        ``DisjointObjectProperties(S O)`` ``owl:ObjectProperty`` or undefined
-``S not skos:exactMatch O``        ``DisjointDataProperties(S O)``   ``owl:DataProperty``
-``S not skos:exactMatch O``        does not exist                    ``owl:AnnotationProperty``
-``S not owl:equivalentClass O``    ``DisjointClasses(S O)``
-``S not owl:sameAs O``             ``DifferentIndividuals(S O)``
-``S not owl:equivalentProperty O`` ``DisjointObjectProperties(S O)`` ``owl:ObjectProperty`` or undefined
-``S not owl:equivalentProperty O`` ``DisjointDataProperties(S O)``   ``owl:DataProperty``
-``S not owl:equivalentProperty O`` does not exist                    ``owl:AnnotationProperty``
-================================== ================================= ================================================================================
+==================================== ================================= ================================================================================
+Semantic Mapping                     Functional OWL Expression         Subject Type
+==================================== ================================= ================================================================================
+``S not skos:exactMatch O``          ``DisjointClasses(S O)``          ``rdfs:Class``, ``rdfs:Resource``, ``owl:Class``, ``skos:Concept``, or undefined
+``S not skos:exactMatch O``          ``DifferentIndividuals(S O)``     ``owl:NamedIndividual``
+``S not skos:exactMatch O``          ``DisjointObjectProperties(S O)`` ``owl:ObjectProperty``
+``S not skos:exactMatch O``          ``DisjointDataProperties(S O)``   ``owl:DataProperty``
+``S not skos:exactMatch O``          does not exist                    ``owl:AnnotationProperty``
+``S not owl:equivalentClass O``      ``DisjointClasses(S O)``
+``S not owl:disjointWith O``         ``EquivalentClasses(S O)``
+``S not owl:differentFrom O``        ``SameIndividual(S O)``
+``S not owl:sameAs O``               ``DifferentIndividuals(S O)``
+``S not owl:equivalentProperty O``   ``DisjointObjectProperties(S O)`` ``owl:ObjectProperty`` or undefined
+``S not owl:equivalentProperty O``   ``DisjointDataProperties(S O)``   ``owl:DataProperty``
+``S not owl:equivalentProperty O``   does not exist                    ``owl:AnnotationProperty``
+``S not owl:propertyDisjointWith O`` EquivalentObjectProperties(S O)   ``owl:ObjectProperty`` or undefined
+``S not owl:propertyDisjointWith O`` EquivalentDataProperties(S O)     ``owl:DataProperty``
+``S not owl:propertyDisjointWith O`` does not exist                    ``owl:AnnotationProperty``
+==================================== ================================= ================================================================================
+
+For example, not being disjoint doesn't necessarily mean they are equivalent. If A and B
+are not disjoint, then A could also be a subclass of B.
+
+Not being equivalent doesn't necessarily bean they are disjoint. If A and B are not
+equivalent, then A could still be a subclass of B.
+
+However, the negatition of the ``owl:differentFrom`` relation always means that they are
+the same, and the negation of ``owl:sameAs`` always means they are different.
 
 The ``--not-implies-disjoint`` option can be passed to the CLI to enable this workflow.
 
