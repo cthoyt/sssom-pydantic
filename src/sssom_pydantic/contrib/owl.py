@@ -6,10 +6,11 @@ provenance metadata. After, SSSOM can be transformed into OWL and merged with th
 ontology edit file during release, for example, using the `ROBOT
 <https://robot.obolibrary.org/>`_ tool.
 
-This module implements the transformation into the `Functional OWL (OFN)
-<https://www.w3.org/TR/owl2-syntax/>`_ object model (implemented in
-:mod:`functional_owl`) that enables serialization with OWL Functional Notation, OWL/RDF,
-and OWL/XML (`upcoming <https://github.com/cthoyt/functional-owl/issues/5>`_).
+:mod:`sssom_pydantic.contrib.owl`
+implements the transformation into the `Functional OWL
+<https://www.w3.org/TR/owl2-syntax/>`_ object model with the
+:mod:`functional_owl` package that enables serialization to OWL Functional Notation (OFN), OWL/RDF,
+and OWL/XML.
 
 More specifically, this module implements the transformation from
 :class:`sssom_pydantic.SemanticMapping` to :class:`functional_owl.Axiom` in
