@@ -149,7 +149,7 @@ Semantic Mapping              Functional Expression
 
 Here's an example SSSOM table containing both a positive and negative semantic mapping
 and its transformation into OWL, serialized in OWL functional notation (OFN). The prefix
-map and metadata are omitted from both the SSOM and OWL output for clarity.
+map and metadata are omitted from both the SSSOM and OWL output for clarity.
 
 =========== ============= =============== ================== ============ ============ ============================
 subject_id  subject_label predicate_id    predicate_modifier object_id    object_label mapping_justification
@@ -204,6 +204,36 @@ Semantic Mapping          Functional OWL Expression
 ``S owl:differentFrom O`` ``DifferentIndividuals(S O)``
 ========================= =============================
 
+Here's an example SSSOM table and accompanying OWL output containing examples for each
+semantic mapping predicate.
+
+============= ====================== ================= ============= ============ ============================
+subject_id    subject_label          predicate_id      object_id     object_label mapping_justification
+============= ====================== ================= ============= ============ ============================
+ror:04xfq0f34 RWTH Aachen University rdf:type          OBI:0000245   organization semapv:ManualMappingCuration
+ror:04fbd2g40 BioNTech (Germany)     owl:sameAs        VO:0004946    BioNTech     semapv:ManualMappingCuration
+ror:04fbd2g40 BioNTech (Germany)     owl:differentFrom ror:054q96n74 AstraZeneca  semapv:ManualMappingCuration
+============= ====================== ================= ============= ============ ============================
+
+.. code-block::
+
+    Ontology(
+        Declaration(Class(OBI:0000245))
+        Declaration(NamedIndividual(ror:04xfq0f34))
+        Declaration(NamedIndividual(VO:0004946))
+        Declaration(NamedIndividual(ror:054q96n74))
+
+        ClassAssertion(OBI:0000245 ror:04xfq0f34)
+        SameIndividual(ror:04xfq0f34 VO:0004946)
+        DifferentIndividuals(ror:04fbd2g40 ror:054q96n74)
+    )
+
+.. note::
+
+    The semantics of ``owl:sameAs`` and ``owl:differentFrom`` are exactly negated,
+    meaning that this could be extended to incorporate negated semantic mappings. See
+    the section below on Negations_ for more information.
+
 *******************************
  Logical Axioms for Properties
 *******************************
@@ -248,6 +278,32 @@ Semantic Mapping                 Functional OWL Expression           Subject Typ
     this seems like an oversight. OWL probably didn't include this since it's only
     informative and not part of a logical definition of an entity.
 
+Here's an example SSSOM table and accompanying OWL output containing examples for some
+semantic mapping predicates.
+
+======================== ======================= ======================= ====================== ============================== ========================== ============================
+subject_id               subject_label           subject_type            predicate_id           object_id                      object_label               mapping_justification
+======================== ======================= ======================= ====================== ============================== ========================== ============================
+RO:0018033               is deprotonated form of owl object property     owl:equivalentProperty obo:chebi#is_conjugate_base_of is conjugate base of       semapv:ManualMappingCuration
+RO:0018002               myristoylates           owl object property     rdfs:subPropertyOf     RO:0002436                     molecularly interacts with semapv:ManualMappingCuration
+oboInOwl:hasBroadSynonym has broad synonym       owl annotation property rdfs:subPropertyOf     IAO:0000118                    alternative label          semapv:ManualMappingCuration
+======================== ======================= ======================= ====================== ============================== ========================== ============================
+
+.. code-block::
+
+    Ontology(
+        Declaration(ObjectProperty(RO:0018033))
+        Declaration(ObjectProperty(RO:0018002))
+        Declaration(ObjectProperty(RO:0002436))
+        Declaration(ObjectProperty(obo:chebi#is_conjugate_base_of))
+        Declaration(ObjectProperty(oboInOwl:hasBroadSynonym))
+        Declaration(ObjectProperty(IAO:0000118 ))
+
+        EquivalentObjectProperties(RO:0018033 obo:chebi#is_conjugate_base_of)
+        SubObjectPropertyOf(RO:0018002 RO:0002436)
+        SubAnnotationPropertyOf(oboInOwl:hasBroadSynonym IAO:0000118)
+    )
+
 **********
  Bridging
 **********
@@ -255,8 +311,8 @@ Semantic Mapping                 Functional OWL Expression           Subject Typ
 A bridge ontology is an ontology with logical axioms for merging two or more other
 ontologies and enabling joint inference and reasoning. This fits neatly with the notion
 of transforming SSSOM to OWL, however, bridge ontologies do not make use of annotation
-assertions. Therefore, when preparing a bridge ontology, it is sometimes advantageous to
-ascribe stronger logical axioms to weaker semantic mapping predicates like
+assertions. Therefore, when constructing a bridge ontology, it is sometimes advantageous
+to ascribe stronger logical axioms to weaker semantic mapping predicates like
 ``skos:exactMatch``, ``skos:narrowMatch``, and ``skos:broadMatch`` that would normally
 produce annotation assertions.
 
@@ -303,18 +359,21 @@ Semantic Mapping         Functional OWL Expression           Subject Type
     narrow matches into broad matches before transforing to OWL.
 
 Adding the ``mode="bridge"`` parameter to :func:`write_owl` opts into this upgrading
-behavior, such as:
+behavior to transform the following SSSOM into OWL.
+
+=========== ============= =============== ============ ============ ============================
+subject_id  subject_label predicate_id    object_id    object_label mapping_justification
+=========== ============= =============== ============ ============ ============================
+CHEBI:28646 ammeline      skos:exactMatch mesh:C000089 ammeline     semapv:ManualMappingCuration
+=========== ============= =============== ============ ============ ============================
 
 .. code-block::
 
-    Prefix(CHEBI:=<http://purl.obolibrary.org/obo/CHEBI_>)
-    Prefix(dcterms:=<http://purl.org/dc/terms/>)
-    Prefix(mesh:=<http://id.nlm.nih.gov/mesh/>)
-    Prefix(orcid:=<https://orcid.org/>)
-
     Ontology(
-        Annotation(dcterms:creator orcid:0000-0003-4423-4370)
-        EquivalentClasses(mesh:C000089 CHEBI:28646)
+        Declaration(Class(CHEBI:28646))
+        Declaration(Class(mesh:C000089))
+
+        EquivalentClasses(CHEBI:28646 mesh:C000089)
     )
 
 Similarly, the ``--mode bridge`` option can be passed to the CLI to enable bridging
@@ -328,17 +387,30 @@ upgrades.
  Negations
 ***********
 
-When preparing reusable *bridge* ontologies, it is sometimes permissible to use negative
-semantic mappings to infer stronger logical axioms. However, note that there are some
-impedance issues, and usage of the following transformation depends on your
-interpretation of negation.
+When constructing a bridge ontology, it is sometimes advantageous to ascribe stronger
+logical axioms to weaker semantic mapping mappings that include a negative predicate
+modifier in conjunction with predicates such as ``skos:exactMatch``,
+``skos:narrowMatch``, and ``skos:broadMatch`` that would normally produce annotation
+assertions. For example, ``A not exact match B`` could be used to assert ``A
+disjointFrom B``.
 
-This can be problematic if a negative mapping is trivial, i.e., there exists another
-mapping with a difference predicate between the same subject and object that is true. If
-``A not exact match B`` and ``A subClassOf B`` are both asserted, then implying a
-disjointness axiom between A and B will cause unsatisfiability. To ensure no such
-trivial negative mappings exist, first invoke
-:func:`sssom_pydantic.process.remove_trivial_negative` on your collection of mappings.
+However, there are a few major caveats to such ascription.
+
+1. If another positive mapping such as ``A subclass of B`` exists, then ``A not exact
+   match B`` is a trivial negative mapping, and should be discarded. Otherwise, the
+   production of ``A disjointFrom B`` would cause an unsatisfiability. The
+   :func:`sssom_pydantic.process.remove_trivial_negative` identifies and removes trivial
+   negative mappings.
+2. Even the lack of existence of another explicit positive mapping such as ``A subclass
+   of B`` doesn't mean that the positive mapping is true. Constructing a logical axiom
+   from a negative mapping can only work if based on your curation workflow, you are
+   sure that the existence of a negative mapping between ``A`` and ``B`` implies that no
+   positive mapping exists.
+
+While these caveats apply to class and property mappings, negative modifiers on mappings
+between individuals can be more confidently handled. The negatition of the
+``owl:differentFrom`` relation always means that they are the same, and the negation of
+``owl:sameAs`` always means they are different.
 
 The following table describes rules for doing this which are implemented in
 :func:`get_implied_negation_axiom`.
@@ -363,21 +435,39 @@ Semantic Mapping                     Functional OWL Expression           Subject
 ``S not owl:propertyDisjointWith O`` does not exist                      ``owl:AnnotationProperty``
 ==================================== =================================== ===================================
 
-For example, not being disjoint doesn't necessarily mean they are equivalent. If A and B
-are not disjoint, then A could also be a subclass of B.
+The following example shows how the negative semantic mapping from the section
+`Annotation Properties`_ now produces a ``DisjointClasses()`` logical axiom instead of
+an ``AnnotationAssertion()`` axiom. It also reuses the examples from `Logical Axioms for
+Named Individuals`_ but flips inverts their predicates.
 
-Not being equivalent doesn't necessarily bean they are disjoint. If A and B are not
-equivalent, then A could still be a subclass of B.
+============= ================== ================= ================== ============= ============ ============================
+subject_id    subject_label      predicate_id      predicate_modifier object_id     object_label mapping_justification
+============= ================== ================= ================== ============= ============ ============================
+CHEBI:10057   9H-xanthene        skos:exactMatch   Not                mesh:C002563  xanthan gum  semapv:ManualMappingCuration
+ror:04fbd2g40 BioNTech (Germany) owl:differentFrom Not                VO:0004946    BioNTech     semapv:ManualMappingCuration
+ror:04fbd2g40 BioNTech (Germany) owl:sameAs        Not                ror:054q96n74 AstraZeneca  semapv:ManualMappingCuration
+============= ================== ================= ================== ============= ============ ============================
 
-However, the negatition of the ``owl:differentFrom`` relation always means that they are
-the same, and the negation of ``owl:sameAs`` always means they are different.
+.. code-block::
 
-The ``--not-implies-disjoint`` option can be passed to the CLI to enable this workflow
-when in bridge mode.
+    Ontology(
+        Declaration(Class(CHEBI:10057))
+        Declaration(Class(mesh:C002563))
+        Declaration(NamedIndividual(ror:04fbd2g40))
+        Declaration(NamedIndividual(ror:054q96n74))
+        Declaration(NamedIndividual(VO:0004946))
+
+        DisjointClasses(CHEBI:10057 mesh:C002563)
+        SameIndividual(ror:04xfq0f34 VO:0004946)
+        DifferentIndividuals(ror:04fbd2g40 ror:054q96n74)
+    )
+
+The ``--negation-workflow`` option can be passed to the CLI to enable this workflow when
+in bridge mode.
 
 .. code-block:: console
 
-    sssom_pydantic owl --mode bridge --not-implies-disjoint -i test.sssom.tsv -o test.ofn
+    sssom_pydantic owl --mode bridge --negation-workflow -i test.sssom.tsv -o test.ofn
 """  # noqa:E501
 
 from __future__ import annotations
