@@ -279,7 +279,7 @@ Semantic Mapping        Functional OWL Expression           Subject Type
 .. note::
 
     The rules for ``skos:narrowMatch`` are omitted for brevity. The implementation
-    requries applying :func:`sssom_pydantic.process.invert_narrow_matches` before
+    requires applying :func:`sssom_pydantic.process.invert_narrow_matches` before
     applying this logic. Later, the functionality here will be upstreamed to be a more
     generic mapping transformation which could be considered as preprocessing.
 
@@ -297,6 +297,13 @@ behavior, such as:
         Annotation(dcterms:creator orcid:0000-0003-4423-4370)
         EquivalentClasses(mesh:C000089 CHEBI:28646)
     )
+
+Similarly, the ``--mode bridge`` option can be passed to the CLI to enable bridging
+upgrades.
+
+.. code-block:: console
+
+    $ sssom_pydantic owl --mode bridge -i test.sssom.tsv -o test.ofn
 
 ***********
  Negations
@@ -332,14 +339,11 @@ Semantic Mapping                   Functional OWL Expression         Subject Typ
 ``S not owl:equivalentProperty O`` does not exist                    ``owl:AnnotationProperty``
 ================================== ================================= ================================================================================
 
-########################
- Implementation History
-########################
+The ``--not-implies-disjoint`` option can be passed to the CLI to enable this workflow.
 
-- https://github.com/cthoyt/sssom-pydantic/pull/128
-- https://github.com/cthoyt/sssom-pydantic/pull/157
-- https://github.com/cthoyt/sssom-pydantic/pull/158
-- https://github.com/cthoyt/sssom-pydantic/pull/159
+.. code-block:: console
+
+    $ sssom_pydantic owl --not-implies-disjoint -i test.sssom.tsv -o test.ofn
 """  # noqa:E501
 
 from __future__ import annotations
@@ -417,6 +421,7 @@ def write_owl(
     allow_arbitrary: bool = False,
     generation_comment: bool = True,
     iri: str | None = None,
+    not_implies_disjoint: bool = False,
     **kwargs: Any,
 ) -> None:
     """Write OWL bridge axioms as an OWL file.
@@ -443,6 +448,8 @@ def write_owl(
         date when this was generated
     :param iri: the IRI for the resulting ontology. if not given, reuses the metadata's
         ID, if available.
+    :param not_implies_disjoint: Whether to assume that the curation of a negative exact
+        match or equivalence mapping should be used to imply a disjointness axiom.
     :param kwargs: keyword arguments to pass to :func:`functional_owl.write_ontology`.
     """
     # add pav since it's part of the output model
@@ -460,6 +467,7 @@ def write_owl(
                 mapping_annotations=mapping_annotations,
                 declarations=declarations,
                 allow_arbitrary=allow_arbitrary,
+                not_implies_disjoint=not_implies_disjoint,
             )
         ),
         file=file,
@@ -867,7 +875,7 @@ def get_object_property_axiom(
     :returns: A logical axiom, if possible
 
     ================================ ============================================== ========================================
-    Semantic Mapping                 Functional OWL Expression                      Condition
+    Semantic Mapping                 Functional OWL Expression                      Subject Type
     ================================ ============================================== ========================================
     ``S owl:equivalentClass O``      ``EquivalentClasses(S O)``
     ``S rdfs:subClassOf O``          ``SubClassOf(S O)``

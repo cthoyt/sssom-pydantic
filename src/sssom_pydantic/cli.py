@@ -183,6 +183,7 @@ def subset(
 )
 @click.option("--mode", type=click.Choice(["bridge", "inline"]), default="bridge")
 @click.option("--no-generation-comment", is_flag=True)
+@click.option("--not-implies-disjoint", is_flag=True)
 def owl(
     input: Path | None,
     output: Path | None,
@@ -191,6 +192,7 @@ def owl(
     declarations: bool,
     mode: AxiomMode,
     no_generation_comment: bool,
+    not_implies_disjoint: bool,
 ) -> None:
     """Convert SSSOM to OWL, serialized as Functional OWL (OFN)."""
     import sys
@@ -211,6 +213,7 @@ def owl(
         mapping_annotations=mapping_annotations,
         declarations=declarations,
         generation_comment=not no_generation_comment,
+        not_implies_disjoint=not_implies_disjoint,
     )
 
 
