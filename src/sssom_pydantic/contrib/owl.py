@@ -11,9 +11,9 @@ ontology edit file during release, for example, using the `ROBOT
 package that enables serialization to OWL Functional Notation (OFN), OWL/RDF, and
 OWL/XML.
 
-######
- Demo
-######
+###############
+ Example Usage
+###############
 
 More specifically, this module implements the transformation from
 :class:`sssom_pydantic.SemanticMapping` to :class:`functional_owl.Axiom` in
@@ -93,8 +93,9 @@ mappings are transformed into annotation properties in OWL, with a small number 
 special cases that are transformed into logical axioms.
 
 Finally, this section describes two custom workflows for producing OWL bridge files (see
-https://github.com/obophenotype/uberon/blob/master/docs/bridges.md for informal
-documentation) and for upgrading negated semantic mappings to logical axioms.
+`the Uberon documentation
+<https://github.com/obophenotype/uberon/blob/master/docs/bridges.md>`_) and for
+upgrading negated semantic mappings to logical axioms.
 
 ***********************
  Annotation Properties
@@ -194,7 +195,7 @@ Semantic Mapping            Functional OWL Expression
 The following semantic mapping predicates are expanded into OWL logical axioms
 describing named individuals. Any semantic mapping using these predicates have their
 subject and object types interpreted as named indiduals, with the exception being
-``rdfs:type`` which infers the object is a class.
+``rdfs:type``, which infers the object is a class.
 
 ========================= =============================
 Semantic Mapping          Functional OWL Expression
@@ -537,7 +538,7 @@ def write_owl(
     file: str | Path | TextIO | None = None,
     *,
     converter: curies.Converter,
-    mode: AxiomMode | None = None,
+    mode: AxiomMode | None,
     metadata: MappingSet | None = None,
     minimum_confidence: float | None = None,
     mapping_annotations: bool = False,
