@@ -73,9 +73,8 @@ which outputs the following OWL functional notation (OFN):
     Prefix(orcid:=<https://orcid.org/>)
 
     Ontology(
-    Annotation(dcterms:creator orcid:0000-0003-4423-4370)
-
-    AnnotationAssertion(skos:exactMatch mesh:C000089 CHEBI:28646)
+        Annotation(dcterms:creator orcid:0000-0003-4423-4370)
+        AnnotationAssertion(skos:exactMatch mesh:C000089 CHEBI:28646)
     )
 
 This can also be accomplished from the command line with:
@@ -122,7 +121,9 @@ Semantic Mapping                       Functional OWL Expression
 ====================================== ===========================================================
 
 In practice, any semantic mapping predicate that doesn't have another transformation
-rule associated with it will get serialized as a ``AnnotationAssertion()``.
+rule associated with it in the following sections `Logical Axioms for Classes`_,
+`Logical Axioms for Named Individuals`_, and `Logical Axioms for Properties`_ will get
+serialized as a ``AnnotationAssertion()``.
 
 OWL does not have a generic notion of negations, inversions, or complements. Therefore,
 the first-class predicate modifier field in SSSOM that represents false information is
