@@ -181,7 +181,7 @@ def subset(
     is_flag=True,
     help="If set, adds declarations (and labels, when available)",
 )
-@click.option("--mode", type=click.Choice(["bridge", "inline"]), default="bridge")
+@click.option("--mode", type=click.Choice(["bridge", "inline"]), default="inline")
 @click.option("--no-generation-comment", is_flag=True)
 @click.option("--negation-workflow", is_flag=True)
 def owl(
