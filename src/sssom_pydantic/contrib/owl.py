@@ -81,7 +81,7 @@ The ``mapping_annotations`` argument can also be used to add all SSSOM metadata 
 ``Annotations`` in the annotation assertions. See the documentation for
 :func:`write_owl` for more options.
 
-This can also be accomplished from the command line with:
+Converting SSSOM to OWL can also be accomplished from the command line with:
 
 .. code-block:: console
 
