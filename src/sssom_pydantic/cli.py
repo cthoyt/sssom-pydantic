@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import click
 
@@ -173,7 +173,7 @@ def subset(
     "-a",
     "--mapping-annotations",
     is_flag=True,
-    help="If set, propagates annotations from mappings into bridge",
+    help="If set, propagates annotations from mappings into OWL",
 )
 @click.option(
     "-d",
@@ -182,15 +182,17 @@ def subset(
     help="If set, adds declarations (and labels, when available)",
 )
 @click.option("--mode", type=click.Choice(["bridge", "inline"]), default="bridge")
-def bridge(
+@click.option("--no-generation-comment", is_flag=True)
+def owl(
     input: Path | None,
     output: Path | None,
     cutoff: float,
     mapping_annotations: bool,
     declarations: bool,
     mode: AxiomMode,
+    no_generation_comment: bool,
 ) -> None:
-    """Write OWL bridge axioms in Functional OWL (OFN)."""
+    """Convert SSSOM to OWL, serialized as Functional OWL (OFN)."""
     import sys
 
     import sssom_pydantic
@@ -208,7 +210,15 @@ def bridge(
         minimum_confidence=cutoff,
         mapping_annotations=mapping_annotations,
         declarations=declarations,
+        generation_comment=not no_generation_comment,
     )
+
+
+@main.command(params=[p for p in owl.params if p.name != "mode"])
+@click.pass_context
+def bridge(context: click.Context, **kwargs: Any) -> None:
+    """Convert SSSOM to OWL in bridge mode, serialized as Functional OWL (OFN)."""
+    context.invoke(owl, mode="bridge", **kwargs)
 
 
 def _default_iri() -> str:
