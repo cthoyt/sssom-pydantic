@@ -1,9 +1,15 @@
 """Command line interface for :mod:`sssom_pydantic`."""
 
+from __future__ import annotations
+
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import click
+
+if TYPE_CHECKING:
+    from .contrib.owl import AxiomMode
 
 __all__ = [
     "main",
@@ -20,16 +26,37 @@ STANDARDIZE_FLAG = click.option(
     is_flag=True,
     help="Standardize against Bioregistry preferred CURIE prefixes and (RDF) URI prefixes",
 )
+RELABEL_FLAG = click.option(
+    "--relabel",
+    is_flag=True,
+    help="Re-label all subjects and objects using PyOBO",
+)
+
+INPUT_OPTION = click.option(
+    "-i",
+    "--input",
+    help="Path to a local file or URL to a remote file. If not given, will get input from STDIN",
+)
+OUTPUT_OPTION = click.option(
+    "-o",
+    "--output",
+    type=Path,
+    help="Path to a local file to output. If not given, will write to STDOUT",
+)
 
 
 @main.command(name="format")
 @click.argument("path", type=Path)
 @STANDARDIZE_FLAG
-def format_sssom_tsv(path: Path, standardize: bool) -> None:
+@RELABEL_FLAG
+@click.option("--drop-duplicates", is_flag=True)
+def format_sssom_tsv(path: Path, standardize: bool, relabel: bool, drop_duplicates: bool) -> None:
     """Lint a SSSOM TSV file."""
     import sssom_pydantic
 
-    sssom_pydantic.format(path, standardize=standardize)
+    sssom_pydantic.format(
+        path, standardize=standardize, relabel=relabel, drop_duplicates=drop_duplicates
+    )
 
 
 @main.command()
@@ -64,17 +91,8 @@ def web(add_examples: bool, tab: bool, host: str, port: int) -> None:
     help="The prefix that becomes the object of all mappings. If used in combination with "
     "--standardize, will get automatically standardized.",
 )
-@click.option(
-    "-i",
-    "--input",
-    help="Path to a local file or URL to a remote file. If not given, will get input from STDIN",
-)
-@click.option(
-    "-o",
-    "--output",
-    type=Path,
-    help="Path to a local file to output. If not given, will write to STDOUT",
-)
+@INPUT_OPTION
+@OUTPUT_OPTION
 @click.option(
     "--justification-policy",
     is_flag=True,
@@ -99,7 +117,6 @@ def subset(
     """
     import sys
 
-    import curies
     from curies.triples import keep_predicates, keep_prefixes_both, keep_prefixes_either
     from curies.vocabulary import exact_match
 
@@ -120,8 +137,8 @@ def subset(
     mappings = keep_predicates(mappings, exact_match)
 
     if standardize:
-        converter = curies.chain([_get_preferred_converter(), converter])
-        mappings = standardize_mappings(mappings_list, converter=converter)
+        converter = _get_preferred_converter(converter)
+        mappings = standardize_mappings(mappings, converter=converter)
 
     prefix = converter.standardize_prefix(prefix, strict=True)
 
@@ -142,6 +159,216 @@ def subset(
         )
 
     sssom_pydantic.write(mappings, output or sys.stdout, converter=converter, metadata=metadata)
+
+
+@main.command()
+@INPUT_OPTION
+@OUTPUT_OPTION
+@click.option(
+    "--cutoff",
+    type=float,
+    help="Minimum confidence cutoff. Mappings w/o confidence are assumed to have 1.0 confidence",
+)
+@click.option(
+    "-a",
+    "--mapping-annotations",
+    is_flag=True,
+    help="If set, propagates annotations from mappings into OWL",
+)
+@click.option(
+    "-d",
+    "--declarations",
+    is_flag=True,
+    help="If set, adds declarations (and labels, when available)",
+)
+@click.option("--mode", type=click.Choice(["bridge", "inline"]), default="inline")
+@click.option("--no-generation-comment", is_flag=True)
+@click.option("--negation-workflow", is_flag=True)
+def owl(
+    input: Path | None,
+    output: Path | None,
+    cutoff: float,
+    mapping_annotations: bool,
+    declarations: bool,
+    mode: AxiomMode,
+    no_generation_comment: bool,
+    negation_workflow: bool,
+) -> None:
+    """Convert SSSOM to OWL, serialized as Functional OWL (OFN)."""
+    import sys
+
+    import sssom_pydantic
+    from sssom_pydantic.contrib.owl import write_owl
+
+    mappings, converter, metadata = sssom_pydantic.read(input or sys.stdin)
+
+    write_owl(
+        mappings,
+        output or sys.stdout,
+        converter=converter,
+        mode=mode,
+        metadata=metadata,
+        iri=str(metadata.id),
+        minimum_confidence=cutoff,
+        mapping_annotations=mapping_annotations,
+        declarations=declarations,
+        generation_comment=not no_generation_comment,
+        negation_workflow=negation_workflow,
+    )
+
+
+@main.command(params=[p for p in owl.params if p.name != "mode"])
+@click.pass_context
+def bridge(context: click.Context, **kwargs: Any) -> None:
+    """Convert SSSOM to OWL in bridge mode, serialized as Functional OWL (OFN)."""
+    context.invoke(owl, mode="bridge", **kwargs)
+
+
+def _default_iri() -> str:
+    import uuid
+
+    return f"https://example.org/{uuid.uuid4()}.sssom.tsv"
+
+
+@main.command()
+@click.option(
+    "-i",
+    "--input",
+    multiple=True,
+    help="Path to a local file or URL to a remote file",
+)
+@OUTPUT_OPTION
+@click.option("--mapping-set-id", default=_default_iri, help="The ID for the merged mapping set")
+@click.option(
+    "--mapping-set-title",
+    default="Merged Mapping Sets",
+    help="The title for the merged mapping set",
+)
+@click.option("--merge-manual", is_flag=True)
+@STANDARDIZE_FLAG
+def merge(
+    input: Iterable[str],
+    output: Path | None,
+    merge_manual: bool,
+    standardize: bool,
+    mapping_set_title: str,
+    mapping_set_id: str,
+) -> None:
+    """Merge SSSOM documents."""
+    import itertools as itt
+    import sys
+
+    import curies
+    from pydantic import AnyUrl
+
+    import sssom_pydantic
+    from sssom_pydantic import MappingSet, SemanticMapping, standardize_mappings
+    from sssom_pydantic import process as pr
+    from sssom_pydantic.api import _get_preferred_converter
+
+    parts = [sssom_pydantic.read(path) for path in input]
+    metadata = MappingSet(
+        id=AnyUrl(mapping_set_id),
+        title=mapping_set_title,
+        source=[part.mapping_set.id for part in parts],
+    )
+
+    converter = curies.chain([part.converter for part in parts])
+    mappings: Iterable[SemanticMapping] = itt.chain.from_iterable(part.mappings for part in parts)
+
+    if standardize:
+        converter = _get_preferred_converter(converter)
+        mappings = standardize_mappings(mappings, converter=converter)
+
+    if merge_manual:
+        mappings = pr.merge_manual_curations(mappings, converter=converter)
+
+    sssom_pydantic.write(
+        mappings, output or sys.stdout, converter=converter, metadata=metadata, sort=True
+    )
+
+
+@main.command(name="compare")
+@click.argument("left")
+@click.argument("right")
+@click.option(
+    "--left-label",
+    help="A short label for the left mapping set. If not given, falls "
+    "back to the left mapping set title.",
+)
+@click.option(
+    "--right-label",
+    help="A short label for the right mapping set. If not given, falls "
+    "back to the right mapping set title.",
+)
+@click.option(
+    "--show-missing",
+    is_flag=True,
+    help="When the left and right mapping set don't both have the same mappings, "
+    "should notes be shown in the output?",
+)
+@click.option(
+    "--standardize-flip",
+    is_flag=True,
+    help="Should subject/object order be automatically standardized by lexicographical order? "
+    "This is useful when combining arbitrary SSSOM files that might have curated with different "
+    "subject and object rules.",
+)
+@OUTPUT_OPTION
+@STANDARDIZE_FLAG
+def compare_it(
+    left: str,
+    right: str,
+    output: Path | None,
+    standardize: bool,
+    left_label: str | None,
+    right_label: str | None,
+    standardize_flip: bool,
+    show_missing: bool,
+) -> None:
+    """Compare manual curations in two SSSOM files."""
+    import sys
+
+    import curies
+    from pystow.utils import safe_write_text
+
+    from .api import SemanticMapping, _get_preferred_converter, standardize_mappings
+    from .compare import get_comparison_markdown
+    from .io import read
+    from .process import invert_on_unordered
+
+    # define them as iterables to avoid confusion later
+    left_mappings: Iterable[SemanticMapping]
+    right_mappings: Iterable[SemanticMapping]
+
+    left_mappings, left_converter, left_metadata = read(left)
+    right_mappings, right_converter, right_metadata = read(right)
+
+    if standardize:
+        converter = _get_preferred_converter(left_converter, right_converter)
+        left_mappings = standardize_mappings(left_mappings, converter=converter)
+        right_mappings = standardize_mappings(right_mappings, converter=converter)
+    else:
+        converter = curies.chain([left_converter, right_converter])
+
+    if standardize_flip:
+        left_mappings = invert_on_unordered(left_mappings, converter=converter)
+        right_mappings = invert_on_unordered(right_mappings, converter=converter)
+
+    markdown = get_comparison_markdown(
+        left_mappings,
+        right_mappings,
+        left_label=left_label or left_metadata.title,
+        right_label=right_label or right_metadata.title,
+        show_missing=show_missing,
+    )
+    safe_write_text(markdown, output or sys.stdout)
+    if output:
+        import os
+
+        os.system(  # noqa:S605
+            f"npx --yes prettier --check --log-level=silent --prose-wrap always --write {output}"
+        )
 
 
 if __name__ == "__main__":

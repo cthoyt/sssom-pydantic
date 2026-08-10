@@ -3,17 +3,25 @@
 from __future__ import annotations
 
 import datetime
-import functools
 import logging
-from collections.abc import Callable, Iterable
-from typing import Annotated, Any, Literal, TypeAlias
+from collections.abc import Callable, Collection, Iterable
+from typing import Annotated, Any, Literal, Self, TypeAlias
 
 import curies
 from curies import NamableReference, Reference, Triple
+from curies import vocabulary as v
 from curies.mixins import SemanticallyStandardizable
-from curies.vocabulary import exact_match, matching_processes, unspecified_matching_process
+from curies.vocabulary import (
+    broad_match,
+    exact_match,
+    matching_processes,
+    narrow_match,
+    parse_xsd,
+    unspecified_matching_process,
+    xsd_string,
+)
 from pydantic import AnyUrl, BaseModel, BeforeValidator, ConfigDict, Field
-from typing_extensions import Self, TypeVar
+from typing_extensions import TypeVar
 
 from .constants import (
     ENTITY_TYPE_REFERENCE_TO_LITERAL,
@@ -21,8 +29,9 @@ from .constants import (
     PROPAGATABLE,
     EntityTypeLiteral,
     Row,
+    SemanticPrimitive,
 )
-from .models import Cardinality, Record, expanded_record_to_str
+from .models import Cardinality, Record, Slot, expanded_record_to_str
 
 __all__ = [
     "NOT",
@@ -31,6 +40,7 @@ __all__ = [
     "MappingSet",
     "MappingSetRecord",
     "MappingTool",
+    "MappingTypeVar",
     "PredicateModifier",
     "SemanticMapping",
     "SemanticMappingHash",
@@ -202,6 +212,9 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
     similarity_measure: str | None = None
     similarity_score: Annotated[float | None, Field(ge=0.0, le=1.0)] = None
 
+    # see https://mapping-commons.github.io/sssom/dev/spec-model/#non-standard-slots
+    extensions: dict[str, Slot] | None = None
+
     @classmethod
     def from_triple(
         cls,
@@ -275,6 +288,40 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
             **kwargs,
         )
 
+    @classmethod
+    def broad(
+        cls,
+        subject: str | Reference,
+        object: str | Reference,
+        **kwargs: Any,
+    ) -> Self:
+        """Construct a ``skos:broadMatch`` mapping from a subject-object pair.
+
+        :param subject: The subject of the mapping triple.
+        :param object: The object of the mapping triple.
+        :param kwargs: Additional fields to pass to the constructor
+
+        :returns: A semantic mapping
+        """
+        return cls.from_triple(subject=subject, predicate=broad_match, object=object, **kwargs)
+
+    @classmethod
+    def narrow(
+        cls,
+        subject: str | Reference,
+        object: str | Reference,
+        **kwargs: Any,
+    ) -> Self:
+        """Construct a ``skos:narrowMatch`` mapping from a subject-object pair.
+
+        :param subject: The subject of the mapping triple.
+        :param object: The object of the mapping triple.
+        :param kwargs: Additional fields to pass to the constructor
+
+        :returns: A semantic mapping
+        """
+        return cls.from_triple(subject=subject, predicate=narrow_match, object=object, **kwargs)
+
     @property
     def negated(self) -> bool:
         """Check if the mapping record is negated."""
@@ -334,13 +381,10 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
             self.object.prefix,
             self.justification.prefix,
         }
-        if self.record is not None:
-            rv.add(self.record.prefix)
-        for a in self.authors or []:
-            rv.add(a.prefix)
         if self.mapping_tool and self.mapping_tool.reference:
             rv.add(self.mapping_tool.reference.prefix)
-        for x in [
+        for reference in [
+            self.record,
             self.subject_source,
             self.subject_type,
             self.predicate_type,
@@ -351,9 +395,9 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
             self.subject_category,
             self.object_category,
         ]:
-            if x is not None:
-                rv.add(x.prefix)
-        for y in [
+            if reference is not None:
+                rv.add(reference.prefix)
+        for reference_list in [
             self.subject_match_field,
             self.subject_preprocessing,
             self.object_match_field,
@@ -364,9 +408,15 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
             self.curation_rule,
             self.derived_from,
         ]:
-            if y is not None:
-                for z in y:
-                    rv.add(z.prefix)
+            if reference_list is not None:
+                for reference in reference_list:
+                    if reference is not None:
+                        rv.add(reference.prefix)
+        if self.extensions:
+            for slot in self.extensions.values():
+                rv.add(slot.predicate.prefix)
+                if isinstance(slot.value, Reference):
+                    rv.add(slot.value.prefix)
         return rv
 
     def to_record(self) -> Record:
@@ -391,7 +441,6 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
 
         return Record(
             record_id=_safe_curie(self.record),
-            #
             subject_id=self.subject.curie,
             subject_label=self.subject_name,
             subject_category=_safe_curie(self.subject_category),
@@ -400,12 +449,10 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
             subject_source=_safe_curie(self.subject_source),
             subject_source_version=self.subject_source_version,
             subject_type=_safe_entity_type(self.subject_type),
-            #
             predicate_id=self.predicate.curie,
             predicate_label=self.predicate_name,
             predicate_modifier=self.predicate_modifier,
             predicate_type=_safe_entity_type(self.predicate_type),
-            #
             object_id=self.object.curie,
             object_label=self.object_name,
             object_category=_safe_curie(self.object_category),
@@ -414,28 +461,23 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
             object_source=_safe_curie(self.object_source),
             object_source_version=self.object_source_version,
             object_type=_safe_entity_type(self.object_type),
-            #
             mapping_justification=self.justification.curie,
-            #
             author_id=_join(self.authors),
             author_label=None,  # FIXME
             creator_id=_join(self.creators),
             creator_label=None,  # FIXME
             reviewer_id=_join(self.reviewers),
             reviewer_label=None,  # FIXME
-            #
             publication_date=self.publication_date,
             mapping_date=self.mapping_date,
             review_date=self.review_date,
             reviewer_agreement=self.reviewer_agreement,
-            #
             comment=self.comment,
             confidence=self.confidence,
             curation_rule=_safe_curies(self.curation_rule),
             curation_rule_text=self.curation_rule_text,
             issue_tracker_item=_safe_curie(self.issue_tracker_item),
             license=self.license,
-            #
             mapping_cardinality=self.cardinality,
             cardinality_scope=self.cardinality_scope,
             mapping_provider=self.provider,
@@ -450,13 +492,25 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
             if self.mapping_tool is not None and self.mapping_tool.version is not None
             else None,
             match_string=self.match_string,
-            #
             derived_from=_safe_curies(self.derived_from),
             other=_dict_to_other(self.other) if self.other else None,
             see_also=self.see_also,
             similarity_measure=self.similarity_measure,
             similarity_score=self.similarity_score,
+            # see https://mapping-commons.github.io/sssom/spec-model/#defined-extensions
+            extensions=self.extensions,
         )
+
+    def relabel(self) -> Self:
+        """Label the subject and object."""
+        import pyobo
+
+        update = {}
+        if subject_label := pyobo.get_name(self.subject):
+            update["subject"] = self.subject.with_name(subject_label)
+        if object_label := pyobo.get_name(self.object):
+            update["object"] = self.object.with_name(object_label)
+        return self.model_copy(update=update)
 
     def standardize(self, converter: curies.Converter) -> Self:
         """Standardize."""
@@ -508,9 +562,9 @@ def _split_key_value(s: str, *, line_number: int | None = None) -> tuple[str, st
         left, right = s.split(OTHER_SECONDARY_SEP)
     except ValueError:
         if line_number is not None:
-            logging.debug("[line: %d] invalid value for `other`: %s", line_number, s)
+            logger.debug("[line: %d] invalid value for `other`: %s", line_number, s)
         else:
-            logging.debug("invalid value for `other`: %s", s)
+            logger.debug("invalid value for `other`: %s", s)
         return None
     return left, right
 
@@ -540,7 +594,7 @@ def _upgrade_list(x: X | list[X] | None) -> list[X] | None:
 def _fix_relative_url(s: str | AnyUrl) -> AnyUrl:
     if isinstance(s, AnyUrl):
         return s
-    if s.startswith("http://") or s.startswith("https://"):
+    if s.startswith(("http://", "https://")):
         return AnyUrl(s)
     url = f"https://w3id.org/sssom/mapping-set/{s}"
     logger.warning("mapping set has non-relative URL: %s. Formatted into %s", s, url)
@@ -605,7 +659,6 @@ class MappingSetRecord(BaseModel):
             source=self.mapping_set_source,
             title=self.mapping_set_title,
             version=self.mapping_set_version,
-            #
             publication_date=self.publication_date,
             see_also=self.see_also,
             other=_other_to_dict(self.other, line_number=line_number) if self.other else None,
@@ -613,7 +666,10 @@ class MappingSetRecord(BaseModel):
             sssom_version=self.sssom_version,
             license=self.license,
             issue_tracker=self.issue_tracker,
-            extension_definitions=list(self.extension_definitions)
+            extension_definitions=[
+                extension_definition.process(converter)
+                for extension_definition in self.extension_definitions
+            ]
             if self.extension_definitions
             else None,
             creators=[converter.parse_curie(c, strict=True).to_pydantic() for c in self.creator_id]
@@ -622,8 +678,8 @@ class MappingSetRecord(BaseModel):
             creator_label=self.creator_label,
         )
 
-    def get_parser(self) -> Callable[[dict[str, str | list[str]]], Record]:
-        """Get a row parser function."""
+    def get_propagatable(self) -> dict[str, str | list[str]]:
+        """Get the propagation dict for row dict parsing."""
         propagatable = {}
         for key in PROPAGATABLE:
             prop_value = getattr(self, key)
@@ -634,12 +690,24 @@ class MappingSetRecord(BaseModel):
             if key in MULTIVALUED and isinstance(prop_value, str):
                 prop_value = [prop_value]
             propagatable[key] = prop_value
+        return propagatable
 
-        return functools.partial(row_to_record, propagatable=propagatable)
 
+def row_to_record(
+    row: Row,
+    *,
+    converter: curies.Converter,
+    propagatable: dict[str, str | list[str]] | None = None,
+    extension_definitions: Collection[ExtensionDefinition] | None = None,
+) -> Record:
+    """Parse a row from a SSSOM TSV file, unprocessed.
 
-def row_to_record(row: Row, *, propagatable: dict[str, str | list[str]] | None = None) -> Record:
-    """Parse a row from a SSSOM TSV file, unprocessed."""
+    :param row: The raw row dictionary
+    :param propagatable: elements that should be propagated to all rows
+    :param extension_definitions: extension slot definitions
+
+    :returns: A record object
+    """
     # Step 1: propagate values from the header if it's not explicit in the record
     if propagatable:
         row.update(propagatable)
@@ -653,8 +721,37 @@ def row_to_record(row: Row, *, propagatable: dict[str, str | list[str]] | None =
                 if (stripped_subvalue := subvalue.strip())
             ]
 
+    # Step 3: handle extensions
+    if extension_definitions is not None:
+        extensions = _parse_extensions(row, extension_definitions, converter)
+        if extensions:
+            return Record.model_validate({**row, "extensions": extensions})
+
     rv = Record.model_validate(row)
     return rv
+
+
+def _parse_extensions(
+    row: Row, extension_definitions: Collection[ExtensionDefinition], converter: curies.Converter
+) -> dict[str, Slot]:
+    extensions: dict[str, Slot] = {}
+    for extension in extension_definitions:
+        extension_value = row.get(extension.name)
+        if not extension_value:
+            continue
+        if isinstance(extension_value, list):
+            raise NotImplementedError(
+                "lists in extension slots are explicitly disallowed by the SSSOM spec"
+            )
+        extension_value_parsed: SemanticPrimitive
+        if extension.datatype == v.linkml_uri_or_curie:
+            extension_value_parsed = converter.parse(extension_value, strict=True).to_pydantic()
+        else:
+            extension_value_parsed = parse_xsd(extension_value, extension.datatype)
+        extensions[extension.name] = Slot(
+            predicate=extension.predicate, value=extension_value_parsed
+        )
+    return extensions
 
 
 class MappingSet(BaseModel):
@@ -714,6 +811,10 @@ class MappingSet(BaseModel):
         return rv
 
 
+SSSOM_INVALID_CURIE_PREFIX = "sssom.invalid"
+SSSOM_INVALID_URI_PREFIX = "http://sssom.invalid/"
+
+
 class ExtensionDefinitionRecord(BaseModel):
     """An extension definition that can be readily dumped to SSSOM."""
 
@@ -724,43 +825,53 @@ class ExtensionDefinitionRecord(BaseModel):
     def process(self, converter: curies.Converter) -> ExtensionDefinition:
         """Process the SSSOM data structure into a more idiomatic one."""
         return ExtensionDefinition(
-            slot_name=self.slot_name,
-            property=converter.parse(self.property, strict=True).to_pydantic()
+            name=self.slot_name,
+            # see https://github.com/mapping-commons/sssom/issues/561#issuecomment-5105368113
+            predicate=converter.parse(self.property, strict=True).to_pydantic()
             if self.property
-            else None,
-            type_hint=converter.parse(self.type_hint, strict=True).to_pydantic()
+            else Reference(prefix=SSSOM_INVALID_CURIE_PREFIX, identifier=self.slot_name),
+            datatype=converter.parse(self.type_hint, strict=True).to_pydantic()
             if self.type_hint
-            else None,
+            else xsd_string,
         )
 
 
 class ExtensionDefinition(BaseModel):
     """A processed extension definition."""
 
-    slot_name: str
-    property: Reference | None = None
-    type_hint: Reference | None = None
+    name: str
+    predicate: Reference
+    datatype: Reference
+
+    @classmethod
+    def default(cls, slot_name: str, *, type_hint: Reference | None = None) -> Self:
+        """Get a default extension."""
+        return cls(
+            name=slot_name,
+            predicate=Reference(prefix=SSSOM_INVALID_CURIE_PREFIX, identifier=slot_name),
+            datatype=type_hint or xsd_string,
+        )
 
     def get_prefixes(self) -> set[str]:
         """Get prefixes in the extension definition."""
-        rv: set[str] = set()
-        if self.property is not None:
-            rv.add(self.property.prefix)
-        if self.type_hint is not None:
-            rv.add(self.type_hint.prefix)
-        return rv
+        return {self.predicate.prefix, self.datatype.prefix}
 
     def to_record(self) -> ExtensionDefinitionRecord:
         """Create a record object that can be readily dumped to SSSOM."""
         return ExtensionDefinitionRecord(
-            slot_name=self.slot_name,
-            property=self.property.curie if self.property else None,
-            type_hint=self.type_hint.curie if self.type_hint else None,
+            slot_name=self.name,
+            property=self.predicate.curie
+            if self.predicate.prefix != SSSOM_INVALID_CURIE_PREFIX
+            else None,
+            type_hint=self.datatype.curie if self.datatype else None,
         )
 
 
 MAPPING_HASH_CURIE_PREFIX = "sssom.record"
 MAPPING_HASH_URI_PREFIX = "https://w3id.org/sssom/record/"
+
+TRIPLE_HASH_CURIE_PREFIX = "mapping"
+TRIPLE_HASH_URI_PREFIX = "https://w3id.org/mapping/"
 
 
 def hash_mapping_to_reference(mapping: SemanticMapping, converter: curies.Converter) -> Reference:
@@ -865,12 +976,18 @@ def hash_triple(mapping: SemanticMapping, converter: curies.Converter) -> str:
     return converter.hash_triple(mapping, negate=mapping.negated)
 
 
+def _not_has_prefix(converter: curies.Converter, prefix: str) -> bool:
+    return prefix not in converter._prefix_to_record
+
+
 TRIPLE_CURIE_PREFIX = "mapping"
 TRIPLE_URI_PREFIX = "https://w3id.org/sssom/mapping/"
 
 
 def hash_triple_to_reference(mapping: SemanticMapping, converter: curies.Converter) -> Reference:
     """Return a mapping sameness identifier as a reference."""
+    if _not_has_prefix(converter, TRIPLE_HASH_CURIE_PREFIX):
+        converter.add_prefix(TRIPLE_HASH_CURIE_PREFIX, TRIPLE_HASH_URI_PREFIX)
     return Reference(prefix=TRIPLE_CURIE_PREFIX, identifier=hash_triple(mapping, converter))
 
 
@@ -884,7 +1001,7 @@ def standardize_mappings(
     return curies.standardize(mappings, converter, return_iterator=True)
 
 
-def _get_preferred_converter() -> curies.Converter:
+def _get_preferred_converter(*others: curies.Converter) -> curies.Converter:
     try:
         import bioregistry
     except ImportError:
@@ -892,4 +1009,5 @@ def _get_preferred_converter() -> curies.Converter:
             "Standardization of semantic mappings without an explicitly passed "
             "converter requires `pip install bioregistry`"
         ) from None
-    return bioregistry.get_preferred_converter()
+    rv = bioregistry.get_preferred_converter()
+    return curies.chain([rv, *others])

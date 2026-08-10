@@ -67,6 +67,8 @@ It does the following:
 6. Optionally, standardizes against
    [Bioregistry](https://github.com/biopragmatics/bioregistry) preferred CURIE
    prefixes and RDF URI prefixes if `--standardize` is passed
+7. Optionally, add subject and object labels via
+   [PyOBO](https://github.com/biopragmatics/pyobo) if `--relabel` is passed
 
 `sssom-pydantic` also has a subsetting mechanism for extracting all mappings for
 a given resource, e.g., to all mappings from CHMO:
@@ -74,6 +76,20 @@ a given resource, e.g., to all mappings from CHMO:
 ```console
 $ wget https://w3id.org/biopragmatics/biomappings/sssom/biomappings.sssom.tsv
 $ sssom_pydantic subset -i biomappings.sssom.tsv -p CHMO -o biomappings-chmo.sssom.tsv
+```
+
+`sssom-pydantic` can merge multiple SSSOM documents together and optionally
+collapse manual curations for the same mapping triple together using the
+[SSSOM confidence model](https://mapping-commons.github.io/sssom/dev/confidence-model/):
+
+```console
+$ sssom_pydantic merge \
+   --input https://github.com/NFDI4Chem/rsc-cmo/raw/0e53ad96495576890c217ebdddac7fadc2e9e0b1/src/mappings/fix-mappings.sssom.tsv \
+   --input https://github.com/nfdi-de/section-metadata-wg-onto/raw/refs/heads/main/sssom/data/positive.sssom.tsv \
+   --standardize \
+   --merge-manual \
+   --mapping-set-id https://example.org/merged.sssom.tsv \
+   --output merged.sssom.tsv
 ```
 
 ## 🚀 Installation

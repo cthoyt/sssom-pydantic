@@ -2,6 +2,7 @@
 
 import datetime
 
+from curies import NamableReference, NamedReference
 from curies.vocabulary import (
     broad_match,
     charlie,
@@ -22,7 +23,7 @@ from curies.vocabulary import (
 from sssom_pydantic import SemanticMapping, hash_triple_to_reference
 from sssom_pydantic import process as pr
 from sssom_pydantic.api import NOT
-from sssom_pydantic.examples import TEST_CONVERTER
+from sssom_pydantic.examples import R3, R4, R5, R6, TEST_CONVERTER
 from sssom_pydantic.process import (
     InvalidExistsActionError,
     Mark,
@@ -421,6 +422,9 @@ class TestProcess(cases.MappingTestCaseMixin):
         l6 = [_m(confidence=0.99), _m(confidence=0.64)]
         self.assertAlmostEqual(0.815, estimate_confidence(l6, confidence_model="mean"))
         self.assertAlmostEqual(0.9964, estimate_confidence(l6, confidence_model="binomial"))
+        self.assertAlmostEqual(
+            0.996, estimate_confidence(l6, confidence_model="binomial", precision=3)
+        )
 
     def test_confidence(self) -> None:
         """Test confidence."""
@@ -428,6 +432,12 @@ class TestProcess(cases.MappingTestCaseMixin):
         _m(justification=manual, confidence=0.8)
         _m(justification=manual, confidence=0.9, reviewer_agreement=0.9)
         _m(justification=manual, confidence=0.9, reviewer_agreement=0.5)
+
+        mappings = [
+            _m(justification=manual, confidence=0.8, reviewer_agreement=0.6),
+            _m(justification=manual, confidence=0.9),
+        ]
+        self.assertEqual(0.85, estimate_confidence(mappings, precision=3))
 
         for x in range(100):
             i = x / 100
@@ -549,11 +559,7 @@ class TestProcess(cases.MappingTestCaseMixin):
             justification=mapping_inversion,
             derived_from=[hash_triple_to_reference(m1, TEST_CONVERTER)],
         )
-        m1_inv_retain = SemanticMapping.exact(
-            "CHEBI:28646",
-            "mesh:C000089",
-            derived_from=[hash_triple_to_reference(m1, TEST_CONVERTER)],
-        )
+        m1_inv_retain = SemanticMapping.exact("CHEBI:28646", "mesh:C000089")
         m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
         assert_semantic_mappings_equal(
             self,
@@ -587,11 +593,7 @@ class TestProcess(cases.MappingTestCaseMixin):
             justification=mapping_inversion,
             derived_from=[hash_triple_to_reference(m1, TEST_CONVERTER)],
         )
-        m1_inv_retain = SemanticMapping.exact(
-            "CHEBI:28646",
-            "mesh:C000089",
-            derived_from=[hash_triple_to_reference(m1, TEST_CONVERTER)],
-        )
+        m1_inv_retain = SemanticMapping.exact("CHEBI:28646", "mesh:C000089")
         m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
         assert_semantic_mappings_equal(
             self,
@@ -634,3 +636,117 @@ class TestProcess(cases.MappingTestCaseMixin):
                 justification_policy=pr.InversionJustificationPolicy.derive,
             ),
         )
+
+    def test_invert_narrow(self) -> None:
+        """Test inverting narrow mappings."""
+        m0 = SemanticMapping.exact(R1, R2)
+        m1 = SemanticMapping.narrow(R1, R2)
+        m2 = SemanticMapping.broad(R2, R1)
+        self.assert_model_sequence_equal(
+            [m0, m2], pr.invert_narrow_matches([m0, m1], converter=TEST_CONVERTER)
+        )
+        self.assert_model_sequence_equal(
+            [m0, m1], pr.invert_broad_matches([m0, m2], converter=TEST_CONVERTER)
+        )
+
+    def test_invert_unordered(self) -> None:
+        """Test inversion when s/o prefixes aren't lexicographically sorted."""
+        r1 = NamableReference.from_curie("chebi:1234")
+        r2 = NamableReference.from_curie("mesh:D1234")
+
+        # first example is already in order
+        m0 = SemanticMapping.exact(r1, r2)
+        self.assert_model_sequence_equal(
+            [m0],
+            pr.invert_on_unordered([m0], converter=TEST_CONVERTER),
+        )
+
+        # out of order, needs flipping
+        m1 = SemanticMapping.exact(r2, r1)
+        self.assert_model_sequence_equal(
+            [m0],
+            pr.invert_on_unordered([m1], converter=TEST_CONVERTER, justification_policy="retain"),
+        )
+
+    def test_filter_by_confidence(self) -> None:
+        """Test filtering by confidence."""
+        m1 = SemanticMapping.exact(R1, R2)
+        m2 = SemanticMapping.exact(R3, R4, confidence=0.9)
+        m3 = SemanticMapping.exact(R5, R6, confidence=0.8)
+        self.assert_model_sequence_equal([m1, m2, m3], pr.filter_by_confidence([m1, m2, m3], 0.5))
+        self.assert_model_sequence_equal([m1, m2], pr.filter_by_confidence([m1, m2, m3], 0.85))
+        self.assert_model_sequence_equal([m1, m2], pr.filter_by_confidence([m1, m2, m3], 0.9))
+        self.assert_model_sequence_equal([m1], pr.filter_by_confidence([m1, m2, m3], 0.95))
+
+    def test_remove_trivial_negative(self) -> None:
+        """Test removing trivial negative mappings."""
+        m1 = SemanticMapping.exact(R1, R2)
+        m2 = SemanticMapping.exact(R3, R4, confidence=0.9)
+        m3 = SemanticMapping.exact(R3, R4, confidence=0.9).negate()
+        mappings = [m1, m2, m3]
+        self.assert_model_sequence_equal([m1, m2], pr.remove_trivial_negative(mappings))
+
+
+ambika = NamedReference.from_curie("orcid:0009-0009-1663-1003", name="Ambika Gupta")
+
+
+class TestMergeManual(cases.MappingTestCaseMixin):
+    """Test merging manually curated things."""
+
+    def test_merge_utility(self) -> None:
+        """Test merging manually curated mappings."""
+        mappings = [
+            _m(authors=[charlie], confidence=0.9),
+            _m(authors=[ambika], confidence=0.8, comment="something"),
+        ]
+        expected = _m(
+            authors=[charlie, ambika],
+            confidence=0.85,
+            derived_from=[hash_triple_to_reference(m, TEST_CONVERTER) for m in mappings],
+        )
+        res = pr._merge(mappings, converter=TEST_CONVERTER, precision=4)
+        self.assert_model_equal(expected, res)
+
+    def test_full(self) -> None:
+        """Test full workflow."""
+        a = _m(
+            authors=[charlie],
+            justification=manual_mapping_curation,
+            confidence=0.9,
+            subject_source="obo:mesh",
+        )
+        b = _m(
+            authors=[ambika],
+            justification=manual_mapping_curation,
+            confidence=0.8,
+            comment="something",
+            subject_source="obo:mesh",
+        )
+
+        mappings = [
+            # the first _m with lexical won't get counted
+            _m(justification=lexical_matching_process, confidence=0.3),
+            a,
+            b,
+            SemanticMapping.exact(R3, R4),  # wrong justification
+            SemanticMapping.exact(
+                R5, R6, justification=manual_mapping_curation
+            ),  # wrong justification
+        ]
+        actual = pr.merge_manual_curations(mappings, converter=TEST_CONVERTER, precision=3)
+        expected = [
+            _m(justification=lexical_matching_process, confidence=0.3),
+            SemanticMapping.exact(R3, R4),
+            SemanticMapping.exact(R5, R6, justification=manual_mapping_curation),
+            _m(
+                authors=[charlie, ambika],
+                justification=manual_mapping_curation,
+                confidence=0.85,
+                derived_from=[
+                    hash_triple_to_reference(a, TEST_CONVERTER),
+                    hash_triple_to_reference(b, TEST_CONVERTER),
+                ],
+                subject_source="obo:mesh",
+            ),
+        ]
+        self.assert_model_sequence_equal(expected, actual, sort=True)

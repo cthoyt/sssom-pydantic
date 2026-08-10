@@ -84,6 +84,8 @@ class TestSQL(cases.TestRepository):
         from sqlmodel import Session, SQLModel, create_engine, select
 
         for example in EXAMPLES:
+            if example.semantic_mapping.extensions:
+                continue
             with self.subTest(desc=example.description):
                 orm_model = SemanticMappingModel.from_semantic_mapping(
                     example.semantic_mapping, converter=TEST_CONVERTER
@@ -111,9 +113,7 @@ class TestFilesystem(cases.TestRepository):
         """Set up the test with a SQL database."""
         self.directory = tempfile.TemporaryDirectory()
         self.path = Path(self.directory.name).joinpath("test.sssom.tsv")
-        self.repository = FileSystemSemanticMappingRepository(self.path)
-        for record in TEST_CONVERTER:
-            self.repository.converter.add_record(record, merge=True)
+        self.repository = FileSystemSemanticMappingRepository(self.path, converter=TEST_CONVERTER)
 
     def tearDown(self) -> None:
         """Tear down the test case."""

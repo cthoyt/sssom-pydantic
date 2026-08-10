@@ -4,15 +4,14 @@ from __future__ import annotations
 
 import datetime
 from collections.abc import Callable, Sequence
-from typing import TYPE_CHECKING, Annotated, Literal, NamedTuple, TypeAlias
+from operator import attrgetter
+from typing import Annotated, Literal, NamedTuple, TypeAlias
 
-from curies.vocabulary import matching_processes
+import curies
+from curies.vocabulary import XSDPrimitive, matching_processes
 from pydantic import AnyUrl, BaseModel, ConfigDict, Field
 
-from .constants import EntityTypeLiteral
-
-if TYPE_CHECKING:
-    import curies
+from .constants import EntityTypeLiteral, SemanticPrimitive
 
 __all__ = [
     "Cardinality",
@@ -24,6 +23,29 @@ __all__ = [
 #: Cardinality annotations, which are valid within the scope of a mapping set
 #: but should not be saved as part of a mapping
 Cardinality: TypeAlias = Literal["1:1", "1:n", "n:1", "1:0", "0:1", "n:n", "0:0"]
+
+
+class Slot(BaseModel):
+    """An extension slot value."""
+
+    predicate: curies.Reference
+    value: SemanticPrimitive
+
+    def expand(self, converter: curies.Converter) -> ExpandedSlot:
+        """Expand the slot."""
+        predicate = converter.expand_reference(self.predicate, strict=True)
+        if isinstance(self.value, curies.Reference):
+            value = converter.expand_reference(self.value, strict=True)
+        else:
+            value = _fmt_primitive_helper(self.value)
+        return ExpandedSlot(predicate=predicate, value=value)
+
+
+class ExpandedSlot(BaseModel):
+    """An extension slot that has been expanded into URIs."""
+
+    predicate: str
+    value: str
 
 
 class Record(BaseModel):
@@ -129,17 +151,29 @@ class Record(BaseModel):
     other: str | None = None
     comment: str | None = None
 
+    # see https://mapping-commons.github.io/sssom/dev/spec-model/#non-standard-slots
+    extensions: dict[str, Slot] | None = None
+
     def expand(
         self, converter: curies.Converter, exclude: set[str] | None = None
     ) -> ExpandedRecord:
         """Expand CURIEs to URIs in the record."""
-        data = self.model_dump(exclude_none=True, exclude_unset=True, exclude=exclude)
+        if exclude is None:
+            exclude = set()
+        data = self.model_dump(
+            exclude_none=True, exclude_unset=True, exclude=exclude | {"extensions"}
+        )
         for key in SINGLE_REFERENCE_FIELDS:
             if curie := data.get(key):
                 data[key] = converter.expand(curie, strict=True)
         for key in MULTIPLE_REFERENCE_FIELDS:
             if curies_ := data.get(key):
                 data[key] = [converter.expand(curie, strict=True) for curie in curies_]
+
+        if self.extensions:
+            data["extensions"] = {
+                key: slot.expand(converter) for key, slot in self.extensions.items()
+            }
         return ExpandedRecord.model_validate(data)
 
 
@@ -243,19 +277,23 @@ class ExpandedRecord(BaseModel):
     other: str | None = None
     comment: str | None = None
 
+    extensions: dict[str, ExpandedSlot] | None = None
+
     def compress(self, converter: curies.Converter) -> Record:
         """Compress expanded URIs into CURIEs."""
-        data = self.model_dump(exclude_none=True, exclude_unset=True)
+        data = self.model_dump(exclude_none=True, exclude_unset=True, exclude={"extensions"})
         for key in SINGLE_REFERENCE_FIELDS:
             if uri := data.get(key):
                 data[key] = converter.compress(str(uri), strict=True)
         for key in MULTIPLE_REFERENCE_FIELDS:
             if uris := data.get(key):
                 data[key] = [converter.compress(str(uri), strict=True) for uri in uris]
+        if self.extensions:
+            raise NotImplementedError
         return Record.model_validate(data)
 
 
-SKIP_SLOTS = {"record_id", "mapping_cardinality"}
+SKIP_SLOTS = {"record_id", "mapping_cardinality", "extensions"}
 
 
 def expanded_record_to_str(mapping: ExpandedRecord, *, _debug: bool = False) -> str:
@@ -269,65 +307,87 @@ def expanded_record_to_box(record: ExpandedRecord) -> Box:
     for name in ExpandedRecord.model_fields:
         if name in SKIP_SLOTS:
             continue
-        match getattr(record, name, None):
-            case None:
-                continue
-            case str() | float() | bool() | datetime.date() as value:
-                boxes.append(Box(name, value))
-            case AnyUrl() as url:
-                boxes.append(Box(name, str(url)))
-            case list() as values:
-                if not values:
-                    continue
-                if all(isinstance(v, str) for v in values):
-                    boxes.append(Box(name, values))
-                elif all(isinstance(v, AnyUrl) for v in values):
-                    boxes.append(Box(name, [str(v) for v in values]))
-                else:
-                    raise TypeError(f"invalid box value: {values}")
-            case _ as value:
-                raise NotImplementedError(f"not implemented for {type(value)}")
+        if box := _get_box(name, getattr(record, name, None)):  # type:ignore[arg-type]
+            boxes.append(box)
+    if record.extensions:
+        extension_boxes = [
+            Box(slot.predicate, slot.value)
+            for slot in sorted(record.extensions.values(), key=attrgetter("predicate"))
+        ]
+        if extension_boxes:
+            boxes.append(Box("extensions", extension_boxes))
     return Box("mapping", boxes)
+
+
+def _get_box(name: str, vvv: XSDPrimitive | Sequence[XSDPrimitive | Box]) -> Box | None:
+    match vvv:
+        case None:
+            return None
+        case (
+            str()
+            | int()
+            | float()
+            | bool()
+            | datetime.datetime()
+            | datetime.date()
+            | AnyUrl() as value
+        ):
+            return Box(name, value)
+        case list(values):
+            if not values:
+                raise ValueError
+            if all(isinstance(v, str) for v in values):
+                return Box(name, values)
+            elif all(isinstance(v, AnyUrl) for v in values):
+                return Box(name, [str(v) for v in values])
+            else:
+                raise TypeError(f"invalid box value: {values}")
+        case _ as value:
+            raise NotImplementedError(f"not implemented for {type(value)}")
 
 
 class Box(NamedTuple):
     """A value."""
 
     label: str
-    value: str | float | bool | datetime.date | Sequence[str | float | bool | datetime.date | Box]
+    value: XSDPrimitive | Sequence[XSDPrimitive | Box]
 
 
-def box_to_str(box: Box, *, max_precision: int = 4, _debug: bool = False) -> str:
+def box_to_str(box: Box, *, _debug: bool = False) -> str:
     """Convert a S-expression object to a string."""
     start = f"{len(box.label)}:{box.label}"
-    match box.value:
-        case str() | float() | bool() | datetime.date():
-            return f"({start}{_fmt_primitive(box.value, max_precision=max_precision)})"
-        case list():
-            rr = []
-            for value in box.value:
-                match value:
-                    case str() | float() | bool():
-                        rr.append(_fmt_primitive(value, max_precision=max_precision))
-                    case Box():
-                        rr.append(box_to_str(value, max_precision=max_precision, _debug=_debug))
-            if _debug:
-                inside = "\n".join(rr)
-            else:
-                inside = "".join(rr)
-            return f"({start}({inside}))"
-        case _:
-            raise TypeError(f"invalid box value: {box.value}")
+    if isinstance(box.value, str) or not isinstance(box.value, Sequence):
+        return f"({start}{_fmt_primitive(box.value)})"
+    rr = []
+    for value in box.value:
+        if isinstance(value, Box):
+            rr.append(box_to_str(value, _debug=_debug))
+        else:
+            rr.append(_fmt_primitive(value))
+    if _debug:
+        inside = "\n".join(rr)
+    else:
+        inside = "".join(rr)
+    return f"({start}({inside}))"
 
 
-def _fmt_primitive(value: str | float | bool | datetime.date, *, max_precision: int = 4) -> str:
+def _fmt_primitive(value: XSDPrimitive, round_float: bool = True) -> str:
+    v = _fmt_primitive_helper(value, round_float=round_float)
+    return f"{len(v)}:{v}"
+
+
+def _fmt_primitive_helper(value: XSDPrimitive, round_float: bool = True) -> str:
     match value:
-        case str():
-            pass
-        case float():
-            value = str(round(value, max_precision))
         case bool():
-            raise NotImplementedError
-        case datetime.date():
-            value = value.strftime("%Y-%m-%d")
-    return f"{len(value)}:{value}"
+            return "true" if value else "false"
+        case int() | AnyUrl():
+            return str(value)
+        case float():
+            if round_float:
+                return str(round(value, 3))
+            else:
+                return str(value)
+        case str():
+            return value
+        case datetime.datetime() | datetime.date():
+            return value.isoformat()

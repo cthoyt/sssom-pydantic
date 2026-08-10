@@ -19,6 +19,8 @@ __all__ = [
     "PROPAGATABLE",
     "EntityTypeLiteral",
     "Row",
+    "SemanticPrimitive",
+    "guess_class",
 ]
 
 PREFIX_MAP_KEY = "curie_map"  # smh
@@ -131,6 +133,8 @@ DEFAULT_PREFIX_MAP: dict[str, str] = {
     "sssom": "https://w3id.org/sssom/",
     "semapv": "https://w3id.org/semapv/vocab/",
     "owl": "http://www.w3.org/2002/07/owl#",
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
+    "linkml": "https://w3id.org/linkml/",
 }
 BUILTIN_CONVERTER = curies.Converter.from_prefix_map(DEFAULT_PREFIX_MAP)
 
@@ -142,7 +146,6 @@ MAPPING_SLOT_SPECIFIC = {
     "mapping_set_source",
     "mapping_set_title",
     "mapping_set_version",
-    #
     "sssom_version",
     "extension_definitions",
     "issue_tracker",
@@ -160,3 +163,16 @@ MAPPING_SET_SLOTS_SKIP = {"mappings"}
 MAPPING_SET_SLOTS = PROPAGATABLE | MAPPING_SLOT_SPECIFIC
 
 Row: TypeAlias = dict[str, str | list[str]]
+
+SemanticPrimitive: TypeAlias = v.XSDPrimitive | curies.Reference
+
+
+def guess_class(reference: curies.Reference | None) -> bool:
+    """Guess if the reference is for a class."""
+    return (
+        reference is None
+        or reference == v.owl_class
+        or reference == v.skos_concept
+        or reference == v.rdfs_class
+        or reference == v.rdfs_datatype
+    )

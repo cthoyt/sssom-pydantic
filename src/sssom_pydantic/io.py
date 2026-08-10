@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import csv
 import datetime
+import functools
 import logging
 import traceback
 import warnings
@@ -24,6 +25,7 @@ from tqdm import tqdm
 from typing_extensions import TypeVar
 
 from .api import (
+    ExtensionDefinition,
     MappingSet,
     MappingSetRecord,
     MappingTool,
@@ -44,7 +46,7 @@ from .constants import (
     EntityTypeLiteral,
     Row,
 )
-from .models import Record, RecordPredicate
+from .models import Record, RecordPredicate, _fmt_primitive_helper
 from .process import Hasher, remove_redundant_external, remove_redundant_internal
 
 if TYPE_CHECKING:
@@ -115,6 +117,7 @@ def row_to_semantic_mapping(
     converter: curies.Converter,
     *,
     propagatable: dict[str, str | list[str]] | None = None,
+    extension_definitions: Collection[ExtensionDefinition] | None = None,
 ) -> SemanticMapping:
     """Get a semantic mapping from a row.
 
@@ -122,11 +125,17 @@ def row_to_semantic_mapping(
     :param converter: A converter for parsing CURIEs
     :param propagatable: Extra data coming from SSSOM TSV frontmatter to get propagated
         into each record
+    :param extension_definitions: A collection of extension definitions
 
     :returns: A semantic mapping
     """
     cleaned_row = _clean_row(row)
-    record = row_to_record(cleaned_row, propagatable=propagatable)
+    record = row_to_record(
+        cleaned_row,
+        propagatable=propagatable,
+        extension_definitions=extension_definitions,
+        converter=converter,
+    )
     return record_to_semantic_mapping(record, converter)
 
 
@@ -223,6 +232,7 @@ def record_to_semantic_mapping(
         see_also=record.see_also,
         similarity_measure=record.similarity_measure,
         similarity_score=record.similarity_score,
+        extensions=record.extensions,
     )
 
 
@@ -242,6 +252,7 @@ def write(
     exclude_prefixes: Collection[str] | None = None,
     condense: bool = True,
     reduce_prefix_map: bool = True,
+    progress: bool = False,
 ) -> None:
     """Write semantic mappings as SSSOM TSV.
 
@@ -269,6 +280,7 @@ def write(
     :param reduce_prefix_map: Should the prefix map be reduced based on prefixes
         appearing in mappings and the metadata? If used, streaming writing is not
         possible.
+    :param progress: Should a progress bar be shown?
     """
     if exclude_mappings is not None:
         mappings = remove_redundant_external(mappings, exclude_mappings, key=exclude_mappings_key)
@@ -278,7 +290,7 @@ def write(
         mappings = sorted(mappings)
 
     if reduce_prefix_map:
-        records, prefixes = _prepare_records(mappings)
+        records, prefixes = _prepare_records(mappings, progress=progress)
     else:
         records = (m.to_record() for m in mappings)
         prefixes = set()
@@ -299,6 +311,7 @@ def write(
         columns=columns,
         exclude_columns=exclude_columns,
         condense=condense,
+        progress=progress,
     )
 
 
@@ -332,10 +345,14 @@ def append(
     )
 
 
-def _prepare_records(mappings: Iterable[SemanticMapping]) -> tuple[Iterable[Record], set[str]]:
+def _prepare_records(
+    mappings: Iterable[SemanticMapping], *, progress: bool = False
+) -> tuple[Iterable[Record], set[str]]:
     records = []
     prefixes: set[str] = set()
-    for mapping in mappings:
+    for mapping in tqdm(
+        mappings, disable=not progress, desc="preparing mappings", unit_scale=True, leave=False
+    ):
         prefixes.update(mapping.get_prefixes())
         records.append(mapping.to_record())
     return records, prefixes
@@ -359,7 +376,8 @@ def append_unprocessed(
             f"can not append {len(records):,} mappings because no headers found in {path}"
         )
     exclude = {"mapping_set_id"}.union(exclude_columns or [])  # this is a hack...
-    columns = _get_columns(records)
+    metadata = _get_metadata(metadata)
+    columns = _get_columns(records, metadata)
     new_columns = set(columns).difference(original_columns).difference(exclude)
     if new_columns:
         raise NotImplementedError(
@@ -383,6 +401,7 @@ def write_unprocessed(
     columns: Sequence[str] | None = None,
     exclude_columns: Collection[str] | None = None,
     condense: bool = True,
+    progress: bool = False,
 ) -> None:
     """Write unprocessed records.
 
@@ -396,6 +415,7 @@ def write_unprocessed(
     :param exclude_columns: explicitly set what columns should not be output
     :param condense: condense mappings into mapping set metadata. Results in taking more
         than one pass over the mappings
+    :param progress: Should a progress bar be shown?
     """
     metadata = _get_metadata(metadata)
 
@@ -405,7 +425,7 @@ def write_unprocessed(
         records = list(records)
 
     if condense:
-        condensation = _get_condensation(records)
+        condensation = _get_condensation(records, progress=progress)
         for key, value in condensation.items():
             if key in metadata and metadata[key] != value:
                 logger.warning("mismatch between given metadata and observed. overwriting")
@@ -430,7 +450,7 @@ def write_unprocessed(
         metadata[PREFIX_MAP_KEY] = bimap
 
     if columns is None:
-        columns = _get_columns(records)
+        columns = _get_columns(records, metadata, progress=progress)
         exclude = set(condensation).union(exclude_columns or [])
         columns = [column for column in columns if column not in exclude]
     else:
@@ -440,7 +460,12 @@ def write_unprocessed(
         write_metadata(metadata, file)
         writer = csv.DictWriter(file, columns, delimiter="\t", extrasaction="ignore")
         writer.writeheader()
-        writer.writerows(_unprocess_row(record, exclude=exclude) for record in records)
+        writer.writerows(
+            _unprocess_row(record, exclude=exclude)
+            for record in tqdm(
+                records, disable=not progress, unit_scale=True, desc="writing SSSOM records"
+            )
+        )
 
 
 def write_metadata(metadata: MappingSetRecord | Metadata | MappingSet | None, file: TextIO) -> None:
@@ -450,16 +475,19 @@ def write_metadata(metadata: MappingSetRecord | Metadata | MappingSet | None, fi
         return
     # TODO add comment about being written with this software at a given time
     yaml_str = model_dump_yaml(mapping_set_record, exclude_none=True, exclude_unset=True)
-    for line in yaml_str.splitlines():
-        file.write(f"#{line}\n")
+    file.writelines(f"#{line}\n" for line in yaml_str.splitlines())
 
 
-CondensationTypes: TypeAlias = str | float | None | datetime.date | tuple[str, ...]
+CondensationTypes: TypeAlias = str | float | datetime.date | tuple[str, ...] | None
 
 
-def _get_condensation(records: Iterable[Record]) -> dict[str, CondensationTypes]:
+def _get_condensation(
+    records: Iterable[Record], *, progress: bool = False
+) -> dict[str, CondensationTypes]:
     values: defaultdict[str, Counter[CondensationTypes]] = defaultdict(Counter)
-    for record in records:
+    for record in tqdm(
+        records, desc="preparing condensation", disable=not progress, unit_scale=True, leave=False
+    ):
         for key in PROPAGATABLE:
             value = getattr(record, key)
             if isinstance(value, list):
@@ -482,22 +510,62 @@ def _get_condensation(records: Iterable[Record]) -> dict[str, CondensationTypes]
     return condensed
 
 
-def _get_columns(records: Iterable[Record]) -> list[str]:
-    columns = set()
-    for record in records:
+def _get_columns(
+    records: Iterable[Record], metadata: Metadata, *, progress: bool = False
+) -> list[str]:
+    extension_slot_names = [
+        extension_definition["slot_name"]
+        for extension_definition in metadata.get("extension_definitions", [])
+    ]
+
+    used_extension_slots: set[str] = set()
+    columns: set[str] = set()
+    for record in tqdm(
+        records, disable=not progress, unit_scale=True, desc="preparing columns", leave=False
+    ):
         for key in record.model_fields_set:
-            if getattr(record, key) is not None:
-                columns.add(key)
+            if value := getattr(record, key):
+                if key != "extensions":
+                    columns.add(key)
+                else:
+                    for subkey in value:
+                        if subkey not in extension_slot_names:
+                            raise ValueError(f"undefined extension: {subkey}")
+                        used_extension_slots.add(subkey)
 
     # get them in the canonical order, based on how they appear in the
     # record, which mirrors https://w3id.org/sssom/Mapping
-    return [column for column in Record.model_fields if column in columns]
+    rv = [column for column in Record.model_fields if column in columns]
+    # add extension slots based on the order they appear in the metadata
+    rv.extend(
+        extension_slot
+        for extension_slot in extension_slot_names
+        if extension_slot in used_extension_slots
+    )
+    return rv
 
 
 def _unprocess_row(record: Record, *, exclude: set[str] | None = None) -> dict[str, Any]:
+    if exclude is None:
+        exclude = set()
     rv = record.model_dump(
-        exclude_none=True, exclude_unset=True, exclude_defaults=True, exclude=exclude
+        exclude_none=True,
+        exclude_unset=True,
+        exclude_defaults=True,
+        exclude=exclude | {"extensions"},
     )
+
+    # splat out all extensions
+    if record.extensions is not None:
+        rv.update(
+            {
+                key: slot.value.curie
+                if isinstance(slot.value, Reference)
+                else _fmt_primitive_helper(slot.value, round_float=False)
+                for key, slot in record.extensions.items()
+            }
+        )
+
     for key in MULTIVALUED:
         if (value := rv.get(key)) and isinstance(value, list):
             rv[key] = "|".join(value)
@@ -802,7 +870,24 @@ def read_unprocessed_iterable(
         mapping_set_record = _chain_mapping_set_record(
             first_metadata, second_metadata, inline_metadata
         )
-        _row_to_record = mapping_set_record.get_parser()
+
+        if mapping_set_record.extension_definitions:
+            for extension_definition in mapping_set_record.extension_definitions:
+                if extension_definition.slot_name in Record.model_fields:
+                    raise ValueError(
+                        f"extension_definition slot name conflicts with built-in field: "
+                        f"{extension_definition.slot_name}"
+                    )
+
+        converter = _chain_converters(converter, mapping_set_record)
+        mapping_set = mapping_set_record.process(converter)
+
+        _row_to_record = functools.partial(
+            row_to_record,
+            propagatable=mapping_set_record.get_propagatable(),
+            converter=converter,
+            extension_definitions=mapping_set.extension_definitions,
+        )
         reader = csv.DictReader(file, fieldnames=columns, delimiter="\t")
         reader = tqdm(reader, **_tqdm_kwargs)
 
@@ -822,8 +907,6 @@ def read_unprocessed_iterable(
                     yield RecordTuple(line_number, record)
 
         records = _iterate_record_tuples()
-        converter = _chain_converters(converter, mapping_set_record)
-        mapping_set = mapping_set_record.process(converter)
         yield ReadUnprocessedStreamTuple(records, converter, mapping_set)
 
 
@@ -899,6 +982,7 @@ def format(
     drop_duplicates: bool = False,
     drop_duplicates_key: Hasher[SemanticMapping, Y] | None = None,
     standardize: bool = False,
+    relabel: bool = False,
 ) -> None:
     """Lint a file."""
     mappings, converter_processed, mapping_set = read(
@@ -906,8 +990,11 @@ def format(
     )
 
     if standardize:
-        converter_processed = curies.chain([_get_preferred_converter(), converter_processed])
+        converter_processed = _get_preferred_converter(converter_processed)
         mappings = list(standardize_mappings(mappings, converter=converter_processed))
+
+    if relabel:
+        mappings = [mapping.relabel() for mapping in mappings]
 
     write(
         mappings,

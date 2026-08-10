@@ -1,5 +1,6 @@
 """Tests for the Pydantic model."""
 
+import importlib.util
 import unittest
 
 from curies import NamableReference, Reference
@@ -13,6 +14,21 @@ from tests.cases import P1, R1, R2
 
 class TestModel(unittest.TestCase):
     """Tests for the Pydantic model."""
+
+    def test_authors(self) -> None:
+        """Test author property."""
+        mapping = SemanticMapping.exact("a:1", "b:1")
+        self.assertIsNone(mapping.author)
+
+        mapping2 = SemanticMapping.exact("a:1", "b:1", authors=["o:1", "o:2"])
+        with self.assertRaises(ValueError):
+            mapping2.author  # noqa:B018
+
+    def test_sort(self) -> None:
+        """Test sorting."""
+        mapping = SemanticMapping.exact("a:1", "b:1")
+        with self.assertRaises(TypeError):
+            mapping < 5  # noqa:B015
 
     def test_creator_id(self) -> None:
         """Test a non-list creator gets properly upgraded."""
@@ -91,3 +107,17 @@ class TestModel(unittest.TestCase):
         self.assertIsNone(m3.predicate_modifier)
         self.assertFalse(m3.negated)
         self.assertFalse(hash_triple(m3, TEST_CONVERTER).endswith("~"))
+
+    @unittest.skipUnless(importlib.util.find_spec("pyobo"), "pyobo is not installed")
+    def test_relabel(self) -> None:
+        """Test relabeling."""
+        self.assertIsNotNone(
+            R1.name, msg="this test doesn't make sense if the base objets don't have names"
+        )
+        self.assertIsNotNone(R2.name)
+
+        m = SemanticMapping.exact(R1.with_name("nope"), R2.without_name())
+        m = m.relabel()
+
+        self.assertEqual(R1.name, m.subject.name)
+        self.assertEqual(R2.name, m.object.name)
