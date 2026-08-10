@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime
 import logging
 from collections.abc import Callable, Collection, Iterable
-from typing import Annotated, Any, Literal, TypeAlias
+from typing import Annotated, Any, Literal, Self, TypeAlias
 
 import curies
 from curies import NamableReference, Reference, Triple
@@ -21,7 +21,7 @@ from curies.vocabulary import (
     xsd_string,
 )
 from pydantic import AnyUrl, BaseModel, BeforeValidator, ConfigDict, Field
-from typing_extensions import Self, TypeVar
+from typing_extensions import TypeVar
 
 from .constants import (
     ENTITY_TYPE_REFERENCE_TO_LITERAL,
