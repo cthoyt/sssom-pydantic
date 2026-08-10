@@ -14,7 +14,7 @@ from __future__ import annotations
 import contextlib
 import datetime
 from collections.abc import Callable, Generator, Iterable, Sequence
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, ParamSpec, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, ParamSpec, Self, TypeVar, cast, overload
 
 import curies
 import sqlmodel
@@ -28,7 +28,6 @@ from sqlalchemy.sql.type_api import TypeEngine
 from sqlmodel import JSON, Column, Field, Session, SQLModel, String, and_, col, func, or_, select
 from sqlmodel.sql._expression_select_cls import SelectOfScalar
 from tqdm import tqdm
-from typing_extensions import Self
 
 from sssom_pydantic.api import MappingTool, SemanticMapping, SemanticMappingHash
 from sssom_pydantic.database.repo import CURIENotFoundError, SemanticMappingRepository
