@@ -4,7 +4,6 @@ from collections import defaultdict
 from collections.abc import Iterable
 from typing import NamedTuple, TypeAlias, TypeVar
 
-import curies
 from curies import Reference
 from curies import vocabulary as v
 from tqdm import tqdm
@@ -37,7 +36,9 @@ PREDICTION_PREDICATES = {
 }
 
 
-def stratify(mappings: Iterable[SemanticMapping], converter: curies.Converter) -> tuple[DD, DD, DD]:
+def stratify(
+    mappings: Iterable[SemanticMapping], *, accept_unspecified: bool = True
+) -> tuple[DD, DD, DD]:
     """Stratify a set of mappings."""
     positive: defaultdict[UnorderedPrefixPair, set[str]] = defaultdict(set)
     negative: defaultdict[UnorderedPrefixPair, set[str]] = defaultdict(set)
@@ -48,18 +49,22 @@ def stratify(mappings: Iterable[SemanticMapping], converter: curies.Converter) -
     #  just assume squashing has been done correctly first?
     # TODO use broad match and exact match to infer NOT exact match?
     # TODO squash higher relations into exact match?
+
+    acceptable = {v.manual_mapping_curation}
+    if accept_unspecified:
+        acceptable.add(v.unspecified_matching_process)
     for m in mappings:
-        # todo could also use hash triple
-        xx = f"{m.subject.curie}-{m.object.curie}"
+        # TODO could also use hash triple to include predicate
+        mapping_hash = f"{m.subject.curie}-{m.object.curie}"
         prefix_pair: UnorderedPrefixPair = frozenset([m.subject.prefix, m.object.prefix])
         if m.justification in PREDICTION_PREDICATES:
             # assume there are no negative predictions
-            predicted[prefix_pair].add(xx)
-        elif m.justification == v.manual_mapping_curation:
+            predicted[prefix_pair].add(mapping_hash)
+        elif m.justification in acceptable:
             if m.predicate_modifier is None:
-                positive[prefix_pair].add(xx)
+                positive[prefix_pair].add(mapping_hash)
             else:
-                negative[prefix_pair].add(xx)
+                negative[prefix_pair].add(mapping_hash)
         elif m.justification not in unhandled_justifications:
             unhandled_justifications.add(m.justification)
             tqdm.write(f"unhandled mapping justification: {m.justification.curie}")
@@ -78,18 +83,25 @@ class Evaluation(NamedTuple):
 
 def evaluate_predictions(
     mappings: Iterable[SemanticMapping],
-    converter: curies.Converter,
     *,
     tag: str | None = None,
 ) -> dict[UnorderedPrefixPair, Evaluation]:
     """Evaluate predicted mappings using manually curated positive and negative mappings."""
-    positive_set, negative_set, predicted_set = stratify(mappings, converter)
+    positive_set, negative_set, predicted_set = stratify(mappings)
     keys = set(positive_set).union(negative_set).union(predicted_set)
     rv = {}
     for key in keys:
-        rv[key] = _evaluate_helper(
-            positive_set[key], negative_set[key], predicted_set[key], tag=tag
-        )
+        try:
+            rr = _evaluate_helper(
+                positive_set.get(key) or set(),
+                negative_set.get(key) or set(),
+                predicted_set.get(key) or set(),
+                tag=tag,
+            )
+        except ZeroDivisionError:
+            tqdm.write(f"failed to calculate statistics for {key}")
+        else:
+            rv[key] = rr
     return rv
 
 
@@ -105,7 +117,7 @@ def _evaluate_helper(
     predicted_only = len(predicted_set - positive_set - negative_set)
     union_len = len(positive_set.union(predicted_set).union(negative_set))
 
-    msg = f"union={union_len:,}, intersection={tp:,}, curated={fn:,}, predicted={predicted_only:,}"
+    msg = f"union={union_len:,}, predicted={predicted_only:,}, {tp=}, {fp=}, {fn=}, {tn=}"
     if tag is not None:
         msg = f"[{tag}] {msg}"
     tqdm.write(msg)

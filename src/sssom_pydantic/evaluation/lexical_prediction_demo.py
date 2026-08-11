@@ -18,6 +18,7 @@ from ssslm import GildaGrounder, Grounder, LiteralMapping
 from tabulate import tabulate
 from tqdm import tqdm
 
+from tqdm.contrib.logging import logging_redirect_tqdm
 import sssom_pydantic
 from sssom_pydantic import MappingSet, SemanticMapping
 from sssom_pydantic.evaluation.evaluation import evaluate_predictions
@@ -89,7 +90,6 @@ def main() -> None:
 
     # skip a few
     prefixes -= {"pubchem.compound", "kegg.pathway", "umls", "ncit", "snomedct"}
-    prefixes = {"maxo"}
 
     start = time.time()
     negative_biomappings_mappings = biomappings.load_false_mappings()
@@ -118,7 +118,8 @@ def main() -> None:
             )
         else:
             try:
-                external_grounder = pyobo.get_grounder(prefix, force=False)
+                with logging_redirect_tqdm():
+                    external_grounder = pyobo.get_grounder(prefix, force=False)
             except Exception as e:  # noqa:BLE001
                 tqdm.write(click.style(f"[{prefix}] failed to get grounder: {e}"))
                 continue
@@ -175,7 +176,7 @@ def main() -> None:
             converter=converter,
         )
 
-        evaluation_results = evaluate_predictions(mappings, tag=prefix, converter=converter)
+        evaluation_results = evaluate_predictions(mappings, tag=prefix)
         evaluation_row = next(iter(evaluation_results.values()))
 
         rows.append((f"[{prefix}](https://bioregistry.io/{prefix})", *evaluation_row))
