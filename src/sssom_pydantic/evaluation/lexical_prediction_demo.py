@@ -17,8 +17,8 @@ from humanize import naturaldelta
 from ssslm import GildaGrounder, Grounder, LiteralMapping
 from tabulate import tabulate
 from tqdm import tqdm
-
 from tqdm.contrib.logging import logging_redirect_tqdm
+
 import sssom_pydantic
 from sssom_pydantic import MappingSet, SemanticMapping
 from sssom_pydantic.evaluation.evaluation import evaluate_predictions
