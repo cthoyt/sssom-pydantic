@@ -524,7 +524,7 @@ def _get_columns(
         records, disable=not progress, unit_scale=True, desc="preparing columns", leave=False
     ):
         for key in record.model_fields_set:
-            if value := getattr(record, key):
+            if (value := getattr(record, key)) is not None:
                 if key != "extensions":
                     columns.add(key)
                 else:
