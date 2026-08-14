@@ -1,4 +1,4 @@
-r"""A workflow for evaluating predicted mappings.
+r"""A workflow for evaluating mapping predictions against manually curated mappings.
 
 The `Ontology Alignment Evaluation Initiative (OAEI)
 <https://oaei.ontologymatching.org>`_ has produced and evaluated benchmarks for ontology
@@ -82,14 +82,14 @@ In the following example, three sources of mappings are combine for the evaluati
         --exclude-predicted \
         -o biomappings-maxo-mesh.sssom.tsv
 
-    \$ mkdir test-dir
-    \$ sssom_curator init --directory test-dir --purl-base https://example.org/
-    \$ sssom_curator -p test-dir predict lexical mesh maxo
+    \$ mkdir maxo-mesh-predictions
+    \$ sssom_curator init --directory maxo-mesh-predictions
+    \$ sssom_curator -p maxo-mesh-predictions predict lexical mesh maxo
 
     \$ sssom_pydantic evaluate \
         -i maxo.sssom.tsv \
         -i biomappings-maxo-mesh.sssom.tsv \
-        -i data/predictions.sssom.tsv \
+        -i maxo-mesh-predictions/data/predictions.sssom.tsv \
         --accept-unspecified
 
 This workflow pools arbitrary SSSOM files then stratifies them into positive, negative,
