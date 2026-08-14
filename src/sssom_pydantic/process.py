@@ -26,6 +26,7 @@ from curies.vocabulary import (
 from typing_extensions import TypeVar
 
 from .api import MappingTypeVar, SemanticMapping, SemanticMappingPredicate, hash_triple_to_reference
+from .constants import PREDICTION_PREDICATES
 
 if TYPE_CHECKING:
     from _typeshed import SupportsRichComparison
@@ -43,6 +44,7 @@ __all__ = [
     "curate",
     "estimate_confidence",
     "exclude_negative",
+    "exclude_predicted",
     "exclude_unsure",
     "filter_by_confidence",
     "get_canonical_tuple",
@@ -618,7 +620,7 @@ def exclude_negative(mappings: Iterable[MappingTypeVar]) -> Iterable[MappingType
 
 
 def exclude_unsure(mappings: Iterable[MappingTypeVar]) -> Iterable[MappingTypeVar]:
-    """Exclude usunre mappings.
+    """Exclude unsure mappings.
 
     :param mappings: An iterable of semantic mappings
 
@@ -633,6 +635,18 @@ def exclude_unsure(mappings: Iterable[MappingTypeVar]) -> Iterable[MappingTypeVa
     """
     for mapping in mappings:
         if mapping.reviewer_agreement != 0.0:
+            yield mapping
+
+
+def exclude_predicted(mappings: Iterable[MappingTypeVar]) -> Iterable[MappingTypeVar]:
+    """Exclude mappings with predicted predicates.
+
+    :param mappings: An iterable of semantic mappings
+
+    :returns: An iterable of semantic mappings, with all predicted predicates excluded
+    """
+    for mapping in mappings:
+        if mapping.justification not in PREDICTION_PREDICATES:
             yield mapping
 
 

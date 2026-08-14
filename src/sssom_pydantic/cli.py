@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Literal
 import click
 
 if TYPE_CHECKING:
+    from .api import SemanticMapping
     from .contrib.owl import AxiomMode
 
 __all__ = [
@@ -109,6 +110,13 @@ def web(add_examples: bool, tab: bool, host: str, port: int) -> None:
     "retained?",
 )
 @STANDARDIZE_FLAG
+@click.option(
+    "--exclude-negative/--no-exclude-negative", "do_exclude_negative", is_flag=True, default=True
+)
+@click.option(
+    "--exclude-unsure/--no-exclude-unsure", "do_exclude_unsure", is_flag=True, default=True
+)
+@click.option("--exclude-predicted", is_flag=True, default=True)
 def subset(
     prefix: str,
     target_prefix: str | None,
@@ -116,6 +124,9 @@ def subset(
     output: Path | None,
     justification_policy: Literal["retain", "derive"],
     standardize: bool,
+    do_exclude_negative: bool,
+    do_exclude_unsure: bool,
+    exclude_predicated: bool,
 ) -> None:
     """Implement the filter workflow for a given prefix.
 
@@ -136,10 +147,15 @@ def subset(
         invert_by_prefix_pair,
     )
 
-    mappings_list, converter, metadata = sssom_pydantic.read(input or sys.stdin)
+    mappings: Iterable[SemanticMapping]
+    mappings, converter, metadata = sssom_pydantic.read(input or sys.stdin)
 
-    mappings = exclude_negative(mappings_list)
-    mappings = exclude_unsure(mappings)
+    if do_exclude_negative:
+        mappings = exclude_negative(mappings)
+    if do_exclude_unsure:
+        mappings = exclude_unsure(mappings)
+    if exclude_predicated:
+        raise NotImplementedError
     mappings = keep_predicates(mappings, exact_match)
 
     if standardize:
@@ -263,7 +279,7 @@ def merge(
     from pydantic import AnyUrl
 
     import sssom_pydantic
-    from sssom_pydantic import MappingSet, SemanticMapping, standardize_mappings
+    from sssom_pydantic import MappingSet, standardize_mappings
     from sssom_pydantic import process as pr
     from sssom_pydantic.api import _get_preferred_converter
 
@@ -333,7 +349,7 @@ def compare_it(
     import curies
     from pystow.utils import safe_write_text
 
-    from .api import SemanticMapping, _get_preferred_converter, standardize_mappings
+    from .api import _get_preferred_converter, standardize_mappings
     from .compare import get_comparison_markdown
     from .io import read
     from .process import invert_on_unordered
@@ -370,6 +386,24 @@ def compare_it(
         os.system(  # noqa:S605
             f"npx --yes prettier --check --log-level=silent --prose-wrap always --write {output}"
         )
+
+
+@main.command(name="evaluate")
+@MULTIPLE_INPUT_OPTION
+@click.option("--accept-unspecified", is_flag=True)
+@click.option("--tablefmt", default="github", show_default=True)
+def evaluate(input: Iterable[str], accept_unspecified: bool, tablefmt: str) -> None:
+    """Produce an evaluation of predicted mappings."""
+    import itertools as itt
+
+    import sssom_pydantic
+
+    from .workflow.evaluation import evaluate_predictions, tabulate_evaluation
+
+    parts = [sssom_pydantic.read(path) for path in input]
+    mappings = itt.chain.from_iterable(part.mappings for part in parts)
+    res = evaluate_predictions(mappings, accept_unspecified=accept_unspecified)
+    click.echo(tabulate_evaluation(res, tablefmt=tablefmt))
 
 
 if __name__ == "__main__":
