@@ -37,6 +37,12 @@ INPUT_OPTION = click.option(
     "--input",
     help="Path to a local file or URL to a remote file. If not given, will get input from STDIN",
 )
+MULTIPLE_INPUT_OPTION = click.option(
+    "-i",
+    "--input",
+    multiple=True,
+    help="Path to a local file or URL to a remote file",
+)
 OUTPUT_OPTION = click.option(
     "-o",
     "--output",
@@ -231,12 +237,7 @@ def _default_iri() -> str:
 
 
 @main.command()
-@click.option(
-    "-i",
-    "--input",
-    multiple=True,
-    help="Path to a local file or URL to a remote file",
-)
+@MULTIPLE_INPUT_OPTION
 @OUTPUT_OPTION
 @click.option("--mapping-set-id", default=_default_iri, help="The ID for the merged mapping set")
 @click.option(
@@ -369,6 +370,22 @@ def compare_it(
         os.system(  # noqa:S605
             f"npx --yes prettier --check --log-level=silent --prose-wrap always --write {output}"
         )
+
+
+@main.command(name="evaluate")
+@MULTIPLE_INPUT_OPTION
+@click.option("--accept-unspecified", is_flag=True)
+def evaluate(input: Iterable[str], accept_unspecified: bool) -> None:
+    """Produce an evaluation of predicted mappings."""
+    import itertools as itt
+
+    import sssom_pydantic
+
+    from .evaluation.evaluation import stratify
+
+    parts = [sssom_pydantic.read(path) for path in input]
+    mappings = itt.chain.from_iterable(part.mappings for part in parts)
+    stratify(mappings, accept_unspecified=accept_unspecified)
 
 
 if __name__ == "__main__":
