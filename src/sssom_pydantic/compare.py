@@ -1,4 +1,4 @@
-"""Compare semantic mappings.
+r"""Compare semantic mappings.
 
 You can subset towards the specific one you want:
 
