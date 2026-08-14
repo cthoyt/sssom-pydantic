@@ -13,3 +13,6 @@
 
 .. automodapi:: sssom_pydantic.query
     :no-inheritance-diagram:
+
+.. automodapi:: sssom_pydantic.compare
+    :no-inheritance-diagram:
