@@ -396,27 +396,14 @@ def evaluate(input: Iterable[str], accept_unspecified: bool, tablefmt: str) -> N
     """Produce an evaluation of predicted mappings."""
     import itertools as itt
 
-    from tabulate import tabulate
-
     import sssom_pydantic
 
-    from .workflow.evaluation import evaluate_predictions
+    from .workflow.evaluation import evaluate_predictions, tabulate_evaluation
 
     parts = [sssom_pydantic.read(path) for path in input]
     mappings = itt.chain.from_iterable(part.mappings for part in parts)
     res = evaluate_predictions(mappings, accept_unspecified=accept_unspecified)
-    rows = []
-    for k, v in res.items():
-        a, b = sorted(k)
-        rows.append((a, b, *v))
-    click.echo(
-        tabulate(
-            rows,
-            headers=["p1", "p2", "completion", "accuracy", "precision", "recall", "f1"],
-            floatfmt=".1%",
-            tablefmt=tablefmt,
-        )
-    )
+    click.echo(tabulate_evaluation(res, tablefmt=tablefmt))
 
 
 if __name__ == "__main__":

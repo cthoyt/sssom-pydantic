@@ -176,7 +176,7 @@ def main() -> None:
             converter=converter,
         )
 
-        evaluation_results = evaluate_predictions(mappings, tag=prefix)
+        evaluation_results = evaluate_predictions(mappings, _tag=prefix)
         evaluation_row = next(iter(evaluation_results.values()))
 
         rows.append((f"[{prefix}](https://bioregistry.io/{prefix})", *evaluation_row))

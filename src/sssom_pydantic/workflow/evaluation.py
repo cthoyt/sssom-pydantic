@@ -12,6 +12,7 @@ automatically evaluated by the OAEI's `Alignment API and Alignment Server
 <https://moex.gitlabpages.inria.fr/alignapi>`_. The results from the last two decades
 are linked in the table below.
 
+
 A criticism of OAEI is that it reuses tasks rather than solving mapping. For example,
 the `largebio <https://www.cs.ox.ac.uk/isg/projects/SEALS/oaei/>`_ task for mapping
 between the `Foundational Model of Anatomy (FMA) <https://semantic.farm/registry/fma>`_
@@ -137,8 +138,7 @@ from curies import Reference
 from curies import vocabulary as v
 from tqdm import tqdm
 
-from sssom_pydantic import SemanticMapping
-
+from ..api import SemanticMapping
 from ..constants import PREDICTION_PREDICATES
 
 __all__ = [
@@ -308,7 +308,10 @@ def stratify(
 class Evaluation(NamedTuple):
     """An evaluation tuple."""
 
+    #: Completion is the ratio of curated / (curated + predicted),
+    #: where closer to 1.0 means that more of the curation has been done
     completion: float
+
     accuracy: float
     precision: float
     recall: float
@@ -318,10 +321,18 @@ class Evaluation(NamedTuple):
 def evaluate_predictions(
     mappings: Iterable[SemanticMapping],
     *,
-    tag: str | None = None,
     accept_unspecified: bool = True,
+    _tag: str | None = None,
 ) -> dict[UnorderedPrefixPair, Evaluation]:
-    """Evaluate predicted mappings using manually curated positive and negative mappings."""
+    """Stratify and evaluate predicted mappings against curated mappings.
+
+    :param mappings: A pool of positive, negative, and predicted semantic mappings
+        :param accept_unspecified: Whether to consider mappings that do not have an explicit
+        justification (i.e., using ``semapv:UnspecifiedMatching``) as having been
+        manually curated. See :func:`stratify` for more details.
+
+    :returns: A mapping from unordered prefix pairs to evaluation objects
+    """
     stratification = stratify(mappings, accept_unspecified=accept_unspecified)
     rv = {}
     for (
@@ -337,7 +348,7 @@ def evaluate_predictions(
                 negative,
                 predicted_positive,
                 predicted_negative,
-                tag=tag,
+                tag=_tag,
             )
         except ZeroDivisionError:
             tqdm.write(f"failed to calculate statistics for {prefix_pair}")
@@ -376,3 +387,21 @@ def _evaluate_helper(
     _positive_percentage = len(positive_set) / (len(positive_set) + len(negative_set))
 
     return Evaluation(completion, accuracy, precision, recall, f1)
+
+
+def tabulate_evaluation(
+    res: dict[UnorderedPrefixPair, Evaluation], tablefmt: str | None = None
+) -> str:
+    """Tabulate the evaluation results."""
+    from tabulate import tabulate
+
+    rows = []
+    for unordered_prefix_pair, evaluation in res.items():
+        prefix_1, prefix_2 = sorted(unordered_prefix_pair)
+        rows.append((prefix_1, prefix_2, *evaluation))
+    return tabulate(
+        rows,
+        headers=["Prefix 1", "Prefix 2", "Completion", "Accuracy", "Precision", "Recall", "F1"],
+        floatfmt=".1%",
+        tablefmt=tablefmt or "github",
+    )
