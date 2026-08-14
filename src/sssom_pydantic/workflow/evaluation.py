@@ -9,37 +9,50 @@ mapping software consumes ontologies in the `Web Ontology Language (OWL)
 Declarative Ontology Alignment Language (EDOAL)
 <https://moex.gitlabpages.inria.fr/alignapi/edoal.html>`_ format, which can then be
 automatically evaluated by the OAEI's `Alignment API and Alignment Server
-<https://moex.gitlabpages.inria.fr/alignapi>`_. The results from the last two decades
-are linked in the table below.
+<https://moex.gitlabpages.inria.fr/alignapi>`_.
 
+During its two-decade runtime, the OAEI consistently reuses the same benchmarks. For
+example, the `largebio <https://www.cs.ox.ac.uk/isg/projects/SEALS/oaei/>`_ task for
+mapping between the `Foundational Model of Anatomy (FMA)
+<https://semantic.farm/registry/fma>`_ ontology, `Systematized Nomenclature of Medicine
+- Clinical Terms (SNOMED-CT) <https://semantic.farm/registry/snomedct>`_, and United
+States `National Cancer Institute Thesaurus (NCIT)
+<https://semantic.farm/registry/ncit>`_ ran between 2011 and 2022 before being
+incorporated into the `Bio-ML <https://krr-oxford.github.io/OAEI-Bio-ML/>`_ task, which
+still runs as of 2026.
 
-A criticism of OAEI is that it reuses tasks rather than solving mapping. For example,
-the `largebio <https://www.cs.ox.ac.uk/isg/projects/SEALS/oaei/>`_ task for mapping
-between the `Foundational Model of Anatomy (FMA) <https://semantic.farm/registry/fma>`_
-ontology, `Systematized Nomenclature of Medicine - Clinical Terms (SNOMED-CT)
-<https://semantic.farm/registry/snomedct>`_, and United States `National Cancer
-Institute Thesaurus (NCIT) <https://semantic.farm/registry/ncit>`_ ran between 2011 and
-2022 before being incorporated into the `Bio-ML
-<https://krr-oxford.github.io/OAEI-Bio-ML/>`_ task.
+This presents several opportunities for moving beyond what OAEI is capable of to:
 
-Instead, if the mappings produced each year were curated, then the alignments between
-each ontology could have been finalized potentially decades ago. This is a heavy
-motivation for the community-oriented SSSOM ecosystem which includes community mapping
-repositories like `Biomappings <https://github.com/biopragmatics/biomappings>`_ where
-predictions can be deposited and software like `SSSOM Curator
-<github.com/cthoyt/sssom-curator>`_ that support the interactive curation of predicted
-mappings.
+1. adopt a better semantic mapping format and software ecosystem
+2. store and manually curate the results of mapping prediction
+3. maintain old benchmarks and create new ones
+4. retire benchmarks for which ontology alignment has been completed
 
-Another criticism of OAEI is that the code, documentation, and data formats are
-antiquated. Therefore, this module implements tools for creating and evaluating
-benchmarks based on mappings in the `Simple Standard for Sharing Ontological Mappings
-(SSSOM) <https://mapping-commons.github.io/sssom>`_.
+The Simple Standard for Sharing Ontological Mappings (SSSOM)
+<https://mapping-commons.github.io/sssom>`_ and its associated software ecosystem are
+already considerably better documented than the alignment API and EDOAL.
 
-And estimates several metrics such as accuracy, precision, recall, and F1 for the
-predictions. This gives back an estimation of the true metrics, since the positive and
-negative manually curated mappings likely are not complete and therefore have some bias
-in which things were curated (e.g., I always curate the easiest first, leading towards a
-skew that more of my manual curations result in positive calls).
+Community repositories for semantic mappings like `Biomappings
+<https://github.com/biopragmatics/biomappings>`_ demonstrated how an open data, open
+code, and open infrastructure (O3) approach could democratize the storage and curation
+of semantic mappings. Specifically, the Biomappings project led to the development of
+the :mod:`sssom_curator` software to wrap prediction pipelines and provide an
+interactive curation interface for end users.
+
+The goal of the SSSOM-Pydantic evaluation pipeline is to build on existing tools for
+extracting mappings from ontologies (e.g., :mod:`pyobo`), curated resources like
+Biomappings, and easily reusable prediction workflows like SSSOM-Curator to
+automatically construct new benchmarks based on existing SSSOM documents then
+automatically calculate statistics about alignment completion (i.e., how many more
+curations are needed to check all predicted mappings, and how many more curations are
+needed to complete the alignment?) and the correctness of the prediction software (e.g.,
+accuracy, precision, recall, $F_1$).
+
+Until all predictions are curated, the accuracy, precision, recall, and $F_1$ are an
+estimation of the true metrics, since the positive and negative manually curated
+mappings likely are not complete and therefore have some bias in which things were
+curated (e.g., I always curate the easiest first, leading towards a skew that more of my
+manual curations result in positive calls).
 
 In the following example, three sources of mappings are combine for the evaluation:
 
@@ -49,7 +62,8 @@ In the following example, three sources of mappings are combine for the evaluati
    justification.
 2. Manually curated mappings from Biomappings, which includes previously curated
    mappings between MAXO and MeSH with high precision predicates and justification.
-3. Mappings predicted by the :mod:`sssom_curator` between MAXO and MeSH
+3. Mappings predicted by the :mod:`sssom_curator` between MAXO and MeSH with lexical
+   matching
 
 .. code-block:: console
 
@@ -98,6 +112,12 @@ Prefix 1                                 Prefix 2                             Co
 `vto <https://semantic.farm/vto>`_       `mesh <https://semantic.farm/mesh>`_ 0.3%       50.0%    50.0%     100.0% 66.7%
 `xlmod <https://semantic.farm/xlmod>`_   `mesh <https://semantic.farm/mesh>`_ 44.7%      98.7%    98.7%     100.0% 99.3%
 ======================================== ==================================== ========== ======== ========= ====== =====
+
+Note that lexical matching typically has a high precision (i.e., most predictions are
+right) but lower recall (i.e., some potential predictions are missed). Given the problem
+domain that (almost all) ontologies don't have one-to-many or many-to-one mappings, then
+it's also possible to identify entities for which there is no mapping between two given
+resources and further increase the accuracy of the accuracy metric.
 
 .. admonition:: OAEI Calls and Publications
 
@@ -327,9 +347,9 @@ def evaluate_predictions(
     """Stratify and evaluate predicted mappings against curated mappings.
 
     :param mappings: A pool of positive, negative, and predicted semantic mappings
-        :param accept_unspecified: Whether to consider mappings that do not have an explicit
-        justification (i.e., using ``semapv:UnspecifiedMatching``) as having been
-        manually curated. See :func:`stratify` for more details.
+        :param accept_unspecified: Whether to consider mappings that do not have an
+        explicit justification (i.e., using ``semapv:UnspecifiedMatching``) as having
+        been manually curated. See :func:`stratify` for more details.
 
     :returns: A mapping from unordered prefix pairs to evaluation objects
     """
