@@ -32,7 +32,6 @@ You can do a multi-comparison:
         --standardize \
         --left-label Ambika \
         --right-label Charlie
-
 """  # noqa:E501
 
 from collections import defaultdict
