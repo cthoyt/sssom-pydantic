@@ -47,7 +47,7 @@ In the following example, three sources of mappings are combine for the evaluati
    to ``oboInOwl:hasDbXref`` as a predicate and ``semapv:UnspecifiedMapping`` as a
    justification.
 2. Manually curated mappings from Biomappings, which includes previously curated
-   mappings between MAXO and MeSH with high precision predicates and justification
+   mappings between MAXO and MeSH with high precision predicates and justification.
 3. Mappings predicted by the :mod:`sssom_curator` between MAXO and MeSH
 
 .. code-block:: console
@@ -56,8 +56,11 @@ In the following example, three sources of mappings are combine for the evaluati
 
     \$ sssom_pydantic subset \
         -i https://w3id.org/biopragmatics/biomappings/sssom/biomappings.sssom.tsv \
-        --prefix maxo
-        --target-prefix mesh
+        --prefix maxo \
+        --target-prefix mesh \
+        --no-exclude-negatives \
+        --no-exclude-unsure \
+        --exclude-predicted \
         -o biomappings-maxo-mesh.sssom.tsv
 
     \$ mkdir test-dir
@@ -136,6 +139,8 @@ from tqdm import tqdm
 
 from sssom_pydantic import SemanticMapping
 
+from ..constants import PREDICTION_PREDICATES
+
 __all__ = [
     "Evaluation",
     "Stratification",
@@ -170,14 +175,6 @@ def _subject_object_hash(m: SemanticMapping) -> UnorderedSemanticMappingHash:
 UnorderedPrefixPair: TypeAlias = frozenset[str]
 
 DD: TypeAlias = dict[UnorderedPrefixPair, set[UnorderedSemanticMappingHash]]
-
-PREDICTION_PREDICATES = {
-    v.lexical_matching_process,
-    v.lexical_similarity_threshold_based_matching_process,
-    v.logical_reasoning_matching_process,
-    v.semantic_similarity,
-    v.structural_matching,
-}
 
 
 class Stratification(NamedTuple):

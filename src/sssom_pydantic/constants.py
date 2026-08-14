@@ -15,6 +15,7 @@ __all__ = [
     "ENTITY_TYPE_REFERENCE_TO_LITERAL",
     "MULTIVALUED",
     "PREDICATE_TYPES",
+    "PREDICTION_PREDICATES",
     "PREFIX_MAP_KEY",
     "PROPAGATABLE",
     "EntityTypeLiteral",
@@ -176,3 +177,12 @@ def guess_class(reference: curies.Reference | None) -> bool:
         or reference == v.rdfs_class
         or reference == v.rdfs_datatype
     )
+
+
+PREDICTION_PREDICATES = {
+    v.lexical_matching_process,
+    v.lexical_similarity_threshold_based_matching_process,
+    v.logical_reasoning_matching_process,
+    v.semantic_similarity,
+    v.structural_matching,
+}

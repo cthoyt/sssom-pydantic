@@ -21,8 +21,8 @@ from tqdm.contrib.logging import logging_redirect_tqdm
 
 import sssom_pydantic
 from sssom_pydantic import MappingSet, SemanticMapping
-from sssom_pydantic.evaluation.evaluation import evaluate_predictions
 from sssom_pydantic.process import invert_by_prefix_pair
+from sssom_pydantic.workflow.evaluation import evaluate_predictions
 
 X = TypeVar("X")
 
