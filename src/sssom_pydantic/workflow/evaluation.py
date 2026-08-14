@@ -9,7 +9,8 @@ mapping software consumes ontologies in the `Web Ontology Language (OWL)
 Declarative Ontology Alignment Language (EDOAL)
 <https://moex.gitlabpages.inria.fr/alignapi/edoal.html>`_ format, which can then be
 automatically evaluated by the OAEI's `Alignment API and Alignment Server
-<https://moex.gitlabpages.inria.fr/alignapi>`_.
+<https://moex.gitlabpages.inria.fr/alignapi>`_. A table of past OAEI calls and results
+are available below.
 
 During its two-decade runtime, the OAEI consistently reuses the same benchmarks. For
 example, the `largebio <https://www.cs.ox.ac.uk/isg/projects/SEALS/oaei/>`_ task for
@@ -21,23 +22,24 @@ States `National Cancer Institute Thesaurus (NCIT)
 incorporated into the `Bio-ML <https://krr-oxford.github.io/OAEI-Bio-ML/>`_ task, which
 still runs as of 2026.
 
-This presents several opportunities for moving beyond what OAEI is capable of to:
+This presents several opportunities to build on top of what OAEI is capable of, in order
+to:
 
 1. adopt a better semantic mapping format and software ecosystem
 2. store and manually curate the results of mapping prediction
 3. maintain old benchmarks and create new ones
 4. retire benchmarks for which ontology alignment has been completed
 
-The Simple Standard for Sharing Ontological Mappings (SSSOM)
+The `Simple Standard for Sharing Ontological Mappings (SSSOM)
 <https://mapping-commons.github.io/sssom>`_ and its associated software ecosystem are
 already considerably better documented than the alignment API and EDOAL.
 
 Community repositories for semantic mappings like `Biomappings
 <https://github.com/biopragmatics/biomappings>`_ demonstrated how an open data, open
-code, and open infrastructure (O3) approach could democratize the storage and curation
-of semantic mappings. Specifically, the Biomappings project led to the development of
-the :mod:`sssom_curator` software to wrap prediction pipelines and provide an
-interactive curation interface for end users.
+code, and open infrastructure (O3) approach democratizes the storage and curation of
+semantic mappings. The Biomappings project itself led to the development of the
+:mod:`sssom_curator` software to wrap prediction pipelines and provide an interactive
+curation interface for end users.
 
 The goal of the SSSOM-Pydantic evaluation pipeline is to build on existing tools for
 extracting mappings from ontologies (e.g., :mod:`pyobo`), curated resources like
@@ -88,8 +90,10 @@ In the following example, three sources of mappings are combine for the evaluati
         -i data/predictions.sssom.tsv \
         --accept-unspecified
 
-When extending this workflow to several other OBO Foundry ontologies mapping to MeSH, a
-table like this is produced:
+This workflow pools arbitrary SSSOM files then stratifies them into positive, negative,
+predicted (positive), and predicted negative mappings using the :func:`stratify`
+function. When extending this workflow to several other OBO Foundry ontologies mapping
+to MeSH, a table like this is produced:
 
 ======================================== ==================================== ========== ======== ========= ====== =====
 Prefix 1                                 Prefix 2                             Completion Accuracy Precision Recall $F_1$
