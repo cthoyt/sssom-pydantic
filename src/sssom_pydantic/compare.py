@@ -4,33 +4,33 @@ You can subset towards the specific one you want:
 
 .. code-block:: console
 
-    $ sssom_pydantic subset -i https://github.com/nfdi-de/section-metadata-wg-onto/raw/refs/heads/main/sssom/data/positive.sssom.tsv \
-        --prefix CHMO \
-        --target-prefix FIX \
-        --standardize \
+    $ sssom_pydantic subset -i https://github.com/nfdi-de/section-metadata-wg-onto/raw/refs/heads/main/sssom/data/positive.sssom.tsv \\
+        --prefix CHMO \\
+        --target-prefix FIX \\
+        --standardize \\
         --output nfdi-chmo-fix.sssom.tsv
-    $ sssom_pydantic compare \
-        https://github.com/NFDI4Chem/rsc-cmo/raw/refs/heads/Add-tsv-files/src/mappings/fix-mappings.sssom.tsv \
-        nfdi-chmo-fix.sssom.tsv \
-        --left-label Ambika \
+    $ sssom_pydantic compare \\
+        https://github.com/NFDI4Chem/rsc-cmo/raw/refs/heads/Add-tsv-files/src/mappings/fix-mappings.sssom.tsv \\
+        nfdi-chmo-fix.sssom.tsv \\
+        --left-label Ambika \\
         --right-label Charlie
 
 You can do a multi-comparison:
 
 .. code-block:: console
 
-    $ sssom_pydantic merge \
-        --input https://github.com/NFDI4Chem/rsc-cmo/raw/refs/heads/Add-tsv-files/src/mappings/fix-mappings.sssom.tsv \
-        --input https://github.com/NFDI4Chem/rsc-cmo/raw/refs/heads/Add-tsv-files/src/mappings/afo-mappings.sssom.tsv \
-        --input https://github.com/NFDI4Chem/rsc-cmo/raw/refs/heads/Add-tsv-files/src/mappings/rex-mappings.sssom.tsv \
-        --input https://github.com/NFDI4Chem/rsc-cmo/raw/refs/heads/Add-tsv-files/src/mappings/wikidata-mappings.sssom.tsv \
-        --standardize \
+    $ sssom_pydantic merge \\
+        --input https://github.com/NFDI4Chem/rsc-cmo/raw/refs/heads/Add-tsv-files/src/mappings/fix-mappings.sssom.tsv \\
+        --input https://github.com/NFDI4Chem/rsc-cmo/raw/refs/heads/Add-tsv-files/src/mappings/afo-mappings.sssom.tsv \\
+        --input https://github.com/NFDI4Chem/rsc-cmo/raw/refs/heads/Add-tsv-files/src/mappings/rex-mappings.sssom.tsv \\
+        --input https://github.com/NFDI4Chem/rsc-cmo/raw/refs/heads/Add-tsv-files/src/mappings/wikidata-mappings.sssom.tsv \\
+        --standardize \\
         --output ambika.sssom.tsv
-    $ sssom_pydantic compare \
-        ambika.sssom.tsv \
-        https://github.com/nfdi-de/section-metadata-wg-onto/raw/refs/heads/main/sssom/data/positive.sssom.tsv \
-        --standardize \
-        --left-label Ambika \
+    $ sssom_pydantic compare \\
+        ambika.sssom.tsv \\
+        https://github.com/nfdi-de/section-metadata-wg-onto/raw/refs/heads/main/sssom/data/positive.sssom.tsv \\
+        --standardize \\
+        --left-label Ambika \\
         --right-label Charlie
 
 """  # noqa:E501
