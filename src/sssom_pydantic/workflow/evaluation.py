@@ -22,8 +22,7 @@ States `National Cancer Institute Thesaurus (NCIT)
 incorporated into the `Bio-ML <https://krr-oxford.github.io/OAEI-Bio-ML/>`_ task, which
 still runs as of 2026.
 
-This presents several opportunities to build on top of what OAEI is capable of, in order
-to:
+This presents several opportunities to go beyond OAEI, in order to:
 
 1. adopt a better semantic mapping format and software ecosystem
 2. store and manually curate the results of mapping prediction
@@ -32,14 +31,17 @@ to:
 
 The `Simple Standard for Sharing Ontological Mappings (SSSOM)
 <https://mapping-commons.github.io/sssom>`_ and its associated software ecosystem are
-already considerably better documented than the alignment API and EDOAL.
+still under active maintenance (whereas the alignment API project has not been updated
+since 2021), are already considerably better documented than the alignment API and
+EDOAL, and adopt much more straightforward languages (Python instead of Java) and
+formats (TSV instead of XML).
 
 Community repositories for semantic mappings like `Biomappings
-<https://github.com/biopragmatics/biomappings>`_ demonstrated how an open data, open
-code, and open infrastructure (O3) approach democratizes the storage and curation of
-semantic mappings. The Biomappings project itself led to the development of the
-:mod:`sssom_curator` software to wrap prediction pipelines and provide an interactive
-curation interface for end users.
+<https://github.com/biopragmatics/biomappings>`_ demonstrated how an `open data, open
+code, and open infrastructure (O3) <https://doi.org/10.1038/s41597-024-03406-w>`_
+approach democratizes the storage and curation of semantic mappings. The Biomappings
+project itself led to the development of the :mod:`sssom_curator` software to wrap
+prediction pipelines and provide an interactive curation interface for end users.
 
 The goal of the SSSOM-Pydantic evaluation pipeline is to build on existing tools for
 extracting mappings from ontologies (e.g., :mod:`pyobo`), curated resources like
