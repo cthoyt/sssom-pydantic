@@ -46,22 +46,28 @@ In the following example, three sources of mappings are combine for the evaluati
    include mappings to Medical Subject Headings (MeSH) with no metadata, so they default
    to ``oboInOwl:hasDbXref`` as a predicate and ``semapv:UnspecifiedMapping`` as a
    justification.
-2. Mappings predicted by the :mod:`sssom_curator` between MAXO and MeSH
-3. Manually curated mappings from Biomappings, which includes previously curated
+2. Manually curated mappings from Biomappings, which includes previously curated
    mappings between MAXO and MeSH with high precision predicates and justification
+3. Mappings predicted by the :mod:`sssom_curator` between MAXO and MeSH
 
 .. code-block:: console
 
     \$ pyobo lookup sssom maxo -o maxo.sssom.tsv
+
+    \$ sssom_pydantic subset \
+        -i https://w3id.org/biopragmatics/biomappings/sssom/biomappings.sssom.tsv \
+        --prefix maxo
+        --target-prefix mesh
+        -o biomappings-maxo-mesh.sssom.tsv
 
     \$ mkdir test-dir
     \$ sssom_curator init --directory test-dir --purl-base https://example.org/
     \$ sssom_curator -p test-dir predict lexical mesh maxo
 
     \$ sssom_pydantic evaluate \
-        -i https://w3id.org/biopragmatics/biomappings/sssom/biomappings.sssom.tsv \
-        -i data/predictions.sssom.tsv \
         -i maxo.sssom.tsv \
+        -i biomappings-maxo-mesh.sssom.tsv \
+        -i data/predictions.sssom.tsv \
         --accept-unspecified
 
 When extending this workflow to several other OBO Foundry ontologies mapping to MeSH, a
