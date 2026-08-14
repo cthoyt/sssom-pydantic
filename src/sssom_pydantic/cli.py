@@ -384,7 +384,7 @@ def evaluate(input: Iterable[str], accept_unspecified: bool, tablefmt: str) -> N
 
     import sssom_pydantic
 
-    from .evaluation.evaluation import evaluate_predictions
+    from .workflow.evaluation import evaluate_predictions
 
     parts = [sssom_pydantic.read(path) for path in input]
     mappings = itt.chain.from_iterable(part.mappings for part in parts)

@@ -2,5 +2,5 @@
  Evaluation
 ############
 
-.. automodapi:: sssom_pydantic.evaluation.evaluation
+.. automodapi:: sssom_pydantic.workflow.evaluation
     :no-heading:

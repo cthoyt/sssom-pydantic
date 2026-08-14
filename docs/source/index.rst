@@ -11,7 +11,7 @@
     usage
     cli
     owl
-    evaluation
+    workflow/evaluation
     contrib
 
 ********************
