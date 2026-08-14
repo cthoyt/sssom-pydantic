@@ -37,6 +37,12 @@ INPUT_OPTION = click.option(
     "--input",
     help="Path to a local file or URL to a remote file. If not given, will get input from STDIN",
 )
+MULTIPLE_INPUT_OPTION = click.option(
+    "-i",
+    "--input",
+    multiple=True,
+    help="Path to a local file or URL to a remote file",
+)
 OUTPUT_OPTION = click.option(
     "-o",
     "--output",
@@ -231,12 +237,7 @@ def _default_iri() -> str:
 
 
 @main.command()
-@click.option(
-    "-i",
-    "--input",
-    multiple=True,
-    help="Path to a local file or URL to a remote file",
-)
+@MULTIPLE_INPUT_OPTION
 @OUTPUT_OPTION
 @click.option("--mapping-set-id", default=_default_iri, help="The ID for the merged mapping set")
 @click.option(

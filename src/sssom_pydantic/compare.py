@@ -1,15 +1,15 @@
-"""Compare semantic mappings.
+r"""Compare semantic mappings.
 
 You can subset towards the specific one you want:
 
 .. code-block:: console
 
-    $ sssom_pydantic subset -i https://github.com/nfdi-de/section-metadata-wg-onto/raw/refs/heads/main/sssom/data/positive.sssom.tsv \
+    \$ sssom_pydantic subset -i https://github.com/nfdi-de/section-metadata-wg-onto/raw/refs/heads/main/sssom/data/positive.sssom.tsv \
         --prefix CHMO \
         --target-prefix FIX \
         --standardize \
         --output nfdi-chmo-fix.sssom.tsv
-    $ sssom_pydantic compare \
+    \$ sssom_pydantic compare \
         https://github.com/NFDI4Chem/rsc-cmo/raw/refs/heads/Add-tsv-files/src/mappings/fix-mappings.sssom.tsv \
         nfdi-chmo-fix.sssom.tsv \
         --left-label Ambika \
@@ -19,14 +19,14 @@ You can do a multi-comparison:
 
 .. code-block:: console
 
-    $ sssom_pydantic merge \
+    \$ sssom_pydantic merge \
         --input https://github.com/NFDI4Chem/rsc-cmo/raw/refs/heads/Add-tsv-files/src/mappings/fix-mappings.sssom.tsv \
         --input https://github.com/NFDI4Chem/rsc-cmo/raw/refs/heads/Add-tsv-files/src/mappings/afo-mappings.sssom.tsv \
         --input https://github.com/NFDI4Chem/rsc-cmo/raw/refs/heads/Add-tsv-files/src/mappings/rex-mappings.sssom.tsv \
         --input https://github.com/NFDI4Chem/rsc-cmo/raw/refs/heads/Add-tsv-files/src/mappings/wikidata-mappings.sssom.tsv \
         --standardize \
         --output ambika.sssom.tsv
-    $ sssom_pydantic compare \
+    \$ sssom_pydantic compare \
         ambika.sssom.tsv \
         https://github.com/nfdi-de/section-metadata-wg-onto/raw/refs/heads/main/sssom/data/positive.sssom.tsv \
         --standardize \
@@ -37,12 +37,12 @@ You can do a multi-comparison:
 
 from collections import defaultdict
 from collections.abc import Collection, Iterable, Mapping
-from typing import Any, Generic, NamedTuple, Self, TypeAlias, TypeVar
+from typing import Any, Generic, NamedTuple, Self, TypeAlias
 
 from curies import NamableReference
 from curies.triples.model import TripleType
 from curies.vocabulary import manual_mapping_curation
-from tabulate import tabulate
+from typing_extensions import TypeVar
 
 from sssom_pydantic import SemanticMapping
 
@@ -130,6 +130,8 @@ def _get_comparison_markdown(
         This function assumes that the mappings are only from a one prefix to another
         prefix
     """
+    from tabulate import tabulate
+
     left_mappings_ = [m for m in left_mappings if m.justification == manual_mapping_curation]
     right_mappings_ = [m for m in right_mappings if m.justification == manual_mapping_curation]
 
