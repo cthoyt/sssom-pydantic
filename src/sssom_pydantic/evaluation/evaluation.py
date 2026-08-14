@@ -1,11 +1,12 @@
-"""A workflow for evaluating predicted mappings.
+r"""A workflow for evaluating predicted mappings.
 
-Since 2004, the `Ontology Alignment Evaluation Initiative (OAEI)
+The `Ontology Alignment Evaluation Initiative (OAEI)
 <https://oaei.ontologymatching.org>`_ has produced and evaluated benchmarks for ontology
 mapping software across biology, medicine, ecology, digital humanities, archaeology, and
-other disciplines. In order to submit, developers must ensure their ontology mapping
-software consumes ontologies in the Web Ontology Language (OWL) format and outputs
-mappings in the `Expressive and Declarative Ontology Alignment Language (EDOAL)
+other disciplines since 2004. In order to submit, developers must ensure their ontology
+mapping software consumes ontologies in the `Web Ontology Language (OWL)
+<https://www.w3.org/OWL/>`_ format and outputs mappings in the `Expressive and
+Declarative Ontology Alignment Language (EDOAL)
 <https://moex.gitlabpages.inria.fr/alignapi/edoal.html>`_ format, which can then be
 automatically evaluated by the OAEI's `Alignment API and Alignment Server
 <https://moex.gitlabpages.inria.fr/alignapi>`_. The results from the last two decades
@@ -37,12 +38,12 @@ that are evaluated by CLI.
 
 .. code-block:: console
 
-    \\$ mkdir test
-    \\$ cd test
-    \\$ sssom_curator init --purl-base https://example.org/
-    \\$ sssom_curator predict lexical mesh maxo
-    \\$ sssom_pydantic evaluate \\
-        -i https://w3id.org/biopragmatics/biomappings/sssom/biomappings.sssom.tsv \\
+    \$ mkdir test
+    \$ cd test
+    \$ sssom_curator init --purl-base https://example.org/
+    \$ sssom_curator predict lexical mesh maxo
+    \$ sssom_pydantic evaluate \
+        -i https://w3id.org/biopragmatics/biomappings/sssom/biomappings.sssom.tsv \
         -i data/predictions.sssom.tsv
 
 .. admonition:: OAEI Calls and Publications
