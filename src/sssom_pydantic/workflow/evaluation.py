@@ -125,6 +125,13 @@ domain that (almost all) ontologies don't have one-to-many or many-to-one mappin
 it's also possible to identify entities for which there is no mapping between two given
 resources and further increase the accuracy of the accuracy metric.
 
+Looking forward, this workflow can be arbitrarily extended with additional curations of
+mappings in Biomappings (or any other manually curated SSSOM files or ontologies) to be
+applied. It currently doesn't automatically stratify based on mapping tool, but if there
+are additional ones put into use (such as LeonMap, implemented by Harshit Soni and
+suggested `here <https://github.com/biopragmatics/biomappings/pull/274>`_), then this is
+an important step towards building an automated, rerunnable evaluation workflow.
+
 .. admonition:: OAEI Calls and Publications
 
     ==== ====================================== ======================================================================
