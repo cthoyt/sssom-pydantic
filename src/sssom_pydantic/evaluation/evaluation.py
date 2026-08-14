@@ -30,63 +30,64 @@ predictions can be deposited and software like `SSSOM Curator
 mappings.
 
 Another criticism of OAEI is that the code, documentation, and data formats are
-antiquated. Therefore, this module implements tools for creating and evaluating benchmarks based on mappings in
-the `Simple Standard for Sharing Ontological Mappings (SSSOM)
-<https://mapping-commons.github.io/sssom>`_.
+antiquated. Therefore, this module implements tools for creating and evaluating
+benchmarks based on mappings in the `Simple Standard for Sharing Ontological Mappings
+(SSSOM) <https://mapping-commons.github.io/sssom>`_.
 
-And estimates several metrics such as accuracy, precision, recall, and F1 for the predictions.
-This gives back an estimation of the true metrics, since the positive and negative manually
-curated mappings likely are not complete and therefore have some bias in which things were
-curated (e.g., I always curate the easiest first, leading towards a skew that more of my
-manual curations result in positive calls).
+And estimates several metrics such as accuracy, precision, recall, and F1 for the
+predictions. This gives back an estimation of the true metrics, since the positive and
+negative manually curated mappings likely are not complete and therefore have some bias
+in which things were curated (e.g., I always curate the easiest first, leading towards a
+skew that more of my manual curations result in positive calls).
 
 In the following example, three sources of mappings are combine for the evaluation:
 
-1. Mappings from Medical Action Ontology (MAXO) extracted using :mod:`pyobo`, which include mappings to
-   Medical Subject Headings (MeSH) with no metadata, so they default to ``oboInOwl:hasDbXref`` as a predicate and
-   ``semapv:UnspecifiedMapping`` as a justification.
-2. Manually curated mappings from Biomappings, which includes previously curated mappings between MAXO and MeSH
-   with high precision predicates and justification
-3. Mappings predicted by the :mod:`sssom_curator` between MAXO and MeSH
+1. Mappings from Medical Action Ontology (MAXO) extracted using :mod:`pyobo`, which
+   include mappings to Medical Subject Headings (MeSH) with no metadata, so they default
+   to ``oboInOwl:hasDbXref`` as a predicate and ``semapv:UnspecifiedMapping`` as a
+   justification.
+2. Mappings predicted by the :mod:`sssom_curator` between MAXO and MeSH
+3. Manually curated mappings from Biomappings, which includes previously curated
+   mappings between MAXO and MeSH with high precision predicates and justification
 
 .. code-block:: console
 
-    \$ mkdir test
-    \$ cd test
-    \$ sssom_curator init --purl-base https://example.org/
-    \$ sssom_curator predict lexical mesh maxo
     \$ pyobo lookup sssom maxo -o maxo.sssom.tsv
+
+    \$ mkdir test-dir
+    \$ sssom_curator init --directory test-dir --purl-base https://example.org/
+    \$ sssom_curator -p test-dir predict lexical mesh maxo
+
     \$ sssom_pydantic evaluate \
         -i https://w3id.org/biopragmatics/biomappings/sssom/biomappings.sssom.tsv \
         -i data/predictions.sssom.tsv \
         -i maxo.sssom.tsv \
         --accept-unspecified
 
-When extending this workflow to several other OBO Foundry ontologies
-mapping to MeSH, a table like this is produced:
+When extending this workflow to several other OBO Foundry ontologies mapping to MeSH, a
+table like this is produced:
 
-============================================================= ===========   =========   ==========   =======   =====
- prefix                                                       completion    accuracy    precision    recall    $F_1$
-============================================================= ===========   =========   ==========   =======   =====
-`chebi <https://bioregistry.io/chebi>`_                              7.9%       98.2%        98.9%     99.2%   99.1% 
-`cl <https://bioregistry.io/cl>`_                                   26.9%       53.4%        90.8%     47.6%   62.5% 
-`clo <https://bioregistry.io/clo>`_                                 50.0%       61.9%        66.7%     85.7%   75.0% 
-`fix <https://bioregistry.io/fix>`_                                 29.7%       93.5%        93.3%    100.0%   96.6% 
-`go <https://bioregistry.io/go>`_                                   32.5%       80.3%        82.6%     96.1%   88.8% 
-`hgnc <https://bioregistry.io/hgnc>`_                                1.9%       43.6%        68.0%     45.9%   54.8% 
-`hp <https://bioregistry.io/hp>`_                                   12.2%       96.6%        98.8%     97.7%   98.3% 
-`maxo <https://bioregistry.io/maxo>`_                               43.3%       86.9%       100.0%     86.9%   93.0% 
-`mi <https://bioregistry.io/mi>`_                                   17.6%       95.8%        95.8%    100.0%   97.9% 
-`mmo <https://bioregistry.io/mmo>`_                                 39.6%       88.9%       100.0%     88.9%   94.1% 
-`ms <https://bioregistry.io/ms>`_                                   44.8%       81.5%        80.8%    100.0%   89.4% 
-`so <https://bioregistry.io/so>`_                                   14.6%       95.2%        95.2%    100.0%   97.6% 
-`txpo <https://bioregistry.io/txpo>`_                               25.8%       72.6%        98.4%     73.5%   84.1% 
-`uberon <https://bioregistry.io/uberon>`_                            7.1%       12.2%        98.7%     12.2%   21.7% 
-`vo <https://bioregistry.io/vo>`_                                   69.4%       64.1%        91.2%     53.8%   67.6% 
-`vto <https://bioregistry.io/vto>`_                                  0.3%       50.0%        50.0%    100.0%   66.7% 
-`xlmod <https://bioregistry.io/xlmod>`_                             44.7%       98.7%        98.7%    100.0%   99.3% 
-============================================================= ===========   =========   ==========   =======   =====
-
+========================================= ========== ======== ========= ====== =====
+Prefix                                    Completion Accuracy Precision Recall $F_1$
+========================================= ========== ======== ========= ====== =====
+`chebi <https://bioregistry.io/chebi>`_   7.9%       98.2%    98.9%     99.2%  99.1%
+`cl <https://bioregistry.io/cl>`_         26.9%      53.4%    90.8%     47.6%  62.5%
+`clo <https://bioregistry.io/clo>`_       50.0%      61.9%    66.7%     85.7%  75.0%
+`fix <https://bioregistry.io/fix>`_       29.7%      93.5%    93.3%     100.0% 96.6%
+`go <https://bioregistry.io/go>`_         32.5%      80.3%    82.6%     96.1%  88.8%
+`hgnc <https://bioregistry.io/hgnc>`_     1.9%       43.6%    68.0%     45.9%  54.8%
+`hp <https://bioregistry.io/hp>`_         12.2%      96.6%    98.8%     97.7%  98.3%
+`maxo <https://bioregistry.io/maxo>`_     43.3%      86.9%    100.0%    86.9%  93.0%
+`mi <https://bioregistry.io/mi>`_         17.6%      95.8%    95.8%     100.0% 97.9%
+`mmo <https://bioregistry.io/mmo>`_       39.6%      88.9%    100.0%    88.9%  94.1%
+`ms <https://bioregistry.io/ms>`_         44.8%      81.5%    80.8%     100.0% 89.4%
+`so <https://bioregistry.io/so>`_         14.6%      95.2%    95.2%     100.0% 97.6%
+`txpo <https://bioregistry.io/txpo>`_     25.8%      72.6%    98.4%     73.5%  84.1%
+`uberon <https://bioregistry.io/uberon>`_ 7.1%       12.2%    98.7%     12.2%  21.7%
+`vo <https://bioregistry.io/vo>`_         69.4%      64.1%    91.2%     53.8%  67.6%
+`vto <https://bioregistry.io/vto>`_       0.3%       50.0%    50.0%     100.0% 66.7%
+`xlmod <https://bioregistry.io/xlmod>`_   44.7%      98.7%    98.7%     100.0% 99.3%
+========================================= ========== ======== ========= ====== =====
 
 .. admonition:: OAEI Calls and Publications
 
