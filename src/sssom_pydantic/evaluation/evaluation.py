@@ -32,33 +32,48 @@ This module implements tools for creating and evaluating benchmarks based on map
 the `Simple Standard for Sharing Ontological Mappings (SSSOM)
 <https://mapping-commons.github.io/sssom>`_.
 
-==== ====================================== ======================================================================
-Year Call                                   Publication
-==== ====================================== ======================================================================
-2026 https://oaei.ontologymatching.org/2026
-2025 https://oaei.ontologymatching.org/2025
-2024 https://oaei.ontologymatching.org/2024 https://inria.hal.science/hal-04892635/
-2023 https://oaei.ontologymatching.org/2023 https://ora.ox.ac.uk/objects/uuid:e167c7dc-72cd-476a-ba23-d4bcc86e0b60
-2022 https://oaei.ontologymatching.org/2022 https://hal.science/hal-04351729/
-2021 https://oaei.ontologymatching.org/2021 https://openaccess.city.ac.uk/id/eprint/27602/
-2020 https://oaei.ontologymatching.org/2020 https://hal.science/hal-04312966/
-2019 https://oaei.ontologymatching.org/2019 https://openaccess.city.ac.uk/id/eprint/23708/
-2018 https://oaei.ontologymatching.org/2018 https://hal.science/hal-02089249/
-2017 https://oaei.ontologymatching.org/2017 https://air.unimi.it/handle/2434/550707
-2016 https://oaei.ontologymatching.org/2016 https://inria.hal.science/hal-01421833/
-2015 https://oaei.ontologymatching.org/2015 https://hal.science/hal-01254907/
-2014 https://oaei.ontologymatching.org/2014 https://hal.science/hal-01180915/
-2013 https://oaei.ontologymatching.org/2013 https://inria.hal.science/hal-01140027/
-2012 https://oaei.ontologymatching.org/2012 https://inria.hal.science/hal-00768409/
-2011 https://oaei.ontologymatching.org/2011 https://inria.hal.science/hal-00781022/
-2010 https://oaei.ontologymatching.org/2010 https://inria.hal.science/hal-00793276/
-2009 https://oaei.ontologymatching.org/2009 https://inria.hal.science/hal-00794918/
-2008 https://oaei.ontologymatching.org/2008 https://inria.hal.science/hal-00793535/
-2007 https://oaei.ontologymatching.org/2007 https://inria.hal.science/hal-00822893/
-2006 https://oaei.ontologymatching.org/2006 https://ceur-ws.org/Vol-225/paper7.pdf
-2005 https://oaei.ontologymatching.org/2005 https://inria.hal.science/hal-00922283/
-2004 https://oaei.ontologymatching.org/2002 https://inria.hal.science/hal-04892635/
-==== ====================================== ======================================================================
+In the following example, :mod:`sssom_curator` is used to construct lexical predictions
+that are evaluated by CLI.
+
+.. code-block:: console
+
+    \\$ mkdir test
+    \\$ cd test
+    \\$ sssom_curator init --purl-base https://example.org/
+    \\$ sssom_curator predict lexical mesh maxo
+    \\$ sssom_pydantic evaluate \\
+        -i https://w3id.org/biopragmatics/biomappings/sssom/biomappings.sssom.tsv \\
+        -i data/predictions.sssom.tsv
+
+.. admonition:: OAEI Calls and Publications
+
+    ==== ====================================== ======================================================================
+    Year Call                                   Publication
+    ==== ====================================== ======================================================================
+    2026 https://oaei.ontologymatching.org/2026
+    2025 https://oaei.ontologymatching.org/2025
+    2024 https://oaei.ontologymatching.org/2024 https://inria.hal.science/hal-04892635/
+    2023 https://oaei.ontologymatching.org/2023 https://ora.ox.ac.uk/objects/uuid:e167c7dc-72cd-476a-ba23-d4bcc86e0b60
+    2022 https://oaei.ontologymatching.org/2022 https://hal.science/hal-04351729/
+    2021 https://oaei.ontologymatching.org/2021 https://openaccess.city.ac.uk/id/eprint/27602/
+    2020 https://oaei.ontologymatching.org/2020 https://hal.science/hal-04312966/
+    2019 https://oaei.ontologymatching.org/2019 https://openaccess.city.ac.uk/id/eprint/23708/
+    2018 https://oaei.ontologymatching.org/2018 https://hal.science/hal-02089249/
+    2017 https://oaei.ontologymatching.org/2017 https://air.unimi.it/handle/2434/550707
+    2016 https://oaei.ontologymatching.org/2016 https://inria.hal.science/hal-01421833/
+    2015 https://oaei.ontologymatching.org/2015 https://hal.science/hal-01254907/
+    2014 https://oaei.ontologymatching.org/2014 https://hal.science/hal-01180915/
+    2013 https://oaei.ontologymatching.org/2013 https://inria.hal.science/hal-01140027/
+    2012 https://oaei.ontologymatching.org/2012 https://inria.hal.science/hal-00768409/
+    2011 https://oaei.ontologymatching.org/2011 https://inria.hal.science/hal-00781022/
+    2010 https://oaei.ontologymatching.org/2010 https://inria.hal.science/hal-00793276/
+    2009 https://oaei.ontologymatching.org/2009 https://inria.hal.science/hal-00794918/
+    2008 https://oaei.ontologymatching.org/2008 https://inria.hal.science/hal-00793535/
+    2007 https://oaei.ontologymatching.org/2007 https://inria.hal.science/hal-00822893/
+    2006 https://oaei.ontologymatching.org/2006 https://ceur-ws.org/Vol-225/paper7.pdf
+    2005 https://oaei.ontologymatching.org/2005 https://inria.hal.science/hal-00922283/
+    2004 https://oaei.ontologymatching.org/2002 https://inria.hal.science/hal-04892635/
+    ==== ====================================== ======================================================================
 """  # noqa:E501
 
 from collections import defaultdict
@@ -179,15 +194,17 @@ def stratify(
     - ``semapv:SemanticSimilarityThresholdMatching``
     - ``semapv::StructuralMatching``
 
-    Manually curated semantic mappings ``semapv:ManualMappingCuration``, and when opted
-    in with the ``accept_unspecified`` flag, also``semapv:UnspecifiedMatching``.
-    Remaining mapping justifications in the `Semantic Mapping Vocabulary (SEMAPV)
-    <https://semantic.farm/registry/semapv>`_ can't be easily categorized.
+    Manually curated semantic mappings have one of the following justifications:
 
-    Semantic mappings are then subcategorized as positive or negative (i.e., when the
-    predicate modifier is set to ``Not``). Note, there are typically no negative
-    predicted semantic mappings because software focuses on producing positive semantic
-    mappings.
+    - ``semapv:ManualMappingCuration``
+    - ``semapv:UnspecifiedMatching`` (when opted in with the ``accept_unspecified``
+      flag)
+
+    Remaining mapping justifications in the `Semantic Mapping Vocabulary (SEMAPV)
+    <https://semantic.farm/registry/semapv>`_ can't be easily categorized. Semantic
+    mappings are then subcategorized as positive or negative (i.e., when the predicate
+    modifier is set to ``Not``). Note, there are typically no negative predicted
+    semantic mappings because software focuses on producing positive semantic mappings.
 
     If needed, negative mappings can be sampled using techniques based on the open world
     assumption (OWA) or local closed world assumption (LCWA). The `PyKEEN
