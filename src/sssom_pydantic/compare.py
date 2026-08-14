@@ -37,11 +37,12 @@ You can do a multi-comparison:
 
 from collections import defaultdict
 from collections.abc import Collection, Iterable, Mapping
-from typing import Any, Generic, NamedTuple, Self, TypeAlias, TypeVar
+from typing import Any, Generic, NamedTuple, Self, TypeAlias
 
 from curies import NamableReference
 from curies.triples.model import TripleType
 from curies.vocabulary import manual_mapping_curation
+from typing_extensions import TypeVar
 
 from sssom_pydantic import SemanticMapping
 
