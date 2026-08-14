@@ -100,7 +100,7 @@ def main() -> None:
 
     start = time.time()
     click.echo("getting MeSH grounder")
-    mesh_grounder = pyobo.get_grounder("mesh")
+    mesh_grounder = pyobo.get_grounder("mesh", force=True, raise_on_missing=True)
     click.echo(f"Got MeSH grounder in {naturaldelta(time.time() - start)}")
 
     rows = []
@@ -111,7 +111,7 @@ def main() -> None:
         prefix = converter.standardize_prefix(prefix, strict=True)
         it.set_description(f"Evaluating {prefix}")
         path = module.join(name=f"{prefix}-predicted.sssom.tsv")
-        if path.is_file() and False:
+        if path.is_file():
             predicted_mappings, _, _ = sssom_pydantic.read(path)
             tqdm.write(
                 f"[{prefix}] loaded {len(predicted_mappings):,} predicted mappings from {path}"
