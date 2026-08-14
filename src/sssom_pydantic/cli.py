@@ -375,17 +375,32 @@ def compare_it(
 @main.command(name="evaluate")
 @MULTIPLE_INPUT_OPTION
 @click.option("--accept-unspecified", is_flag=True)
-def evaluate(input: Iterable[str], accept_unspecified: bool) -> None:
+@click.option("--tablefmt", default="github", show_default=True)
+def evaluate(input: Iterable[str], accept_unspecified: bool, tablefmt: str) -> None:
     """Produce an evaluation of predicted mappings."""
     import itertools as itt
 
+    from tabulate import tabulate
+
     import sssom_pydantic
 
-    from .evaluation.evaluation import stratify
+    from .evaluation.evaluation import evaluate_predictions
 
     parts = [sssom_pydantic.read(path) for path in input]
     mappings = itt.chain.from_iterable(part.mappings for part in parts)
-    stratify(mappings, accept_unspecified=accept_unspecified)
+    res = evaluate_predictions(mappings, accept_unspecified=accept_unspecified)
+    rows = []
+    for k, v in res.items():
+        a, b = sorted(k)
+        rows.append((a, b, *v))
+    click.echo(
+        tabulate(
+            rows,
+            headers=["p1", "p2", "completion", "accuracy", "precision", "recall", "f1"],
+            floatfmt=".1%",
+            tablefmt=tablefmt,
+        )
+    )
 
 
 if __name__ == "__main__":
