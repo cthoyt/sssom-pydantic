@@ -5,7 +5,7 @@ build-backend = "uv_build"
 [project]
 name = "sssom-pydantic"
 version = "0.6.4-dev"
-description = "Pydantic models for SSSOM"
+description = "An elegant implementation of SSSOM, with Pydantic"
 readme = "README.md"
 authors = [
     { name = "Charles Tapley Hoyt", email = "cthoyt@gmail.com" }
@@ -159,6 +159,7 @@ Funding = "https://github.com/sponsors/cthoyt"
 
 [project.scripts]
 sssom_pydantic = "sssom_pydantic.cli:main"
+sssom-pydantic = "sssom_pydantic.cli:main"
 
 [tool.cruft]
 skip = [
