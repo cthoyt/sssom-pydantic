@@ -493,6 +493,7 @@ QUERY_TO_CLAUSE: dict[str, Callable[[str], ColumnExpressionArgument[bool] | None
         if value is not None
         else None
     ),
+    "justification": lambda value: col(SemanticMappingModel.justification).icontains(value.lower()),
 }
 
 

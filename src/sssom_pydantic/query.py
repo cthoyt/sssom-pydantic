@@ -84,7 +84,10 @@ class Query(BaseModel):
     same_text: Annotated[
         bool | None, Field(description="If true, filter to predictions with the same label")
     ] = None
-    justification: Annotated[str | None, Field(description="If given, filter to mappings whose CURIEs are the given justification")] = None
+    justification: Annotated[
+        str | None,
+        Field(description="If given, filter to mappings whose CURIEs are the given justification"),
+    ] = None
 
 
 def filter_mappings(
