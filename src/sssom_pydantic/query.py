@@ -84,6 +84,10 @@ class Query(BaseModel):
     same_text: Annotated[
         bool | None, Field(description="If true, filter to predictions with the same label")
     ] = None
+    justification: Annotated[
+        str | None,
+        Field(description="If given, filter to mappings whose CURIEs are the given justification"),
+    ] = None
 
 
 def filter_mappings(
@@ -178,6 +182,7 @@ QUERY_TO_FUNC: dict[str, Callable[[SemanticMapping], list[str | None]]] = {
     "object_query": lambda mapping: [mapping.object.curie, mapping.object_name],
     "prefix": lambda mapping: [mapping.subject.curie, mapping.object.curie],
     "mapping_tool": lambda mapping: [mapping.mapping_tool_name],
+    "justification": lambda mapping: [mapping.justification.curie],
 }
 
 

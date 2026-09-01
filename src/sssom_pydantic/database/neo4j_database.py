@@ -410,6 +410,7 @@ QUERY_TO_CLAUSE: dict[str, Callable[[str | bool], str]] = {
             )
         )"""
     ),
+    "justification": lambda value: "toLower(p.justification) CONTAINS toLower($justification)",
 }
 
 
