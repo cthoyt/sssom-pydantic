@@ -5,19 +5,20 @@ from __future__ import annotations
 import datetime
 from collections.abc import Callable, Sequence
 from operator import attrgetter
-from typing import Annotated, Literal, NamedTuple, TypeAlias
+from typing import Annotated, Literal, NamedTuple, Self, TypeAlias
 
 import curies
 from curies.vocabulary import XSDPrimitive, matching_processes
 from pydantic import AnyUrl, BaseModel, ConfigDict, Field
 
-from .constants import EntityTypeLiteral, SemanticPrimitive
+from .constants import EntityTypeLiteral, SemanticPrimitive, get_sssom_invalid_reference
 
 __all__ = [
     "Cardinality",
     "ExpandedRecord",
     "Record",
     "RecordPredicate",
+    "Slot",
 ]
 
 #: Cardinality annotations, which are valid within the scope of a mapping set
@@ -26,10 +27,45 @@ Cardinality: TypeAlias = Literal["1:1", "1:n", "n:1", "1:0", "0:1", "n:n", "0:0"
 
 
 class Slot(BaseModel):
-    """An extension slot value."""
+    """An extension slot value.
+
+    .. code-block:: python
+
+        import sssom_pydantic
+        from curies import Converter, NameableReference
+        from sssom_pydantic import SemanticMapping, Slot, MappingSet, ExtensionDefinition
+
+        converter = Converter.from_prefix_map(
+            {
+                "CHEBI": "http://purl.obolibrary.org/obo/CHEBI_",
+                "mesh": "http://id.nlm.nih.gov/mesh/",
+            }
+        )
+        metadata = MappingSet(
+            id="https://example.org/sssom.tsv",
+            extensions=[
+                ExtensionDefinition.default("test_slot"),
+            ],
+        )
+        mapping = SemanticMapping(
+            subject="mesh:C000089",
+            predicate="skos:exactMatch",
+            object="CHEBI:28646",
+            mapping_justification="semapv:ManualMappingCuration",
+            extensions={
+                "test_slot": Slot.default("test_slot", "test slot value"),
+            },
+        )
+        sssom_pydantic.write([mapping], converter=converter, metadata=metadata)
+    """
 
     predicate: curies.Reference
     value: SemanticPrimitive
+
+    @classmethod
+    def default(cls, slot_name: str, value: SemanticPrimitive) -> Self:
+        """Get a default slot."""
+        return cls(predicate=get_sssom_invalid_reference(slot_name), value=value)
 
     def expand(self, converter: curies.Converter) -> ExpandedSlot:
         """Expand the slot."""

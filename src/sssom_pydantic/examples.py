@@ -24,8 +24,6 @@ from pydantic import BaseModel
 from sssom_pydantic.api import (
     MAPPING_HASH_CURIE_PREFIX,
     MAPPING_HASH_URI_PREFIX,
-    SSSOM_INVALID_CURIE_PREFIX,
-    SSSOM_INVALID_URI_PREFIX,
     TRIPLE_HASH_CURIE_PREFIX,
     TRIPLE_HASH_URI_PREFIX,
     ExtensionDefinition,
@@ -35,6 +33,7 @@ from sssom_pydantic.api import (
     hash_mapping_to_reference,
     hash_triple_to_reference,
 )
+from sssom_pydantic.constants import SSSOM_INVALID_CURIE_PREFIX, SSSOM_INVALID_URI_PREFIX
 from sssom_pydantic.models import Slot
 
 __all__ = [

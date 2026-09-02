@@ -20,7 +20,7 @@ from pydantic import AnyUrl
 
 import sssom_pydantic
 from sssom_pydantic import ExtensionDefinition, SemanticMapping
-from sssom_pydantic.api import SSSOM_INVALID_CURIE_PREFIX
+from sssom_pydantic.constants import SSSOM_INVALID_CURIE_PREFIX
 from sssom_pydantic.models import Slot
 
 
