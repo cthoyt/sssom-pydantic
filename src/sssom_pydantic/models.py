@@ -27,7 +27,37 @@ Cardinality: TypeAlias = Literal["1:1", "1:n", "n:1", "1:0", "0:1", "n:n", "0:0"
 
 
 class Slot(BaseModel):
-    """An extension slot value."""
+    """An extension slot value.
+
+    .. code-block:: python
+
+        import sssom_pydantic
+        from curies import Converter, NameableReference
+        from sssom_pydantic import SemanticMapping, Slot, MappingSet, ExtensionDefinition
+
+        converter = Converter.from_prefix_map(
+            {
+                "CHEBI": "http://purl.obolibrary.org/obo/CHEBI_",
+                "mesh": "http://id.nlm.nih.gov/mesh/",
+            }
+        )
+        metadata = MappingSet(
+            id="https://example.org/sssom.tsv",
+            extensions=[
+                ExtensionDefinition.default("test_slot"),
+            ],
+        )
+        mapping = SemanticMapping(
+            subject="mesh:C000089",
+            predicate="skos:exactMatch",
+            object="CHEBI:28646",
+            mapping_justification="semapv:ManualMappingCuration",
+            extensions={
+                "test_slot": Slot.default("test_slot", "test slot value"),
+            },
+        )
+        sssom_pydantic.write([mapping], converter=converter, metadata=metadata)
+    """
 
     predicate: curies.Reference
     value: SemanticPrimitive
