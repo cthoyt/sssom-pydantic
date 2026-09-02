@@ -27,9 +27,11 @@ from .constants import (
     ENTITY_TYPE_REFERENCE_TO_LITERAL,
     MULTIVALUED,
     PROPAGATABLE,
+    SSSOM_INVALID_CURIE_PREFIX,
     EntityTypeLiteral,
     Row,
     SemanticPrimitive,
+    get_sssom_invalid_reference,
 )
 from .models import Cardinality, Record, Slot, expanded_record_to_str
 
@@ -811,10 +813,6 @@ class MappingSet(BaseModel):
         return rv
 
 
-SSSOM_INVALID_CURIE_PREFIX = "sssom.invalid"
-SSSOM_INVALID_URI_PREFIX = "http://sssom.invalid/"
-
-
 class ExtensionDefinitionRecord(BaseModel):
     """An extension definition that can be readily dumped to SSSOM."""
 
@@ -848,7 +846,7 @@ class ExtensionDefinition(BaseModel):
         """Get a default extension."""
         return cls(
             name=slot_name,
-            predicate=Reference(prefix=SSSOM_INVALID_CURIE_PREFIX, identifier=slot_name),
+            predicate=get_sssom_invalid_reference(slot_name),
             datatype=type_hint or xsd_string,
         )
 

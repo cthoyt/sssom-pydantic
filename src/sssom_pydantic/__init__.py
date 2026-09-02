@@ -29,7 +29,7 @@ from .io import (
     write,
     write_unprocessed,
 )
-from .models import Record
+from .models import Record, Slot
 from .process import invert
 
 __all__ = [
@@ -44,6 +44,7 @@ __all__ = [
     "SemanticMapping",
     "SemanticMappingPack",
     "SemanticMappingPredicate",
+    "Slot",
     "append",
     "append_unprocessed",
     "format",

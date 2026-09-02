@@ -18,9 +18,12 @@ __all__ = [
     "PREDICTION_PREDICATES",
     "PREFIX_MAP_KEY",
     "PROPAGATABLE",
+    "SSSOM_INVALID_CURIE_PREFIX",
+    "SSSOM_INVALID_URI_PREFIX",
     "EntityTypeLiteral",
     "Row",
     "SemanticPrimitive",
+    "get_sssom_invalid_reference",
     "guess_class",
 ]
 
@@ -139,7 +142,6 @@ DEFAULT_PREFIX_MAP: dict[str, str] = {
 }
 BUILTIN_CONVERTER = curies.Converter.from_prefix_map(DEFAULT_PREFIX_MAP)
 
-
 MAPPING_SLOT_SPECIFIC = {
     "mapping_set_id",
     "mapping_set_confidence",
@@ -186,3 +188,11 @@ PREDICTION_PREDICATES = {
     v.semantic_similarity,
     v.structural_matching,
 }
+
+SSSOM_INVALID_CURIE_PREFIX = "sssom.invalid"
+SSSOM_INVALID_URI_PREFIX = "http://sssom.invalid/"
+
+
+def get_sssom_invalid_reference(slot_name: str) -> Reference:
+    """Get a reference with the SSSOM invalid CURIE prefix."""
+    return Reference(prefix=SSSOM_INVALID_CURIE_PREFIX, identifier=slot_name)

@@ -5,19 +5,20 @@ from __future__ import annotations
 import datetime
 from collections.abc import Callable, Sequence
 from operator import attrgetter
-from typing import Annotated, Literal, NamedTuple, TypeAlias
+from typing import Annotated, Literal, NamedTuple, Self, TypeAlias
 
 import curies
 from curies.vocabulary import XSDPrimitive, matching_processes
 from pydantic import AnyUrl, BaseModel, ConfigDict, Field
 
-from .constants import EntityTypeLiteral, SemanticPrimitive
+from .constants import EntityTypeLiteral, SemanticPrimitive, get_sssom_invalid_reference
 
 __all__ = [
     "Cardinality",
     "ExpandedRecord",
     "Record",
     "RecordPredicate",
+    "Slot",
 ]
 
 #: Cardinality annotations, which are valid within the scope of a mapping set
@@ -30,6 +31,11 @@ class Slot(BaseModel):
 
     predicate: curies.Reference
     value: SemanticPrimitive
+
+    @classmethod
+    def default(cls, slot_name: str, value: SemanticPrimitive) -> Self:
+        """Get a default slot."""
+        return cls(predicate=get_sssom_invalid_reference(slot_name), value=value)
 
     def expand(self, converter: curies.Converter) -> ExpandedSlot:
         """Expand the slot."""
