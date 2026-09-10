@@ -203,9 +203,17 @@ def subset(
     is_flag=True,
     help="If set, adds declarations (and labels, when available)",
 )
-@click.option("--mode", type=click.Choice(["bridge", "inline"]), default="inline")
-@click.option("--no-generation-comment", is_flag=True)
-@click.option("--negation-workflow", is_flag=True)
+@click.option(
+    "--mode", type=click.Choice(["bridge", "inline"]), default="inline", show_default=True
+)
+@click.option(
+    "--no-generation-comment",
+    is_flag=True,
+    help="If set, do not add a rdfs:comment annotation to the ontology "
+    "with SSSOM-Pydantic version information",
+)
+@click.option("--negation-workflow", is_flag=True, help="If set, enable the negation workflow")
+@click.option("--ontology-iri", help="Explicitly give the ontology IRI to write")
 def owl(
     input: Path | None,
     output: Path | None,
@@ -215,6 +223,7 @@ def owl(
     mode: AxiomMode,
     no_generation_comment: bool,
     negation_workflow: bool,
+    ontology_iri: str | None,
 ) -> None:
     """Convert SSSOM to OWL, serialized as Functional OWL (OFN)."""
     import sys
@@ -230,7 +239,7 @@ def owl(
         converter=converter,
         mode=mode,
         metadata=metadata,
-        iri=str(metadata.id),
+        iri=ontology_iri or str(metadata.id),
         minimum_confidence=cutoff,
         mapping_annotations=mapping_annotations,
         declarations=declarations,
