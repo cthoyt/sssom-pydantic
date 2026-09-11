@@ -8,7 +8,6 @@ import datetime
 import functools
 import logging
 import traceback
-import warnings
 from collections import ChainMap, Counter, defaultdict
 from collections.abc import Collection, Generator, Iterable, Mapping, Sequence
 from io import StringIO
@@ -60,7 +59,6 @@ __all__ = [
     "append",
     "append_unprocessed",
     "format",
-    "lint",
     "read",
     "read_iterable",
     "read_unprocessed",
@@ -1018,12 +1016,6 @@ def format(
         drop_duplicates_key=drop_duplicates_key,
         sort=True,
     )
-
-
-def lint(*args: Any, **kwargs: Any) -> None:
-    """Run the formatter."""
-    warnings.warn("use sssom_pydantic.format() instead", DeprecationWarning, stacklevel=2)
-    return format(*args, **kwargs)
 
 
 class CachedSemanticMappings(Cached[SemanticMappingPack]):
