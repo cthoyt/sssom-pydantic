@@ -11,6 +11,7 @@ import click
 if TYPE_CHECKING:
     from .api import SemanticMapping
     from .contrib.owl import AxiomMode
+    from .io import ErrorAction
 
 __all__ = [
     "main",
@@ -57,12 +58,21 @@ OUTPUT_OPTION = click.option(
 @STANDARDIZE_FLAG
 @RELABEL_FLAG
 @click.option("--drop-duplicates", is_flag=True)
-def format_sssom_tsv(path: Path, standardize: bool, relabel: bool, drop_duplicates: bool) -> None:
+@click.option(
+    "--error-action", type=click.Choice(["raise", "ignore"]), default="raise", show_default=True
+)
+def format_sssom_tsv(
+    path: Path, standardize: bool, relabel: bool, drop_duplicates: bool, error_action: ErrorAction
+) -> None:
     """Lint a SSSOM TSV file."""
     import sssom_pydantic
 
     sssom_pydantic.format(
-        path, standardize=standardize, relabel=relabel, drop_duplicates=drop_duplicates
+        path,
+        standardize=standardize,
+        relabel=relabel,
+        drop_duplicates=drop_duplicates,
+        error_action=error_action,
     )
 
 
