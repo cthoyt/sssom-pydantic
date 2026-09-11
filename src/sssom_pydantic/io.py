@@ -969,6 +969,9 @@ def _chomp_frontmatter(file: TextIO) -> tuple[list[str], MappingSetRecord | None
     return columns, rv, count
 
 
+ErrorAction: TypeAlias = Literal["raise", "ignore"]
+
+
 def format(
     path: str | Path,
     *,
@@ -981,9 +984,11 @@ def format(
     drop_duplicates_key: Hasher[SemanticMapping, Y] | None = None,
     standardize: bool = False,
     relabel: bool = False,
-    ignore_errors: bool = False,
+    error_action: ErrorAction | None = None,
 ) -> None:
     """Lint a file."""
+    if error_action is None:
+        error_action = "raise"
     mappings, converter_processed, mapping_set, errors = read(
         path,
         metadata_path=metadata_path,
@@ -991,7 +996,7 @@ def format(
         converter=converter,
         return_errors=True,
     )
-    if errors and not ignore_errors:
+    if errors and error_action == "raise":
         raise ValueError(errors)
 
     if standardize:
