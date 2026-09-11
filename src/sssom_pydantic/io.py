@@ -95,6 +95,10 @@ class ParseError(NamedTuple):
         return _get_exc(self.exception)
 
 
+def format_parse_errors(parse_errors: list[ParseError]) -> str:
+    raise NotImplementedError
+
+
 def _get_exc(exc: Exception) -> str:
     file = StringIO()
     traceback.print_exception(exc, file=file)
@@ -984,7 +988,7 @@ def format(
     standardize: bool = False,
     relabel: bool = False,
     ignore_errors: bool = False,
-) -> None:
+) -> list[ParseError] | None:
     """Lint a file."""
     mappings, converter_processed, mapping_set, errors = read(
         path,
@@ -994,7 +998,7 @@ def format(
         return_errors=True,
     )
     if errors and not ignore_errors:
-        raise RuntimeError(errors)
+        return errors
 
     if standardize:
         converter_processed = _get_preferred_converter(converter_processed)

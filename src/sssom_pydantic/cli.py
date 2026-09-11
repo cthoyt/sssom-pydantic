@@ -63,14 +63,17 @@ def format_sssom_tsv(
 ) -> None:
     """Lint a SSSOM TSV file."""
     import sssom_pydantic
+    from sssom_pydantic.io import format_parse_errors
 
-    sssom_pydantic.format(
+    errors = sssom_pydantic.format(
         path,
         standardize=standardize,
         relabel=relabel,
         drop_duplicates=drop_duplicates,
         ignore_errors=ignore_errors,
     )
+    if errors:
+        click.secho(format_parse_errors(errors))
 
 
 @main.command()
