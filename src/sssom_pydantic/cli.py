@@ -57,12 +57,19 @@ OUTPUT_OPTION = click.option(
 @STANDARDIZE_FLAG
 @RELABEL_FLAG
 @click.option("--drop-duplicates", is_flag=True)
-def format_sssom_tsv(path: Path, standardize: bool, relabel: bool, drop_duplicates: bool) -> None:
+@click.option("--ignore-errors", is_flag=True)
+def format_sssom_tsv(
+    path: Path, standardize: bool, relabel: bool, drop_duplicates: bool, ignore_errors: bool
+) -> None:
     """Lint a SSSOM TSV file."""
     import sssom_pydantic
 
     sssom_pydantic.format(
-        path, standardize=standardize, relabel=relabel, drop_duplicates=drop_duplicates
+        path,
+        standardize=standardize,
+        relabel=relabel,
+        drop_duplicates=drop_duplicates,
+        ignore_errors=ignore_errors,
     )
 
 

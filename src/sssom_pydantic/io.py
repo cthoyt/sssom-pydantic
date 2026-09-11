@@ -983,11 +983,18 @@ def format(
     drop_duplicates_key: Hasher[SemanticMapping, Y] | None = None,
     standardize: bool = False,
     relabel: bool = False,
+    ignore_errors: bool = False,
 ) -> None:
     """Lint a file."""
-    mappings, converter_processed, mapping_set = read(
-        path, metadata_path=metadata_path, metadata=metadata, converter=converter
+    mappings, converter_processed, mapping_set, errors = read(
+        path,
+        metadata_path=metadata_path,
+        metadata=metadata,
+        converter=converter,
+        return_errors=True,
     )
+    if errors and not ignore_errors:
+        raise RuntimeError(errors)
 
     if standardize:
         converter_processed = _get_preferred_converter(converter_processed)
