@@ -987,8 +987,6 @@ def format(
     error_action: ErrorAction | None = None,
 ) -> None:
     """Lint a file."""
-    if error_action is None:
-        error_action = "raise"
     mappings, converter_processed, mapping_set, errors = read(
         path,
         metadata_path=metadata_path,
@@ -996,7 +994,7 @@ def format(
         converter=converter,
         return_errors=True,
     )
-    if errors and error_action == "raise":
+    if errors and (error_action is None or error_action == "raise"):
         raise ValueError(errors)
 
     if standardize:
