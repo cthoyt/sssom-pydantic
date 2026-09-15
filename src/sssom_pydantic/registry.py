@@ -3,6 +3,7 @@
 import hashlib
 import logging
 from pathlib import Path
+from typing import Self
 
 import click
 import pystow
@@ -10,7 +11,6 @@ from pydantic import AnyUrl, BaseModel, ConfigDict, Field
 from pystow.utils.pydantic_utils import read_pydantic_yaml
 from tqdm import tqdm
 from tqdm.contrib.logging import logging_redirect_tqdm
-from typing_extensions import Self
 
 import sssom_pydantic
 from sssom_pydantic import MappingSet, SemanticMapping
@@ -61,7 +61,7 @@ class MappingSetReference(BaseModel):
                     progress=True,
                     progress_kwargs={"leave": False},
                 )
-        except Exception as e:
+        except Exception as e:  # noqa:BLE001
             tqdm.write(click.style(f"\n{self.url} uncaught exception in {e}\n", fg="red"))
         else:
             if self.mappings:
@@ -74,8 +74,10 @@ class MappingSetReference(BaseModel):
                         f"{self.url} had {len(self.errors):,} errors. Sampling:", fg="yellow"
                     )
                 )
-                for error in self.errors[:5]:
-                    tqdm.write(f"Error on {error.line_number}:\n{_get_exc(error.exception)}\n")
+                sample = False
+                if sample:
+                    for error in self.errors[:5]:
+                        tqdm.write(f"Error on {error.line_number}:\n{_get_exc(error.exception)}\n")
 
 
 class Registry(BaseModel):
@@ -112,7 +114,7 @@ class ServerEntry(BaseModel):
         alias="id",
         description="This is a code for the resource, local to the mapping server configuration",
     )
-    url: AnyUrl = Field(..., alias="uri")
+    url: AnyUrl = Field(..., alias="url")
     registry: Registry | None = None
 
     def hydrate(self) -> None:
@@ -124,9 +126,8 @@ class ServerEntry(BaseModel):
                 self.registry = get_registry(str(self.url))
             except ValueError as e:
                 tqdm.write(
-                    click.style(f"{self.url} failed to parse registry\n{_get_exc(e)}", fg="red")
+                    click.style(f"{self.url} failed to parse registry\n\n{_get_exc(e)}", fg="red")
                 )
-
             else:
                 self.registry.hydrate()
 
@@ -140,7 +141,9 @@ class Server(BaseModel):
 
     def hydrate(self) -> Self:
         """Hydrate metadata about this server's registries."""
-        for registry in tqdm(self.registries, desc="Hydrating server", unit="registry"):
+        for registry in tqdm(
+            self.registries, desc="Hydrating server", unit="registry", leave=False
+        ):
             registry.hydrate()
         return self
 
