@@ -3,30 +3,30 @@
 from __future__ import annotations
 
 import datetime
+import enum
 import itertools as itt
 import math
 import statistics
 import typing
 from collections import defaultdict
 from collections.abc import Callable, Collection, Iterable
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Literal,
-    TypeAlias,
-    TypeVar,
-    cast,
-    get_args,
-)
+from typing import TYPE_CHECKING, Any, Literal, TypeAlias, cast, get_args
 
-from curies import Reference
+import curies
+from curies import Converter, Reference
 from curies.vocabulary import (
     SemanticMappingScope,
+    broad_match,
     manual_mapping_curation,
+    mapping_inversion,
+    narrow_match,
+    semantic_mapping_inversions,
     semantic_mapping_scopes,
 )
+from typing_extensions import TypeVar
 
-from . import SemanticMapping
+from .api import MappingTypeVar, SemanticMapping, SemanticMappingPredicate, hash_triple_to_reference
+from .constants import PREDICTION_PREDICATES
 
 if TYPE_CHECKING:
     from _typeshed import SupportsRichComparison
@@ -43,23 +43,33 @@ __all__ = [
     "Mark",
     "curate",
     "estimate_confidence",
+    "exclude_negative",
+    "exclude_predicted",
+    "exclude_unsure",
+    "filter_by_confidence",
     "get_canonical_tuple",
+    "invert",
+    "invert_broad_matches",
+    "invert_by_object_prefix",
+    "invert_by_prefix_pair",
+    "invert_by_subject_prefix",
+    "invert_narrow_matches",
+    "invert_on_unordered",
+    "merge_manual_curations",
     "publish",
     "remove_redundant_external",
     "remove_redundant_internal",
+    "remove_trivial_negative",
     "review",
 ]
 
 #: A canonical mapping tuple
 CanonicalMappingTuple: TypeAlias = tuple[str, str, str, str]
 
-#: A type variable bound to a semantic mapping type, to
-#: make it possible to annotate functions that spit out the
-#: same type that goes in
-MappingTypeVar = TypeVar("MappingTypeVar", bound=SemanticMapping)
-
-#: The type used in hashing functions.
-HashTarget = TypeVar("HashTarget")
+#: The type used in hashing functions, which get put into a set.
+#: This is set with ``tuple[str, ...]`` as a default because normally,
+#: The hash function used is :func:`get_canonical_tuple`
+HashTarget = TypeVar("HashTarget", bound=typing.Hashable, default=tuple[str, ...])
 
 #: A function that constructs a hashable object from a semantic mapping
 Hasher: TypeAlias = Callable[[MappingTypeVar], HashTarget]
@@ -141,8 +151,8 @@ def _score_mapping(mapping: SemanticMapping) -> int:
 
 def get_canonical_tuple(mapping: SemanticMapping) -> CanonicalMappingTuple:
     """Get the canonical tuple from a mapping entry."""
-    source, target = sorted([mapping.subject, mapping.object])
-    return source.prefix, source.identifier, target.prefix, target.identifier
+    subject, object_ = sorted([mapping.subject, mapping.object])
+    return subject.prefix, subject.identifier, object_.prefix, object_.identifier
 
 
 def remove_redundant_external(
@@ -333,6 +343,130 @@ def publish(
     return rv
 
 
+#: A set of the stems of field names that
+#: should be swapped during inversion
+_EXCHANGEABLE_FIELDS: set[str] = set()
+for key in SemanticMapping.model_fields:
+    if key.startswith("subject_"):
+        _EXCHANGEABLE_FIELDS.add(key[len("subject_") :])
+    elif key.startswith("object_"):
+        _EXCHANGEABLE_FIELDS.add(key[len("object_") :])
+
+
+class InversionJustificationPolicy(enum.Enum):
+    """An enumeration of different inversion derivation policies."""
+
+    #: Keep the original justification (default)
+    retain = enum.auto()
+
+    #: Derive a new evidence, whose justification is ``semapv:MappingInversion``
+    derive = enum.auto()
+
+    @classmethod
+    def parse(
+        cls, value: InversionJustificationPolicy | str | None
+    ) -> InversionJustificationPolicy:
+        """Parse an inversion derivation policy."""
+        match value:
+            case None | "retain":
+                return cls.retain
+            case "derive":
+                return cls.derive
+            case InversionJustificationPolicy():
+                return value
+        raise ValueError(f"invalid inversion derivation: {value}")
+
+
+def invert(
+    mapping: MappingTypeVar,
+    *,
+    converter: Converter,
+    justification_policy: InversionJustificationPolicy | None = None,
+) -> MappingTypeVar:
+    """Invert a mapping.
+
+    :param mapping: A semantic mapping record
+    :param converter: A converter function hashing the mapping to fill the
+        "derives_from" field
+    :param justification_policy: The policy for how the original evidence is mutated
+        during inversion. Defaults to :class:`InversionDerivationPolicy.retain`, where
+        the original justification is retained
+
+    :returns: An inverted mapping. Mapping inversion clears the ``record`` field if
+        present.
+
+    >>> from curies import NamableReference, Converter
+    >>> from curies.vocabulary import charlie, manual_mapping_curation, exact_match
+    >>> from sssom_pydantic import SemanticMapping, hash_triple_to_reference
+    >>> converter = Converter.from_prefix_map(
+    ...     {
+    ...         "CHEBI": "http://purl.obolibrary.org/obo/CHEBI_",
+    ...         "mesh": "http://id.nlm.nih.gov/mesh/",
+    ...         "skos": "http://www.w3.org/2004/02/skos/core#",
+    ...         "semapv": "https://w3id.org/semapv/vocab/",
+    ...     }
+    ... )
+    >>> mapping = SemanticMapping(
+    ...     subject=NamableReference(prefix="mesh", identifier="C000089", name="ammeline"),
+    ...     predicate=exact_match,
+    ...     object=NamableReference(prefix="CHEBI", identifier="28646", name="ammeline"),
+    ...     justification=manual_mapping_curation,
+    ...     authors=[charlie],
+    ...     mapping_date="2026-04-21",
+    ... )
+    >>> hash_triple_to_reference(mapping, converter)
+    Reference(prefix='mapping', identifier='36a1f9244ea7641a90987c82f33c25c0c13712ee8f48207b2a0825f8a4e4e26a')
+    >>> mapping_inv = invert(
+    ...     mapping,
+    ...     converter=converter,
+    ...     justification_policy=InversionJustificationPolicy.derive,
+    ... )
+    >>> mapping_inv.subject
+    NamableReference(prefix='CHEBI', identifier='28646', name='ammeline')
+    >>> mapping_inv.object
+    NamableReference(prefix='mesh', identifier='C000089', name='ammeline')
+    >>> mapping_inv.derived_from
+    [Reference(prefix='mapping', identifier='36a1f9244ea7641a90987c82f33c25c0c13712ee8f48207b2a0825f8a4e4e26a')]
+    """  # noqa:E501
+    new_predicate: curies.Reference | None = semantic_mapping_inversions.get(mapping.predicate)
+    if new_predicate is None:
+        raise NotImplementedError(
+            f"inversion is not implemented for predicate: {mapping.predicate}"
+        )
+    if mapping.justification == mapping_inversion:
+        raise ValueError("double inversion is not supported")
+
+    if not mapping.predicate.name:
+        new_predicate = new_predicate.without_name()
+
+    update: dict[str, Any] = {
+        "subject": mapping.object,
+        "predicate": new_predicate,
+        "object": mapping.subject,
+        "record": None,  # need to clear the record, since the mapping will now have a new identity
+        # TODO update cardinality?
+    }
+
+    if justification_policy is InversionJustificationPolicy.derive:
+        update["justification"] = mapping_inversion
+        update["derived_from"] = [hash_triple_to_reference(mapping, converter)]
+
+    for part in _EXCHANGEABLE_FIELDS:
+        subject_part = getattr(mapping, f"subject_{part}")
+        object_part = getattr(mapping, f"object_{part}")
+        if subject_part and object_part:
+            update[f"object_{part}"] = subject_part
+            update[f"subject_{part}"] = object_part
+        elif subject_part:
+            update[f"object_{part}"] = subject_part
+            update[f"subject_{part}"] = None
+        else:  # elif object_part
+            update[f"object_{part}"] = None
+            update[f"subject_{part}"] = object_part
+
+    return mapping.model_copy(update=update)
+
+
 #: Models for aggregating mapping confidences
 ConfidenceModel: TypeAlias = Literal["binomial", "mean"]
 
@@ -342,6 +476,7 @@ def estimate_confidence(
     *,
     confidence_model: ConfidenceModel | None = None,
     check: bool = True,
+    precision: int | None = None,
 ) -> float:
     r"""Estimate the confidence of a subject-predicate-triple based on multiple evidences.
 
@@ -398,7 +533,10 @@ def estimate_confidence(
                     reviewer_agreements.append(1.0)
 
     return _aggregate_confidences(
-        creator_confidences, reviewer_agreements, confidence_model=confidence_model
+        creator_confidences,
+        reviewer_agreements,
+        confidence_model=confidence_model,
+        precision=precision,
     )
 
 
@@ -407,6 +545,7 @@ def _aggregate_confidences(
     reviewer_agreements: list[float],
     *,
     confidence_model: ConfidenceModel | None = None,
+    precision: int | None = None,
 ) -> float:
     match confidence_model:
         case "mean" | None:
@@ -419,11 +558,15 @@ def _aggregate_confidences(
             )
 
     if not reviewer_agreements:
+        if precision:
+            c = round(c, precision)
         return c
 
     direction = statistics.mean(reviewer_agreements)  # R
     strength = statistics.mean(abs(a) for a in reviewer_agreements)  # W
     rv = (1 - strength) * c + strength * (1 + direction) / 2
+    if precision:
+        rv = round(rv, precision)
     return rv
 
 
@@ -457,6 +600,473 @@ def plot2d() -> None:
     fig.colorbar(mesh, ax=ax)
     plt.show()
     plt.savefig("images/reviewer-agreement-aggregation.svg")
+
+
+def exclude_negative(mappings: Iterable[MappingTypeVar]) -> Iterable[MappingTypeVar]:
+    """Exclude negative mappings.
+
+    :param mappings: An iterable of semantic mappings
+
+    :returns: A list of semantic mappings, with all negative mappings excluded
+
+    >>> from sssom_pydantic import SemanticMapping, NOT
+    >>> m1 = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
+    >>> m2 = SemanticMapping.exact("mesh:C000089", "CHEBI:28647", predicate_modifier=NOT)
+    >>> assert [m1] == list(exclude_negative([m1, m2]))
+    """
+    for mapping in mappings:
+        if mapping.predicate_modifier is None:
+            yield mapping
+
+
+def exclude_unsure(mappings: Iterable[MappingTypeVar]) -> Iterable[MappingTypeVar]:
+    """Exclude unsure mappings.
+
+    :param mappings: An iterable of semantic mappings
+
+    :returns: A list of semantic mappings, with all unsure mappings excluded. Mappings
+        are considered unsure when there's a explicit reviewer agreement of 0.0.
+
+    >>> from sssom_pydantic import SemanticMapping, NOT
+    >>> m1 = SemanticMapping.exact("CHEBI:48552", "MESH:D020926")
+    >>> m2 = SemanticMapping.exact("CHEBI:53227", "MESH:D020959", reviewer_agreement=1.0)
+    >>> m3 = SemanticMapping.exact("CHEBI:82761", "MESH:D023082", reviewer_agreement=0.0)
+    >>> assert [m1, m2] == list(exclude_unsure([m1, m2, m3]))
+    """
+    for mapping in mappings:
+        if mapping.reviewer_agreement != 0.0:
+            yield mapping
+
+
+def exclude_predicted(mappings: Iterable[MappingTypeVar]) -> Iterable[MappingTypeVar]:
+    """Exclude mappings with predicted predicates.
+
+    :param mappings: An iterable of semantic mappings
+
+    :returns: An iterable of semantic mappings, with all predicted predicates excluded
+    """
+    for mapping in mappings:
+        if mapping.justification not in PREDICTION_PREDICATES:
+            yield mapping
+
+
+def invert_by_predicate(
+    mappings: Iterable[MappingTypeVar],
+    predicate: SemanticMappingPredicate,
+    *,
+    converter: curies.Converter,
+    justification_policy: InversionJustificationPolicy | str | None = None,
+) -> Iterable[MappingTypeVar]:
+    """Invert based on prefixes.
+
+    :param mappings: An iterable of semantic mappings
+    :param predicate: A predicate function
+    :param converter: A converter function hashing the mapping to fill the
+        "derives_from" field
+    :param justification_policy: The policy for how the original evidence is mutated
+        during inversion. Defaults to :class:`InversionDerivationPolicy.retain`, where
+        the original justification is retained
+
+    :returns: An iterable of semantic mappings, with the correct ones inverted
+
+    .. note::
+
+        mappings with ``semapv:MappingInversion`` justification are simply yielded and
+        not considered for re-inverting
+    """
+    justification_policy = InversionJustificationPolicy.parse(justification_policy)
+    for mapping in mappings:
+        if (
+            mapping.justification != mapping_inversion
+            and mapping.predicate in semantic_mapping_inversions
+            and predicate(mapping)
+        ):
+            yield invert(mapping, converter=converter, justification_policy=justification_policy)
+        else:
+            yield mapping
+
+
+def _mapping_nonstandard_order(mapping: SemanticMapping) -> bool:
+    return mapping.subject.prefix.casefold() > mapping.object.prefix.casefold()
+
+
+def invert_on_unordered(
+    mappings: Iterable[MappingTypeVar],
+    *,
+    converter: curies.Converter,
+    justification_policy: InversionJustificationPolicy | str | None = None,
+) -> Iterable[SemanticMapping]:
+    """Invert mappings whose subject and object prefixes are not in lexicographic order."""
+    yield from invert_by_predicate(
+        mappings,
+        predicate=_mapping_nonstandard_order,
+        converter=converter,
+        justification_policy=justification_policy,
+    )
+
+
+def invert_narrow_matches(
+    mappings: Iterable[MappingTypeVar],
+    *,
+    converter: curies.Converter,
+    justification_policy: InversionJustificationPolicy | str | None = None,
+) -> Iterable[MappingTypeVar]:
+    """Invert narrow matches into broad matches.
+
+    :param mappings: An iterable of semantic mappings
+    :param converter: A converter function hashing the mapping to fill the
+        "derives_from" field
+    :param justification_policy: The policy for how the original evidence is mutated
+        during inversion. Defaults to :class:`InversionDerivationPolicy.retain`, where
+        the original justification is retained
+
+    :returns: An iterable of semantic mappings, with the narrow matches inverted into
+        broad ones
+
+    This is useful when creating OWL bridging axioms.
+    """
+    yield from _invert_by_mapping_predicate(
+        mappings, narrow_match, converter=converter, justification_policy=justification_policy
+    )
+
+
+def invert_broad_matches(
+    mappings: Iterable[MappingTypeVar],
+    *,
+    converter: curies.Converter,
+    justification_policy: InversionJustificationPolicy | str | None = None,
+) -> Iterable[MappingTypeVar]:
+    """Invert broad matches into narrow matches.
+
+    :param mappings: An iterable of semantic mappings
+    :param converter: A converter function hashing the mapping to fill the
+        "derives_from" field
+    :param justification_policy: The policy for how the original evidence is mutated
+        during inversion. Defaults to :class:`InversionDerivationPolicy.retain`, where
+        the original justification is retained
+
+    :returns: An iterable of semantic mappings, with the narrow matches inverted into
+        broad ones
+    """
+    yield from _invert_by_mapping_predicate(
+        mappings, broad_match, converter=converter, justification_policy=justification_policy
+    )
+
+
+def _invert_by_mapping_predicate(
+    mappings: Iterable[MappingTypeVar],
+    predicate: Reference,
+    *,
+    converter: curies.Converter,
+    justification_policy: InversionJustificationPolicy | str | None = None,
+) -> Iterable[MappingTypeVar]:
+    yield from invert_by_predicate(
+        mappings,
+        predicate=lambda mapping: mapping.predicate == predicate,
+        converter=converter,
+        justification_policy=justification_policy,
+    )
+
+
+def invert_by_subject_prefix(
+    mappings: Iterable[MappingTypeVar],
+    subject_prefix: str,
+    *,
+    converter: curies.Converter,
+    justification_policy: InversionJustificationPolicy | str | None = None,
+) -> Iterable[MappingTypeVar]:
+    """Invert mappings with the given subject prefix.
+
+    :param mappings: An iterable of semantic mappings
+    :param subject_prefix: Invert mappings that have this subject prefix
+    :param converter: A converter function hashing the mapping to fill the
+        "derives_from" field
+    :param justification_policy: The policy for how the original evidence is mutated
+        during inversion. Defaults to :class:`InversionDerivationPolicy.retain`, where
+        the original justification is retained
+
+    :returns: An iterable of semantic mappings, with the correct ones inverted
+
+    >>> from curies import Converter
+    >>> from curies.vocabulary import mapping_inversion
+    >>> from sssom_pydantic import SemanticMapping, NOT, hash_triple_to_reference
+    >>> converter = Converter.from_prefix_map(
+    ...     {
+    ...         "CHEBI": "http://purl.obolibrary.org/obo/CHEBI_",
+    ...         "mesh": "http://id.nlm.nih.gov/mesh/",
+    ...         "skos": "http://www.w3.org/2004/02/skos/core#",
+    ...         "semapv": "https://w3id.org/semapv/vocab/",
+    ...         "mapping": "https://w3id.org/mapping/",
+    ...     }
+    ... )
+    >>> m1 = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
+    >>> m1_inv = SemanticMapping.exact("CHEBI:28646", "mesh:C000089")
+    >>> m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
+    >>> assert [m1_inv, m2] == list(invert_by_subject_prefix([m1, m2], "mesh", converter=converter))
+    >>> m1_inv_derive = SemanticMapping.exact(
+    ...     "CHEBI:28646",
+    ...     "mesh:C000089",
+    ...     justification=mapping_inversion,
+    ...     derived_from=[hash_triple_to_reference(m1, converter)],
+    ... )
+    >>> assert [m1_inv_derive, m2] == list(
+    ...     invert_by_subject_prefix(
+    ...         [m1, m2], "mesh", converter=converter, justification_policy="derive"
+    ...     )
+    ... )
+    """
+    yield from invert_by_predicate(
+        mappings,
+        _subject_prefix(subject_prefix),
+        converter=converter,
+        justification_policy=justification_policy,
+    )
+
+
+def _subject_prefix(subject_prefix: str) -> SemanticMappingPredicate:
+    def _func(m: MappingTypeVar) -> bool:
+        return m.subject.prefix == subject_prefix
+
+    return _func
+
+
+def invert_by_object_prefix(
+    mappings: Iterable[MappingTypeVar],
+    object_prefix: str,
+    *,
+    converter: curies.Converter,
+    justification_policy: InversionJustificationPolicy | str | None = None,
+) -> Iterable[MappingTypeVar]:
+    """Invert mappings with the given object prefix.
+
+    :param mappings: An iterable of semantic mappings
+    :param object_prefix: Invert mappings that have this object prefix
+    :param converter: A converter function hashing the mapping to fill the
+        "derives_from" field
+    :param justification_policy: The policy for how the original evidence is mutated
+        during inversion. Defaults to :class:`InversionDerivationPolicy.retain`, where
+        the original justification is retained
+
+    :returns: An iterable of semantic mappings, with the correct ones inverted
+
+    >>> from curies import Converter
+    >>> from curies.vocabulary import mapping_inversion
+    >>> from sssom_pydantic import SemanticMapping, NOT, hash_triple_to_reference
+    >>> converter = Converter.from_prefix_map(
+    ...     {
+    ...         "CHEBI": "http://purl.obolibrary.org/obo/CHEBI_",
+    ...         "mesh": "http://id.nlm.nih.gov/mesh/",
+    ...         "skos": "http://www.w3.org/2004/02/skos/core#",
+    ...         "semapv": "https://w3id.org/semapv/vocab/",
+    ...         "mapping": "https://w3id.org/mapping/",
+    ...     }
+    ... )
+    >>> m1 = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
+    >>> m1_inv = SemanticMapping.exact("CHEBI:28646", "mesh:C000089")
+    >>> m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
+    >>> assert [m1_inv, m2] == list(invert_by_object_prefix([m1, m2], "CHEBI", converter=converter))
+    >>> m1_inv_derive = SemanticMapping.exact(
+    ...     "CHEBI:28646",
+    ...     "mesh:C000089",
+    ...     justification=mapping_inversion,
+    ...     derived_from=[hash_triple_to_reference(m1, converter)],
+    ... )
+    >>> assert [m1_inv_derive, m2] == list(
+    ...     invert_by_object_prefix(
+    ...         [m1, m2], "CHEBI", converter=converter, justification_policy="derive"
+    ...     )
+    ... )
+    """
+    yield from invert_by_predicate(
+        mappings,
+        _object_prefix(object_prefix),
+        converter=converter,
+        justification_policy=justification_policy,
+    )
+
+
+def _object_prefix(object_prefix: str) -> SemanticMappingPredicate:
+    def _func(m: MappingTypeVar) -> bool:
+        return m.object.prefix == object_prefix
+
+    return _func
+
+
+def invert_by_prefix_pair(
+    mappings: Iterable[MappingTypeVar],
+    source_prefix: str,
+    object_prefix: str,
+    *,
+    converter: curies.Converter,
+    justification_policy: InversionJustificationPolicy | str | None = None,
+) -> Iterable[MappingTypeVar]:
+    """Invert mappings with the given subject and object (SO) prefixes.
+
+    :param mappings: An iterable of semantic mappings
+    :param source_prefix: Invert mappings that have this source prefix
+    :param object_prefix: Invert mappings that have this object prefix
+    :param converter: A converter function hashing the mapping to fill the
+        "derives_from" field
+    :param justification_policy: The policy for how the original evidence is mutated
+        during inversion. Defaults to :class:`InversionDerivationPolicy.retain`, where
+        the original justification is retained
+
+    :returns: An iterable of semantic mappings, with the correct ones inverted
+
+    >>> from curies import Converter
+    >>> from curies.vocabulary import mapping_inversion
+    >>> from sssom_pydantic import SemanticMapping, NOT, hash_triple_to_reference
+    >>> converter = Converter.from_prefix_map(
+    ...     {
+    ...         "CHEBI": "http://purl.obolibrary.org/obo/CHEBI_",
+    ...         "mesh": "http://id.nlm.nih.gov/mesh/",
+    ...         "skos": "http://www.w3.org/2004/02/skos/core#",
+    ...         "semapv": "https://w3id.org/semapv/vocab/",
+    ...         "mapping": "https://w3id.org/mapping/",
+    ...     }
+    ... )
+    >>> m1 = SemanticMapping.exact("mesh:C000089", "CHEBI:28646")
+    >>> m1_inv = SemanticMapping.exact(
+    ...     "CHEBI:28646",
+    ...     "mesh:C000089",
+    ... )
+    >>> m2 = SemanticMapping.exact("CHEBI:10001", "mesh:C067604")
+    >>> assert [m1_inv, m2] == list(
+    ...     invert_by_prefix_pair([m1, m2], "mesh", "CHEBI", converter=converter)
+    ... )
+    >>> m1_inv_derive = SemanticMapping.exact(
+    ...     "CHEBI:28646",
+    ...     "mesh:C000089",
+    ...     justification=mapping_inversion,
+    ...     derived_from=[hash_triple_to_reference(m1, converter)],
+    ... )
+    >>> assert [m1_inv_derive, m2] == list(
+    ...     invert_by_prefix_pair(
+    ...         [m1, m2], "mesh", "CHEBI", converter=converter, justification_policy="derive"
+    ...     )
+    ... )
+    """
+    yield from invert_by_predicate(
+        mappings,
+        _so_prefixes(source_prefix, object_prefix),
+        converter=converter,
+        justification_policy=justification_policy,
+    )
+
+
+def _so_prefixes(source_prefix: str, object_prefix: str) -> SemanticMappingPredicate:
+    def _func(m: MappingTypeVar) -> bool:
+        return m.subject.prefix == source_prefix and m.object.prefix == object_prefix
+
+    return _func
+
+
+def merge_manual_curations(
+    mappings: Iterable[MappingTypeVar],
+    *,
+    converter: curies.Converter,
+    precision: int | None = None,
+    confidence_model: ConfidenceModel | None = None,
+) -> Iterable[MappingTypeVar]:
+    r"""Merge manually curated mappings.
+
+    :param mappings: An iterable of semantic mappings
+    :param converter: A converter
+    :param precision: the precision to round newly calculated confidences
+    :param confidence_model: Which confidence model to use when aggregating mapping
+        confidences.
+
+        - mean aggregation is $\frac{1}{n} \sum_{i=1}^n c_i$
+        - binomial aggregation is $1 - \prod_{i=1}^n (1 - c_i)$
+
+    :returns: An iterable of semantic mappings, with manually curated mappings for the
+        same mapping triple merged together based on :func:`estimate_confidence`
+
+    .. note::
+
+        The confidence estimation algorithm properly handles negative predicate
+        modifiers as well as reviewer information.
+
+    .. warning::
+
+        This function partially scrambles the order of mappings. All non-merged mappings
+        come out in normal order, followed by merged mappings.
+    """
+    manual_curated_index = defaultdict(list)
+    for mapping in mappings:
+        if mapping.justification == manual_mapping_curation:
+            manual_curated_index[mapping.as_str_triple()].append(mapping)
+        else:
+            yield mapping
+    for mapping_group in manual_curated_index.values():
+        if len(mapping_group) == 1:
+            yield mapping_group[0]
+        else:
+            yield _merge(
+                mapping_group,
+                converter=converter,
+                precision=precision,
+                confidence_model=confidence_model,
+            )
+
+
+def _merge(
+    mappings: list[MappingTypeVar],
+    *,
+    converter: curies.Converter,
+    precision: int | None = None,
+    confidence_model: ConfidenceModel | None = None,
+) -> MappingTypeVar:
+    """Merge manually curated mappings with the same s-p-o triple."""
+    authors = {author for mapping in mappings for author in mapping.authors or []}
+    confidence = estimate_confidence(
+        mappings, precision=precision, check=False, confidence_model=confidence_model
+    )
+    mapping = mappings[0]
+    data = {
+        "subject": mapping.subject,
+        "predicate": mapping.predicate,
+        "object": mapping.object,
+        "justification": mapping.justification,  # will always be manual curation, by construction
+        "authors": sorted(authors),
+        "confidence": confidence,
+        # TODO CC0 license?
+        "derived_from": [hash_triple_to_reference(mapping, converter) for mapping in mappings],
+    }
+    # look for matching fields
+    for slot_name in ["subject_source", "object_source"]:
+        values = {getattr(mapping, slot_name) for mapping in mappings}
+        if len(values) == 1 and (value := values.pop()) is not None:
+            data[slot_name] = value
+    return mapping.model_validate(data)
+
+
+def filter_by_confidence(
+    mappings: Iterable[MappingTypeVar], cutoff: float
+) -> Iterable[MappingTypeVar]:
+    """Filter by confidence."""
+    for mapping in mappings:
+        if mapping.confidence is not None and mapping.confidence < cutoff:
+            continue
+        yield mapping
+
+
+def remove_trivial_negative(mappings: Iterable[MappingTypeVar]) -> Iterable[MappingTypeVar]:
+    """Remove trivial negative triples.
+
+    A negative mapping is trivial in the context of collection of mappings if there
+    exists another non-negative mapping with the same subject and object.
+
+    :param mappings: An iterable of semantic mappings
+
+    :yields: An iterable of semantic mappings (in the same order) with trivial negative
+        mappings removed
+    """
+    mappings = list(mappings)
+    positive_so_pairs = {(m.subject, m.object) for m in mappings if m.predicate_modifier is None}
+    for m in mappings:
+        if m.predicate_modifier is None or (m.subject, m.object) not in positive_so_pairs:
+            yield m
 
 
 if __name__ == "__main__":

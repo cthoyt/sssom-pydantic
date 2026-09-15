@@ -22,7 +22,7 @@ from pydantic import BaseModel
 
 import sssom_pydantic
 from sssom_pydantic import MappingSetRecord
-from sssom_pydantic.api import MAPPING_HASH_CURIE_PREFIX, SemanticMapping, mapping_to_sexpr_str
+from sssom_pydantic.api import MAPPING_HASH_CURIE_PREFIX, SemanticMapping
 from sssom_pydantic.database import (
     NEGATIVE_MAPPING_CLAUSE,
     POSITIVE_MAPPING_CLAUSE,
@@ -33,8 +33,11 @@ from sssom_pydantic.database import (
     SemanticMappingRepository,
 )
 from sssom_pydantic.examples import (
-    EXAMPLE_MAPPINGS,
+    EXAMPLE_MAPPINGS_NO_EXT,
     EXAMPLES,
+    EXT_BAR_REC,
+    EXT_COUNT_REC,
+    EXT_PERC_REC,
     P1,
     P2,
     P3,
@@ -45,6 +48,7 @@ from sssom_pydantic.examples import (
 )
 from sssom_pydantic.models import Record
 from sssom_pydantic.query import Query, Sort
+from sssom_pydantic.testing import assert_semantic_mapping_equal
 from sssom_pydantic.web.router import ReviewPayload
 
 if TYPE_CHECKING:
@@ -100,6 +104,7 @@ TEST_MAPPING_SET_ID = "https://example.org/sssom.mappingset/1.sssom.tsv"
 TEST_METADATA = MappingSetRecord(
     mapping_set_id=TEST_MAPPING_SET_ID,
     license="https://spdx.org/licenses/CC0-1.0",
+    extension_definitions=[EXT_BAR_REC, EXT_COUNT_REC, EXT_PERC_REC],
 )
 TEST_MAPPING_SET = TEST_METADATA.process(TEST_CONVERTER)
 TEST_METADATA_W_PREFIX_MAP = MappingSetRecord(
@@ -119,26 +124,11 @@ class MappingTestCaseMixin(unittest.TestCase):
         msg: str | None = None,
     ) -> None:
         """Assert two models are equal."""
-        if actual is None:
-            raise self.fail()
-
         if hasattr(self, "repository"):
-            self.assertEqual(
-                mapping_to_sexpr_str(expected, self.repository.converter, _debug=True),
-                mapping_to_sexpr_str(actual, self.repository.converter, _debug=True),
-            )
-
-        parameters: dict[str, Any] = {
-            "exclude_none": True,
-            "exclude_unset": True,
-            "exclude_defaults": True,
-        }
-        self.assertEqual(
-            expected.model_dump(**parameters), actual.model_dump(**parameters), msg=msg
-        )
-        self.assertEqual(expected.subject_name, actual.subject_name)
-        self.assertEqual(expected.predicate_name, actual.predicate_name)
-        self.assertEqual(expected.object_name, actual.object_name)
+            converter = self.repository.converter
+        else:
+            converter = None
+        assert_semantic_mapping_equal(self, expected, actual, converter=converter, msg=msg)
 
     def assert_base_model_equal(self, expected: BaseModel, actual: BaseModel) -> None:
         """Check two models are equal by serializing to dict."""
@@ -147,11 +137,19 @@ class MappingTestCaseMixin(unittest.TestCase):
         )
 
     def assert_model_sequence_equal(
-        self, expected: Iterable[SemanticMapping], actual: Iterable[SemanticMapping] | None
+        self,
+        expected: Iterable[SemanticMapping],
+        actual: Iterable[SemanticMapping] | None,
+        *,
+        sort: bool = False,
+        msg: str | None = None,
     ) -> None:
         """Assert two model sequences are equal."""
         if actual is None:
             raise self.fail()
+        if sort:
+            expected = sorted(expected)
+            actual = sorted(actual)
         return self.assertEqual(
             [
                 expected_mapping.model_dump(
@@ -169,6 +167,7 @@ class MappingTestCaseMixin(unittest.TestCase):
                 )
                 for actual_mapping in actual
             ],
+            msg=msg,
         )
 
 
@@ -225,8 +224,11 @@ class TestRepository(MappingTestCaseMixin):
             self.assertEqual(lexical_matching_process, mappings[0].justification)
             self.assertEqual(lexical_matching_process, mappings[1].justification)
 
+        returned_mappings = db.get_mappings()
+        returned_mapping_ids = {db.converter.hash_triple(m) for m in returned_mappings}
+
         self.assertEqual(1, len(db.get_mappings(limit=1)))
-        self.assertEqual(4, len(db.get_mappings()))
+        self.assertEqual(4, len(returned_mappings))
         self.assertEqual(4, len(db.get_mappings(limit=1000)))
 
         if isinstance(db, SemanticMappingDatabase):
@@ -245,11 +247,14 @@ class TestRepository(MappingTestCaseMixin):
 
         self.assertIn("mesh", db.converter.get_prefixes())
 
+        mapping_1_triple_id = db.converter.hash_triple(mapping_1)
+        self.assertIn(mapping_1_triple_id, returned_mapping_ids)
+
         self.assertEqual(
             4,
             len(
                 db.get_mappings(
-                    query=Query(triple_id=db.converter.hash_triple(mapping_1)),
+                    query=Query(triple_id=mapping_1_triple_id),
                 )
             ),
         )
@@ -299,8 +304,8 @@ class TestRepository(MappingTestCaseMixin):
     def test_queries(self) -> None:
         """Generate and execute variety of queries."""
         db = self.repository
-        db.add_mappings(EXAMPLE_MAPPINGS)
-        for mapping in EXAMPLE_MAPPINGS:
+        db.add_mappings(EXAMPLE_MAPPINGS_NO_EXT)
+        for mapping in EXAMPLE_MAPPINGS_NO_EXT:
             queries = [Query(query=mapping.subject.prefix)]
             for query in queries:
                 results = db.get_mappings(query)
@@ -598,6 +603,8 @@ class TestRepository(MappingTestCaseMixin):
 
         for example in EXAMPLES:
             if example.description == "reference for the mapping itself in the `record` field":
+                continue
+            if example.semantic_mapping.extensions:
                 continue
             with self.subTest(desc=example.description), tempfile.TemporaryDirectory() as tmpdir:
                 self.assertEqual(0, db.count_mappings())

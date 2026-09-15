@@ -4,26 +4,84 @@ from __future__ import annotations
 
 import datetime
 from collections.abc import Callable, Sequence
-from typing import TYPE_CHECKING, Literal, NamedTuple, TypeAlias
+from operator import attrgetter
+from typing import Annotated, Literal, NamedTuple, Self, TypeAlias
 
-from curies.vocabulary import matching_processes
+import curies
+from curies.vocabulary import XSDPrimitive, matching_processes
 from pydantic import AnyUrl, BaseModel, ConfigDict, Field
 
-from .constants import EntityTypeLiteral
-
-if TYPE_CHECKING:
-    import curies
+from .constants import EntityTypeLiteral, SemanticPrimitive, get_sssom_invalid_reference
 
 __all__ = [
     "Cardinality",
     "ExpandedRecord",
     "Record",
     "RecordPredicate",
+    "Slot",
 ]
 
 #: Cardinality annotations, which are valid within the scope of a mapping set
 #: but should not be saved as part of a mapping
 Cardinality: TypeAlias = Literal["1:1", "1:n", "n:1", "1:0", "0:1", "n:n", "0:0"]
+
+
+class Slot(BaseModel):
+    """An extension slot value.
+
+    .. code-block:: python
+
+        import sssom_pydantic
+        from curies import Converter, NameableReference
+        from sssom_pydantic import SemanticMapping, Slot, MappingSet, ExtensionDefinition
+
+        converter = Converter.from_prefix_map(
+            {
+                "CHEBI": "http://purl.obolibrary.org/obo/CHEBI_",
+                "mesh": "http://id.nlm.nih.gov/mesh/",
+            }
+        )
+        metadata = MappingSet(
+            id="https://example.org/sssom.tsv",
+            extensions=[
+                ExtensionDefinition.default("test_slot"),
+            ],
+        )
+        mapping = SemanticMapping(
+            subject="mesh:C000089",
+            predicate="skos:exactMatch",
+            object="CHEBI:28646",
+            mapping_justification="semapv:ManualMappingCuration",
+            extensions={
+                "test_slot": Slot.default("test_slot", "test slot value"),
+            },
+        )
+        sssom_pydantic.write([mapping], converter=converter, metadata=metadata)
+    """
+
+    predicate: curies.Reference
+    value: SemanticPrimitive
+
+    @classmethod
+    def default(cls, slot_name: str, value: SemanticPrimitive) -> Self:
+        """Get a default slot."""
+        return cls(predicate=get_sssom_invalid_reference(slot_name), value=value)
+
+    def expand(self, converter: curies.Converter) -> ExpandedSlot:
+        """Expand the slot."""
+        predicate = converter.expand_reference(self.predicate, strict=True)
+        if isinstance(self.value, curies.Reference):
+            value = converter.expand_reference(self.value, strict=True)
+        else:
+            value = _fmt_primitive_helper(self.value)
+        return ExpandedSlot(predicate=predicate, value=value)
+
+
+class ExpandedSlot(BaseModel):
+    """An extension slot that has been expanded into URIs."""
+
+    predicate: str
+    value: str
 
 
 class Record(BaseModel):
@@ -34,55 +92,59 @@ class Record(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    record_id: str | None = Field(None)
+    record_id: str | None = None
 
-    subject_id: str = Field(...)
-    subject_label: str | None = Field(None)
-    subject_category: str | None = Field(None)
-    predicate_id: str = Field(...)
-    predicate_label: str | None = Field(None)
-    predicate_modifier: Literal["Not"] | None = Field(None)
-    object_id: str = Field(...)
-    object_label: str | None = Field(None)
-    object_category: str | None = Field(None)
-    mapping_justification: str = Field(..., examples=[p.curie for p in matching_processes])
-    author_id: list[str] | None = Field(None)
-    author_label: list[str] | None = Field(None)
-    reviewer_id: list[str] | None = Field(None)
-    reviewer_label: list[str] | None = Field(None)
-    creator_id: list[str] | None = Field(None)
-    creator_label: list[str] | None = Field(None)
-    license: str | None = Field(None)
-    subject_type: EntityTypeLiteral | None = Field(
-        None, description="See https://mapping-commons.github.io/sssom/subject_type"
-    )
-    subject_source: str | None = Field(None)
-    subject_source_version: str | None = Field(None)
-    object_type: EntityTypeLiteral | None = Field(
-        None, description="See https://mapping-commons.github.io/sssom/object_type"
-    )
-    object_source: str | None = Field(None)
-    object_source_version: str | None = Field(None)
-    predicate_type: EntityTypeLiteral | None = Field(
-        None, description="See https://mapping-commons.github.io/sssom/predicate_type"
-    )
-    mapping_provider: AnyUrl | None = Field(None)
+    subject_id: str
+    subject_label: str | None = None
+    subject_category: str | None = None
+    predicate_id: str
+    predicate_label: str | None = None
+    predicate_modifier: Literal["Not"] | None = None
+    object_id: str
+    object_label: str | None = None
+    object_category: str | None = None
+    mapping_justification: Annotated[str, Field(examples=[p.curie for p in matching_processes])]
+    author_id: list[str] | None = None
+    author_label: list[str] | None = None
+    reviewer_id: list[str] | None = None
+    reviewer_label: list[str] | None = None
+    creator_id: list[str] | None = None
+    creator_label: list[str] | None = None
+    license: str | None = None
+    subject_type: Annotated[
+        EntityTypeLiteral | None,
+        Field(description="See https://mapping-commons.github.io/sssom/subject_type"),
+    ] = None
+    subject_source: str | None = None
+    subject_source_version: str | None = None
+    object_type: Annotated[
+        EntityTypeLiteral | None,
+        Field(description="See https://mapping-commons.github.io/sssom/object_type"),
+    ] = None
+    object_source: str | None = None
+    object_source_version: str | None = None
+    predicate_type: Annotated[
+        EntityTypeLiteral | None,
+        Field(description="See https://mapping-commons.github.io/sssom/predicate_type"),
+    ] = None
+    mapping_provider: AnyUrl | None = None
     #: https://mapping-commons.github.io/sssom/mapping_source/
-    mapping_source: str | None = Field(None)
+    mapping_source: str | None = None
     #: see https://mapping-commons.github.io/sssom/MappingCardinalityEnum/
-    mapping_cardinality: Cardinality | None = Field(None)
-    cardinality_scope: list[str] | None = Field(None)
-    mapping_tool: str | None = Field(None)
-    mapping_tool_id: str | None = Field(None)
-    mapping_tool_version: str | None = Field(None)
-    mapping_date: datetime.date | None = Field(None)
-    publication_date: datetime.date | None = Field(None)
-    review_date: datetime.date | None = Field(None)
-    confidence: float | None = Field(
-        None,
-        ge=0.0,
-        le=1.0,
-        description="""\
+    mapping_cardinality: Cardinality | None = None
+    cardinality_scope: list[str] | None = None
+    mapping_tool: str | None = None
+    mapping_tool_id: str | None = None
+    mapping_tool_version: str | None = None
+    mapping_date: datetime.date | None = None
+    publication_date: datetime.date | None = None
+    review_date: datetime.date | None = None
+    confidence: Annotated[
+        float | None,
+        Field(
+            ge=0.0,
+            le=1.0,
+            description="""\
         An assessment of the confidence of the mapping, reported by the method used to generate it.
 
         This means that confidence values aren't generally comparable, though they should follow
@@ -105,33 +167,49 @@ class Record(BaseModel):
         However, other variants are possible. For example, this confidence could reflect the loss
         function if a knowledge graph embedding model was used ot generate a mapping prediction.
         """,
-    )
-    reviewer_agreement: float | None = Field(None, ge=-1.0, le=1.0, examples=[-1.0, 0.0, 1.0])
-    curation_rule: list[str] | None = Field(None)
-    curation_rule_text: list[str] | None = Field(None)
-    subject_match_field: list[str] | None = Field(None)
-    object_match_field: list[str] | None = Field(None)
-    match_string: list[str] | None = Field(None)
-    subject_preprocessing: list[str] | None = Field(None)
-    object_preprocessing: list[str] | None = Field(None)
-    similarity_score: float | None = Field(None, ge=0.0, le=1.0)
-    similarity_measure: str | None = Field(None)
-    see_also: list[str] | None = Field(None)
-    issue_tracker_item: str | None = Field(None)
-    other: str | None = Field(None)
-    comment: str | None = Field(None)
+        ),
+    ] = None
+    reviewer_agreement: Annotated[
+        float | None, Field(ge=-1.0, le=1.0, examples=[-1.0, 0.0, 1.0])
+    ] = None
+    curation_rule: list[str] | None = None
+    curation_rule_text: list[str] | None = None
+    subject_match_field: list[str] | None = None
+    object_match_field: list[str] | None = None
+    match_string: list[str] | None = None
+    subject_preprocessing: list[str] | None = None
+    object_preprocessing: list[str] | None = None
+    similarity_score: Annotated[float | None, Field(ge=0.0, le=1.0)] = None
+    similarity_measure: str | None = None
+    see_also: list[str] | None = None
+    issue_tracker_item: str | None = None
+    derived_from: list[str] | None = None
+    other: str | None = None
+    comment: str | None = None
+
+    # see https://mapping-commons.github.io/sssom/dev/spec-model/#non-standard-slots
+    extensions: dict[str, Slot] | None = None
 
     def expand(
         self, converter: curies.Converter, exclude: set[str] | None = None
     ) -> ExpandedRecord:
         """Expand CURIEs to URIs in the record."""
-        data = self.model_dump(exclude_none=True, exclude_unset=True, exclude=exclude)
+        if exclude is None:
+            exclude = set()
+        data = self.model_dump(
+            exclude_none=True, exclude_unset=True, exclude=exclude | {"extensions"}
+        )
         for key in SINGLE_REFERENCE_FIELDS:
             if curie := data.get(key):
                 data[key] = converter.expand(curie, strict=True)
         for key in MULTIPLE_REFERENCE_FIELDS:
             if curies_ := data.get(key):
                 data[key] = [converter.expand(curie, strict=True) for curie in curies_]
+
+        if self.extensions:
+            data["extensions"] = {
+                key: slot.expand(converter) for key, slot in self.extensions.items()
+            }
         return ExpandedRecord.model_validate(data)
 
 
@@ -159,6 +237,7 @@ MULTIPLE_REFERENCE_FIELDS = {
     "creator_id",
     "reviewer_id",
     "curation_rule",
+    "derived_from",
 }
 
 #: A predicate for a record
@@ -170,77 +249,87 @@ class ExpandedRecord(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    record_id: AnyUrl | None = Field(None)
-    subject_id: AnyUrl = Field(...)
-    subject_label: str | None = Field(None)
-    subject_category: str | None = Field(None)
-    predicate_id: AnyUrl = Field(...)
-    predicate_label: str | None = Field(None)
-    predicate_modifier: Literal["Not"] | None = Field(None)
-    object_id: str = Field(...)
-    object_label: str | None = Field(None)
-    object_category: str | None = Field(None)
-    mapping_justification: str = Field(..., examples=[p.curie for p in matching_processes])
-    author_id: list[str] | None = Field(None)
-    author_label: list[str] | None = Field(None)
-    reviewer_id: list[AnyUrl] | None = Field(None)
-    reviewer_label: list[str] | None = Field(None)
-    creator_id: list[AnyUrl] | None = Field(None)
-    creator_label: list[str] | None = Field(None)
-    license: str | None = Field(None)
-    subject_type: EntityTypeLiteral | None = Field(
-        None, description="See https://mapping-commons.github.io/sssom/subject_type"
-    )
-    subject_source: AnyUrl | None = Field(None)
-    subject_source_version: str | None = Field(None)
-    object_type: EntityTypeLiteral | None = Field(
-        None, description="See https://mapping-commons.github.io/sssom/object_type"
-    )
-    object_source: AnyUrl | None = Field(None)
-    object_source_version: str | None = Field(None)
-    predicate_type: EntityTypeLiteral | None = Field(
-        None, description="See https://mapping-commons.github.io/sssom/predicate_type"
-    )
-    mapping_provider: AnyUrl | None = Field(None)
-    mapping_source: AnyUrl | None = Field(None)
+    record_id: AnyUrl | None = None
+    subject_id: AnyUrl
+    subject_label: str | None = None
+    subject_category: str | None = None
+    predicate_id: AnyUrl
+    predicate_label: str | None = None
+    predicate_modifier: Literal["Not"] | None = None
+    object_id: str
+    object_label: str | None = None
+    object_category: str | None = None
+    mapping_justification: Annotated[str, Field(examples=[p.curie for p in matching_processes])]
+    author_id: list[str] | None = None
+    author_label: list[str] | None = None
+    reviewer_id: list[AnyUrl] | None = None
+    reviewer_label: list[str] | None = None
+    creator_id: list[AnyUrl] | None = None
+    creator_label: list[str] | None = None
+    license: str | None = None
+    subject_type: Annotated[
+        EntityTypeLiteral | None,
+        Field(description="See https://mapping-commons.github.io/sssom/subject_type"),
+    ] = None
+    subject_source: AnyUrl | None = None
+    subject_source_version: str | None = None
+    object_type: Annotated[
+        EntityTypeLiteral | None,
+        Field(description="See https://mapping-commons.github.io/sssom/object_type"),
+    ] = None
+    object_source: AnyUrl | None = None
+    object_source_version: str | None = None
+    predicate_type: Annotated[
+        EntityTypeLiteral | None,
+        Field(description="See https://mapping-commons.github.io/sssom/predicate_type"),
+    ] = None
+    mapping_provider: AnyUrl | None = None
+    mapping_source: AnyUrl | None = None
     #: see https://mapping-commons.github.io/sssom/MappingCardinalityEnum/
-    mapping_cardinality: Cardinality | None = Field(None)
-    cardinality_scope: list[str] | None = Field(None)
-    mapping_tool: str | None = Field(None)
-    mapping_tool_id: AnyUrl | None = Field(None)
-    mapping_tool_version: str | None = Field(None)
-    mapping_date: datetime.date | None = Field(None)
-    publication_date: datetime.date | None = Field(None)
-    review_date: datetime.date | None = Field(None)
-    confidence: float | None = Field(None, ge=0.0, le=1.0)
-    reviewer_agreement: float | None = Field(None, ge=-1.0, le=1.0, examples=[-1.0, 0.0, 1.0])
-    curation_rule: list[AnyUrl] | None = Field(None)
-    curation_rule_text: list[str] | None = Field(None)
-    subject_match_field: list[AnyUrl] | None = Field(None)
-    object_match_field: list[AnyUrl] | None = Field(None)
-    match_string: list[str] | None = Field(None)
-    subject_preprocessing: list[AnyUrl] | None = Field(None)
-    object_preprocessing: list[AnyUrl] | None = Field(None)
-    similarity_score: float | None = Field(None, ge=0.0, le=1.0)
-    similarity_measure: str | None = Field(None)
-    see_also: list[str] | None = Field(None)
-    issue_tracker_item: str | None = Field(None)
-    other: str | None = Field(None)
-    comment: str | None = Field(None)
+    mapping_cardinality: Cardinality | None = None
+    cardinality_scope: list[str] | None = None
+    mapping_tool: str | None = None
+    mapping_tool_id: AnyUrl | None = None
+    mapping_tool_version: str | None = None
+    mapping_date: datetime.date | None = None
+    publication_date: datetime.date | None = None
+    review_date: datetime.date | None = None
+    confidence: Annotated[float | None, Field(ge=0.0, le=1.0)] = None
+    reviewer_agreement: Annotated[
+        float | None, Field(ge=-1.0, le=1.0, examples=[-1.0, 0.0, 1.0])
+    ] = None
+    curation_rule: list[AnyUrl] | None = None
+    curation_rule_text: list[str] | None = None
+    subject_match_field: list[AnyUrl] | None = None
+    object_match_field: list[AnyUrl] | None = None
+    match_string: list[str] | None = None
+    subject_preprocessing: list[AnyUrl] | None = None
+    object_preprocessing: list[AnyUrl] | None = None
+    similarity_score: Annotated[float | None, Field(ge=0.0, le=1.0)] = None
+    similarity_measure: str | None = None
+    see_also: list[str] | None = None
+    issue_tracker_item: str | None = None
+    derived_from: list[AnyUrl] | None = None
+    other: str | None = None
+    comment: str | None = None
+
+    extensions: dict[str, ExpandedSlot] | None = None
 
     def compress(self, converter: curies.Converter) -> Record:
         """Compress expanded URIs into CURIEs."""
-        data = self.model_dump(exclude_none=True, exclude_unset=True)
+        data = self.model_dump(exclude_none=True, exclude_unset=True, exclude={"extensions"})
         for key in SINGLE_REFERENCE_FIELDS:
             if uri := data.get(key):
                 data[key] = converter.compress(str(uri), strict=True)
         for key in MULTIPLE_REFERENCE_FIELDS:
             if uris := data.get(key):
                 data[key] = [converter.compress(str(uri), strict=True) for uri in uris]
+        if self.extensions:
+            raise NotImplementedError
         return Record.model_validate(data)
 
 
-SKIP_SLOTS = {"record_id", "mapping_cardinality"}
+SKIP_SLOTS = {"record_id", "mapping_cardinality", "extensions"}
 
 
 def expanded_record_to_str(mapping: ExpandedRecord, *, _debug: bool = False) -> str:
@@ -254,65 +343,87 @@ def expanded_record_to_box(record: ExpandedRecord) -> Box:
     for name in ExpandedRecord.model_fields:
         if name in SKIP_SLOTS:
             continue
-        match getattr(record, name, None):
-            case None:
-                continue
-            case str() | float() | bool() | datetime.date() as value:
-                boxes.append(Box(name, value))
-            case AnyUrl() as url:
-                boxes.append(Box(name, str(url)))
-            case list() as values:
-                if not values:
-                    continue
-                if all(isinstance(v, str) for v in values):
-                    boxes.append(Box(name, values))
-                elif all(isinstance(v, AnyUrl) for v in values):
-                    boxes.append(Box(name, [str(v) for v in values]))
-                else:
-                    raise TypeError(f"invalid box value: {values}")
-            case _ as value:
-                raise NotImplementedError(f"not implemented for {type(value)}")
+        if box := _get_box(name, getattr(record, name, None)):  # type:ignore[arg-type]
+            boxes.append(box)
+    if record.extensions:
+        extension_boxes = [
+            Box(slot.predicate, slot.value)
+            for slot in sorted(record.extensions.values(), key=attrgetter("predicate"))
+        ]
+        if extension_boxes:
+            boxes.append(Box("extensions", extension_boxes))
     return Box("mapping", boxes)
+
+
+def _get_box(name: str, vvv: XSDPrimitive | Sequence[XSDPrimitive | Box]) -> Box | None:
+    match vvv:
+        case None:
+            return None
+        case (
+            str()
+            | int()
+            | float()
+            | bool()
+            | datetime.datetime()
+            | datetime.date()
+            | AnyUrl() as value
+        ):
+            return Box(name, value)
+        case list(values):
+            if not values:
+                raise ValueError
+            if all(isinstance(v, str) for v in values):
+                return Box(name, values)
+            elif all(isinstance(v, AnyUrl) for v in values):
+                return Box(name, [str(v) for v in values])
+            else:
+                raise TypeError(f"invalid box value: {values}")
+        case _ as value:
+            raise NotImplementedError(f"not implemented for {type(value)}")
 
 
 class Box(NamedTuple):
     """A value."""
 
     label: str
-    value: str | float | bool | datetime.date | Sequence[str | float | bool | datetime.date | Box]
+    value: XSDPrimitive | Sequence[XSDPrimitive | Box]
 
 
-def box_to_str(box: Box, *, max_precision: int = 4, _debug: bool = False) -> str:
+def box_to_str(box: Box, *, _debug: bool = False) -> str:
     """Convert a S-expression object to a string."""
     start = f"{len(box.label)}:{box.label}"
-    match box.value:
-        case str() | float() | bool() | datetime.date():
-            return f"({start}{_fmt_primitive(box.value, max_precision=max_precision)})"
-        case list():
-            rr = []
-            for value in box.value:
-                match value:
-                    case str() | float() | bool():
-                        rr.append(_fmt_primitive(value, max_precision=max_precision))
-                    case Box():
-                        rr.append(box_to_str(value, max_precision=max_precision, _debug=_debug))
-            if _debug:
-                inside = "\n".join(rr)
-            else:
-                inside = "".join(rr)
-            return f"({start}({inside}))"
-        case _:
-            raise TypeError(f"invalid box value: {box.value}")
+    if isinstance(box.value, str) or not isinstance(box.value, Sequence):
+        return f"({start}{_fmt_primitive(box.value)})"
+    rr = []
+    for value in box.value:
+        if isinstance(value, Box):
+            rr.append(box_to_str(value, _debug=_debug))
+        else:
+            rr.append(_fmt_primitive(value))
+    if _debug:
+        inside = "\n".join(rr)
+    else:
+        inside = "".join(rr)
+    return f"({start}({inside}))"
 
 
-def _fmt_primitive(value: str | float | bool | datetime.date, *, max_precision: int = 4) -> str:
+def _fmt_primitive(value: XSDPrimitive, round_float: bool = True) -> str:
+    v = _fmt_primitive_helper(value, round_float=round_float)
+    return f"{len(v)}:{v}"
+
+
+def _fmt_primitive_helper(value: XSDPrimitive, round_float: bool = True) -> str:
     match value:
-        case str():
-            pass
-        case float():
-            value = str(round(value, max_precision))
         case bool():
-            raise NotImplementedError
-        case datetime.date():
-            value = value.strftime("%Y-%m-%d")
-    return f"{len(value)}:{value}"
+            return "true" if value else "false"
+        case int() | AnyUrl():
+            return str(value)
+        case float():
+            if round_float:
+                return str(round(value, 3))
+            else:
+                return str(value)
+        case str():
+            return value
+        case datetime.datetime() | datetime.date():
+            return value.isoformat()

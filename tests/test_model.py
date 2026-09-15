@@ -1,16 +1,34 @@
 """Tests for the Pydantic model."""
 
+import importlib.util
 import unittest
 
 from curies import NamableReference, Reference
 from curies.vocabulary import unspecified_matching_process
 
-from sssom_pydantic import SemanticMapping
-from sssom_pydantic.api import MappingSetRecord
+from sssom_pydantic import MappingSetRecord, SemanticMapping, hash_triple
+from sssom_pydantic.api import NOT
+from sssom_pydantic.examples import TEST_CONVERTER
+from tests.cases import P1, R1, R2
 
 
 class TestModel(unittest.TestCase):
     """Tests for the Pydantic model."""
+
+    def test_authors(self) -> None:
+        """Test author property."""
+        mapping = SemanticMapping.exact("a:1", "b:1")
+        self.assertIsNone(mapping.author)
+
+        mapping2 = SemanticMapping.exact("a:1", "b:1", authors=["o:1", "o:2"])
+        with self.assertRaises(ValueError):
+            mapping2.author  # noqa:B018
+
+    def test_sort(self) -> None:
+        """Test sorting."""
+        mapping = SemanticMapping.exact("a:1", "b:1")
+        with self.assertRaises(TypeError):
+            mapping < 5  # noqa:B015
 
     def test_creator_id(self) -> None:
         """Test a non-list creator gets properly upgraded."""
@@ -59,3 +77,47 @@ class TestModel(unittest.TestCase):
         self.assertIsInstance(mapping3.subject, NamableReference)
         self.assertIsInstance(mapping3.predicate, NamableReference)
         self.assertIsInstance(mapping3.object, NamableReference)
+
+    def test_negate(self) -> None:
+        """Test negation."""
+        m1 = SemanticMapping.exact(R1, R2)
+        self.assertEqual(R1, m1.subject)
+        self.assertEqual(P1, m1.predicate)
+        self.assertEqual(R2, m1.object)
+        self.assertEqual(unspecified_matching_process, m1.justification)
+        self.assertIsNone(m1.predicate_modifier)
+        self.assertFalse(m1.negated)
+        self.assertFalse(hash_triple(m1, TEST_CONVERTER).endswith("~"))
+
+        m2 = m1.negate()
+        self.assertEqual(R1, m2.subject)
+        self.assertEqual(P1, m2.predicate)
+        self.assertEqual(R2, m2.object)
+        self.assertEqual(unspecified_matching_process, m2.justification)
+        self.assertEqual(NOT, m2.predicate_modifier)
+        self.assertTrue(m2.negated)
+        self.assertTrue(hash_triple(m2, TEST_CONVERTER).endswith("~"))
+
+        # test round trip
+        m3 = m2.negate()
+        self.assertEqual(R1, m3.subject)
+        self.assertEqual(P1, m3.predicate)
+        self.assertEqual(R2, m3.object)
+        self.assertEqual(unspecified_matching_process, m3.justification)
+        self.assertIsNone(m3.predicate_modifier)
+        self.assertFalse(m3.negated)
+        self.assertFalse(hash_triple(m3, TEST_CONVERTER).endswith("~"))
+
+    @unittest.skipUnless(importlib.util.find_spec("pyobo"), "pyobo is not installed")
+    def test_relabel(self) -> None:
+        """Test relabeling."""
+        self.assertIsNotNone(
+            R1.name, msg="this test doesn't make sense if the base objets don't have names"
+        )
+        self.assertIsNotNone(R2.name)
+
+        m = SemanticMapping.exact(R1.with_name("nope"), R2.without_name())
+        m = m.relabel()
+
+        self.assertEqual(R1.name, m.subject.name)
+        self.assertEqual(R2.name, m.object.name)

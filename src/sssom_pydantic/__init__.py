@@ -1,6 +1,7 @@
 """Pydantic models for SSSOM."""
 
 from .api import (
+    NOT,
     ExtensionDefinition,
     ExtensionDefinitionRecord,
     MappingSet,
@@ -11,21 +12,27 @@ from .api import (
     hash_mapping,
     hash_mapping_to_reference,
     hash_triple,
+    hash_triple_to_reference,
+    standardize_mappings,
 )
 from .io import (
     Metadata,
+    SemanticMappingPack,
     append,
     append_unprocessed,
-    lint,
+    format,
     read,
     read_iterable,
     read_unprocessed,
+    to_dataframe,
     write,
     write_unprocessed,
 )
-from .models import Record
+from .models import Record, Slot
+from .process import invert
 
 __all__ = [
+    "NOT",
     "ExtensionDefinition",
     "ExtensionDefinitionRecord",
     "MappingSet",
@@ -34,16 +41,22 @@ __all__ = [
     "Metadata",
     "Record",
     "SemanticMapping",
+    "SemanticMappingPack",
     "SemanticMappingPredicate",
+    "Slot",
     "append",
     "append_unprocessed",
+    "format",
     "hash_mapping",
     "hash_mapping_to_reference",
     "hash_triple",
-    "lint",
+    "hash_triple_to_reference",
+    "invert",
     "read",
     "read_iterable",
     "read_unprocessed",
+    "standardize_mappings",
+    "to_dataframe",
     "write",
     "write_unprocessed",
 ]

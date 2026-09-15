@@ -3,7 +3,7 @@
 from collections import Counter
 
 from curies import NamedReference
-from curies.vocabulary import exact_match, unspecified_matching_process
+from curies.vocabulary import exact_match, lexical_matching_process, unspecified_matching_process
 
 from sssom_pydantic import SemanticMapping
 from sssom_pydantic.api import NOT
@@ -57,6 +57,8 @@ class TestQuery(cases.MappingTestCaseMixin):
             (Query(), mappings),
             (Query(subject_prefix="chebi"), [m2, m3]),
             (Query(same_text=True), [m3]),
+            (Query(justification=unspecified_matching_process.curie), [m1, m2, m3]),
+            (Query(justification=lexical_matching_process.curie), []),
         ]
         for i, (query, expected) in enumerate(cases):
             with self.subTest(i=i):

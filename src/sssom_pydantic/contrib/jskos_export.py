@@ -173,6 +173,7 @@ def _convert(input_path: Path, input_format: str, output_format: str) -> str:
                 input_path.as_posix(),
             ],
             stderr=subprocess.PIPE,
+            check=False,
         )
         if not output_path.is_file():
             raise ValueError(

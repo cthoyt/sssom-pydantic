@@ -84,6 +84,8 @@ class TestSQL(cases.TestRepository):
         from sqlmodel import Session, SQLModel, create_engine, select
 
         for example in EXAMPLES:
+            if example.semantic_mapping.extensions:
+                continue
             with self.subTest(desc=example.description):
                 orm_model = SemanticMappingModel.from_semantic_mapping(
                     example.semantic_mapping, converter=TEST_CONVERTER
@@ -111,9 +113,7 @@ class TestFilesystem(cases.TestRepository):
         """Set up the test with a SQL database."""
         self.directory = tempfile.TemporaryDirectory()
         self.path = Path(self.directory.name).joinpath("test.sssom.tsv")
-        self.repository = FileSystemSemanticMappingRepository(self.path)
-        for record in TEST_CONVERTER:
-            self.repository.converter.add_record(record, merge=True)
+        self.repository = FileSystemSemanticMappingRepository(self.path, converter=TEST_CONVERTER)
 
     def tearDown(self) -> None:
         """Tear down the test case."""
@@ -148,4 +148,20 @@ class TestNeo4j(cases.TestRepository):
 
     def test_queries(self) -> None:
         """Skip query tests."""
-        raise self.skipTest("queries test is implemented for neo4j")
+        raise self.skipTest("queries test is not yet implemented for neo4j")
+
+    def test_construct_get_mappings_cypher(self) -> None:
+        """Test constructing Cypher."""
+        cypher1, params1 = self.repository._construct(query=Query(triple_id="ABC"), count=False)
+        self.assertEqual(
+            "MATCH (p:SemanticMapping) WHERE p.triple_id = $triple_id RETURN p",
+            cypher1,
+        )
+        self.assertEqual({"triple_id": "ABC"}, params1)
+
+        cypher2, params2 = self.repository._construct(query=Query(triple_id="ABC"), count=True)
+        self.assertEqual(
+            "MATCH (p:SemanticMapping) WHERE p.triple_id = $triple_id RETURN count(p) AS total",
+            cypher2,
+        )
+        self.assertEqual({"triple_id": "ABC"}, params2)
