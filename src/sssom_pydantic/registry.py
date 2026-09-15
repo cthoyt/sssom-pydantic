@@ -25,12 +25,15 @@ REGISTRY_EXAMPLE = (
 SKIPS_REGISTRIES = {
     "https://raw.githubusercontent.com/mapping-commons/mesh-mappings/main/mappings.yml"
 }
+SKIP_SSSOM = {
+    "http://w3id.org/sssom/commons/monarch/mappings/mondo_hp_lexical.sssom.tsv"
+}
 
 
-def _get_path(url: AnyUrl) -> Path:
+def _get_path(url: AnyUrl, *, force: bool = False) -> Path:
     md5 = hashlib.md5(usedforsecurity=False)
     md5.update(str(url).encode("utf-8"))
-    path = pystow.ensure("tmp", url=str(url), name=md5.hexdigest())
+    path = pystow.ensure("tmp", url=str(url), name=md5.hexdigest(), force=force)
     return path
 
 
@@ -51,12 +54,14 @@ class MappingSetReference(BaseModel):
     mappings: list[SemanticMapping] | None = Field(None, repr=False, exclude=True)
     errors: list[ParseError] | None = Field(None, repr=False, exclude=True)
 
-    def hydrate(self) -> None:
+    def hydrate(self, *, force: bool = False) -> None:
         """Hydrate the mappings and metadata from this mapping set."""
+        if str(self.url) in SKIP_SSSOM:
+            return None
         try:
             with logging_redirect_tqdm():
                 self.mappings, _converter, self.mapping_set, self.errors = sssom_pydantic.read(
-                    _get_path(self.url),
+                    _get_path(self.url, force=force),
                     return_errors=True,
                     progress=True,
                     progress_kwargs={"leave": False},
@@ -93,7 +98,7 @@ class Registry(BaseModel):
     documentation: AnyUrl | None = None  # weirdly, not part of the SSSOM schema
     mapping_set_references: list[MappingSetReference]
 
-    def hydrate(self) -> None:
+    def hydrate(self, *, force: bool = False) -> None:
         """Hydrate the mappings and metadata for each mapping set."""
         for mapping_set_ref in tqdm(
             self.mapping_set_references,
@@ -101,7 +106,7 @@ class Registry(BaseModel):
             unit="mapping set",
             leave=False,
         ):
-            mapping_set_ref.hydrate()
+            mapping_set_ref.hydrate(force=force)
 
     # TODO remove description if doubles title
 
@@ -117,7 +122,7 @@ class ServerEntry(BaseModel):
     url: AnyUrl = Field(..., alias="url")
     registry: Registry | None = None
 
-    def hydrate(self) -> None:
+    def hydrate(self, *, force: bool = False) -> None:
         """Hydrate metadata about this registry."""
         if str(self.url) in SKIPS_REGISTRIES:
             pass  # too broken
@@ -129,7 +134,7 @@ class ServerEntry(BaseModel):
                     click.style(f"{self.url} failed to parse registry\n\n{_get_exc(e)}", fg="red")
                 )
             else:
-                self.registry.hydrate()
+                self.registry.hydrate(force=force)
 
 
 class Server(BaseModel):
@@ -139,12 +144,12 @@ class Server(BaseModel):
     title: str
     registries: list[ServerEntry]
 
-    def hydrate(self) -> Self:
+    def hydrate(self, *, force: bool = False) -> Self:
         """Hydrate metadata about this server's registries."""
         for registry in tqdm(
             self.registries, desc="Hydrating server", unit="registry", leave=False
         ):
-            registry.hydrate()
+            registry.hydrate(force=force)
         return self
 
 
@@ -158,9 +163,11 @@ def get_server(url: str) -> Server:
     return read_pydantic_yaml(url, Server)
 
 
-def _main() -> None:
+@click.command()
+@click.option("--force", is_flag=True)
+def _main(force: bool) -> None:
     server = get_server(SERVER_EXAMPLE)
-    server.hydrate()
+    server.hydrate(force=force)
 
 
 if __name__ == "__main__":
