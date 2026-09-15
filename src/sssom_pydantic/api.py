@@ -593,6 +593,9 @@ def _upgrade_list(x: X | list[X] | None) -> list[X] | None:
     return [x]
 
 
+UpgradeListValidator = BeforeValidator(_upgrade_list)
+
+
 def _fix_relative_url(s: str | AnyUrl) -> AnyUrl:
     if isinstance(s, AnyUrl):
         return s
@@ -613,12 +616,12 @@ class MappingSetRecord(BaseModel):
     mapping_set_id: Annotated[AnyUrl, BeforeValidator(_fix_relative_url)]
     mapping_set_confidence: Annotated[float | None, Field(ge=0.0, le=1.0)] = None
     mapping_set_description: str | None = None
-    mapping_set_source: Annotated[list[AnyUrl] | None, BeforeValidator(_upgrade_list)] = None
+    mapping_set_source: Annotated[list[AnyUrl] | None, UpgradeListValidator] = None
     mapping_set_title: str | None = None
     mapping_set_version: str | None = None
 
     publication_date: datetime.date | None = None
-    see_also: Annotated[list[AnyUrl] | None, BeforeValidator(_upgrade_list)] = None
+    see_also: Annotated[list[AnyUrl] | None, UpgradeListValidator] = None
     other: str | None = None
     comment: str | None = None
     sssom_version: str | None = None
@@ -627,8 +630,8 @@ class MappingSetRecord(BaseModel):
     license: AnyUrl | None = None
     issue_tracker: AnyUrl | None = None
     extension_definitions: list[ExtensionDefinitionRecord] | None = None
-    creator_id: Annotated[list[str] | None, BeforeValidator(_upgrade_list)] = None
-    creator_label: list[str] | None = None
+    creator_id: Annotated[list[str] | None, UpgradeListValidator] = None
+    creator_label: Annotated[list[str] | None, UpgradeListValidator] = None
 
     # propagatable slots
     cardinality_scope: list[str] | None = None
@@ -777,8 +780,8 @@ class MappingSet(BaseModel):
     license: AnyUrl | None = None
     issue_tracker: AnyUrl | None = None
     extension_definitions: list[ExtensionDefinition] | None = None
-    creators: list[Reference] | None = None
-    creator_label: list[str] | None = None
+    creators: Annotated[list[Reference] | None, UpgradeListValidator] = None
+    creator_label: Annotated[list[str] | None, UpgradeListValidator] = None
 
     def to_record(self) -> MappingSetRecord:
         """Create a record, for dumping to SSSOM directly."""
