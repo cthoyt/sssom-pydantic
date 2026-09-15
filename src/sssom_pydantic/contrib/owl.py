@@ -569,7 +569,7 @@ def write_owl(
     :param minimum_confidence: minimum confidence level to keep for exporting as a
         bridge
     :param mapping_annotations: whether to include annotations (extra metadata like
-        mapping type, confidence, etc.) on the produced axioms, defaults to false :param
+        mapping type, confidence, etc.) on the produced axioms, defaults to false
     :param declarations: whether to include declarations (and labels, if available)
     :param allow_arbitrary: When in ``inline`` mode, if set to true, skip mappings with
         predicates that aren't in :data:`curies.vocabulary.extended_match_typedefs`
