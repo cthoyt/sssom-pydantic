@@ -12,7 +12,7 @@ from collections import ChainMap, Counter, defaultdict
 from collections.abc import Collection, Generator, Iterable, Mapping, Sequence
 from io import StringIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, NamedTuple, TextIO, TypeAlias, overload
+from typing import IO, TYPE_CHECKING, Any, Literal, NamedTuple, TypeAlias, overload
 
 import curies
 import yaml
@@ -236,7 +236,7 @@ def record_to_semantic_mapping(
 
 def write(
     mappings: Iterable[MappingTypeVar],
-    path: str | Path | TextIO,
+    path: str | Path | IO[str],
     *,
     metadata: MappingSet | Metadata | MappingSetRecord | None = None,
     converter: curies.Converter | None = None,
@@ -391,7 +391,7 @@ def append_unprocessed(
 
 def write_unprocessed(
     records: Iterable[Record],
-    path: str | Path | TextIO,
+    path: str | Path | IO[str],
     *,
     metadata: MappingSet | Metadata | MappingSetRecord | None = None,
     converter: curies.Converter | None = None,
@@ -466,7 +466,9 @@ def write_unprocessed(
         )
 
 
-def write_metadata(metadata: MappingSetRecord | Metadata | MappingSet | None, file: TextIO) -> None:
+def write_metadata(
+    metadata: MappingSetRecord | Metadata | MappingSet | None, file: IO[str]
+) -> None:
     """Write SSSOM metadata for the top of a TSV."""
     mapping_set_record = _get_mapping_set_record(metadata)
     if mapping_set_record is None:
@@ -602,7 +604,7 @@ ExtendedReadType: TypeAlias = tuple[list[SemanticMapping], Converter, MappingSet
 # docstr-coverage:excused `overload`
 @overload
 def read(
-    path_or_url: str | Path | TextIO,
+    path_or_url: str | Path | IO[str],
     *,
     metadata_path: str | Path | None,
     metadata: MappingSet | MappingSetRecord | Metadata | None,
@@ -618,7 +620,7 @@ def read(
 # docstr-coverage:excused `overload`
 @overload
 def read(
-    path_or_url: str | Path | TextIO,
+    path_or_url: str | Path | IO[str],
     *,
     metadata_path: str | Path | None = ...,
     metadata: MappingSet | MappingSetRecord | Metadata | None = ...,
@@ -634,7 +636,7 @@ def read(
 # docstr-coverage:excused `overload`
 @overload
 def read(
-    path_or_url: str | Path | TextIO,
+    path_or_url: str | Path | IO[str],
     *,
     metadata_path: str | Path | None = ...,
     metadata: MappingSet | MappingSetRecord | Metadata | None = ...,
@@ -650,7 +652,7 @@ def read(
 # docstr-coverage:excused `overload`
 @overload
 def read(
-    path_or_url: str | Path | TextIO,
+    path_or_url: str | Path | IO[str],
     *,
     metadata_path: str | Path | None = ...,
     metadata: MappingSet | MappingSetRecord | Metadata | None = ...,
@@ -664,7 +666,7 @@ def read(
 
 
 def read(
-    path_or_url: str | Path | TextIO,
+    path_or_url: str | Path | IO[str],
     *,
     metadata_path: str | Path | None = None,
     metadata: MappingSet | MappingSetRecord | Metadata | None = None,
@@ -709,7 +711,7 @@ class ReadTuple(NamedTuple):
 
 @contextlib.contextmanager
 def read_iterable(
-    path_or_url: str | Path | TextIO,
+    path_or_url: str | Path | IO[str],
     *,
     metadata_path: str | Path | None = None,
     metadata: MappingSet | MappingSetRecord | Metadata | None = None,
@@ -800,7 +802,7 @@ class ReadUnprocessedStreamTuple(NamedTuple):
 
 
 def read_unprocessed(
-    path_or_url: str | Path | TextIO,
+    path_or_url: str | Path | IO[str],
     *,
     metadata_path: str | Path | None = None,
     metadata: MappingSet | MappingSetRecord | Metadata | None = None,
@@ -838,7 +840,7 @@ def read_unprocessed(
 
 @contextlib.contextmanager
 def read_unprocessed_iterable(
-    path_or_url: str | Path | TextIO,
+    path_or_url: str | Path | IO[str],
     *,
     metadata_path: str | Path | None = None,
     metadata: MappingSet | MappingSetRecord | Metadata | None = None,
@@ -944,7 +946,7 @@ def _cm(m: Iterable[dict[str, Any]]) -> dict[str, Any]:
     return dict(ChainMap(*m))
 
 
-def _chomp_frontmatter(file: TextIO) -> tuple[list[str], MappingSetRecord | None, int]:
+def _chomp_frontmatter(file: IO[str]) -> tuple[list[str], MappingSetRecord | None, int]:
     # consume from the top of the stream until there's no more preceding #
     count = 0
     header_yaml = ""
