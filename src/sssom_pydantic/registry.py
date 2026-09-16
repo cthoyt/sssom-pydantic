@@ -23,7 +23,10 @@ REGISTRY_EXAMPLE = (
     "https://github.com/mapping-commons/mh_mapping_initiative/raw/refs/heads/master/registry.yml"
 )
 SKIPS_REGISTRIES = {
-    "https://raw.githubusercontent.com/mapping-commons/mesh-mappings/main/mappings.yml"
+    # broken, see https://github.com/mapping-commons/mesh-mappings/pull/4
+    "https://raw.githubusercontent.com/mapping-commons/mesh-mappings/main/mappings.yml",
+    # text mappings aren't handled by sssom-pydantic
+    "https://raw.githubusercontent.com/mapping-commons/ebi-text-mappings/refs/heads/main/mappings.yml",
 }
 SKIP_SSSOM = {"http://w3id.org/sssom/commons/monarch/mappings/mondo_hp_lexical.sssom.tsv"}
 
