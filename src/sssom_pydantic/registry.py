@@ -25,9 +25,7 @@ REGISTRY_EXAMPLE = (
 SKIPS_REGISTRIES = {
     "https://raw.githubusercontent.com/mapping-commons/mesh-mappings/main/mappings.yml"
 }
-SKIP_SSSOM = {
-    "http://w3id.org/sssom/commons/monarch/mappings/mondo_hp_lexical.sssom.tsv"
-}
+SKIP_SSSOM = {"http://w3id.org/sssom/commons/monarch/mappings/mondo_hp_lexical.sssom.tsv"}
 
 
 def _get_path(url: AnyUrl, *, force: bool = False) -> Path:
@@ -57,7 +55,7 @@ class MappingSetReference(BaseModel):
     def hydrate(self, *, force: bool = False) -> None:
         """Hydrate the mappings and metadata from this mapping set."""
         if str(self.url) in SKIP_SSSOM:
-            return None
+            return
         try:
             with logging_redirect_tqdm():
                 self.mappings, _converter, self.mapping_set, self.errors = sssom_pydantic.read(
