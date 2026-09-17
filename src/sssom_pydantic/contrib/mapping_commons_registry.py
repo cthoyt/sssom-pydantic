@@ -1,4 +1,31 @@
-"""Utilities for working with Mapping Servers and Mapping Registries."""
+"""Utilities for parsing a Mapping Commons server and reporting on its results.
+
+A Mapping Commons server is a two-tiered registry. The server's configuration points to
+multiple external registries which themselves list various SSSOM artifacts. The
+`flagship Mapping Commons server <https://mapping-commons.github.io>`_ is defined with
+`this YAML
+<https://github.com/mapping-commons/mapping-commons.github.io/raw/refs/heads/main/mapping-server.yml>`_.
+It references registries from the `Monarch Initiative
+<https://raw.githubusercontent.com/monarch-initiative/monarch-mapping-commons/main/registry.yml>`_,
+`Biopragmatics
+<https://github.com/biopragmatics/mapping-registry/raw/refs/heads/main/registry.yml>`_,
+`Critical Path Institute
+<https://gitlab.c-path.org/c-pathontology/mapping-commons/-/raw/main/registry.yml>`_,
+and others.
+
+This module implements a workflow that can parse any Mapping Commons server definition
+with :func:`get_server`. The result can optionally be _hydrated_ with
+:meth:`Server.hydrate` to download and parse the results.
+
+The command line interface for this module parses the flagship Mapping Commons server
+that's hosted at https://mapping-commons.github.io and whose definition is available
+`here
+<https://github.com/mapping-commons/mh_mapping_initiative/raw/refs/heads/master/registry.yml>`_.
+
+.. code-block:: console
+
+    $ python -m sssom_pydantic.contrib.mapping_commons_registry
+"""
 
 import hashlib
 import logging
@@ -49,7 +76,9 @@ def _get_path(url: AnyUrl, *, code: str, name: str | None, force: bool = False) 
 class MappingSetReference(BaseModel):
     """Represents metadata about a mapping set.
 
-    .. seealso:: https://mapping-commons.github.io/sssom/MappingSetReference/
+    .. seealso::
+
+        https://mapping-commons.github.io/sssom/MappingSetReference/
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -104,7 +133,9 @@ class MappingSetReference(BaseModel):
 class Registry(BaseModel):
     """Represents full metadata about a registry.
 
-    .. seealso:: https://mapping-commons.github.io/sssom/MappingRegistry/
+    .. seealso::
+
+        https://mapping-commons.github.io/sssom/MappingRegistry/
     """
 
     iri: AnyUrl = Field(..., alias="mapping_registry_id")
@@ -190,9 +221,11 @@ def get_server(url: str) -> Server:
 
 
 @click.command()
+@click.option("--url", default=SERVER_EXAMPLE, show_default=True)
 @click.option("--force", is_flag=True)
-def _main(force: bool) -> None:
-    server = get_server(SERVER_EXAMPLE)
+def _main(url: str, force: bool) -> None:
+    """Parse and report on a Mapping Commons server."""
+    server = get_server(url)
     server.hydrate(force=force)
 
 
