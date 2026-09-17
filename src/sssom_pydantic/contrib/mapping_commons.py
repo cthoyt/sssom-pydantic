@@ -4,8 +4,8 @@ A Mapping Commons server is a two-tiered registry. The server's configuration po
 multiple external registries which themselves list various SSSOM artifacts. The
 `flagship Mapping Commons server <https://mapping-commons.github.io>`_ is defined with
 `this YAML
-<https://github.com/mapping-commons/mapping-commons.github.io/raw/refs/heads/main/mapping-server.yml>`_.
-It references registries from the `Monarch Initiative
+<https://github.com/mapping-commons/mapping-commons.github.io/raw/refs/heads/main/mapping-server.yml>`_,
+which references registries from the `Monarch Initiative
 <https://raw.githubusercontent.com/monarch-initiative/monarch-mapping-commons/main/registry.yml>`_,
 `Biopragmatics
 <https://github.com/biopragmatics/mapping-registry/raw/refs/heads/main/registry.yml>`_,
@@ -17,14 +17,12 @@ This module implements a workflow that can parse any Mapping Commons server defi
 with :func:`get_server`. The result can optionally be _hydrated_ with
 :meth:`Server.hydrate` to download and parse the results.
 
-The command line interface for this module parses the flagship Mapping Commons server
-that's hosted at https://mapping-commons.github.io and whose definition is available
-`here
-<https://github.com/mapping-commons/mh_mapping_initiative/raw/refs/heads/master/registry.yml>`_.
+The command line interface for this module parses the flagship Mapping Commons server by
+default but can be pointed to a different server configuration with ``--url``:
 
 .. code-block:: console
 
-    $ python -m sssom_pydantic.contrib.mapping_commons_registry
+    $ python -m sssom_pydantic.contrib.mapping_commons
 """
 
 import hashlib
@@ -44,6 +42,15 @@ from tqdm.contrib.logging import logging_redirect_tqdm
 import sssom_pydantic
 from sssom_pydantic import MappingSet, SemanticMapping
 from sssom_pydantic.io import ParseError, _get_exc
+
+__all__ = [
+    "MappingSetReference",
+    "Registry",
+    "Server",
+    "ServerEntry",
+    "get_registry",
+    "get_server",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -223,11 +230,11 @@ def get_server(url: str) -> Server:
 @click.command()
 @click.option("--url", default=SERVER_EXAMPLE, show_default=True)
 @click.option("--force", is_flag=True)
-def _main(url: str, force: bool) -> None:
+def main(url: str, force: bool) -> None:
     """Parse and report on a Mapping Commons server."""
     server = get_server(url)
     server.hydrate(force=force)
 
 
 if __name__ == "__main__":
-    _main()
+    main()
