@@ -13,3 +13,5 @@
 .. automodapi:: sssom_pydantic.contrib.sssompy
 
 .. automodapi:: sssom_pydantic.contrib.wikidata
+
+.. automodapi:: sssom_pydantic.contrib.mapping_commons
