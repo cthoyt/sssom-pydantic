@@ -3,32 +3,37 @@
 from __future__ import annotations
 
 import datetime
-import functools
 import logging
-from collections.abc import Callable, Iterable
-from typing import Annotated, Any, Literal, TypeAlias
+from collections.abc import Callable, Collection, Iterable
+from typing import Annotated, Any, Literal, Self, TypeAlias
 
 import curies
 from curies import NamableReference, Reference, Triple
+from curies import vocabulary as v
 from curies.mixins import SemanticallyStandardizable
 from curies.vocabulary import (
     broad_match,
     exact_match,
     matching_processes,
     narrow_match,
+    parse_xsd,
     unspecified_matching_process,
+    xsd_string,
 )
 from pydantic import AnyUrl, BaseModel, BeforeValidator, ConfigDict, Field
-from typing_extensions import Self, TypeVar
+from typing_extensions import TypeVar
 
 from .constants import (
     ENTITY_TYPE_REFERENCE_TO_LITERAL,
     MULTIVALUED,
     PROPAGATABLE,
+    SSSOM_INVALID_CURIE_PREFIX,
     EntityTypeLiteral,
     Row,
+    SemanticPrimitive,
+    get_sssom_invalid_reference,
 )
-from .models import Cardinality, Record, expanded_record_to_str
+from .models import Cardinality, Record, Slot, expanded_record_to_str
 
 __all__ = [
     "NOT",
@@ -208,6 +213,9 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
     see_also: list[str] | None = None
     similarity_measure: str | None = None
     similarity_score: Annotated[float | None, Field(ge=0.0, le=1.0)] = None
+
+    # see https://mapping-commons.github.io/sssom/dev/spec-model/#non-standard-slots
+    extensions: dict[str, Slot] | None = None
 
     @classmethod
     def from_triple(
@@ -406,6 +414,11 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
                 for reference in reference_list:
                     if reference is not None:
                         rv.add(reference.prefix)
+        if self.extensions:
+            for slot in self.extensions.values():
+                rv.add(slot.predicate.prefix)
+                if isinstance(slot.value, Reference):
+                    rv.add(slot.value.prefix)
         return rv
 
     def to_record(self) -> Record:
@@ -430,7 +443,6 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
 
         return Record(
             record_id=_safe_curie(self.record),
-            #
             subject_id=self.subject.curie,
             subject_label=self.subject_name,
             subject_category=_safe_curie(self.subject_category),
@@ -439,12 +451,10 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
             subject_source=_safe_curie(self.subject_source),
             subject_source_version=self.subject_source_version,
             subject_type=_safe_entity_type(self.subject_type),
-            #
             predicate_id=self.predicate.curie,
             predicate_label=self.predicate_name,
             predicate_modifier=self.predicate_modifier,
             predicate_type=_safe_entity_type(self.predicate_type),
-            #
             object_id=self.object.curie,
             object_label=self.object_name,
             object_category=_safe_curie(self.object_category),
@@ -453,28 +463,23 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
             object_source=_safe_curie(self.object_source),
             object_source_version=self.object_source_version,
             object_type=_safe_entity_type(self.object_type),
-            #
             mapping_justification=self.justification.curie,
-            #
             author_id=_join(self.authors),
             author_label=None,  # FIXME
             creator_id=_join(self.creators),
             creator_label=None,  # FIXME
             reviewer_id=_join(self.reviewers),
             reviewer_label=None,  # FIXME
-            #
             publication_date=self.publication_date,
             mapping_date=self.mapping_date,
             review_date=self.review_date,
             reviewer_agreement=self.reviewer_agreement,
-            #
             comment=self.comment,
             confidence=self.confidence,
             curation_rule=_safe_curies(self.curation_rule),
             curation_rule_text=self.curation_rule_text,
             issue_tracker_item=_safe_curie(self.issue_tracker_item),
             license=self.license,
-            #
             mapping_cardinality=self.cardinality,
             cardinality_scope=self.cardinality_scope,
             mapping_provider=self.provider,
@@ -489,12 +494,13 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
             if self.mapping_tool is not None and self.mapping_tool.version is not None
             else None,
             match_string=self.match_string,
-            #
             derived_from=_safe_curies(self.derived_from),
             other=_dict_to_other(self.other) if self.other else None,
             see_also=self.see_also,
             similarity_measure=self.similarity_measure,
             similarity_score=self.similarity_score,
+            # see https://mapping-commons.github.io/sssom/spec-model/#defined-extensions
+            extensions=self.extensions,
         )
 
     def relabel(self) -> Self:
@@ -558,9 +564,9 @@ def _split_key_value(s: str, *, line_number: int | None = None) -> tuple[str, st
         left, right = s.split(OTHER_SECONDARY_SEP)
     except ValueError:
         if line_number is not None:
-            logging.debug("[line: %d] invalid value for `other`: %s", line_number, s)
+            logger.debug("[line: %d] invalid value for `other`: %s", line_number, s)
         else:
-            logging.debug("invalid value for `other`: %s", s)
+            logger.debug("invalid value for `other`: %s", s)
         return None
     return left, right
 
@@ -587,10 +593,13 @@ def _upgrade_list(x: X | list[X] | None) -> list[X] | None:
     return [x]
 
 
+UpgradeListValidator = BeforeValidator(_upgrade_list)
+
+
 def _fix_relative_url(s: str | AnyUrl) -> AnyUrl:
     if isinstance(s, AnyUrl):
         return s
-    if s.startswith("http://") or s.startswith("https://"):
+    if s.startswith(("http://", "https://")):
         return AnyUrl(s)
     url = f"https://w3id.org/sssom/mapping-set/{s}"
     logger.warning("mapping set has non-relative URL: %s. Formatted into %s", s, url)
@@ -607,12 +616,12 @@ class MappingSetRecord(BaseModel):
     mapping_set_id: Annotated[AnyUrl, BeforeValidator(_fix_relative_url)]
     mapping_set_confidence: Annotated[float | None, Field(ge=0.0, le=1.0)] = None
     mapping_set_description: str | None = None
-    mapping_set_source: Annotated[list[AnyUrl] | None, BeforeValidator(_upgrade_list)] = None
+    mapping_set_source: Annotated[list[AnyUrl] | None, UpgradeListValidator] = None
     mapping_set_title: str | None = None
     mapping_set_version: str | None = None
 
     publication_date: datetime.date | None = None
-    see_also: Annotated[list[AnyUrl] | None, BeforeValidator(_upgrade_list)] = None
+    see_also: Annotated[list[AnyUrl] | None, UpgradeListValidator] = None
     other: str | None = None
     comment: str | None = None
     sssom_version: str | None = None
@@ -621,8 +630,8 @@ class MappingSetRecord(BaseModel):
     license: AnyUrl | None = None
     issue_tracker: AnyUrl | None = None
     extension_definitions: list[ExtensionDefinitionRecord] | None = None
-    creator_id: Annotated[list[str] | None, BeforeValidator(_upgrade_list)] = None
-    creator_label: list[str] | None = None
+    creator_id: Annotated[list[str] | None, UpgradeListValidator] = None
+    creator_label: Annotated[list[str] | None, UpgradeListValidator] = None
 
     # propagatable slots
     cardinality_scope: list[str] | None = None
@@ -655,7 +664,6 @@ class MappingSetRecord(BaseModel):
             source=self.mapping_set_source,
             title=self.mapping_set_title,
             version=self.mapping_set_version,
-            #
             publication_date=self.publication_date,
             see_also=self.see_also,
             other=_other_to_dict(self.other, line_number=line_number) if self.other else None,
@@ -663,7 +671,10 @@ class MappingSetRecord(BaseModel):
             sssom_version=self.sssom_version,
             license=self.license,
             issue_tracker=self.issue_tracker,
-            extension_definitions=list(self.extension_definitions)
+            extension_definitions=[
+                extension_definition.process(converter)
+                for extension_definition in self.extension_definitions
+            ]
             if self.extension_definitions
             else None,
             creators=[converter.parse_curie(c, strict=True).to_pydantic() for c in self.creator_id]
@@ -672,8 +683,8 @@ class MappingSetRecord(BaseModel):
             creator_label=self.creator_label,
         )
 
-    def get_parser(self) -> Callable[[dict[str, str | list[str]]], Record]:
-        """Get a row parser function."""
+    def get_propagatable(self) -> dict[str, str | list[str]]:
+        """Get the propagation dict for row dict parsing."""
         propagatable = {}
         for key in PROPAGATABLE:
             prop_value = getattr(self, key)
@@ -684,12 +695,24 @@ class MappingSetRecord(BaseModel):
             if key in MULTIVALUED and isinstance(prop_value, str):
                 prop_value = [prop_value]
             propagatable[key] = prop_value
+        return propagatable
 
-        return functools.partial(row_to_record, propagatable=propagatable)
 
+def row_to_record(
+    row: Row,
+    *,
+    converter: curies.Converter,
+    propagatable: dict[str, str | list[str]] | None = None,
+    extension_definitions: Collection[ExtensionDefinition] | None = None,
+) -> Record:
+    """Parse a row from a SSSOM TSV file, unprocessed.
 
-def row_to_record(row: Row, *, propagatable: dict[str, str | list[str]] | None = None) -> Record:
-    """Parse a row from a SSSOM TSV file, unprocessed."""
+    :param row: The raw row dictionary
+    :param propagatable: elements that should be propagated to all rows
+    :param extension_definitions: extension slot definitions
+
+    :returns: A record object
+    """
     # Step 1: propagate values from the header if it's not explicit in the record
     if propagatable:
         row.update(propagatable)
@@ -703,8 +726,37 @@ def row_to_record(row: Row, *, propagatable: dict[str, str | list[str]] | None =
                 if (stripped_subvalue := subvalue.strip())
             ]
 
+    # Step 3: handle extensions
+    if extension_definitions is not None:
+        extensions = _parse_extensions(row, extension_definitions, converter)
+        if extensions:
+            return Record.model_validate({**row, "extensions": extensions})
+
     rv = Record.model_validate(row)
     return rv
+
+
+def _parse_extensions(
+    row: Row, extension_definitions: Collection[ExtensionDefinition], converter: curies.Converter
+) -> dict[str, Slot]:
+    extensions: dict[str, Slot] = {}
+    for extension in extension_definitions:
+        extension_value = row.get(extension.name)
+        if not extension_value:
+            continue
+        if isinstance(extension_value, list):
+            raise NotImplementedError(
+                "lists in extension slots are explicitly disallowed by the SSSOM spec"
+            )
+        extension_value_parsed: SemanticPrimitive
+        if extension.datatype == v.linkml_uri_or_curie:
+            extension_value_parsed = converter.parse(extension_value, strict=True).to_pydantic()
+        else:
+            extension_value_parsed = parse_xsd(extension_value, extension.datatype)
+        extensions[extension.name] = Slot(
+            predicate=extension.predicate, value=extension_value_parsed
+        )
+    return extensions
 
 
 class MappingSet(BaseModel):
@@ -728,8 +780,8 @@ class MappingSet(BaseModel):
     license: AnyUrl | None = None
     issue_tracker: AnyUrl | None = None
     extension_definitions: list[ExtensionDefinition] | None = None
-    creators: list[Reference] | None = None
-    creator_label: list[str] | None = None
+    creators: Annotated[list[Reference] | None, UpgradeListValidator] = None
+    creator_label: Annotated[list[str] | None, UpgradeListValidator] = None
 
     def to_record(self) -> MappingSetRecord:
         """Create a record, for dumping to SSSOM directly."""
@@ -774,38 +826,45 @@ class ExtensionDefinitionRecord(BaseModel):
     def process(self, converter: curies.Converter) -> ExtensionDefinition:
         """Process the SSSOM data structure into a more idiomatic one."""
         return ExtensionDefinition(
-            slot_name=self.slot_name,
-            property=converter.parse(self.property, strict=True).to_pydantic()
+            name=self.slot_name,
+            # see https://github.com/mapping-commons/sssom/issues/561#issuecomment-5105368113
+            predicate=converter.parse(self.property, strict=True).to_pydantic()
             if self.property
-            else None,
-            type_hint=converter.parse(self.type_hint, strict=True).to_pydantic()
+            else Reference(prefix=SSSOM_INVALID_CURIE_PREFIX, identifier=self.slot_name),
+            datatype=converter.parse(self.type_hint, strict=True).to_pydantic()
             if self.type_hint
-            else None,
+            else xsd_string,
         )
 
 
 class ExtensionDefinition(BaseModel):
     """A processed extension definition."""
 
-    slot_name: str
-    property: Reference | None = None
-    type_hint: Reference | None = None
+    name: str
+    predicate: Reference
+    datatype: Reference
+
+    @classmethod
+    def default(cls, slot_name: str, *, type_hint: Reference | None = None) -> Self:
+        """Get a default extension."""
+        return cls(
+            name=slot_name,
+            predicate=get_sssom_invalid_reference(slot_name),
+            datatype=type_hint or xsd_string,
+        )
 
     def get_prefixes(self) -> set[str]:
         """Get prefixes in the extension definition."""
-        rv: set[str] = set()
-        if self.property is not None:
-            rv.add(self.property.prefix)
-        if self.type_hint is not None:
-            rv.add(self.type_hint.prefix)
-        return rv
+        return {self.predicate.prefix, self.datatype.prefix}
 
     def to_record(self) -> ExtensionDefinitionRecord:
         """Create a record object that can be readily dumped to SSSOM."""
         return ExtensionDefinitionRecord(
-            slot_name=self.slot_name,
-            property=self.property.curie if self.property else None,
-            type_hint=self.type_hint.curie if self.type_hint else None,
+            slot_name=self.name,
+            property=self.predicate.curie
+            if self.predicate.prefix != SSSOM_INVALID_CURIE_PREFIX
+            else None,
+            type_hint=self.datatype.curie if self.datatype else None,
         )
 
 

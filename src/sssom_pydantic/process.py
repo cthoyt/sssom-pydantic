@@ -26,6 +26,7 @@ from curies.vocabulary import (
 from typing_extensions import TypeVar
 
 from .api import MappingTypeVar, SemanticMapping, SemanticMappingPredicate, hash_triple_to_reference
+from .constants import PREDICTION_PREDICATES
 
 if TYPE_CHECKING:
     from _typeshed import SupportsRichComparison
@@ -43,6 +44,7 @@ __all__ = [
     "curate",
     "estimate_confidence",
     "exclude_negative",
+    "exclude_predicted",
     "exclude_unsure",
     "filter_by_confidence",
     "get_canonical_tuple",
@@ -57,6 +59,7 @@ __all__ = [
     "publish",
     "remove_redundant_external",
     "remove_redundant_internal",
+    "remove_trivial_negative",
     "review",
 ]
 
@@ -617,7 +620,7 @@ def exclude_negative(mappings: Iterable[MappingTypeVar]) -> Iterable[MappingType
 
 
 def exclude_unsure(mappings: Iterable[MappingTypeVar]) -> Iterable[MappingTypeVar]:
-    """Exclude usunre mappings.
+    """Exclude unsure mappings.
 
     :param mappings: An iterable of semantic mappings
 
@@ -632,6 +635,18 @@ def exclude_unsure(mappings: Iterable[MappingTypeVar]) -> Iterable[MappingTypeVa
     """
     for mapping in mappings:
         if mapping.reviewer_agreement != 0.0:
+            yield mapping
+
+
+def exclude_predicted(mappings: Iterable[MappingTypeVar]) -> Iterable[MappingTypeVar]:
+    """Exclude mappings with predicted predicates.
+
+    :param mappings: An iterable of semantic mappings
+
+    :returns: An iterable of semantic mappings, with all predicted predicates excluded
+    """
+    for mapping in mappings:
+        if mapping.justification not in PREDICTION_PREDICATES:
             yield mapping
 
 
@@ -1034,6 +1049,24 @@ def filter_by_confidence(
         if mapping.confidence is not None and mapping.confidence < cutoff:
             continue
         yield mapping
+
+
+def remove_trivial_negative(mappings: Iterable[MappingTypeVar]) -> Iterable[MappingTypeVar]:
+    """Remove trivial negative triples.
+
+    A negative mapping is trivial in the context of collection of mappings if there
+    exists another non-negative mapping with the same subject and object.
+
+    :param mappings: An iterable of semantic mappings
+
+    :yields: An iterable of semantic mappings (in the same order) with trivial negative
+        mappings removed
+    """
+    mappings = list(mappings)
+    positive_so_pairs = {(m.subject, m.object) for m in mappings if m.predicate_modifier is None}
+    for m in mappings:
+        if m.predicate_modifier is None or (m.subject, m.object) not in positive_so_pairs:
+            yield m
 
 
 if __name__ == "__main__":

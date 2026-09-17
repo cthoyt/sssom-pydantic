@@ -158,6 +158,29 @@ class TestLinting(unittest.TestCase):
         """)
         self.assert_linted(expected, original)
 
+    def test_reviewer_agreement(self) -> None:
+        """Test round trip for reviewer ID and agreement."""
+        original = dedent("""\
+            #mapping_set_id: https://example.org/test.tsv
+            #curie_map:
+            #  mesh: "http://id.nlm.nih.gov/mesh/"
+            #  chebi: "http://purl.obolibrary.org/obo/CHEBI_"
+            object_id	subject_id	predicate_id	mapping_justification	reviewer_id	reviewer_agreement
+            chebi:28646	mesh:C000089	skos:exactMatch	semapv:ManualMappingCuration	orcid:0000-0003-4423-4370	0.0
+        """)
+        expected = dedent("""\
+            #curie_map:
+            #  chebi: http://purl.obolibrary.org/obo/CHEBI_
+            #  mesh: http://id.nlm.nih.gov/mesh/
+            #  orcid: https://orcid.org/
+            #  semapv: https://w3id.org/semapv/vocab/
+            #  skos: http://www.w3.org/2004/02/skos/core#
+            #mapping_set_id: https://example.org/test.tsv
+            subject_id	predicate_id	object_id	mapping_justification	reviewer_id	reviewer_agreement
+            mesh:C000089	skos:exactMatch	chebi:28646	semapv:ManualMappingCuration	orcid:0000-0003-4423-4370	0.0
+        """)
+        self.assert_linted(expected, original)
+
     def test_no_condense_creator(self) -> None:
         """Test that creator shouldn't be condensed."""
         original = dedent("""\

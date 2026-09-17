@@ -3,9 +3,9 @@ requires = ["uv_build>=0.9.6,<1.0"]
 build-backend = "uv_build"
 
 [project]
-name = "sssom_pydantic"
-version = "0.5.12-dev"
-description = "Pydantic models for SSSOM"
+name = "sssom-pydantic"
+version = "0.6.7-dev"
+description = "An elegant implementation of SSSOM, with Pydantic"
 readme = "README.md"
 authors = [
     { name = "Charles Tapley Hoyt", email = "cthoyt@gmail.com" }
@@ -26,7 +26,6 @@ classifiers = [
     "Framework :: Sphinx",
     "Natural Language :: English",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -45,12 +44,12 @@ keywords = [
 license = "MIT"
 license-files = ["LICENSE"]
 
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "pydantic",
-    "curies>=0.13.13",
+    "curies>=0.15.0",
     "pyyaml",
-    "pystow>=0.8.6",
+    "pystow>=0.9.4",
     "tqdm",
 ]
 
@@ -61,7 +60,7 @@ tests = [
     "coverage[toml]",
     "linkml>=1.10.0",
     "linkml-runtime>=1.10.0",
-    "httpx",
+    "httpx2",
     "tabulate",
 ]
 docs = [
@@ -141,12 +140,13 @@ fastapi = [
 wikidata = [
     "wikidata-client",
     "quickstatements-client>=0.1.2",
-    "bioregistry>=0.13.56",
+    "bioregistry>=0.14.0",
 ]
 cli = [
     "click",
 ]
-bridge = ["functional-owl>=0.1.3"]
+bridge = ["functional-owl>=0.1.6"]
+graph = ["networkx"]
 
 # See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#urls
 # and also https://packaging.python.org/en/latest/specifications/well-known-project-urls/
@@ -159,6 +159,7 @@ Funding = "https://github.com/sponsors/cthoyt"
 
 [project.scripts]
 sssom_pydantic = "sssom_pydantic.cli:main"
+sssom-pydantic = "sssom_pydantic.cli:main"
 
 [tool.cruft]
 skip = [
@@ -194,7 +195,12 @@ omit = [
     "src/sssom_pydantic/version.py",
     "src/sssom_pydantic/__main__.py",
     "src/sssom_pydantic/cli.py",
-    "src/sssom_pydantic/contrib/*",
+    # TODO test contrib better
+    "src/sssom_pydantic/contrib/jskos_export.py",
+    "src/sssom_pydantic/contrib/mermaid.py",
+    "src/sssom_pydantic/contrib/ndex.py",
+    "src/sssom_pydantic/contrib/ontoportal.py",
+    "src/sssom_pydantic/contrib/wikidata.py",
 ]
 
 [tool.coverage.paths]
@@ -245,6 +251,7 @@ ignore = [
     "D105", # Missing docstring in magic method
     "E203", # Black conflicts with the following
     "C901", # too complex? not enough!
+    "DTZ",
 ]
 
 # See https://docs.astral.sh/ruff/settings/#per-file-ignores
@@ -276,7 +283,7 @@ known-first-party = [
 docstring-code-format = true
 
 [tool.bumpversion]
-current_version = "0.5.12-dev"
+current_version = "0.6.7-dev"
 parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)(?:-(?P<release>[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?(?:\\+(?P<build>[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?"
 serialize = [
     "{major}.{minor}.{patch}-{release}+{build}",

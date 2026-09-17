@@ -15,6 +15,21 @@ from tests.cases import P1, R1, R2
 class TestModel(unittest.TestCase):
     """Tests for the Pydantic model."""
 
+    def test_authors(self) -> None:
+        """Test author property."""
+        mapping = SemanticMapping.exact("a:1", "b:1")
+        self.assertIsNone(mapping.author)
+
+        mapping2 = SemanticMapping.exact("a:1", "b:1", authors=["o:1", "o:2"])
+        with self.assertRaises(ValueError):
+            mapping2.author  # noqa:B018
+
+    def test_sort(self) -> None:
+        """Test sorting."""
+        mapping = SemanticMapping.exact("a:1", "b:1")
+        with self.assertRaises(TypeError):
+            mapping < 5  # noqa:B015
+
     def test_creator_id(self) -> None:
         """Test a non-list creator gets properly upgraded."""
         x = {

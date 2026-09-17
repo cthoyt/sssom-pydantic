@@ -21,7 +21,6 @@ from .io import (
     append,
     append_unprocessed,
     format,
-    lint,
     read,
     read_iterable,
     read_unprocessed,
@@ -29,7 +28,7 @@ from .io import (
     write,
     write_unprocessed,
 )
-from .models import Record
+from .models import Record, Slot
 from .process import invert
 
 __all__ = [
@@ -44,6 +43,7 @@ __all__ = [
     "SemanticMapping",
     "SemanticMappingPack",
     "SemanticMappingPredicate",
+    "Slot",
     "append",
     "append_unprocessed",
     "format",
@@ -52,7 +52,6 @@ __all__ = [
     "hash_triple",
     "hash_triple_to_reference",
     "invert",
-    "lint",
     "read",
     "read_iterable",
     "read_unprocessed",

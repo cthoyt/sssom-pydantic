@@ -5,12 +5,21 @@ from __future__ import annotations
 import json
 from collections.abc import Callable, Iterable, Sequence
 from contextlib import closing
-from typing import TYPE_CHECKING, Any, Concatenate, Literal, ParamSpec, TypeVar, cast, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Concatenate,
+    Literal,
+    LiteralString,
+    ParamSpec,
+    TypeVar,
+    cast,
+    overload,
+)
 
 import curies
 from curies import NamableReference, Reference
 from tqdm import tqdm
-from typing_extensions import LiteralString
 
 from .repo import CURIENotFoundError, SemanticMappingRepository
 from ..api import SemanticMapping, SemanticMappingHash
@@ -401,6 +410,7 @@ QUERY_TO_CLAUSE: dict[str, Callable[[str | bool], str]] = {
             )
         )"""
     ),
+    "justification": lambda value: "toLower(p.justification) CONTAINS toLower($justification)",
 }
 
 

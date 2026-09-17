@@ -678,6 +678,14 @@ class TestProcess(cases.MappingTestCaseMixin):
         self.assert_model_sequence_equal([m1, m2], pr.filter_by_confidence([m1, m2, m3], 0.9))
         self.assert_model_sequence_equal([m1], pr.filter_by_confidence([m1, m2, m3], 0.95))
 
+    def test_remove_trivial_negative(self) -> None:
+        """Test removing trivial negative mappings."""
+        m1 = SemanticMapping.exact(R1, R2)
+        m2 = SemanticMapping.exact(R3, R4, confidence=0.9)
+        m3 = SemanticMapping.exact(R3, R4, confidence=0.9).negate()
+        mappings = [m1, m2, m3]
+        self.assert_model_sequence_equal([m1, m2], pr.remove_trivial_negative(mappings))
+
 
 ambika = NamedReference.from_curie("orcid:0009-0009-1663-1003", name="Ambika Gupta")
 

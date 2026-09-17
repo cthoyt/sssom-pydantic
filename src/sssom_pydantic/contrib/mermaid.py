@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NotRequired
 
 import curies
 from curies import vocabulary as v
-from typing_extensions import NotRequired, TypedDict, Unpack
+from typing_extensions import TypedDict, Unpack
 
 from sssom_pydantic.api import NOT, SemanticMapping, hash_mapping, hash_triple
 
@@ -26,7 +26,9 @@ __all__ = [
 class MermaidOptions(TypedDict):
     """Keyword arguments for Mermaid."""
 
+    #: Should authors, creators, and reviewers be included?
     include_people: NotRequired[bool]
+    #: Should mapping sources be included?
     include_sources: NotRequired[bool]
 
 
