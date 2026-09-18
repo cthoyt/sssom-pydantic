@@ -8,10 +8,10 @@ from curies.vocabulary import charlie, exact_match, manual_mapping_curation
 from quickstatements_client import EntityQualifier, TextLine, TextQualifier
 
 from sssom_pydantic import SemanticMapping
-from sssom_pydantic.contrib.wikidata import (
+from sssom_pydantic.contrib.wikidata import get_quickstatements_lines
+from sssom_pydantic.contrib.wikidata.read import (
     _get_wikidata_to_exact_matches,
     _get_wikidata_to_property_matches,
-    get_quickstatements_lines,
 )
 from tests.cases import TEST_MAPPING_SET, TEST_MAPPING_SET_ID, TEST_PREFIX_MAP
 
