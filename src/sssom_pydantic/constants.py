@@ -10,6 +10,7 @@ from curies import vocabulary as v
 
 __all__ = [
     "BUILTIN_CONVERTER",
+    "CC0_URL",
     "DEFAULT_PREFIX_MAP",
     "ENTITY_TYPE_LITERAL_TO_REFERENCE",
     "ENTITY_TYPE_REFERENCE_TO_LITERAL",
@@ -196,3 +197,6 @@ SSSOM_INVALID_URI_PREFIX = "http://sssom.invalid/"
 def get_sssom_invalid_reference(slot_name: str) -> Reference:
     """Get a reference with the SSSOM invalid CURIE prefix."""
     return Reference(prefix=SSSOM_INVALID_CURIE_PREFIX, identifier=slot_name)
+
+
+CC0_URL = "https://creativecommons.org/publicdomain/zero/1.0/"

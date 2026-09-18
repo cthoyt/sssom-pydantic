@@ -53,6 +53,7 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Collection, Iterable
 from itertools import chain
+from textwrap import dedent
 from typing import TYPE_CHECKING, Any, TypeVar
 
 import bioregistry
@@ -60,7 +61,7 @@ import curies
 import curies.vocabulary as cv
 import quickstatements_client
 import wikidata_client
-from curies import Converter
+from curies import Converter, NamableReference
 from quickstatements_client import (
     DateQualifier,
     EntityQualifier,
@@ -70,18 +71,24 @@ from quickstatements_client import (
     TextQualifier,
 )
 from quickstatements_client.model import prepare_date
+from tqdm import tqdm
 
 from sssom_pydantic import MappingSet, SemanticMapping, read
+from sssom_pydantic.constants import CC0_URL
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 __all__ = [
+    "SKOS_TO_WIKIDATA",
+    "WIKIDATA_TO_SKOS",
+    "get_mappings_by_prefix",
     "get_quickstatements_lines",
     "open_quickstatements",
     "post",
     "read_and_open_quickstatements",
     "read_and_post",
+    "get_wikidata_property_mappings",
     "read_to_quickstatements_lines",
 ]
 
@@ -278,7 +285,7 @@ def _get_orcid_to_wikidata(mappings: Iterable[SemanticMapping]) -> dict[str, str
         person.identifier
         for mapping in mappings
         # TODO creators?
-        for person in chain(mapping.authors or [], mapping.reviewers or [])
+        for person in chain(mapping.authors or [], mapping.reviewers or [], mapping.creators or [])
         if person.prefix == "orcid"
     }
     return wikidata_client.get_entities_by_orcid(orcids)
@@ -291,6 +298,7 @@ SKOS_TO_WIKIDATA: dict[curies.Reference, str] = {
     cv.narrow_match: "Q39893967",  # see https://www.wikidata.org/wiki/Q39893967
     cv.broad_match: "Q39894595",  # see https://www.wikidata.org/wiki/Q39894595
 }
+WIKIDATA_TO_SKOS = {v: k for k, v in SKOS_TO_WIKIDATA.items()}
 
 
 def _get_mapping_qualifiers(
@@ -324,6 +332,108 @@ def _get_mapping_qualifiers(
     return rv
 
 
+EQUIVALENT_PROPERTY_SPARQL = """\
+    SELECT ?item ?itemLabel ?val ?mappingType ?mappingTypeLabel
+    WHERE {
+        ?item p:P1628 ?statement .
+        ?statement ps:P1628 ?val .
+        OPTIONAL { ?statement pq:P4390 ?mappingType }
+        SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],mul,en" . }
+    }
+"""
+
+#: A wikidata entry about itself
+WIKIDATA_SOURCE_R = NamableReference(prefix="wikidata", identifier="Q2013", name="Wikidata")
+
+
+def get_wikidata_property_mappings(*, converter: Converter | None = None) -> list[SemanticMapping]:
+    """Get equivalent properties from wikidata.
+
+    In September 2026, there were 861 results, with 4 that included
+    mapping types.
+    """
+    if converter is None:
+        converter = bioregistry.get_default_converter()
+
+    rv = []
+    failures = []
+    for row in wikidata_client.query(EQUIVALENT_PROPERTY_SPARQL):
+        object_reference_tuple = converter.parse_uri(row["val"])
+        if object_reference_tuple is None:
+            failures.append(row["val"])
+            continue
+        if mapping_predicate_qid := row.get("mappingType"):
+            predicate = WIKIDATA_TO_SKOS.get(mapping_predicate_qid, cv.equivalent_property)
+        else:
+            predicate = cv.equivalent_property
+        mapping = SemanticMapping(
+            subject=NamableReference(
+                prefix="wikidata", identifier=row["item"], name=row["itemLabel"]
+            ),
+            predicate=predicate,
+            object=object_reference_tuple.to_pydantic(),
+            justification=cv.unspecified_matching_process,
+            license=CC0_URL,
+            source=WIKIDATA_SOURCE_R,
+        )
+        rv.append(mapping)
+
+    for f in sorted(failures):
+        tqdm.write(f"failed to parse {f}")
+    return rv
+
+
+def get_mappings_by_prefix(
+    *,
+    prefix: str | None = None,
+    property_id: str | None = None,
+    confidence: float = 0.99,
+    timeout: int = 300,
+    endpoint: str | None = None,
+) -> Iterable[SemanticMapping]:
+    """Get mappings from Wikidata."""
+    if prefix is None:
+        if property_id is None:
+            raise ValueError("must pass at least one of prefix or property_id")
+        prefix = bioregistry.get_registry_invmap("wikidata")[property_id]
+    elif property_id is None:
+        property_id = bioregistry.get_registry_map("wikidata")[prefix]
+
+    sparql = dedent(f"""\
+        SELECT ?entity ?entityLabel ?id
+        WHERE {{
+            ?entity wdt:{property_id} ?id .
+            SERVICE wikibase:label {{ bd:serviceParam wikibase:language "[AUTO_LANGUAGE],mul,en". }}
+        }}
+    """)
+    # TODO extend to get match types?
+    rows = wikidata_client.query(sparql, timeout=timeout, endpoint=endpoint)
+    for row in rows:
+        if not row["entity"].startswith("Q"):
+            continue
+        try:
+            obj = NamableReference(prefix=prefix, identifier=_clean_xref_id(prefix, row["id"]))
+        except ValueError:
+            continue
+        yield SemanticMapping(
+            subject=NamableReference(
+                prefix="wikidata", identifier=row["entity"], name=row["entityLabel"]
+            ),
+            predicate=cv.exact_match,
+            object=obj,
+            justification=cv.unspecified_matching_process,
+            license=CC0_URL,
+            confidence=confidence,
+            source=WIKIDATA_SOURCE_R,
+        )
+
+
+def _clean_xref_id(prefix: str, identifier: str) -> str:
+    if identifier.lower().startswith(f"{prefix}_"):
+        identifier = identifier[len(prefix) + 1 :]
+    return identifier
+
+
 def _demo() -> None:
     import datetime
 
@@ -335,7 +445,7 @@ def _demo() -> None:
         object=Reference(prefix="chebi", identifier="15366"),
         justification=cv.manual_mapping_curation,
         authors=[cv.charlie],
-        license="CC0-1.0",
+        license=CC0_URL,
         publication_date=datetime.date(2025, 1, 8),
     )
     open_quickstatements([mapping], wikidata_id_to_references={})
