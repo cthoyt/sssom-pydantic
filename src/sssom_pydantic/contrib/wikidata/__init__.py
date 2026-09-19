@@ -57,6 +57,7 @@ from collections.abc import Iterable
 from itertools import chain
 from typing import TYPE_CHECKING, Any, TypeVar
 
+import bioregistry
 import quickstatements_client
 import wikidata_client
 from quickstatements_client import (
@@ -185,8 +186,6 @@ def get_quickstatements_lines(
 ) -> list[Line]:
     """Get lines for QuickStatements that can be used to upload SSSOM to Wikidata."""
     if converter is None:
-        import bioregistry
-
         converter = bioregistry.get_default_converter()
 
     mappings = [
@@ -196,8 +195,6 @@ def get_quickstatements_lines(
     ]
 
     if prefix_to_wikidata is None:
-        import bioregistry
-
         # Get the mapping from Bioregistry prefixes to Wikidata prefixes,
         # e.g., `chebi` maps to `P683`
         prefix_to_wikidata = bioregistry.get_registry_map("wikidata")

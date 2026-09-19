@@ -7,6 +7,7 @@ from collections.abc import Iterable
 from textwrap import dedent
 from typing import TYPE_CHECKING, Unpack
 
+import bioregistry
 import curies
 import wikidata_client
 from curies import Converter, NamableReference
@@ -301,6 +302,5 @@ def _get_uri_matches_by_ids(
 def _ensure_converter(converter: Converter | None) -> Converter:
     if converter is not None:
         return converter
-    import bioregistry
 
     return bioregistry.get_default_converter()
