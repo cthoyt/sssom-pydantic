@@ -70,6 +70,8 @@ from quickstatements_client import (
 )
 from quickstatements_client.model import prepare_date
 
+import sssom_pydantic
+
 from .constants import CC0_URL, SKOS_TO_WIKIDATA, WIKIDATA_TO_SKOS
 from .query import (
     EQUIVALENT_PROPERTY_SPARQL,
@@ -118,8 +120,6 @@ def read_and_open_quickstatements(
     path_or_url: str | Path, *, read_kwargs: dict[str, Any] | None = None, **kwargs: Any
 ) -> None:
     """Read an SSSOM file and open the Quickstatements v2 uploader with the web browser."""
-    import sssom_pydantic
-
     mappings, converter, metadata = sssom_pydantic.read(path_or_url, **(read_kwargs or {}))
     open_quickstatements(mappings, converter=converter, metadata=metadata, **kwargs)
 
@@ -132,8 +132,6 @@ def read_and_post(
     **kwargs: Any,
 ) -> None:
     """Read mappings from a file then post."""
-    import sssom_pydantic
-
     mappings, converter, metadata = sssom_pydantic.read(path_or_url, **(read_kwargs or {}))
     post(mappings, converter=converter, metadata=metadata, batch_name=batch_name, **kwargs)
 
@@ -167,8 +165,6 @@ def read_to_quickstatements_lines(
     path_or_url: str | Path, *, read_kwargs: dict[str, Any] | None = None, **kwargs: Any
 ) -> list[Line]:
     """Read an SSSOM file and get QuickStatements v2 lines."""
-    import sssom_pydantic
-
     mappings, converter, metadata = sssom_pydantic.read(path_or_url, **(read_kwargs or {}))
     return get_quickstatements_lines(mappings, converter=converter, metadata=metadata, **kwargs)
 
