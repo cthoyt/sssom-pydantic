@@ -68,7 +68,8 @@ def get_equivalent_property_mappings(
 
     :param converter: A converter for parsing the URIs of the objects of equivalent
         property triples.
-    :param kwargs: SPARQL query keyword arguments passed to :func:`wikidata_client.query`
+    :param kwargs: SPARQL query keyword arguments passed to
+        :func:`wikidata_client.query`
 
     :returns: A list of semantic mappings
 
@@ -90,7 +91,8 @@ def get_exact_match_mappings(
 
     :param converter: A converter for parsing the URIs of the objects of equivalent
         property triples.
-    :param kwargs: SPARQL query keyword arguments passed to :func:`wikidata_client.query`
+    :param kwargs: SPARQL query keyword arguments passed to
+        :func:`wikidata_client.query`
 
     :returns: A list of semantic mappings
 
@@ -167,7 +169,8 @@ def get_mappings_by_property(
         :mod:`bioregistry`.
     :param confidence: An optional confidence to apply to all mappings. Alternatively,
         confidence can be applied at the mapping set level
-    :param kwargs: SPARQL query keyword arguments passed to :func:`wikidata_client.query`
+    :param kwargs: SPARQL query keyword arguments passed to
+        :func:`wikidata_client.query`
 
     :yields: semantic mappings
     """
@@ -238,7 +241,8 @@ def get_exact_matches_by_ids(
 
     :param wikidata_ids: The identifiers for entities to query
     :param converter: A converter for compressing the URIs
-    :param kwargs: SPARQL query keyword arguments passed to :func:`wikidata_client.query`
+    :param kwargs: SPARQL query keyword arguments passed to
+        :func:`wikidata_client.query`
 
     :returns: A dict from identifier to set of exact match semantic mappings
     """

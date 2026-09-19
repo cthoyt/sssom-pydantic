@@ -142,6 +142,10 @@ class TestWikidata(unittest.TestCase):
         self.assertLessEqual(500, len(mappings))
 
     def test_get_property(self) -> None:
-        """Test looking up mappings by a property."""
-        mappings = list(get_mappings_by_property("P12357", prefix="bindingdb", timeout=TIMEOUT))
+        """Test looking up mappings by a property.
+
+        P12357 (bindingDB identifier) was chosen because there are only a small number
+        of mappings in Wikidata (<10) and therefore the query should be fast.
+        """
+        mappings = list(get_mappings_by_property("P12357", timeout=TIMEOUT))
         self.assertLessEqual(4, len(mappings))
