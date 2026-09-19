@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Collection, Iterable
+from collections.abc import Iterable
 from textwrap import dedent
 from typing import Unpack
 
@@ -22,6 +22,7 @@ from .constants import WIKIDATA_TO_SKOS
 __all__ = [
     "EQUIVALENT_PROPERTY_SPARQL",
     "EXACT_MATCH_SPARQL",
+    "get_equivalent_properties_by_ids",
     "get_equivalent_property_mappings",
     "get_exact_match_mappings",
     "get_exact_matches_by_ids",
@@ -214,7 +215,7 @@ def _clean_xref_id(prefix: str, identifier: str) -> str:
 
 
 def get_property_matches_by_ids(
-    wikidata_ids: Collection[str],
+    wikidata_ids: Iterable[str],
     prefix_to_wikidata: dict[str, str | None],  # TODO change this to properties list
     **kwargs: Unpack[QueryKwargs],
 ) -> dict[str, set[curies.Reference]]:
@@ -239,7 +240,7 @@ def get_property_matches_by_ids(
 
 
 def get_exact_matches_by_ids(
-    wikidata_ids: Collection[str],
+    wikidata_ids: Iterable[str],
     *,
     converter: Converter | None = None,
     **kwargs: Unpack[QueryKwargs],
@@ -253,10 +254,38 @@ def get_exact_matches_by_ids(
 
     :returns: A dict from identifier to set of exact match semantic mappings
     """
-    converter = _ensure_converter(converter)
-    res = wikidata_client.get_properties(
-        wikidata_ids, EXACT_MATCH_PID, single_value=False, **kwargs
+    return _get_uri_matches_by_ids(wikidata_ids, EXACT_MATCH_PID, converter=converter, **kwargs)
+
+
+def get_equivalent_properties_by_ids(
+    wikidata_ids: Iterable[str],
+    *,
+    converter: Converter | None = None,
+    **kwargs: Unpack[QueryKwargs],
+) -> dict[str, set[curies.Reference]]:
+    """Get equivalent properties from Wikidata for the given entities.
+
+    :param wikidata_ids: The identifiers for entities to query
+    :param converter: A converter for compressing the URIs
+    :param kwargs: SPARQL query keyword arguments passed to
+        :func:`wikidata_client.query`
+
+    :returns: A dict from identifier to set of exact match semantic mappings
+    """
+    return _get_uri_matches_by_ids(
+        wikidata_ids, EQUIVALENT_PROPERTY_PID, converter=converter, **kwargs
     )
+
+
+def _get_uri_matches_by_ids(
+    wikidata_ids: Iterable[str],
+    prop: str,
+    *,
+    converter: Converter | None,
+    **kwargs: Unpack[QueryKwargs],
+) -> dict[str, set[curies.Reference]]:
+    converter = _ensure_converter(converter)
+    res = wikidata_client.get_properties(wikidata_ids, prop, single_value=False, **kwargs)
     return {
         wikidata_id: {
             reference.to_pydantic() for uri in uris if (reference := converter.parse(uri))

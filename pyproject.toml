@@ -138,7 +138,7 @@ fastapi = [
     "a2wsgi",
 ]
 wikidata = [
-    "wikidata-client>=0.0.6",
+    "wikidata-client>=0.0.7",
     "quickstatements-client>=0.1.2",
     "bioregistry>=0.14.0",
 ]

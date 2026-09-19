@@ -79,6 +79,7 @@ from .constants import SKOS_TO_WIKIDATA, WIKIDATA_TO_SKOS
 from .read import (
     EQUIVALENT_PROPERTY_SPARQL,
     EXACT_MATCH_SPARQL,
+    get_equivalent_properties_by_ids,
     get_equivalent_property_mappings,
     get_exact_match_mappings,
     get_exact_matches_by_ids,
@@ -95,6 +96,7 @@ __all__ = [
     "EXACT_MATCH_SPARQL",
     "SKOS_TO_WIKIDATA",
     "WIKIDATA_TO_SKOS",
+    "get_equivalent_properties_by_ids",
     "get_equivalent_property_mappings",
     "get_exact_match_mappings",
     "get_exact_matches_by_ids",
