@@ -64,10 +64,10 @@ tests = [
     "tabulate",
 ]
 docs = [
-    "sphinx>=8",
+    "sphinx>=9",
     "sphinx-rtd-theme>=3.0",
     "sphinx-click",
-    "sphinx-automodapi",
+    "sphinx-automodapi>=0.22.0",
     "autodoc-pydantic",
     "texext",
 ]
@@ -138,7 +138,7 @@ fastapi = [
     "a2wsgi",
 ]
 wikidata = [
-    "wikidata-client",
+    "wikidata-client>=0.0.7",
     "quickstatements-client>=0.1.2",
     "bioregistry>=0.14.0",
 ]
