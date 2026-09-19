@@ -72,12 +72,12 @@ from quickstatements_client.model import prepare_date
 from sssom_pydantic import MappingSet, SemanticMapping, read
 from sssom_pydantic.constants import CC0_URL
 from sssom_pydantic.contrib.wikidata.read import (
-    _get_wikidata_to_exact_matches,
-    _get_wikidata_to_property_matches,
+    get_property_matches_by_ids,
+    get_exact_matches_by_ids,
 )
 
 from .constants import SKOS_TO_WIKIDATA, WIKIDATA_TO_SKOS
-from .read import get_mappings_by_prefix, get_wikidata_property_mappings
+from .read import get_mappings_by_property, get_equivalent_property_mappings
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -85,9 +85,9 @@ if TYPE_CHECKING:
 __all__ = [
     "SKOS_TO_WIKIDATA",
     "WIKIDATA_TO_SKOS",
-    "get_mappings_by_prefix",
+    "get_mappings_by_property",
     "get_quickstatements_lines",
-    "get_wikidata_property_mappings",
+    "get_equivalent_property_mappings",
     "open_quickstatements",
     "post",
     "read_and_open_quickstatements",
@@ -188,12 +188,12 @@ def get_quickstatements_lines(
     wikidata_ids: set[str] = {mapping.subject.identifier for mapping in mappings}
 
     if wikidata_id_to_references is None:
-        wikidata_id_to_references = _get_wikidata_to_property_matches(
+        wikidata_id_to_references = get_property_matches_by_ids(
             wikidata_ids, object_prefix_to_wikidata
         )
 
     if wikidata_id_to_exact is None:
-        wikidata_id_to_exact = _get_wikidata_to_exact_matches(wikidata_ids, converter)
+        wikidata_id_to_exact = get_exact_matches_by_ids(wikidata_ids, converter=converter)
 
     if orcid_to_wikidata is None:
         orcid_to_wikidata = _get_orcid_to_wikidata(mappings)

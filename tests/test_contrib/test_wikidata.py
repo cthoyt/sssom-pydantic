@@ -10,8 +10,8 @@ from quickstatements_client import EntityQualifier, TextLine, TextQualifier
 from sssom_pydantic import SemanticMapping
 from sssom_pydantic.contrib.wikidata import get_quickstatements_lines
 from sssom_pydantic.contrib.wikidata.read import (
-    _get_wikidata_to_exact_matches,
-    _get_wikidata_to_property_matches,
+    get_property_matches_by_ids,
+    get_exact_matches_by_ids,
 )
 from tests.cases import TEST_MAPPING_SET, TEST_MAPPING_SET_ID, TEST_PREFIX_MAP
 
@@ -101,7 +101,7 @@ class TestWikidata(unittest.TestCase):
     def test_lookup_mapping_in_property(self) -> None:
         """Test looking up existing mappings."""
         try:
-            res = _get_wikidata_to_property_matches(
+            res = get_property_matches_by_ids(
                 wikidata_ids=["Q47512"],
                 prefix_to_wikidata={
                     "chebi": "P683",
@@ -120,7 +120,7 @@ class TestWikidata(unittest.TestCase):
         # http://purl.obolibrary.org/obo/GO_0005618
         converter = Converter.from_prefix_map({"GO": "http://purl.obolibrary.org/obo/GO_"})
         try:
-            res = _get_wikidata_to_exact_matches(wikidata_ids=["Q128700"], converter=converter)
+            res = get_exact_matches_by_ids(wikidata_ids=["Q128700"], converter=converter)
         except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError):
             raise unittest.SkipTest("wikidata SPARQL is not available") from None
         else:
