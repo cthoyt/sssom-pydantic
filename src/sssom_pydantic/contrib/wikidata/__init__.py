@@ -71,10 +71,6 @@ from quickstatements_client.model import prepare_date
 
 from sssom_pydantic import MappingSet, SemanticMapping, read
 from sssom_pydantic.constants import CC0_URL
-from sssom_pydantic.contrib.wikidata.read import (
-    get_exact_matches_by_ids,
-    get_property_matches_by_ids,
-)
 
 from .constants import SKOS_TO_WIKIDATA, WIKIDATA_TO_SKOS
 from .read import (
@@ -82,8 +78,10 @@ from .read import (
     EXACT_MATCH_SPARQL,
     get_equivalent_property_mappings,
     get_exact_match_mappings,
+    get_exact_matches_by_ids,
     get_mapping_sparql,
     get_mappings_by_property,
+    get_property_matches_by_ids,
 )
 
 if TYPE_CHECKING:
