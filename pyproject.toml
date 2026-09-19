@@ -64,10 +64,10 @@ tests = [
     "tabulate",
 ]
 docs = [
-    "sphinx>=8",
+    "sphinx>=9",
     "sphinx-rtd-theme>=3.0",
     "sphinx-click",
-    "sphinx-automodapi",
+    "sphinx-automodapi>=0.22.0",
     "autodoc-pydantic",
     "texext",
 ]

@@ -75,7 +75,7 @@ from sssom_pydantic import MappingSet, SemanticMapping, read
 from sssom_pydantic.constants import CC0_URL
 
 from .constants import SKOS_TO_WIKIDATA, WIKIDATA_TO_SKOS
-from .read import (
+from .query_wikidata import (
     EQUIVALENT_PROPERTY_SPARQL,
     EXACT_MATCH_SPARQL,
     get_equivalent_properties_by_ids,
