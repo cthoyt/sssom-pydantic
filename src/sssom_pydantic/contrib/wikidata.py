@@ -53,7 +53,7 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Collection, Iterable
 from itertools import chain
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar, Unpack
 
 import bioregistry
 import curies
@@ -70,6 +70,7 @@ from quickstatements_client import (
     TextQualifier,
 )
 from quickstatements_client.model import prepare_date
+from wikidata_client import QueryKwargs
 
 from sssom_pydantic import MappingSet, SemanticMapping, read
 
@@ -228,13 +229,14 @@ def get_quickstatements_lines(
 def _get_wikidata_to_property_matches(
     wikidata_ids: Collection[str],
     prefix_to_wikidata: dict[str, str | None],
+    **kwargs: Unpack[QueryKwargs],
 ) -> dict[str, set[curies.Reference]]:
     rv: defaultdict[str, set[curies.Reference]] = defaultdict(set)
     for prefix, wikidata_property_id in prefix_to_wikidata.items():
         if wikidata_property_id is None:
             continue
         properties = wikidata_client.get_properties(
-            wikidata_ids, wikidata_property_id, single_value=False
+            wikidata_ids, wikidata_property_id, single_value=False, **kwargs
         )
         for wikidata_id, external_ids in properties.items():
             for external_id in external_ids:
@@ -243,10 +245,10 @@ def _get_wikidata_to_property_matches(
 
 
 def _get_wikidata_to_exact_matches(
-    wikidata_ids: Collection[str], converter: Converter
+    wikidata_ids: Collection[str], converter: Converter, **kwargs: Unpack[QueryKwargs]
 ) -> dict[str, set[curies.Reference]]:
     # P2888 is "exact match", see https://www.wikidata.org/wiki/Property:P2888
-    res = wikidata_client.get_properties(wikidata_ids, "P2888", single_value=False)
+    res = wikidata_client.get_properties(wikidata_ids, "P2888", single_value=False, **kwargs)
     return {
         wikidata_id: {
             reference.to_pydantic() for uri in uris if (reference := converter.parse(uri))
