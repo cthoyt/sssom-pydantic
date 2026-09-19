@@ -10,8 +10,9 @@ from quickstatements_client import EntityQualifier, TextLine, TextQualifier
 from sssom_pydantic import SemanticMapping
 from sssom_pydantic.contrib.wikidata import get_quickstatements_lines
 from sssom_pydantic.contrib.wikidata.read import (
-    get_property_matches_by_ids,
+    get_equivalent_property_mappings,
     get_exact_matches_by_ids,
+    get_property_matches_by_ids,
 )
 from tests.cases import TEST_MAPPING_SET, TEST_MAPPING_SET_ID, TEST_PREFIX_MAP
 
@@ -125,3 +126,8 @@ class TestWikidata(unittest.TestCase):
             raise unittest.SkipTest("wikidata SPARQL is not available") from None
         else:
             self.assertEqual({"Q128700": {Reference(prefix="GO", identifier="0005618")}}, res)
+
+    def test_get_equivalent_property_mappings(self) -> None:
+        """Test getting equivalent property mappings."""
+        mappings = get_equivalent_property_mappings(timeout=60)
+        self.assertLessEqual(500, len(mappings))

@@ -72,12 +72,12 @@ from quickstatements_client.model import prepare_date
 from sssom_pydantic import MappingSet, SemanticMapping, read
 from sssom_pydantic.constants import CC0_URL
 from sssom_pydantic.contrib.wikidata.read import (
-    get_property_matches_by_ids,
     get_exact_matches_by_ids,
+    get_property_matches_by_ids,
 )
 
 from .constants import SKOS_TO_WIKIDATA, WIKIDATA_TO_SKOS
-from .read import get_mappings_by_property, get_equivalent_property_mappings
+from .read import get_equivalent_property_mappings, get_mappings_by_property
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -85,9 +85,9 @@ if TYPE_CHECKING:
 __all__ = [
     "SKOS_TO_WIKIDATA",
     "WIKIDATA_TO_SKOS",
+    "get_equivalent_property_mappings",
     "get_mappings_by_property",
     "get_quickstatements_lines",
-    "get_equivalent_property_mappings",
     "open_quickstatements",
     "post",
     "read_and_open_quickstatements",
@@ -189,7 +189,7 @@ def get_quickstatements_lines(
 
     if wikidata_id_to_references is None:
         wikidata_id_to_references = get_property_matches_by_ids(
-            wikidata_ids, object_prefix_to_wikidata
+            wikidata_ids, prefix_to_wikidata=object_prefix_to_wikidata
         )
 
     if wikidata_id_to_exact is None:
