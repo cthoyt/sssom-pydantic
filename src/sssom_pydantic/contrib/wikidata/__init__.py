@@ -2,18 +2,21 @@
 
 Wikidata encodes semantic mappings in two ways:
 
-1. Using the `exact match (P2888) <https://www.wikidata.org/wiki/Property:P2888>`_
-   property with a URI as the object. For example, `cell wall (Q128700)
-   <https://www.wikidata.org/wiki/Q128700>`_ maps to the Gene Ontology (GO) term for
-   `cell wall <https://purl.obolibrary.org/obo/GO_0005618>`_ by its URI
-   ``http://purl.obolibrary.org/obo/GO_0005618``.
+1. Using the Wikidata properties whose triples' objects are URIs such as `exact match
+   (P2888) <https://www.wikidata.org/wiki/Property:P2888>`_ and `equivalent property
+   (P1628) <https://www.wikidata.org/wiki/Property:P1628>`_. For example, `cell wall
+   (Q128700) <https://www.wikidata.org/wiki/Q128700>`_ maps to the Gene Ontology (GO)
+   term for `cell wall <https://purl.obolibrary.org/obo/GO_0005618>`_ by its URI
+   ``http://purl.obolibrary.org/obo/GO_0005618``. These can be processed in bulk with
+   :func:`get_exact_match_mappings` and :func:`get_equivalent_property_mappings`.
 2. Using semantic space-specific properties (e.g. `P683
    <https://www.wikidata.org/wiki/Property:P683>`_ for ChEBI) with local unique
    identifiers as the object. For example, `acetic acid (Q47512)
    <https://www.wikidata.org/wiki/Q47512>`_ maps to the ChEBI term for `acetic acid
    <https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:15366>`_ using the `P683
    <https://www.wikidata.org/wiki/Property:P683>`_ property for ChEBI and local unique
-   identifier for acetic acid (within ChEBI) ``15366``.
+   identifier for acetic acid (within ChEBI) ``15366``. These can be queried with
+   :func:`get_mappings_by_property`.
 
 Wikidata has a data structure that enables annotating qualifiers onto triples.
 Therefore, other parts of semantic mappings modeled in SSSOM can be ported:
