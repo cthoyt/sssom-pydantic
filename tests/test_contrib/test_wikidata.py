@@ -1,6 +1,10 @@
 """Test Wikidata conversion."""
 
+import getpass
 import unittest
+from collections.abc import Callable
+from functools import wraps
+from typing import ParamSpec, TypeVar
 
 import requests.exceptions
 from curies import Converter, Reference
@@ -8,16 +12,40 @@ from curies.vocabulary import charlie, exact_match, manual_mapping_curation
 from quickstatements_client import EntityQualifier, TextLine, TextQualifier
 
 from sssom_pydantic import SemanticMapping
-from sssom_pydantic.contrib.wikidata import (
-    _get_wikidata_to_exact_matches,
-    _get_wikidata_to_property_matches,
-    get_quickstatements_lines,
+from sssom_pydantic.contrib.wikidata import get_quickstatements_lines
+from sssom_pydantic.contrib.wikidata.query import (
+    get_equivalent_properties_by_ids,
+    get_equivalent_property_mappings,
+    get_exact_matches_by_ids,
+    get_mappings_by_property,
+    get_property_matches_by_ids,
 )
 from tests.cases import TEST_MAPPING_SET, TEST_MAPPING_SET_ID, TEST_PREFIX_MAP
 
 CHARLIE_WD = "Q47475003"
 TEST_CONVERTER = Converter.from_prefix_map(TEST_PREFIX_MAP)
 TEST_CONVERTER.add_prefix("ex", "https://example.org/")
+
+if getpass.getuser() == "cthoyt":
+    TIMEOUT = 60
+else:
+    TIMEOUT = 10
+
+T = TypeVar("T")
+P = ParamSpec("P")
+
+
+def skip_on_wikidata_timeout(func: Callable[P, T]) -> Callable[P, T]:
+    """Decorate a function to skip."""
+
+    @wraps(func)
+    def _wrapped_func(*args: P.args, **kwargs: P.kwargs) -> T:
+        try:
+            return func(*args, **kwargs)
+        except OSError:
+            raise unittest.SkipTest("wikidata SPARQL timed out 🤷") from None
+
+    return _wrapped_func
 
 
 class TestWikidata(unittest.TestCase):
@@ -98,30 +126,51 @@ class TestWikidata(unittest.TestCase):
                     self.assertEqual(1, len(lines))
                     self.assertEqual(line, lines[0])
 
+    @skip_on_wikidata_timeout
     def test_lookup_mapping_in_property(self) -> None:
         """Test looking up existing mappings."""
-        try:
-            res = _get_wikidata_to_property_matches(
-                wikidata_ids=["Q47512"],
-                prefix_to_wikidata={
-                    "chebi": "P683",
-                    "pdb": "P638",  # exists, but not for this entry
-                    "bioregistry": None,  # does not exist
-                },
-            )
-        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError):
-            raise unittest.SkipTest("wikidata SPARQL is not available") from None
-        else:
-            self.assertEqual({"Q47512": {Reference(prefix="chebi", identifier="15366")}}, res)
+        res = get_property_matches_by_ids(
+            wikidata_ids=["Q47512"],
+            prefix_to_wikidata={
+                "chebi": "P683",
+                "pdb": "P638",  # exists, but not for this entry
+                "bioregistry": None,  # does not exist
+            },
+        )
+        self.assertEqual({"Q47512": {Reference(prefix="chebi", identifier="15366")}}, res)
 
+    @skip_on_wikidata_timeout
     def test_lookup_mapping_in_exact_match(self) -> None:
         """Test looking up existing mappings."""
         # https://www.wikidata.org/wiki/Q128700
         # http://purl.obolibrary.org/obo/GO_0005618
         converter = Converter.from_prefix_map({"GO": "http://purl.obolibrary.org/obo/GO_"})
-        try:
-            res = _get_wikidata_to_exact_matches(wikidata_ids=["Q128700"], converter=converter)
-        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError):
-            raise unittest.SkipTest("wikidata SPARQL is not available") from None
-        else:
-            self.assertEqual({"Q128700": {Reference(prefix="GO", identifier="0005618")}}, res)
+        res = get_exact_matches_by_ids(
+            wikidata_ids=["Q128700"], converter=converter, timeout=TIMEOUT
+        )
+        self.assertEqual({"Q128700": {Reference(prefix="GO", identifier="0005618")}}, res)
+
+    @skip_on_wikidata_timeout
+    def test_lookup_mapping_in_equivalent_property(self) -> None:
+        """Test looking up existing mappings."""
+        converter = Converter.from_prefix_map({"owl": "http://www.w3.org/2002/07/owl#"})
+        res = get_equivalent_properties_by_ids(
+            wikidata_ids=["P1628"], converter=converter, timeout=TIMEOUT
+        )
+        self.assertEqual({"P1628": {Reference(prefix="owl", identifier="equivalentProperty")}}, res)
+
+    @skip_on_wikidata_timeout
+    def test_get_equivalent_property_mappings(self) -> None:
+        """Test getting equivalent property mappings."""
+        mappings = get_equivalent_property_mappings(timeout=TIMEOUT)
+        self.assertLessEqual(500, len(mappings))
+
+    @skip_on_wikidata_timeout
+    def test_get_property(self) -> None:
+        """Test looking up mappings by a property.
+
+        P12357 (bindingDB identifier) was chosen because there are only a small number
+        of mappings in Wikidata (<10) and therefore the query should be fast.
+        """
+        mappings = list(get_mappings_by_property("P12357", timeout=TIMEOUT))
+        self.assertLessEqual(4, len(mappings))

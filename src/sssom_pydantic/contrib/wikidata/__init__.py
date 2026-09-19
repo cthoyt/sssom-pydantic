@@ -2,18 +2,21 @@
 
 Wikidata encodes semantic mappings in two ways:
 
-1. Using the `exact match (P2888) <https://www.wikidata.org/wiki/Property:P2888>`_
-   property with a URI as the object. For example, `cell wall (Q128700)
-   <https://www.wikidata.org/wiki/Q128700>`_ maps to the Gene Ontology (GO) term for
-   `cell wall <https://purl.obolibrary.org/obo/GO_0005618>`_ by its URI
-   ``http://purl.obolibrary.org/obo/GO_0005618``.
+1. Using the Wikidata properties whose triples' objects are URIs such as `exact match
+   (P2888) <https://www.wikidata.org/wiki/Property:P2888>`_ and `equivalent property
+   (P1628) <https://www.wikidata.org/wiki/Property:P1628>`_. For example, `cell wall
+   (Q128700) <https://www.wikidata.org/wiki/Q128700>`_ maps to the Gene Ontology (GO)
+   term for `cell wall <https://purl.obolibrary.org/obo/GO_0005618>`_ by its URI
+   ``http://purl.obolibrary.org/obo/GO_0005618``. These can be processed in bulk with
+   :func:`get_exact_match_mappings` and :func:`get_equivalent_property_mappings`.
 2. Using semantic space-specific properties (e.g. `P683
    <https://www.wikidata.org/wiki/Property:P683>`_ for ChEBI) with local unique
    identifiers as the object. For example, `acetic acid (Q47512)
    <https://www.wikidata.org/wiki/Q47512>`_ maps to the ChEBI term for `acetic acid
    <https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:15366>`_ using the `P683
    <https://www.wikidata.org/wiki/Property:P683>`_ property for ChEBI and local unique
-   identifier for acetic acid (within ChEBI) ``15366``.
+   identifier for acetic acid (within ChEBI) ``15366``. These can be queried with
+   :func:`get_mappings_by_property`.
 
 Wikidata has a data structure that enables annotating qualifiers onto triples.
 Therefore, other parts of semantic mappings modeled in SSSOM can be ported:
@@ -50,17 +53,13 @@ caution since they write directly to Wikidata:
 
 from __future__ import annotations
 
-from collections import defaultdict
-from collections.abc import Collection, Iterable
+from collections.abc import Iterable
 from itertools import chain
 from typing import TYPE_CHECKING, Any, TypeVar
 
 import bioregistry
-import curies
-import curies.vocabulary as cv
 import quickstatements_client
 import wikidata_client
-from curies import Converter
 from quickstatements_client import (
     DateQualifier,
     EntityQualifier,
@@ -71,12 +70,40 @@ from quickstatements_client import (
 )
 from quickstatements_client.model import prepare_date
 
-from sssom_pydantic import MappingSet, SemanticMapping, read
+import sssom_pydantic
+
+from .constants import CC0_URL, SKOS_TO_WIKIDATA, WIKIDATA_TO_SKOS
+from .query import (
+    EQUIVALENT_PROPERTY_SPARQL,
+    EXACT_MATCH_SPARQL,
+    get_equivalent_properties_by_ids,
+    get_equivalent_property_mappings,
+    get_exact_match_mappings,
+    get_exact_matches_by_ids,
+    get_mappings_by_property,
+    get_mappings_by_property_sparql,
+    get_property_matches_by_ids,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
 
+    import curies
+
+    from sssom_pydantic import MappingSet, SemanticMapping
+
 __all__ = [
+    "EQUIVALENT_PROPERTY_SPARQL",
+    "EXACT_MATCH_SPARQL",
+    "SKOS_TO_WIKIDATA",
+    "WIKIDATA_TO_SKOS",
+    "get_equivalent_properties_by_ids",
+    "get_equivalent_property_mappings",
+    "get_exact_match_mappings",
+    "get_exact_matches_by_ids",
+    "get_mappings_by_property",
+    "get_mappings_by_property_sparql",
+    "get_property_matches_by_ids",
     "get_quickstatements_lines",
     "open_quickstatements",
     "post",
@@ -93,7 +120,7 @@ def read_and_open_quickstatements(
     path_or_url: str | Path, *, read_kwargs: dict[str, Any] | None = None, **kwargs: Any
 ) -> None:
     """Read an SSSOM file and open the Quickstatements v2 uploader with the web browser."""
-    mappings, converter, metadata = read(path_or_url, **(read_kwargs or {}))
+    mappings, converter, metadata = sssom_pydantic.read(path_or_url, **(read_kwargs or {}))
     open_quickstatements(mappings, converter=converter, metadata=metadata, **kwargs)
 
 
@@ -104,8 +131,8 @@ def read_and_post(
     batch_name: str | None = None,
     **kwargs: Any,
 ) -> None:
-    """."""
-    mappings, converter, metadata = read(path_or_url, **(read_kwargs or {}))
+    """Read mappings from a file then post."""
+    mappings, converter, metadata = sssom_pydantic.read(path_or_url, **(read_kwargs or {}))
     post(mappings, converter=converter, metadata=metadata, batch_name=batch_name, **kwargs)
 
 
@@ -138,7 +165,7 @@ def read_to_quickstatements_lines(
     path_or_url: str | Path, *, read_kwargs: dict[str, Any] | None = None, **kwargs: Any
 ) -> list[Line]:
     """Read an SSSOM file and get QuickStatements v2 lines."""
-    mappings, converter, metadata = read(path_or_url, **(read_kwargs or {}))
+    mappings, converter, metadata = sssom_pydantic.read(path_or_url, **(read_kwargs or {}))
     return get_quickstatements_lines(mappings, converter=converter, metadata=metadata, **kwargs)
 
 
@@ -151,6 +178,7 @@ def get_quickstatements_lines(
     wikidata_id_to_references: dict[str, set[curies.Reference]] | None = None,
     wikidata_id_to_exact: dict[str, set[curies.Reference]] | None = None,
     orcid_to_wikidata: dict[str, str] | None = None,
+    prefix_to_wikidata: dict[str, str] | None = None,
 ) -> list[Line]:
     """Get lines for QuickStatements that can be used to upload SSSOM to Wikidata."""
     if converter is None:
@@ -162,9 +190,10 @@ def get_quickstatements_lines(
         if mapping.subject.prefix == "wikidata" and mapping.predicate_modifier is None
     ]
 
-    # Get the mapping from Bioregistry prefixes to Wikidata prefixes,
-    # e.g., `chebi` maps to `P683`
-    prefix_to_wikidata = bioregistry.get_registry_map("wikidata")
+    if prefix_to_wikidata is None:
+        # Get the mapping from Bioregistry prefixes to Wikidata prefixes,
+        # e.g., `chebi` maps to `P683`
+        prefix_to_wikidata = bioregistry.get_registry_map("wikidata")
 
     # This makes a mapping from the prefixes appearing in mappings to
     # Wikidata properties. For example, mappings whose objects use
@@ -178,12 +207,12 @@ def get_quickstatements_lines(
     wikidata_ids: set[str] = {mapping.subject.identifier for mapping in mappings}
 
     if wikidata_id_to_references is None:
-        wikidata_id_to_references = _get_wikidata_to_property_matches(
-            wikidata_ids, object_prefix_to_wikidata
+        wikidata_id_to_references = get_property_matches_by_ids(
+            wikidata_ids, prefix_to_wikidata=object_prefix_to_wikidata
         )
 
     if wikidata_id_to_exact is None:
-        wikidata_id_to_exact = _get_wikidata_to_exact_matches(wikidata_ids, converter)
+        wikidata_id_to_exact = get_exact_matches_by_ids(wikidata_ids, converter=converter)
 
     if orcid_to_wikidata is None:
         orcid_to_wikidata = _get_orcid_to_wikidata(mappings)
@@ -225,40 +254,6 @@ def get_quickstatements_lines(
     return lines
 
 
-def _get_wikidata_to_property_matches(
-    wikidata_ids: Collection[str],
-    prefix_to_wikidata: dict[str, str | None],
-) -> dict[str, set[curies.Reference]]:
-    rv: defaultdict[str, set[curies.Reference]] = defaultdict(set)
-    for prefix, wikidata_property_id in prefix_to_wikidata.items():
-        if wikidata_property_id is None:
-            continue
-        properties = wikidata_client.get_properties(
-            wikidata_ids, wikidata_property_id, single_value=False
-        )
-        for wikidata_id, external_ids in properties.items():
-            for external_id in external_ids:
-                rv[wikidata_id].add(curies.Reference(prefix=prefix, identifier=external_id))
-    return dict(rv)
-
-
-def _get_wikidata_to_exact_matches(
-    wikidata_ids: Collection[str], converter: Converter
-) -> dict[str, set[curies.Reference]]:
-    # P2888 is "exact match", see https://www.wikidata.org/wiki/Property:P2888
-    res = wikidata_client.get_properties(wikidata_ids, "P2888", single_value=False)
-    return {
-        wikidata_id: {
-            reference.to_pydantic() for uri in uris if (reference := converter.parse(uri))
-        }
-        for wikidata_id, uris in res.items()
-    }
-
-
-def _values_for_sparql(wikidata_ids: Collection[str]) -> str:
-    return " ".join("wd:" + x for x in sorted(wikidata_ids))
-
-
 _TEMP_LICENSE_MAP = {
     "ccby40": "Q20007257",
     "cc0": "Q6938433",
@@ -278,19 +273,10 @@ def _get_orcid_to_wikidata(mappings: Iterable[SemanticMapping]) -> dict[str, str
         person.identifier
         for mapping in mappings
         # TODO creators?
-        for person in chain(mapping.authors or [], mapping.reviewers or [])
+        for person in chain(mapping.authors or [], mapping.reviewers or [], mapping.creators or [])
         if person.prefix == "orcid"
     }
     return wikidata_client.get_entities_by_orcid(orcids)
-
-
-SKOS_TO_WIKIDATA: dict[curies.Reference, str] = {
-    cv.exact_match: "Q39893449",  # see https://www.wikidata.org/wiki/Q39893449
-    cv.related_match: "Q39894604",  # see https://www.wikidata.org/wiki/Q39894604
-    cv.close_match: "Q39893184",  # see https://www.wikidata.org/wiki/Q39893184
-    cv.narrow_match: "Q39893967",  # see https://www.wikidata.org/wiki/Q39893967
-    cv.broad_match: "Q39894595",  # see https://www.wikidata.org/wiki/Q39894595
-}
 
 
 def _get_mapping_qualifiers(
@@ -327,7 +313,10 @@ def _get_mapping_qualifiers(
 def _demo() -> None:
     import datetime
 
+    import curies.vocabulary as cv
     from curies import Reference
+
+    from sssom_pydantic import SemanticMapping
 
     mapping = SemanticMapping(
         subject=Reference(prefix="wikidata", identifier="Q47512"),
@@ -335,7 +324,7 @@ def _demo() -> None:
         object=Reference(prefix="chebi", identifier="15366"),
         justification=cv.manual_mapping_curation,
         authors=[cv.charlie],
-        license="CC0-1.0",
+        license=CC0_URL,
         publication_date=datetime.date(2025, 1, 8),
     )
     open_quickstatements([mapping], wikidata_id_to_references={})
