@@ -1,5 +1,6 @@
 """Test Wikidata conversion."""
 
+import getpass
 import unittest
 
 import requests.exceptions
@@ -12,6 +13,7 @@ from sssom_pydantic.contrib.wikidata import get_quickstatements_lines
 from sssom_pydantic.contrib.wikidata.read import (
     get_equivalent_property_mappings,
     get_exact_matches_by_ids,
+    get_mappings_by_property,
     get_property_matches_by_ids,
 )
 from tests.cases import TEST_MAPPING_SET, TEST_MAPPING_SET_ID, TEST_PREFIX_MAP
@@ -19,6 +21,11 @@ from tests.cases import TEST_MAPPING_SET, TEST_MAPPING_SET_ID, TEST_PREFIX_MAP
 CHARLIE_WD = "Q47475003"
 TEST_CONVERTER = Converter.from_prefix_map(TEST_PREFIX_MAP)
 TEST_CONVERTER.add_prefix("ex", "https://example.org/")
+
+if getpass.getuser() == "cthoyt":
+    TIMEOUT = 60
+else:
+    TIMEOUT = 10
 
 
 class TestWikidata(unittest.TestCase):
@@ -121,7 +128,9 @@ class TestWikidata(unittest.TestCase):
         # http://purl.obolibrary.org/obo/GO_0005618
         converter = Converter.from_prefix_map({"GO": "http://purl.obolibrary.org/obo/GO_"})
         try:
-            res = get_exact_matches_by_ids(wikidata_ids=["Q128700"], converter=converter)
+            res = get_exact_matches_by_ids(
+                wikidata_ids=["Q128700"], converter=converter, timeout=TIMEOUT
+            )
         except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError):
             raise unittest.SkipTest("wikidata SPARQL is not available") from None
         else:
@@ -129,5 +138,10 @@ class TestWikidata(unittest.TestCase):
 
     def test_get_equivalent_property_mappings(self) -> None:
         """Test getting equivalent property mappings."""
-        mappings = get_equivalent_property_mappings(timeout=60)
+        mappings = get_equivalent_property_mappings(timeout=TIMEOUT)
         self.assertLessEqual(500, len(mappings))
+
+    def test_get_property(self) -> None:
+        """Test looking up mappings by a property."""
+        mappings = list(get_mappings_by_property("P12357", prefix="bindingdb", timeout=TIMEOUT))
+        self.assertLessEqual(4, len(mappings))
