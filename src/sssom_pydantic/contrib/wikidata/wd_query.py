@@ -17,7 +17,7 @@ from wikidata_client import QueryKwargs
 from sssom_pydantic import SemanticMapping
 from sssom_pydantic.constants import CC0_URL
 
-from .constants import WIKIDATA_TO_SKOS
+from .wd_constants import WIKIDATA_TO_SKOS
 
 __all__ = [
     "EQUIVALENT_PROPERTY_SPARQL",

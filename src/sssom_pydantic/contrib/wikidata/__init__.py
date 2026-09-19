@@ -57,8 +57,6 @@ from collections.abc import Iterable
 from itertools import chain
 from typing import TYPE_CHECKING, Any, TypeVar
 
-import curies
-import curies.vocabulary as cv
 import quickstatements_client
 import wikidata_client
 from quickstatements_client import (
@@ -74,8 +72,8 @@ from quickstatements_client.model import prepare_date
 from sssom_pydantic import MappingSet, SemanticMapping, read
 from sssom_pydantic.constants import CC0_URL
 
-from .constants import SKOS_TO_WIKIDATA, WIKIDATA_TO_SKOS
-from .query_wikidata import (
+from .wd_constants import SKOS_TO_WIKIDATA, WIKIDATA_TO_SKOS
+from .wd_query import (
     EQUIVALENT_PROPERTY_SPARQL,
     EXACT_MATCH_SPARQL,
     get_equivalent_properties_by_ids,
@@ -89,6 +87,8 @@ from .query_wikidata import (
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    import curies
 
 __all__ = [
     "EQUIVALENT_PROPERTY_SPARQL",
@@ -315,6 +315,7 @@ def _get_mapping_qualifiers(
 def _demo() -> None:
     import datetime
 
+    import curies.vocabulary as cv
     from curies import Reference
 
     mapping = SemanticMapping(
