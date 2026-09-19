@@ -13,7 +13,7 @@ from quickstatements_client import EntityQualifier, TextLine, TextQualifier
 
 from sssom_pydantic import SemanticMapping
 from sssom_pydantic.contrib.wikidata import get_quickstatements_lines
-from sssom_pydantic.contrib.wikidata.read import (
+from sssom_pydantic.contrib.wikidata.query import (
     get_equivalent_properties_by_ids,
     get_equivalent_property_mappings,
     get_exact_matches_by_ids,
