@@ -6,6 +6,7 @@ import curies
 from curies import vocabulary as cv
 
 __all__ = [
+    "CC0_URL",
     "SKOS_TO_WIKIDATA",
     "WIKIDATA_TO_SKOS",
 ]
@@ -18,3 +19,5 @@ SKOS_TO_WIKIDATA: dict[curies.Reference, str] = {
     cv.broad_match: "Q39894595",  # see https://www.wikidata.org/wiki/Q39894595
 }
 WIKIDATA_TO_SKOS = {v: k for k, v in SKOS_TO_WIKIDATA.items()}
+
+CC0_URL = "https://creativecommons.org/publicdomain/zero/1.0/"

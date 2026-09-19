@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Iterable
 from textwrap import dedent
-from typing import Unpack
+from typing import TYPE_CHECKING, Unpack
 
 import curies
 import wikidata_client
@@ -14,10 +14,10 @@ from curies import vocabulary as cv
 from tqdm import tqdm
 from wikidata_client import QueryKwargs
 
-from sssom_pydantic import SemanticMapping
-from sssom_pydantic.constants import CC0_URL
+from .constants import CC0_URL, WIKIDATA_TO_SKOS
 
-from .wd_constants import WIKIDATA_TO_SKOS
+if TYPE_CHECKING:
+    from sssom_pydantic import SemanticMapping
 
 __all__ = [
     "EQUIVALENT_PROPERTY_SPARQL",
@@ -117,6 +117,8 @@ def _get_mapping_to_uri(
     converter: Converter | None = None,
     **kwargs: Unpack[QueryKwargs],
 ) -> Iterable[SemanticMapping]:
+    from ...api import SemanticMapping
+
     converter = _ensure_converter(converter)
     for row in wikidata_client.query(sparql, **kwargs):
         object_uri = row["uri"]
@@ -182,6 +184,8 @@ def get_mappings_by_property(
 
     :yields: semantic mappings
     """
+    from ...api import SemanticMapping
+
     if prefix is None:
         import bioregistry
 
