@@ -21,9 +21,11 @@ from .constants import WIKIDATA_TO_SKOS
 
 __all__ = [
     "EQUIVALENT_PROPERTY_SPARQL",
+    "EXACT_MATCH_SPARQL",
     "get_equivalent_property_mappings",
     "get_exact_match_mappings",
     "get_exact_matches_by_ids",
+    "get_mapping_sparql",
     "get_mappings_by_property",
     "get_property_matches_by_ids",
 ]
@@ -78,7 +80,9 @@ def get_equivalent_property_mappings(
         In September 2026, there were 861 results, with 4 that included mapping types.
     """
     return list(
-        _get_mapping_to_uri(converter, EQUIVALENT_PROPERTY_SPARQL, cv.equivalent_property, **kwargs)
+        _get_mapping_to_uri(
+            EQUIVALENT_PROPERTY_SPARQL, cv.equivalent_property, converter=converter, **kwargs
+        )
     )
 
 
@@ -100,13 +104,16 @@ def get_exact_match_mappings(
 
         In September 2026, there were on the scale of 500K results
     """
-    return list(_get_mapping_to_uri(converter, EXACT_MATCH_SPARQL, cv.exact_match, **kwargs))
+    return list(
+        _get_mapping_to_uri(EXACT_MATCH_SPARQL, cv.exact_match, converter=converter, **kwargs)
+    )
 
 
 def _get_mapping_to_uri(
-    converter: Converter | None,
     sparql: str,
-    default_pred: curies.Reference,
+    default_predicate: curies.Reference,
+    *,
+    converter: Converter | None = None,
     **kwargs: Unpack[QueryKwargs],
 ) -> Iterable[SemanticMapping]:
     converter = _ensure_converter(converter)
@@ -120,7 +127,7 @@ def _get_mapping_to_uri(
             subject=NamableReference(
                 prefix="wikidata", identifier=row["item"], name=row["itemLabel"]
             ),
-            predicate=_handle_mapping_type(row.get("mappingType"), default_pred),
+            predicate=_handle_mapping_type(row.get("mappingType"), default_predicate),
             object=object_reference_tuple.to_pydantic(),
             justification=cv.unspecified_matching_process,
             license=CC0_URL,
@@ -136,7 +143,7 @@ def _handle_mapping_type(
     return WIKIDATA_TO_SKOS.get(mapping_predicate_qid, default)
 
 
-def _get_mapping_sparql(property_id: str) -> str:
+def get_mapping_sparql(property_id: str) -> str:
     """Get a SPARQL query for retrieving mappings with a given property.
 
     :param property_id: The property to retrieve, such as ``P683`` for ChEBI
@@ -180,7 +187,7 @@ def get_mappings_by_property(
         # todo use bioregistry.lookup_from
         prefix = bioregistry.get_registry_invmap("wikidata")[property_id]
 
-    for row in wikidata_client.query(_get_mapping_sparql(property_id), **kwargs):
+    for row in wikidata_client.query(get_mapping_sparql(property_id), **kwargs):
         if not row["entity"].startswith("Q"):
             continue
         try:

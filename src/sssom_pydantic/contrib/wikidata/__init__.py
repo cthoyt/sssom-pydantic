@@ -77,16 +77,29 @@ from sssom_pydantic.contrib.wikidata.read import (
 )
 
 from .constants import SKOS_TO_WIKIDATA, WIKIDATA_TO_SKOS
-from .read import get_equivalent_property_mappings, get_mappings_by_property
+from .read import (
+    EQUIVALENT_PROPERTY_SPARQL,
+    EXACT_MATCH_SPARQL,
+    get_equivalent_property_mappings,
+    get_exact_match_mappings,
+    get_mapping_sparql,
+    get_mappings_by_property,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 __all__ = [
+    "EQUIVALENT_PROPERTY_SPARQL",
+    "EXACT_MATCH_SPARQL",
     "SKOS_TO_WIKIDATA",
     "WIKIDATA_TO_SKOS",
     "get_equivalent_property_mappings",
+    "get_exact_match_mappings",
+    "get_exact_matches_by_ids",
+    "get_mapping_sparql",
     "get_mappings_by_property",
+    "get_property_matches_by_ids",
     "get_quickstatements_lines",
     "open_quickstatements",
     "post",
