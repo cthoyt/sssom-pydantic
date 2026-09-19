@@ -15,7 +15,8 @@ from curies import vocabulary as cv
 from tqdm import tqdm
 from wikidata_client import QueryKwargs
 
-from .constants import CC0_URL, WIKIDATA_TO_SKOS
+from .constants import WIKIDATA_TO_SKOS
+from ...constants import CC0_URL
 
 if TYPE_CHECKING:
     from sssom_pydantic import SemanticMapping

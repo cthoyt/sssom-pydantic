@@ -71,8 +71,9 @@ from quickstatements_client import (
 from quickstatements_client.model import prepare_date
 
 import sssom_pydantic
+from sssom_pydantic.constants import CC0_URL
 
-from .constants import CC0_URL, SKOS_TO_WIKIDATA, WIKIDATA_TO_SKOS
+from .constants import SKOS_TO_WIKIDATA, WIKIDATA_TO_SKOS
 from .query import (
     EQUIVALENT_PROPERTY_SPARQL,
     EXACT_MATCH_SPARQL,
