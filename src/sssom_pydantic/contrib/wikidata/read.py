@@ -25,8 +25,8 @@ __all__ = [
     "get_equivalent_property_mappings",
     "get_exact_match_mappings",
     "get_exact_matches_by_ids",
-    "get_mapping_sparql",
     "get_mappings_by_property",
+    "get_mappings_by_property_sparql",
     "get_property_matches_by_ids",
 ]
 
@@ -143,7 +143,7 @@ def _handle_mapping_type(
     return WIKIDATA_TO_SKOS.get(mapping_predicate_qid, default)
 
 
-def get_mapping_sparql(property_id: str) -> str:
+def get_mappings_by_property_sparql(property_id: str) -> str:
     """Get a SPARQL query for retrieving mappings with a given property.
 
     :param property_id: The property to retrieve, such as ``P683`` for ChEBI
@@ -187,7 +187,7 @@ def get_mappings_by_property(
         # todo use bioregistry.lookup_from
         prefix = bioregistry.get_registry_invmap("wikidata")[property_id]
 
-    for row in wikidata_client.query(get_mapping_sparql(property_id), **kwargs):
+    for row in wikidata_client.query(get_mappings_by_property_sparql(property_id), **kwargs):
         if not row["entity"].startswith("Q"):
             continue
         try:

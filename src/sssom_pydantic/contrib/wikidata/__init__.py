@@ -82,8 +82,8 @@ from .read import (
     get_equivalent_property_mappings,
     get_exact_match_mappings,
     get_exact_matches_by_ids,
-    get_mapping_sparql,
     get_mappings_by_property,
+    get_mappings_by_property_sparql,
     get_property_matches_by_ids,
 )
 
@@ -98,8 +98,8 @@ __all__ = [
     "get_equivalent_property_mappings",
     "get_exact_match_mappings",
     "get_exact_matches_by_ids",
-    "get_mapping_sparql",
     "get_mappings_by_property",
+    "get_mappings_by_property_sparql",
     "get_property_matches_by_ids",
     "get_quickstatements_lines",
     "open_quickstatements",
