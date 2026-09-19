@@ -57,7 +57,6 @@ from collections.abc import Iterable
 from itertools import chain
 from typing import TYPE_CHECKING, Any, TypeVar
 
-import bioregistry
 import curies
 import curies.vocabulary as cv
 import quickstatements_client
@@ -177,9 +176,12 @@ def get_quickstatements_lines(
     wikidata_id_to_references: dict[str, set[curies.Reference]] | None = None,
     wikidata_id_to_exact: dict[str, set[curies.Reference]] | None = None,
     orcid_to_wikidata: dict[str, str] | None = None,
+    prefix_to_wikidata: dict[str, str] | None = None,
 ) -> list[Line]:
     """Get lines for QuickStatements that can be used to upload SSSOM to Wikidata."""
     if converter is None:
+        import bioregistry
+
         converter = bioregistry.get_default_converter()
 
     mappings = [
@@ -188,9 +190,12 @@ def get_quickstatements_lines(
         if mapping.subject.prefix == "wikidata" and mapping.predicate_modifier is None
     ]
 
-    # Get the mapping from Bioregistry prefixes to Wikidata prefixes,
-    # e.g., `chebi` maps to `P683`
-    prefix_to_wikidata = bioregistry.get_registry_map("wikidata")
+    if prefix_to_wikidata is None:
+        import bioregistry
+
+        # Get the mapping from Bioregistry prefixes to Wikidata prefixes,
+        # e.g., `chebi` maps to `P683`
+        prefix_to_wikidata = bioregistry.get_registry_map("wikidata")
 
     # This makes a mapping from the prefixes appearing in mappings to
     # Wikidata properties. For example, mappings whose objects use
