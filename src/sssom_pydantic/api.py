@@ -8,7 +8,7 @@ from collections.abc import Callable, Collection, Iterable
 from typing import Annotated, Any, Literal, Self, TypeAlias
 
 import curies
-from curies import NamableReference, Reference, Triple
+from curies import Converter, NamableReference, Reference, Triple
 from curies import vocabulary as v
 from curies.mixins import SemanticallyStandardizable
 from curies.vocabulary import (
@@ -254,6 +254,10 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
             justification=justification or unspecified_matching_process,
             **kwargs,
         )
+
+    def with_hash(self, converter: Converter) -> Self:
+        """Construct a new mapping with a standard hash."""
+        return self.model_copy(update={"record": hash_mapping_to_reference(self, converter)})
 
     @classmethod
     def exact(
