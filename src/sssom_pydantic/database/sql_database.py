@@ -283,7 +283,11 @@ class SemanticMappingDatabase(SemanticMappingRepository):
             yield session
 
     def count_mappings(
-        self, query: Query | list[ColumnExpressionArgument[bool]] | None = None
+        self,
+        query: Query
+        | ColumnExpressionArgument[bool]
+        | list[ColumnExpressionArgument[bool]]
+        | None = None,
     ) -> int:
         """Count the mappings in the database."""
         with self.get_session() as session:
@@ -292,7 +296,11 @@ class SemanticMappingDatabase(SemanticMappingRepository):
             return session.exec(statement).one()
 
     def count_entities(
-        self, query: Query | list[ColumnExpressionArgument[bool]] | None = None
+        self,
+        query: Query
+        | ColumnExpressionArgument[bool]
+        | list[ColumnExpressionArgument[bool]]
+        | None = None,
     ) -> int:
         """Count the mappings in the database."""
         with self.get_session() as session:
@@ -366,7 +374,10 @@ class SemanticMappingDatabase(SemanticMappingRepository):
 
     def get_mappings(
         self,
-        query: Query | list[ColumnExpressionArgument[bool]] | None = None,
+        query: Query
+        | ColumnExpressionArgument[bool]
+        | list[ColumnExpressionArgument[bool]]
+        | None = None,
         *,
         limit: int | None = None,
         offset: int | None = None,
