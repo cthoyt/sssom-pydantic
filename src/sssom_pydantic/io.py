@@ -461,7 +461,11 @@ def write_unprocessed(
         writer.writerows(
             _unprocess_row(record, exclude=exclude)
             for record in tqdm(
-                records, disable=not progress, unit_scale=True, desc="writing SSSOM records"
+                records,
+                disable=not progress,
+                unit_scale=True,
+                desc="writing SSSOM records",
+                leave=False,
             )
         )
 
@@ -742,7 +746,12 @@ def read_iterable(
                         record, t.converter, line_number=line_number
                     )
                 except ValueError as e:
-                    logger.debug("[line %d] failed to process record: %s", line_number, record)
+                    logger.debug(
+                        "[line %d] failed to process record: %s\n\t%s",
+                        line_number,
+                        str(e),
+                        record.model_dump_json(exclude_none=True, exclude_defaults=True),
+                    )
                     yield ParseError(line_number, e, stage="processing")
                 else:
                     if semantic_mapping_predicate is not None and not semantic_mapping_predicate(
