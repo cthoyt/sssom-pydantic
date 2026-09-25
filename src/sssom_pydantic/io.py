@@ -349,7 +349,12 @@ def _prepare_records(
     records = []
     prefixes: set[str] = set()
     for mapping in tqdm(
-        mappings, disable=not progress, desc="preparing mappings", unit_scale=True, leave=False
+        mappings,
+        disable=not progress,
+        desc="preparing SSSOM for write",
+        unit_scale=True,
+        leave=False,
+        unit="mapping",
     ):
         prefixes.update(mapping.get_prefixes())
         records.append(mapping.to_record())
