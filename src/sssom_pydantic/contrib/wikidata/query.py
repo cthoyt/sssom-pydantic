@@ -63,6 +63,12 @@ EXACT_MATCH_SPARQL = """
     }
 """
 
+# TODO:
+# - https://www.wikidata.org/wiki/Property:P2235
+# - https://www.wikidata.org/wiki/Property:P1709
+# - https://www.wikidata.org/wiki/Property:P3950
+# - https://www.wikidata.org/wiki/Property:P4900
+
 
 def get_equivalent_property_mappings(
     *,
