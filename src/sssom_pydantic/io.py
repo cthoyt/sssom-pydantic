@@ -46,7 +46,7 @@ from .constants import (
     Row,
 )
 from .models import Record, RecordPredicate, _fmt_primitive_helper
-from .process import Hasher, remove_redundant_external, remove_redundant_internal
+from .process import Hasher, Scorer, remove_redundant_external, remove_redundant_internal
 
 if TYPE_CHECKING:
     import pandas
@@ -244,6 +244,7 @@ def write(
     exclude_mappings_key: Hasher[MappingTypeVar, X] | None = None,
     drop_duplicates: bool = False,
     drop_duplicates_key: Hasher[MappingTypeVar, Y] | None = None,
+    drop_duplicates_scorer: Scorer[MappingTypeVar] | None = None,
     sort: bool = False,
     columns: Sequence[str] | None = None,
     exclude_columns: Collection[str] | None = None,
@@ -266,6 +267,9 @@ def write(
     :param drop_duplicates: whether to drop redundant mappings. If used, streaming
         writing is not possible.
     :param drop_duplicates_key: a key function for identifying "duplicate" mappings
+    :param drop_duplicates_scorer: A function that gives a score to a given mapping,
+        where a higher score means it's more likely to be kept. Any function returning a
+        comparable value can be used, but int/float are the easiest to understand.
     :param sort: Should mappings be sorted? If used, streaming writing is not possible.
     :param columns: If given, explicitly use these columns instead of inferring which
         have data in the given semantic mappings. This is required to enable streaming
@@ -283,7 +287,9 @@ def write(
     if exclude_mappings is not None:
         mappings = remove_redundant_external(mappings, exclude_mappings, key=exclude_mappings_key)
     if drop_duplicates:
-        mappings = remove_redundant_internal(mappings, key=drop_duplicates_key)
+        mappings = remove_redundant_internal(
+            mappings, key=drop_duplicates_key, scorer=drop_duplicates_scorer
+        )
     if sort:
         mappings = sorted(mappings)
 
@@ -998,6 +1004,7 @@ def format(
     exclude_mappings_key: Hasher[SemanticMapping, X] | None = None,
     drop_duplicates: bool = False,
     drop_duplicates_key: Hasher[SemanticMapping, Y] | None = None,
+    drop_duplicates_scorer: Scorer[SemanticMapping] | None = None,
     standardize: bool = False,
     relabel: bool = False,
     error_action: ErrorAction | None = None,
@@ -1029,6 +1036,7 @@ def format(
         exclude_mappings_key=exclude_mappings_key,
         drop_duplicates=drop_duplicates,
         drop_duplicates_key=drop_duplicates_key,
+        drop_duplicates_scorer=drop_duplicates_scorer,
         sort=True,
     )
 
