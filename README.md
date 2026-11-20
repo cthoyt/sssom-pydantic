@@ -33,7 +33,9 @@
     -->
 </p>
 
-An opinionated implementation of a simple subset of [Simple Standard for Sharing Ontological Mappings (SSSOM)](https://mapping-commons.github.io/sssom), based on Pydantic.
+An opinionated implementation of a simple subset of
+[Simple Standard for Sharing Ontological Mappings (SSSOM)](https://mapping-commons.github.io/sssom),
+based on Pydantic.
 
 ## 💪 Getting Started
 
