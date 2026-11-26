@@ -6,7 +6,7 @@ from pathlib import Path
 from curies import NamableReference
 
 from sssom_pydantic import SemanticMapping
-from sssom_pydantic.contrib.bridgedb_duckdb import from_bridgedb
+from sssom_pydantic.contrib.bridgedb import from_bridgedb
 
 HERE = Path(__file__).parent.resolve()
 V4_PATH = HERE.joinpath("aminoacids_duckdb_db4.bridge")

@@ -15,3 +15,5 @@
 .. automodapi:: sssom_pydantic.contrib.wikidata
 
 .. automodapi:: sssom_pydantic.contrib.mapping_commons
+
+.. automodapi:: sssom_pydantic.contrib.bridgedb

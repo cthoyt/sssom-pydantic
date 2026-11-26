@@ -1,4 +1,4 @@
-"""Ingest a DuckDB file from BridgeDB (schema v4)."""
+"""I/O for BridgeDB (DuckDB schema v4)."""
 
 from __future__ import annotations
 
@@ -46,7 +46,15 @@ SQL = dedent("""\
 
 
 def from_bridgedb(path: str | Path, *, predicate: Reference | None = None) -> list[SemanticMapping]:
-    """Load a DuckDB file from BridgeDB (schema v4)."""
+    """Load a BridgeDB file encoded in DuckDB schema v4.
+
+    :param path: Path to BridgeDB file. See https://data.bridgedb.org/gene_database/ for
+        first-party BridgeDB files
+    :param predicate: The predicate to use for mappings. If not specified, defaults to
+        :data:`curies.vocabulary.has_dbxref`
+
+    :returns: A list of semantic mapping objects
+    """
     if predicate is None:
         predicate = has_dbxref.without_name()
     with closing(duckdb.connect(path, read_only=True)) as con:
@@ -56,7 +64,7 @@ def from_bridgedb(path: str | Path, *, predicate: Reference | None = None) -> li
 def from_bridgedb_connection(
     connection: duckdb.DuckDBPyConnection, *, predicate: Reference | None = None
 ) -> list[SemanticMapping]:
-    """Load a DuckDB file from BridgeDB (schema v4)."""
+    """Load a BridgeDB file (DuckDB schema v4) that has already been opened with :func:`duckdb.connect`."""
     if predicate is None:
         predicate = has_dbxref.without_name()
     code_to_prefix = get_bridgedb_code_to_prefix()
@@ -107,7 +115,7 @@ def get_bridgedb_code_to_prefix(*, refresh: bool = False) -> dict[str, str]:
 
 
 def to_bridgedb(mappings: list[SemanticMapping], path: str | Path) -> None:
-    """Create a BridgeDB DuckDB file."""
+    """Create a BridgeDB file encoded in DuckDB schema v4."""
     with closing(duckdb.connect(path, read_only=False)) as conn:
         _to_bridgedb(mappings, conn)
 
@@ -165,3 +173,23 @@ def _to_bridgedb(mappings: list[SemanticMapping], conn: duckdb.DuckDBPyConnectio
     conn.append("attribute", attribute_df)
     conn.append("link", link_df)
 
+
+def _main() -> None:
+    import sssom_pydantic
+    from sssom_pydantic import MappingSet
+
+    p1 = "/Users/cthoyt/dev/sssom-pydantic/tests/test_contrib/test_bridgedb/aminoacids_duckdb_db4.bridge"
+
+    mappings = from_bridgedb(p1)
+    # TODO construct mapping set from VOID headers, if they're in the duckdb?
+    mapping_set = MappingSet(title="amino acids", id="https://example.org/test.sssom.tsv")
+    sssom_pydantic.write(
+        mappings,
+        "/Users/cthoyt/dev/sssom-pydantic/tests/test_contrib/test_bridgedb/aminoacids_duckdb_db4.sssom.tsv",
+        metadata=mapping_set,
+        converter=bioregistry.get_preferred_converter(),
+    )
+
+
+if __name__ == "__main__":
+    _main()
