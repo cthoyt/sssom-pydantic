@@ -1,7 +1,7 @@
 """Test importing BridgeDB."""
 
-from pathlib import Path
 import unittest
+from pathlib import Path
 
 from sssom_pydantic.contrib.bridgedb_duckdb import _from_bridgedb_v3, _from_bridgedb_v4
 
@@ -14,7 +14,9 @@ class TestImportBridgeDb(unittest.TestCase):
     """Test importing BridgeDB."""
 
     def test_v3(self) -> None:
-        mappings = _from_bridgedb_v3(V3_PATH)
+        """Test importing from BridgeDB v3."""
+        _from_bridgedb_v3(V3_PATH)
 
     def test_v4(self) -> None:
-        mappings = _from_bridgedb_v4(V4_PATH)
+        """Test importing from BridgeDB v4."""
+        _from_bridgedb_v4(V4_PATH)
