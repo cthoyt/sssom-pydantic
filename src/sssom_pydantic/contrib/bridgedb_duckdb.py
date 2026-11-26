@@ -12,6 +12,7 @@ from curies import Reference
 from curies.vocabulary import has_dbxref, unspecified_matching_process
 
 import sssom_pydantic
+from sssom_pydantic.process import remove_redundant_internal
 from sssom_pydantic import MappingSet, SemanticMapping
 
 __all__ = [
@@ -20,6 +21,8 @@ __all__ = [
 ]
 
 DATASOURCES_URL = "https://bridgedb.github.io/datasources/datasources.tsv"
+
+# bridge code (link.bridge) doesn't do anything
 V4_SQL = dedent("""\
     SELECT
         link.codeLeft,
@@ -107,6 +110,8 @@ def _from_bridgedb_v4(path: str | Path, predicate: Reference | None = None) -> R
     # TODO construct mapping set from VOID headers, if they're in the duckdb?
     mapping_set = MappingSet(title="amino acids", id="https://example.org/test.sssom.tsv")
 
+    # needed since the source has bananas first (e.g., CHEBI:CHEBI:1234)
+    mappings = remove_redundant_internal(mappings)
     return mappings, mapping_set
 
 
