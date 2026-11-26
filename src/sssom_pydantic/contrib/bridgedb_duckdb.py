@@ -12,8 +12,8 @@ from curies import Reference
 from curies.vocabulary import has_dbxref, unspecified_matching_process
 
 import sssom_pydantic
-from sssom_pydantic.process import remove_redundant_internal
 from sssom_pydantic import MappingSet, SemanticMapping
+from sssom_pydantic.process import remove_redundant_internal
 
 __all__ = [
     "BridgeDBVersion",
@@ -45,10 +45,8 @@ V4_SQL = dedent("""\
 #: Versions of BridgeDB's DuckDB
 BridgeDBVersion: TypeAlias = Literal["3", "4"]
 
-ReturnType: TypeAlias = tuple[list[SemanticMapping], MappingSet]
 
-
-def from_bridgedb(path: Path, version: BridgeDBVersion) -> ReturnType:
+def from_bridgedb(path: Path, version: BridgeDBVersion) -> list[SemanticMapping]:
     """Load a DuckDB file from BridgeDB (schema v4)."""
     match version:
         case "3":
@@ -59,7 +57,7 @@ def from_bridgedb(path: Path, version: BridgeDBVersion) -> ReturnType:
             raise ValueError(f"Unknown bridgedb version: {version}")
 
 
-def _from_bridgedb_v3(path: Path) -> ReturnType:
+def _from_bridgedb_v3(path: Path) -> list[SemanticMapping]:
     raise NotImplementedError
 
 
@@ -75,7 +73,9 @@ def get_bridgedb_code_to_prefix(*, refresh: bool = False) -> dict[str, str]:
     return code_to_prefix
 
 
-def _from_bridgedb_v4(path: str | Path, predicate: Reference | None = None) -> ReturnType:
+def _from_bridgedb_v4(
+    path: str | Path, predicate: Reference | None = None
+) -> list[SemanticMapping]:
     if predicate is None:
         predicate = has_dbxref.without_name()
     code_to_prefix = get_bridgedb_code_to_prefix()
@@ -107,18 +107,17 @@ def _from_bridgedb_v4(path: str | Path, predicate: Reference | None = None) -> R
             )
             mappings.append(mapping)
 
-    # TODO construct mapping set from VOID headers, if they're in the duckdb?
-    mapping_set = MappingSet(title="amino acids", id="https://example.org/test.sssom.tsv")
-
     # needed since the source has bananas first (e.g., CHEBI:CHEBI:1234)
     mappings = remove_redundant_internal(mappings)
-    return mappings, mapping_set
+    return mappings
 
 
 def _main() -> None:
-    mappings, mapping_set = _from_bridgedb_v4(
+    mappings = _from_bridgedb_v4(
         "/Users/cthoyt/dev/sssom-pydantic/tests/test_contrib/test_bridgedb/aminoacids_duckdb_db4.bridge",
     )
+    # TODO construct mapping set from VOID headers, if they're in the duckdb?
+    mapping_set = MappingSet(title="amino acids", id="https://example.org/test.sssom.tsv")
     sssom_pydantic.write(
         mappings,
         "/Users/cthoyt/dev/sssom-pydantic/tests/test_contrib/test_bridgedb/aminoacids_duckdb_db4.sssom.tsv",
