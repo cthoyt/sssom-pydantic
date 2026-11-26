@@ -64,7 +64,7 @@ def from_bridgedb(path: str | Path, *, predicate: Reference | None = None) -> li
 def from_bridgedb_connection(
     connection: duckdb.DuckDBPyConnection, *, predicate: Reference | None = None
 ) -> list[SemanticMapping]:
-    """Load a BridgeDB file (DuckDB schema v4) that has already been opened with :func:`duckdb.connect`."""
+    """Load a BridgeDB file (DuckDB schema v4) that's been opened with :func:`duckdb.connect`."""
     if predicate is None:
         predicate = has_dbxref.without_name()
     code_to_prefix = get_bridgedb_code_to_prefix()
@@ -130,8 +130,8 @@ def _get_not_primary(mappings: list[SemanticMapping]) -> set[Reference]:
 
 
 def _to_bridgedb(mappings: list[SemanticMapping], conn: duckdb.DuckDBPyConnection) -> None:
-    references: set[NamableReference] = {
-        reference for mapping in mappings for reference in mapping.get_prefixes()
+    references: set[Reference] = {
+        reference for mapping in mappings for reference in mapping.get_references()
     }
     prefix_to_code = {code: prefix for prefix, code in get_bridgedb_code_to_prefix().items()}
 
@@ -153,7 +153,7 @@ def _to_bridgedb(mappings: list[SemanticMapping], conn: duckdb.DuckDBPyConnectio
             reference.name,
         )
         for reference in references
-        if reference.name is not None
+        if isinstance(reference, NamableReference) and reference.name is not None
     ]
     link_df = pd.DataFrame(link_rows, columns=LINK_COLUMNS)
     attribute_rows = [
@@ -178,9 +178,9 @@ def _main() -> None:
     import sssom_pydantic
     from sssom_pydantic import MappingSet
 
-    p1 = "/Users/cthoyt/dev/sssom-pydantic/tests/test_contrib/test_bridgedb/aminoacids_duckdb_db4.bridge"
-
-    mappings = from_bridgedb(p1)
+    mappings = from_bridgedb(
+        "/Users/cthoyt/dev/sssom-pydantic/tests/test_contrib/test_bridgedb/aminoacids_duckdb_db4.bridge"
+    )
     # TODO construct mapping set from VOID headers, if they're in the duckdb?
     mapping_set = MappingSet(title="amino acids", id="https://example.org/test.sssom.tsv")
     sssom_pydantic.write(
