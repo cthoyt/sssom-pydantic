@@ -1,13 +1,16 @@
 """Ingest a DuckDB file from BridgeDB (schema v4)."""
 
+from __future__ import annotations
+
 from contextlib import closing
 from pathlib import Path
 from textwrap import dedent
 
 import bioregistry
 import duckdb
+import pandas as pd
 import pystow
-from curies import Reference
+from curies import NamableReference, Reference
 from curies.vocabulary import has_dbxref, unspecified_matching_process
 
 from sssom_pydantic import SemanticMapping
@@ -18,10 +21,11 @@ __all__ = [
     "to_bridgedb",
 ]
 
+#: A URL for the BridgeDB datasource to Bioregistry prefix table
 DATASOURCES_URL = "https://bridgedb.github.io/datasources/datasources.tsv"
 
 # bridge code (link.bridge) doesn't do anything
-V4_SQL = dedent("""\
+SQL = dedent("""\
     SELECT
         link.codeLeft,
         link.idLeft,
@@ -45,44 +49,49 @@ def from_bridgedb(path: str | Path, *, predicate: Reference | None = None) -> li
     """Load a DuckDB file from BridgeDB (schema v4)."""
     if predicate is None:
         predicate = has_dbxref.without_name()
-    code_to_prefix = get_bridgedb_code_to_prefix()
     with closing(duckdb.connect(path, read_only=True)) as con:
-        mappings = []
-        for (
-            subject_code,
-            subject_id,
-            subject_label,
-            object_code,
-            object_id,
-            object_label,
-        ) in con.sql(V4_SQL).fetchall():
-            subject = bioregistry.StandardNamableReference(
-                prefix=code_to_prefix[subject_code],
-                identifier=subject_id,
-                name=subject_label,
-            )
-            obj = bioregistry.StandardNamableReference(
-                prefix=code_to_prefix[object_code],
-                identifier=object_id,
-                name=object_label,
-            )
-            if subject.curie == obj.curie:
-                continue
-            mapping = SemanticMapping(
-                subject=subject,
-                predicate=predicate,
-                object=obj,
-                justification=unspecified_matching_process,
-            )
-            mappings.append(mapping)
+        return from_bridgedb_connection(con, predicate=predicate)
+
+
+def from_bridgedb_connection(
+    connection: duckdb.DuckDBPyConnection, *, predicate: Reference | None = None
+) -> list[SemanticMapping]:
+    """Load a DuckDB file from BridgeDB (schema v4)."""
+    if predicate is None:
+        predicate = has_dbxref.without_name()
+    code_to_prefix = get_bridgedb_code_to_prefix()
+    mappings = []
+    for (
+        subject_code,
+        subject_id,
+        subject_label,
+        object_code,
+        object_id,
+        object_label,
+    ) in connection.sql(SQL).fetchall():
+        subject = bioregistry.StandardNamableReference(
+            prefix=code_to_prefix[subject_code],
+            identifier=subject_id,
+            name=subject_label,
+        )
+        obj = bioregistry.StandardNamableReference(
+            prefix=code_to_prefix[object_code],
+            identifier=object_id,
+            name=object_label,
+        )
+        if subject.curie == obj.curie:
+            continue
+        mapping = SemanticMapping(
+            subject=subject,
+            predicate=predicate,
+            object=obj,
+            justification=unspecified_matching_process,
+        )
+        mappings.append(mapping)
 
     # needed since the source has bananas first (e.g., CHEBI:CHEBI:1234)
     mappings = remove_redundant_internal(mappings)
     return mappings
-
-
-def _from_bridgedb_v3(path: Path) -> list[SemanticMapping]:
-    raise NotImplementedError
 
 
 def get_bridgedb_code_to_prefix(*, refresh: bool = False) -> dict[str, str]:
@@ -97,7 +106,62 @@ def get_bridgedb_code_to_prefix(*, refresh: bool = False) -> dict[str, str]:
     return code_to_prefix
 
 
-def to_bridgedb(mappings: list[SemanticMapping], path: Path) -> None:
+def to_bridgedb(mappings: list[SemanticMapping], path: str | Path) -> None:
     """Create a BridgeDB DuckDB file."""
-    with closing(duckdb.connect(path, read_only=False)):
-        raise NotImplementedError
+    with closing(duckdb.connect(path, read_only=False)) as conn:
+        _to_bridgedb(mappings, conn)
+
+
+DATANODE_COLUMNS = ["id", "code", "isPrimary"]
+LINK_COLUMNS = ["idLeft", "codeLeft", "idRight", "codeRight", "bridge"]
+ATTRIBUTE_COLUMNS = ["id", "code", "isPrimary", "attrname", "attrvalue"]
+
+
+def _get_not_primary(mappings: list[SemanticMapping]) -> set[Reference]:
+    return set()
+
+
+def _to_bridgedb(mappings: list[SemanticMapping], conn: duckdb.DuckDBPyConnection) -> None:
+    references: set[NamableReference] = {
+        reference for mapping in mappings for reference in mapping.get_prefixes()
+    }
+    prefix_to_code = {code: prefix for prefix, code in get_bridgedb_code_to_prefix().items()}
+
+    # TODO precalculate isPrimary
+    not_primary: set[Reference] = set()
+
+    datanode_rows = [
+        (prefix_to_code[reference.prefix], reference.identifier, reference not in not_primary)
+        for reference in references
+    ]
+    datanode_df = pd.DataFrame(datanode_rows, columns=DATANODE_COLUMNS)
+
+    link_rows = [
+        (
+            prefix_to_code[reference.prefix],
+            reference.identifier,
+            reference not in not_primary,
+            "Symbol",
+            reference.name,
+        )
+        for reference in references
+        if reference.name is not None
+    ]
+    link_df = pd.DataFrame(link_rows, columns=LINK_COLUMNS)
+    attribute_rows = [
+        (
+            prefix_to_code[mapping.subject.prefix],
+            mapping.subject.identifier,
+            prefix_to_code[mapping.object.prefix],
+            mapping.object.identifier,
+            None,  # TODO what should go in bridge spot?
+        )
+        for mapping in mappings
+        if mapping.subject.prefix in prefix_to_code and mapping.object.prefix in prefix_to_code
+    ]
+    attribute_df = pd.DataFrame(attribute_rows, columns=ATTRIBUTE_COLUMNS)
+
+    conn.append("datanode", datanode_df)
+    conn.append("attribute", attribute_df)
+    conn.append("link", link_df)
+

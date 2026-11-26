@@ -379,16 +379,16 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
             self.mapping_tool_name or "",
         )
 
-    def get_prefixes(self) -> set[str]:
+    def get_references(self) -> set[Reference]:
         """Get prefixes used in this mapping."""
-        rv: set[str] = {
-            self.subject.prefix,
-            self.predicate.prefix,
-            self.object.prefix,
-            self.justification.prefix,
+        rv: set[Reference] = {
+            self.subject,
+            self.predicate,
+            self.object,
+            self.justification,
         }
         if self.mapping_tool and self.mapping_tool.reference:
-            rv.add(self.mapping_tool.reference.prefix)
+            rv.add(self.mapping_tool.reference)
         for reference in [
             self.record,
             self.subject_source,
@@ -402,7 +402,7 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
             self.object_category,
         ]:
             if reference is not None:
-                rv.add(reference.prefix)
+                rv.add(reference)
         for reference_list in [
             self.subject_match_field,
             self.subject_preprocessing,
@@ -417,13 +417,17 @@ class SemanticMapping(Triple, SemanticallyStandardizable):
             if reference_list is not None:
                 for reference in reference_list:
                     if reference is not None:
-                        rv.add(reference.prefix)
+                        rv.add(reference)
         if self.extensions:
             for slot in self.extensions.values():
-                rv.add(slot.predicate.prefix)
+                rv.add(slot.predicate)
                 if isinstance(slot.value, Reference):
-                    rv.add(slot.value.prefix)
+                    rv.add(slot.value)
         return rv
+
+    def get_prefixes(self) -> set[str]:
+        """Get prefixes used in this mapping."""
+        return {str(r.prefix) for r in self.get_references()}
 
     def to_record(self) -> Record:
         """Get a record."""
