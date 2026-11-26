@@ -16,6 +16,7 @@ from sssom_pydantic.process import remove_redundant_internal
 
 __all__ = [
     "from_bridgedb",
+    "to_bridgedb",
 ]
 
 DATASOURCES_URL = "https://bridgedb.github.io/datasources/datasources.tsv"
@@ -95,6 +96,12 @@ def get_bridgedb_code_to_prefix(*, refresh: bool = False) -> dict[str, str]:
     ]
     code_to_prefix = dict(datasources_df[[code_column, semantic_farm_column]].values)
     return code_to_prefix
+
+
+def to_bridgedb(mappings: list[SemanticMapping], path: Path) -> None:
+    """Create a BridgeDB DuckDB file."""
+    with closing(duckdb.connect(path, read_only=False)):
+        raise NotImplementedError
 
 
 def _main() -> None:
