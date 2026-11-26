@@ -3,20 +3,46 @@
 import unittest
 from pathlib import Path
 
-from sssom_pydantic.contrib.bridgedb_duckdb import _from_bridgedb_v3, _from_bridgedb_v4
+from sssom_pydantic.contrib.bridgedb_duckdb import from_bridgedb
+from sssom_pydantic import SemanticMapping
+from curies import NamableReference
 
 HERE = Path(__file__).parent.resolve()
-V3_PATH = HERE.joinpath("aminoacids_duckdb_db3.bridge")
 V4_PATH = HERE.joinpath("aminoacids_duckdb_db4.bridge")
 
 
 class TestImportBridgeDb(unittest.TestCase):
     """Test importing BridgeDB."""
 
-    def test_v3(self) -> None:
-        """Test importing from BridgeDB v3."""
-        _from_bridgedb_v3(V3_PATH)
-
-    def test_v4(self) -> None:
+    def test_from_bridgedb(self) -> None:
         """Test importing from BridgeDB v4."""
-        _from_bridgedb_v4(V4_PATH)
+        mappings = from_bridgedb(V4_PATH)
+        self.assertIn(
+            SemanticMapping(
+                subject=NamableReference.from_curie("wikidata:Q100980887", name="ornaline"),
+                predicate=NamableReference.from_curie("oboInOwl:hasDbXref"),
+                object=NamableReference.from_curie("CHEBI:133921"),
+                justification="semapv:UnspecifiedMatching",
+            ),
+            mappings,
+        )
+        self.assertNotIn(
+            SemanticMapping(
+                subject=NamableReference.from_curie("wikidata:Q100980887", name="ornaline"),
+                predicate=NamableReference.from_curie("oboInOwl:hasDbXref"),
+                object=NamableReference.from_curie("CHEBI:CHEBI:133921"),
+                justification="semapv:UnspecifiedMatching",
+            ),
+            mappings,
+            msg="self mapping shouldn't be there"
+        )
+        self.assertNotIn(
+            SemanticMapping(
+                subject=NamableReference.from_curie("wikidata:Q100980887", name="ornaline"),
+                predicate=NamableReference.from_curie("oboInOwl:hasDbXref"),
+                object=NamableReference.from_curie("wikidata:Q100980887", name="ornaline"),
+                justification="semapv:UnspecifiedMatching",
+            ),
+            mappings,
+            msg="self mapping shouldn't be there"
+        )

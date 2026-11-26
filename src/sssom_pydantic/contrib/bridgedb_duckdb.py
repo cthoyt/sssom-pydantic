@@ -66,6 +66,8 @@ def from_bridgedb(path: str | Path, *, predicate: Reference | None = None) -> li
                 identifier=object_id,
                 name=object_label,
             )
+            if subject.curie == obj.curie:
+                continue
             mapping = SemanticMapping(
                 subject=subject,
                 predicate=predicate,
