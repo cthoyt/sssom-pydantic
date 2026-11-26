@@ -10,8 +10,7 @@ import pystow
 from curies import Reference
 from curies.vocabulary import has_dbxref, unspecified_matching_process
 
-import sssom_pydantic
-from sssom_pydantic import MappingSet, SemanticMapping
+from sssom_pydantic import SemanticMapping
 from sssom_pydantic.process import remove_redundant_internal
 
 __all__ = [
@@ -102,21 +101,3 @@ def to_bridgedb(mappings: list[SemanticMapping], path: Path) -> None:
     """Create a BridgeDB DuckDB file."""
     with closing(duckdb.connect(path, read_only=False)):
         raise NotImplementedError
-
-
-def _main() -> None:
-    mappings = from_bridgedb(
-        "/Users/cthoyt/dev/sssom-pydantic/tests/test_contrib/test_bridgedb/aminoacids_duckdb_db4.bridge",
-    )
-    # TODO construct mapping set from VOID headers, if they're in the duckdb?
-    mapping_set = MappingSet(title="amino acids", id="https://example.org/test.sssom.tsv")
-    sssom_pydantic.write(
-        mappings,
-        "/Users/cthoyt/dev/sssom-pydantic/tests/test_contrib/test_bridgedb/aminoacids_duckdb_db4.sssom.tsv",
-        metadata=mapping_set,
-        converter=bioregistry.get_preferred_converter(),
-    )
-
-
-if __name__ == "__main__":
-    _main()
