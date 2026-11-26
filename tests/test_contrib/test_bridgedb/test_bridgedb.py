@@ -3,9 +3,10 @@
 import unittest
 from pathlib import Path
 
-from sssom_pydantic.contrib.bridgedb_duckdb import from_bridgedb
-from sssom_pydantic import SemanticMapping
 from curies import NamableReference
+
+from sssom_pydantic import SemanticMapping
+from sssom_pydantic.contrib.bridgedb_duckdb import from_bridgedb
 
 HERE = Path(__file__).parent.resolve()
 V4_PATH = HERE.joinpath("aminoacids_duckdb_db4.bridge")
@@ -34,7 +35,7 @@ class TestImportBridgeDb(unittest.TestCase):
                 justification="semapv:UnspecifiedMatching",
             ),
             mappings,
-            msg="self mapping shouldn't be there"
+            msg="self mapping shouldn't be there",
         )
         self.assertNotIn(
             SemanticMapping(
@@ -44,5 +45,5 @@ class TestImportBridgeDb(unittest.TestCase):
                 justification="semapv:UnspecifiedMatching",
             ),
             mappings,
-            msg="self mapping shouldn't be there"
+            msg="self mapping shouldn't be there",
         )
