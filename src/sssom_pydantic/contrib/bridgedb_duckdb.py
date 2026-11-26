@@ -3,7 +3,6 @@
 from contextlib import closing
 from pathlib import Path
 from textwrap import dedent
-from typing import Literal, TypeAlias
 
 import bioregistry
 import duckdb
@@ -16,7 +15,6 @@ from sssom_pydantic import MappingSet, SemanticMapping
 from sssom_pydantic.process import remove_redundant_internal
 
 __all__ = [
-    "BridgeDBVersion",
     "from_bridgedb",
 ]
 
@@ -42,40 +40,9 @@ V4_SQL = dedent("""\
         AND right_attribute.attrname = 'Symbol'
 """)
 
-#: Versions of BridgeDB's DuckDB
-BridgeDBVersion: TypeAlias = Literal["3", "4"]
 
-
-def from_bridgedb(path: Path, version: BridgeDBVersion) -> list[SemanticMapping]:
+def from_bridgedb(path: str | Path, *, predicate: Reference | None = None) -> list[SemanticMapping]:
     """Load a DuckDB file from BridgeDB (schema v4)."""
-    match version:
-        case "3":
-            return _from_bridgedb_v3(path)
-        case "4":
-            return _from_bridgedb_v4(path)
-        case _:
-            raise ValueError(f"Unknown bridgedb version: {version}")
-
-
-def _from_bridgedb_v3(path: Path) -> list[SemanticMapping]:
-    raise NotImplementedError
-
-
-def get_bridgedb_code_to_prefix(*, refresh: bool = False) -> dict[str, str]:
-    """Get the BridgeDB code to Semantic Farm prefix mapping."""
-    datasources_df = pystow.ensure_csv("bridgedb", url=DATASOURCES_URL, force=refresh)
-    code_column = datasources_df.columns[1]
-    semantic_farm_column = datasources_df.columns[12]
-    datasources_df = datasources_df[
-        datasources_df[code_column].notna() & datasources_df[semantic_farm_column].notna()
-    ]
-    code_to_prefix = dict(datasources_df[[code_column, semantic_farm_column]].values)
-    return code_to_prefix
-
-
-def _from_bridgedb_v4(
-    path: str | Path, predicate: Reference | None = None
-) -> list[SemanticMapping]:
     if predicate is None:
         predicate = has_dbxref.without_name()
     code_to_prefix = get_bridgedb_code_to_prefix()
@@ -112,8 +79,24 @@ def _from_bridgedb_v4(
     return mappings
 
 
+def _from_bridgedb_v3(path: Path) -> list[SemanticMapping]:
+    raise NotImplementedError
+
+
+def get_bridgedb_code_to_prefix(*, refresh: bool = False) -> dict[str, str]:
+    """Get the BridgeDB code to Semantic Farm prefix mapping."""
+    datasources_df = pystow.ensure_csv("bridgedb", url=DATASOURCES_URL, force=refresh)
+    code_column = datasources_df.columns[1]
+    semantic_farm_column = datasources_df.columns[12]
+    datasources_df = datasources_df[
+        datasources_df[code_column].notna() & datasources_df[semantic_farm_column].notna()
+    ]
+    code_to_prefix = dict(datasources_df[[code_column, semantic_farm_column]].values)
+    return code_to_prefix
+
+
 def _main() -> None:
-    mappings = _from_bridgedb_v4(
+    mappings = from_bridgedb(
         "/Users/cthoyt/dev/sssom-pydantic/tests/test_contrib/test_bridgedb/aminoacids_duckdb_db4.bridge",
     )
     # TODO construct mapping set from VOID headers, if they're in the duckdb?
