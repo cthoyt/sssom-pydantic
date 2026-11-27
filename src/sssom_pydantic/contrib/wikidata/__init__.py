@@ -194,7 +194,7 @@ def get_quickstatements_lines(
     if prefix_to_wikidata is None:
         # Get the mapping from Bioregistry prefixes to Wikidata prefixes,
         # e.g., `chebi` maps to `P683`
-        prefix_to_wikidata = bioregistry.get_registry_map("wikidata")
+        prefix_to_wikidata = bioregistry.get_registry_map("wikidata.property")
 
     # This makes a mapping from the prefixes appearing in mappings to
     # Wikidata properties. For example, mappings whose objects use
