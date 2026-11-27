@@ -283,7 +283,11 @@ class SemanticMappingDatabase(SemanticMappingRepository):
             yield session
 
     def count_mappings(
-        self, query: Query | list[ColumnExpressionArgument[bool]] | None = None
+        self,
+        query: Query
+        | ColumnExpressionArgument[bool]
+        | list[ColumnExpressionArgument[bool]]
+        | None = None,
     ) -> int:
         """Count the mappings in the database."""
         with self.get_session() as session:
@@ -292,7 +296,11 @@ class SemanticMappingDatabase(SemanticMappingRepository):
             return session.exec(statement).one()
 
     def count_entities(
-        self, query: Query | list[ColumnExpressionArgument[bool]] | None = None
+        self,
+        query: Query
+        | ColumnExpressionArgument[bool]
+        | list[ColumnExpressionArgument[bool]]
+        | None = None,
     ) -> int:
         """Count the mappings in the database."""
         with self.get_session() as session:
@@ -366,7 +374,10 @@ class SemanticMappingDatabase(SemanticMappingRepository):
 
     def get_mappings(
         self,
-        query: Query | list[ColumnExpressionArgument[bool]] | None = None,
+        query: Query
+        | ColumnExpressionArgument[bool]
+        | list[ColumnExpressionArgument[bool]]
+        | None = None,
         *,
         limit: int | None = None,
         offset: int | None = None,
@@ -517,15 +528,20 @@ def clauses_from_query(
 
 def _apply_where_clauses(
     statement: SelectOfScalar[X],
-    where_clauses: Query | list[ColumnExpressionArgument[bool]] | None,
+    where_clauses: Query
+    | ColumnExpressionArgument[bool]
+    | list[ColumnExpressionArgument[bool]]
+    | None,
     converter: curies.Converter | None = None,
 ) -> SelectOfScalar[X]:
     if where_clauses is None:
         return statement
     elif isinstance(where_clauses, Query):
         return statement.where(*clauses_from_query(where_clauses, converter=converter))
-    else:
+    elif isinstance(where_clauses, list):
         return statement.where(*where_clauses)
+    else:
+        return statement.where(where_clauses)
 
 
 def _get_sorter(sort: Sort) -> ColumnExpressionArgument[Any]:

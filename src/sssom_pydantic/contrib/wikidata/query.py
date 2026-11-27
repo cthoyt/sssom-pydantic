@@ -208,7 +208,7 @@ def get_mappings_by_property(
         import bioregistry
 
         # todo use bioregistry.lookup_from
-        prefix = bioregistry.get_registry_invmap("wikidata")[property_id]
+        prefix = bioregistry.get_registry_invmap("wikidata.property")[property_id]
 
     for row in wikidata_client.query(get_mappings_by_property_sparql(property_id), **kwargs):
         if not row["entity"].startswith("Q"):
