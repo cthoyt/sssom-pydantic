@@ -50,8 +50,24 @@ EQUIVALENT_PROPERTY_SPARQL = """\
     }
 """
 
-#: P2888 is "exact match", see https://www.wikidata.org/wiki/Property:P2888
+#: equivalent class - https://www.wikidata.org/wiki/Property:P1709,
+#: exactly same as owl:equivalentClass
+EQUIVALENT_CLASS_PID = "P1709"
+
+#: P2888 is "exact match", see https://www.wikidata.org/wiki/Property:P2888,
+#: exactly same as skos:exactMatch
 EXACT_MATCH_PID = "P2888"
+
+#: narrower external class - https://www.wikidata.org/wiki/Property:P3950,
+#: exactly same as skos:narrowMatch
+NARROWER_EXTERNAL_CLASS_PID = "P3950"
+
+#: broader concept - https://www.wikidata.org/wiki/Property:P4900,
+#: exactly same as skos:broadMatch
+BROADER_CONCEPT_PID = "P4900"
+
+#: external superproperty - https://www.wikidata.org/wiki/Property:P2235
+EXTERNAL_SUPERPROPERTY_PID = "P2235"
 
 EXACT_MATCH_SPARQL = """
     SELECT ?item ?itemLabel ?uri ?mappingType
@@ -62,12 +78,6 @@ EXACT_MATCH_SPARQL = """
         SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],mul,en" . }
     }
 """
-
-# TODO:
-# - https://www.wikidata.org/wiki/Property:P2235
-# - https://www.wikidata.org/wiki/Property:P1709
-# - https://www.wikidata.org/wiki/Property:P3950
-# - https://www.wikidata.org/wiki/Property:P4900
 
 
 def get_equivalent_property_mappings(
