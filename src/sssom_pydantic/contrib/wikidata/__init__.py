@@ -56,7 +56,7 @@ Mappings for ChEBI can be exported with the following:
     from sssom_pydantic import MappingSet
 
     metadata = MappingSet(id="https://example.org/wikidata-chebi.sssom.tsv")
-    mappings = get_mappings_by_property("P683")
+    mappings = get_mappings_by_property("P683")  # or with: get_mappings_by_prefix("chebi")
     sssom_pydantic.write(mappings, "wikidata-chebi.sssom.tsv", metadata=metadata)
 
 All property-based mappings can be accessed in bulk together with
@@ -155,6 +155,7 @@ from .query import (
     get_exact_match_mappings,
     get_exact_matches_by_ids,
     get_mappings,
+    get_mappings_by_prefix,
     get_mappings_by_property,
     get_mappings_by_property_sparql,
     get_narrow_match_mappings,
@@ -184,6 +185,7 @@ __all__ = [
     "get_exact_match_mappings",
     "get_exact_matches_by_ids",
     "get_mappings",
+    "get_mappings_by_prefix",
     "get_mappings_by_property",
     "get_mappings_by_property_sparql",
     "get_narrow_match_mappings",

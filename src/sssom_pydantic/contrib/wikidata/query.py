@@ -38,6 +38,7 @@ __all__ = [
     "get_exact_match_mappings",
     "get_exact_matches_by_ids",
     "get_mappings",
+    "get_mappings_by_prefix",
     "get_mappings_by_property",
     "get_mappings_by_property_sparql",
     "get_narrow_match_mappings",
@@ -297,6 +298,34 @@ def get_mappings_by_property_sparql(property_id: str) -> str:
             SERVICE wikibase:label {{ bd:serviceParam wikibase:language "[AUTO_LANGUAGE],mul,en". }}
         }}
     """)
+
+
+def get_mappings_by_prefix(
+    prefix: str,
+    *,
+    property_id: str | None = None,
+    confidence: float | None = None,
+    **kwargs: Unpack[QueryKwargs],
+) -> Iterable[SemanticMapping]:
+    """Yield mappings from Wikidata from the given property.
+
+    :param prefix: The prefix to use when constructing references for the property,
+        e.g., ``CHEBI`` for property `P683``.
+    :param property_id: The property to retrieve, such as ``P683`` for ChEBI. If not
+        given, will look up using :mod:`bioregistry`.
+    :param confidence: An optional confidence to apply to all mappings
+    :param kwargs: SPARQL query keyword arguments passed to
+        :func:`wikidata_client.query`
+
+    :yields: semantic mappings
+    """
+    if property_id is None:
+        import bioregistry
+
+        property_id = bioregistry.get_registry_map(prefix)["wikidata.property"]
+    yield from _get_mappings_by_property_helper(
+        prefix=prefix, property_id=property_id, confidence=confidence, **kwargs
+    )
 
 
 def get_mappings_by_property(
