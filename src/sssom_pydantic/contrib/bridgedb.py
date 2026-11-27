@@ -5,9 +5,9 @@ from __future__ import annotations
 from contextlib import closing
 from pathlib import Path
 from textwrap import dedent
+from typing import TYPE_CHECKING
 
 import bioregistry
-import duckdb
 import pandas as pd
 import pystow
 from curies import NamableReference, Reference
@@ -15,6 +15,9 @@ from curies.vocabulary import has_dbxref, unspecified_matching_process
 
 from sssom_pydantic import SemanticMapping
 from sssom_pydantic.process import remove_redundant_internal
+
+if TYPE_CHECKING:
+    import duckdb
 
 __all__ = [
     "from_bridgedb",
@@ -55,6 +58,8 @@ def from_bridgedb(path: str | Path, *, predicate: Reference | None = None) -> li
 
     :returns: A list of semantic mapping objects
     """
+    import duckdb
+
     if predicate is None:
         predicate = has_dbxref.without_name()
     with closing(duckdb.connect(path, read_only=True)) as con:
@@ -116,6 +121,8 @@ def get_bridgedb_code_to_prefix(*, refresh: bool = False) -> dict[str, str]:
 
 def to_bridgedb(mappings: list[SemanticMapping], path: str | Path) -> None:
     """Create a BridgeDB file encoded in DuckDB schema v4."""
+    import duckdb
+
     with closing(duckdb.connect(path, read_only=False)) as conn:
         _to_bridgedb(mappings, conn)
 
