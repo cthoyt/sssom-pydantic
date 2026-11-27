@@ -140,7 +140,7 @@ fastapi = [
 wikidata = [
     "wikidata-client>=0.0.7",
     "quickstatements-client>=0.1.2",
-    "bioregistry>=0.14.0",
+    "bioregistry>=0.15.0",
 ]
 cli = [
     "click",
