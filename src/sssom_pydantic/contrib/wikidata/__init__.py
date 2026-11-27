@@ -20,7 +20,20 @@ For example, `cell wall (Q128700) <https://www.wikidata.org/wiki/Q128700>`_ maps
 Gene Ontology (GO) term for `cell wall <https://purl.obolibrary.org/obo/GO_0005618>`_ by
 its URI ``http://purl.obolibrary.org/obo/GO_0005618``.
 
-All URI-based mappings can be accessed in bulk together with :func:`get_uri_mappings`.
+All exact match mappings can be exported with the following:
+
+.. code-block:: python
+
+    import sssom_pydantic
+    from sssom_pydantic.contrib.wikidata import get_exact_match_mappings
+    from sssom_pydantic import MappingSet
+
+    metadata = MappingSet(id="https://example.org/wikidata-exact-mappings.sssom.tsv")
+    mappings = get_exact_match_mappings()
+    sssom_pydantic.write(mappings, "wikidata-exact-mappings.sssom.tsv", metadata=metadata)
+
+Each of the other functions in the table above also return an iterable of mappings. All
+URI-based mappings can be accessed in bulk together with :func:`get_uri_mappings`.
 
 Mapping Predicates with Objects as Local Unique Identifier strings
 ------------------------------------------------------------------
@@ -33,6 +46,18 @@ as the object. For example, `acetic acid (Q47512)
 <https://www.wikidata.org/wiki/Property:P683>`_ property for ChEBI and local unique
 identifier for acetic acid (within ChEBI) ``15366``. These can be queried with
 :func:`get_mappings_by_property`.
+
+Mappings for ChEBI can be exported with the following:
+
+.. code-block:: python
+
+    import sssom_pydantic
+    from sssom_pydantic.contrib.wikidata import get_mappings_by_property
+    from sssom_pydantic import MappingSet
+
+    metadata = MappingSet(id="https://semantic.farm/chebi")
+    mappings = get_mappings_by_property("P683")
+    sssom_pydantic.write(mappings, "chebi.sssom.tsv", metadata=metadata)
 
 All property-based mappings can be accessed in bulk together with
 :func:`get_property_mappings`.
