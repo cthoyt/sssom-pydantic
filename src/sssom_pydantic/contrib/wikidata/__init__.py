@@ -57,6 +57,27 @@ Note that properties that normally start with a ``P`` when used in triples are c
 to start with an ``S`` when used as qualifiers. Other fields in SSSOM could potentially
 be mapped to Wikidata later.
 
+Bulk Export
+-----------
+
+While mapping aggregators like :mod:`semra` provide a better harness for aggregating
+mappings (e.g., with caching and retry logic), there's a high-level function for getting
+all Wikidata mappings:
+
+.. code-block:: python
+
+    import sssom_pydantic
+    from sssom_pydantic.contrib.wikidata import get_mappings
+    from sssom_pydantic import MappingSet
+
+    metadata = MappingSet(id="https://wikidata.org")
+    mappings = get_mappings()
+    sssom_pydantic.write(mappings, "wikidata.sssom.tsv", metadata=metadata)
+
+:func:`get_mappings` wraps :func:`get_property_mappings` and :func:`get_uri_mappings`,
+see any of these three functions for more insight on how to narrow down the mappings you
+want to get from Wikidata.
+
 Workflows in SSSOM-Pydantic
 ---------------------------
 
