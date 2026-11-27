@@ -14,7 +14,6 @@
 .. automodapi:: sssom_pydantic.contrib.sssompy
 
 .. automodapi:: sssom_pydantic.contrib.wikidata
-    :include-all-objects:
 
 .. automodapi:: sssom_pydantic.contrib.mapping_commons
     :no-inheritance-diagram:

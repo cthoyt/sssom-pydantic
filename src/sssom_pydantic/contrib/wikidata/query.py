@@ -163,7 +163,6 @@ def get_broad_match_mappings(
     return list(_get_mapping_to_uri(BROADER_CONCEPT_PID, converter=converter, **kwargs))
 
 
-# TODO rename before merging
 def get_uri_mappings(
     *,
     converter: Converter | None = None,
