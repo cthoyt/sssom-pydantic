@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-import itertools as itt
 from collections import defaultdict
 from collections.abc import Iterable
 from textwrap import dedent
-from typing import TYPE_CHECKING, Unpack
+from typing import Unpack
 
 import bioregistry
 import curies
@@ -26,10 +25,8 @@ from .constants import (
     WIKIDATA_PROPERTY_TO_PREDICATE,
     WIKIDATA_TO_SKOS,
 )
+from ...api import SemanticMapping
 from ...constants import CC0_URL
-
-if TYPE_CHECKING:
-    from sssom_pydantic import SemanticMapping
 
 __all__ = [
     "EQUIVALENT_PROPERTY_SPARQL",
@@ -40,9 +37,11 @@ __all__ = [
     "get_equivalent_property_mappings",
     "get_exact_match_mappings",
     "get_exact_matches_by_ids",
+    "get_mappings",
     "get_mappings_by_property",
     "get_mappings_by_property_sparql",
     "get_narrow_match_mappings",
+    "get_property_mappings",
     "get_property_matches_by_ids",
     "get_subproperty_of_mappings",
     "get_uri_mappings",
@@ -56,6 +55,7 @@ WIKIDATA_SOURCE_R = NamableReference(prefix="wikidata", identifier="Q2013", name
 def get_equivalent_property_mappings(
     *,
     converter: Converter | None = None,
+    confidence: float | None = None,
     **kwargs: Unpack[QueryKwargs],
 ) -> list[SemanticMapping]:
     """Get mappings from Wikidata encoded in "equivalent property" triples.
@@ -71,12 +71,17 @@ def get_equivalent_property_mappings(
 
         In September 2026, there were 861 results, with 4 that included mapping types.
     """
-    return list(_get_mapping_to_uri(EQUIVALENT_PROPERTY_PID, converter=converter, **kwargs))
+    return list(
+        _get_mapping_to_uri(
+            EQUIVALENT_PROPERTY_PID, converter=converter, confidence=confidence, **kwargs
+        )
+    )
 
 
 def get_equivalent_class_mappings(
     *,
     converter: Converter | None = None,
+    confidence: float | None = None,
     **kwargs: Unpack[QueryKwargs],
 ) -> list[SemanticMapping]:
     """Get mappings from Wikidata encoded in "equivalent class" triples.
@@ -88,12 +93,17 @@ def get_equivalent_class_mappings(
 
     :returns: A list of semantic mappings
     """
-    return list(_get_mapping_to_uri(EQUIVALENT_CLASS_PID, converter=converter, **kwargs))
+    return list(
+        _get_mapping_to_uri(
+            EQUIVALENT_CLASS_PID, converter=converter, confidence=confidence, **kwargs
+        )
+    )
 
 
 def get_subproperty_of_mappings(
     *,
     converter: Converter | None = None,
+    confidence: float | None = None,
     **kwargs: Unpack[QueryKwargs],
 ) -> list[SemanticMapping]:
     """Get mappings from Wikidata encoded in "external superproperty" triples.
@@ -105,12 +115,17 @@ def get_subproperty_of_mappings(
 
     :returns: A list of semantic mappings
     """
-    return list(_get_mapping_to_uri(EXTERNAL_SUPERPROPERTY_PID, converter=converter, **kwargs))
+    return list(
+        _get_mapping_to_uri(
+            EXTERNAL_SUPERPROPERTY_PID, converter=converter, confidence=confidence, **kwargs
+        )
+    )
 
 
 def get_exact_match_mappings(
     *,
     converter: Converter | None = None,
+    confidence: float | None = None,
     **kwargs: Unpack[QueryKwargs],
 ) -> list[SemanticMapping]:
     """Get mappings from Wikidata encoded in "exact match" triples.
@@ -126,12 +141,15 @@ def get_exact_match_mappings(
 
         In September 2026, there were on the scale of 500K results
     """
-    return list(_get_mapping_to_uri(EXACT_MATCH_PID, converter=converter, **kwargs))
+    return list(
+        _get_mapping_to_uri(EXACT_MATCH_PID, converter=converter, confidence=confidence, **kwargs)
+    )
 
 
 def get_narrow_match_mappings(
     *,
     converter: Converter | None = None,
+    confidence: float | None = None,
     **kwargs: Unpack[QueryKwargs],
 ) -> list[SemanticMapping]:
     """Get mappings from Wikidata encoded in "narrow match" triples.
@@ -143,12 +161,17 @@ def get_narrow_match_mappings(
 
     :returns: A list of semantic mappings
     """
-    return list(_get_mapping_to_uri(NARROWER_EXTERNAL_CLASS_PID, converter=converter, **kwargs))
+    return list(
+        _get_mapping_to_uri(
+            NARROWER_EXTERNAL_CLASS_PID, converter=converter, confidence=confidence, **kwargs
+        )
+    )
 
 
 def get_broad_match_mappings(
     *,
     converter: Converter | None = None,
+    confidence: float | None = None,
     **kwargs: Unpack[QueryKwargs],
 ) -> list[SemanticMapping]:
     """Get mappings from Wikidata encoded in "broad match" triples.
@@ -160,14 +183,19 @@ def get_broad_match_mappings(
 
     :returns: A list of semantic mappings
     """
-    return list(_get_mapping_to_uri(BROADER_CONCEPT_PID, converter=converter, **kwargs))
+    return list(
+        _get_mapping_to_uri(
+            BROADER_CONCEPT_PID, converter=converter, confidence=confidence, **kwargs
+        )
+    )
 
 
 def get_uri_mappings(
     *,
     converter: Converter | None = None,
+    confidence: float | None = None,
     **kwargs: Unpack[QueryKwargs],
-) -> list[SemanticMapping]:
+) -> Iterable[SemanticMapping]:
     """Get all URI-based mappings from Wikidata.
 
     :param converter: A converter for parsing the URIs of the objects of equivalent
@@ -183,12 +211,10 @@ def get_uri_mappings(
         :func:`get_equivalent_property_mappings`, and all other functions build on top
         of :data:`WIKIDATA_PROPERTY_TO_PREDICATE`.
     """
-    return list(
-        itt.chain.from_iterable(
-            _get_mapping_to_uri(wikidata_property, converter=converter, **kwargs)
-            for wikidata_property in WIKIDATA_PROPERTY_TO_PREDICATE
+    for wikidata_property in WIKIDATA_PROPERTY_TO_PREDICATE:
+        yield from _get_mapping_to_uri(
+            wikidata_property, converter=converter, confidence=confidence, **kwargs
         )
-    )
 
 
 def get_uri_mappings_sparql(wikidata_property: str) -> str:
@@ -215,10 +241,9 @@ def _get_mapping_to_uri(
     wikidata_property: str,
     *,
     converter: Converter | None = None,
+    confidence: float | None,
     **kwargs: Unpack[QueryKwargs],
 ) -> Iterable[SemanticMapping]:
-    from ...api import SemanticMapping
-
     sparql = get_uri_mappings_sparql(wikidata_property)
     default_predicate = WIKIDATA_PROPERTY_TO_PREDICATE[wikidata_property]
     converter = _ensure_converter(converter)
@@ -237,6 +262,7 @@ def _get_mapping_to_uri(
             justification=cv.unspecified_matching_process,
             license=CC0_URL,
             source=WIKIDATA_SOURCE_R,
+            confidence=confidence,
         )
 
 
@@ -286,13 +312,24 @@ def get_mappings_by_property(
 
     :yields: semantic mappings
     """
-    from ...api import SemanticMapping
-
     if prefix is None:
         import bioregistry
 
         # todo use bioregistry.lookup_from
         prefix = bioregistry.get_registry_invmap("wikidata.property")[property_id]
+    yield from _get_mappings_by_property_helper(
+        prefix=prefix, property_id=property_id, confidence=confidence, **kwargs
+    )
+
+
+def _get_mappings_by_property_helper(
+    *,
+    prefix: str,
+    property_id: str,
+    confidence: float | None = None,
+    **kwargs: Unpack[QueryKwargs],
+) -> Iterable[SemanticMapping]:
+    from ...api import SemanticMapping
 
     for row in wikidata_client.query(get_mappings_by_property_sparql(property_id), **kwargs):
         if not row["entity"].startswith("Q"):
@@ -398,6 +435,47 @@ def _get_uri_matches_by_ids(
         }
         for wikidata_id, uris in res.items()
     }
+
+
+def get_property_mappings(
+    confidence: float | None = None, **kwargs: Unpack[QueryKwargs]
+) -> Iterable[SemanticMapping]:
+    """Iterate over all property-based mappings.
+
+    :param confidence: An optional confidence to apply to all mappings. Alternatively,
+        confidence can be applied at the mapping set level
+    :param kwargs: SPARQL query keyword arguments passed to
+        :func:`wikidata_client.query`
+
+    :yields: semantic mappings
+
+    .. note::
+
+        if you only want mappings for one property, use :func:`get_mappings_by_property`
+    """
+    import bioregistry
+
+    for prefix, property_id in bioregistry.get_registry_invmap("wikidata.property").items():
+        yield from _get_mappings_by_property_helper(
+            prefix=prefix, property_id=property_id, confidence=confidence, **kwargs
+        )
+
+
+def get_mappings(
+    *,
+    converter: Converter | None = None,
+    confidence: float | None = None,
+    **kwargs: Unpack[QueryKwargs],
+) -> Iterable[SemanticMapping]:
+    """Iterate over all mappings from Wikidata.
+
+    :param converter: A converter for parsing the URIs of the objects of equivalent
+        property triples.
+    :param kwargs: SPARQL query keyword arguments passed to
+        :func:`wikidata_client.query`
+    """
+    yield from get_property_mappings(confidence=confidence, **kwargs)
+    yield from get_uri_mappings(converter=converter, confidence=confidence, **kwargs)
 
 
 def _ensure_converter(converter: Converter | None) -> Converter:

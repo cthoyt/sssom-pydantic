@@ -34,6 +34,9 @@ as the object. For example, `acetic acid (Q47512)
 identifier for acetic acid (within ChEBI) ``15366``. These can be queried with
 :func:`get_mappings_by_property`.
 
+All property-based mappings can be accessed in bulk together with
+:func:`get_property_mappings`.
+
 Mapping Metadata in Wikidata
 ----------------------------
 
@@ -105,9 +108,11 @@ from .query import (
     get_equivalent_property_mappings,
     get_exact_match_mappings,
     get_exact_matches_by_ids,
+    get_mappings,
     get_mappings_by_property,
     get_mappings_by_property_sparql,
     get_narrow_match_mappings,
+    get_property_mappings,
     get_property_matches_by_ids,
     get_subproperty_of_mappings,
     get_uri_mappings,
@@ -132,9 +137,11 @@ __all__ = [
     "get_equivalent_property_mappings",
     "get_exact_match_mappings",
     "get_exact_matches_by_ids",
+    "get_mappings",
     "get_mappings_by_property",
     "get_mappings_by_property_sparql",
     "get_narrow_match_mappings",
+    "get_property_mappings",
     "get_property_matches_by_ids",
     "get_quickstatements_lines",
     "get_subproperty_of_mappings",
