@@ -62,6 +62,7 @@ def get_equivalent_property_mappings(
 
     :param converter: A converter for parsing the URIs of the objects of equivalent
         property triples.
+    :param confidence: An optional confidence to apply to all mappings
     :param kwargs: SPARQL query keyword arguments passed to
         :func:`wikidata_client.query`
 
@@ -88,6 +89,7 @@ def get_equivalent_class_mappings(
 
     :param converter: A converter for parsing the URIs of the objects of equivalent
         property triples.
+    :param confidence: An optional confidence to apply to all mappings
     :param kwargs: SPARQL query keyword arguments passed to
         :func:`wikidata_client.query`
 
@@ -110,6 +112,7 @@ def get_subproperty_of_mappings(
 
     :param converter: A converter for parsing the URIs of the objects of equivalent
         property triples.
+    :param confidence: An optional confidence to apply to all mappings
     :param kwargs: SPARQL query keyword arguments passed to
         :func:`wikidata_client.query`
 
@@ -132,6 +135,7 @@ def get_exact_match_mappings(
 
     :param converter: A converter for parsing the URIs of the objects of equivalent
         property triples.
+    :param confidence: An optional confidence to apply to all mappings
     :param kwargs: SPARQL query keyword arguments passed to
         :func:`wikidata_client.query`
 
@@ -156,6 +160,7 @@ def get_narrow_match_mappings(
 
     :param converter: A converter for parsing the URIs of the objects of equivalent
         property triples.
+    :param confidence: An optional confidence to apply to all mappings
     :param kwargs: SPARQL query keyword arguments passed to
         :func:`wikidata_client.query`
 
@@ -178,6 +183,7 @@ def get_broad_match_mappings(
 
     :param converter: A converter for parsing the URIs of the objects of equivalent
         property triples.
+    :param confidence: An optional confidence to apply to all mappings
     :param kwargs: SPARQL query keyword arguments passed to
         :func:`wikidata_client.query`
 
@@ -200,6 +206,7 @@ def get_uri_mappings(
 
     :param converter: A converter for parsing the URIs of the objects of equivalent
         property triples.
+    :param confidence: An optional confidence to apply to all mappings
     :param kwargs: SPARQL query keyword arguments passed to
         :func:`wikidata_client.query`
 
@@ -305,8 +312,7 @@ def get_mappings_by_property(
     :param prefix: The prefix to use when constructing references for the property,
         e.g., ``CHEBI`` for property `P683``. If not given, will look up using
         :mod:`bioregistry`.
-    :param confidence: An optional confidence to apply to all mappings. Alternatively,
-        confidence can be applied at the mapping set level
+    :param confidence: An optional confidence to apply to all mappings
     :param kwargs: SPARQL query keyword arguments passed to
         :func:`wikidata_client.query`
 
@@ -438,12 +444,11 @@ def _get_uri_matches_by_ids(
 
 
 def get_property_mappings(
-    confidence: float | None = None, **kwargs: Unpack[QueryKwargs]
+    *, confidence: float | None = None, **kwargs: Unpack[QueryKwargs]
 ) -> Iterable[SemanticMapping]:
     """Iterate over all property-based mappings.
 
-    :param confidence: An optional confidence to apply to all mappings. Alternatively,
-        confidence can be applied at the mapping set level
+    :param confidence: An optional confidence to apply to all mappings
     :param kwargs: SPARQL query keyword arguments passed to
         :func:`wikidata_client.query`
 
@@ -471,6 +476,7 @@ def get_mappings(
 
     :param converter: A converter for parsing the URIs of the objects of equivalent
         property triples.
+    :param confidence: An optional confidence to apply to all mappings
     :param kwargs: SPARQL query keyword arguments passed to
         :func:`wikidata_client.query`
     """
