@@ -17,3 +17,5 @@
 
 .. automodapi:: sssom_pydantic.contrib.mapping_commons
     :no-inheritance-diagram:
+
+.. automodapi:: sssom_pydantic.contrib.bridgedb

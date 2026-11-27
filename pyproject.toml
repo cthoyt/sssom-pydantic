@@ -147,6 +147,7 @@ cli = [
 ]
 bridge = ["functional-owl>=0.1.6"]
 graph = ["networkx"]
+bridgedb = ["duckdb"]
 
 # See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#urls
 # and also https://packaging.python.org/en/latest/specifications/well-known-project-urls/
