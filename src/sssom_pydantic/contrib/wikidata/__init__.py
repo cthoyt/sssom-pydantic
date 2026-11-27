@@ -1,22 +1,39 @@
 """Implements between semantic mappings in SSSOM and Wikidata.
 
-Wikidata encodes semantic mappings in two ways:
+Mapping Predicates with Objects as URIs
+---------------------------------------
 
-1. Using the Wikidata properties whose triples' objects are URIs such as `exact match
-   (P2888) <https://www.wikidata.org/wiki/Property:P2888>`_ and `equivalent property
-   (P1628) <https://www.wikidata.org/wiki/Property:P1628>`_. For example, `cell wall
-   (Q128700) <https://www.wikidata.org/wiki/Q128700>`_ maps to the Gene Ontology (GO)
-   term for `cell wall <https://purl.obolibrary.org/obo/GO_0005618>`_ by its URI
-   ``http://purl.obolibrary.org/obo/GO_0005618``. These can be processed in bulk with
-   :func:`get_exact_match_mappings` and :func:`get_equivalent_property_mappings`.
-2. Using semantic space-specific properties (e.g. `P683
-   <https://www.wikidata.org/wiki/Property:P683>`_ for ChEBI) with local unique
-   identifiers as the object. For example, `acetic acid (Q47512)
-   <https://www.wikidata.org/wiki/Q47512>`_ maps to the ChEBI term for `acetic acid
-   <https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:15366>`_ using the `P683
-   <https://www.wikidata.org/wiki/Property:P683>`_ property for ChEBI and local unique
-   identifier for acetic acid (within ChEBI) ``15366``. These can be queried with
-   :func:`get_mappings_by_property`.
+The following properties in Wikidata encode triples whose objects are URIs:
+
+======================================================= ======================= ========================== ========================================
+Property                                                Label                   External Predicate         Bulk Access
+======================================================= ======================= ========================== ========================================
+`P1628 <https://www.wikidata.org/wiki/Property:P1628>`_ equivalent property     ``owl:equivalentProperty`` :func:`get_equivalent_property_mappings`
+`P1709 <https://www.wikidata.org/wiki/Property:P1709>`_ equivalent class        ``owl:equivalentClass``
+`P2888 <https://www.wikidata.org/wiki/Property:P2888>`_ exact match             ``skos:exactMatch``        :func:`get_exact_match_mappings`
+`P3950 <https://www.wikidata.org/wiki/Property:P3950>`_ narrower external class ``skos:narrowMatch``
+`P4900 <https://www.wikidata.org/wiki/Property:P4900>`_ broader concept         ``skos:broadMatch``
+`P2235 <https://www.wikidata.org/wiki/Property:P2235>`_ external superproperty  ``rdfs:subPropertyOf``
+======================================================= ======================= ========================== ========================================
+
+For example, `cell wall (Q128700) <https://www.wikidata.org/wiki/Q128700>`_ maps to the
+Gene Ontology (GO) term for `cell wall <https://purl.obolibrary.org/obo/GO_0005618>`_ by
+its URI ``http://purl.obolibrary.org/obo/GO_0005618``.
+
+Mapping Predicates with Objects as Local Unique Identifier strings
+------------------------------------------------------------------
+
+Using semantic space-specific properties (e.g. `P683
+<https://www.wikidata.org/wiki/Property:P683>`_ for ChEBI) with local unique identifiers
+as the object. For example, `acetic acid (Q47512)
+<https://www.wikidata.org/wiki/Q47512>`_ maps to the ChEBI term for `acetic acid
+<https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:15366>`_ using the `P683
+<https://www.wikidata.org/wiki/Property:P683>`_ property for ChEBI and local unique
+identifier for acetic acid (within ChEBI) ``15366``. These can be queried with
+:func:`get_mappings_by_property`.
+
+Mapping Metadata in Wikidata
+----------------------------
 
 Wikidata has a data structure that enables annotating qualifiers onto triples.
 Therefore, other parts of semantic mappings modeled in SSSOM can be ported:
@@ -35,6 +52,9 @@ Note that properties that normally start with a ``P`` when used in triples are c
 to start with an ``S`` when used as qualifiers. Other fields in SSSOM could potentially
 be mapped to Wikidata later.
 
+Workflows in SSSOM-Pydantic
+---------------------------
+
 This module implements the following interactive workflows:
 
 1. Read an SSSOM file, convert mappings to Wikidata schema, then open a QuickStatements
@@ -49,7 +69,7 @@ caution since they write directly to Wikidata:
    to Wikidata via QuickStatements using :func:`read_and_post`
 2. Convert in-memory semantic mappings to the Wikidata schema, then post
    non-interactively to Wikidata via QuickStatements using :func:`post`
-"""
+"""  # noqa:E501
 
 from __future__ import annotations
 
