@@ -28,6 +28,7 @@ __all__ = [
     "get_equivalent_property_mappings",
     "get_exact_match_mappings",
     "get_exact_matches_by_ids",
+    "get_mapping_to_uri_sparql",
     "get_mappings_by_property",
     "get_mappings_by_property_sparql",
     "get_property_matches_by_ids",
@@ -36,19 +37,9 @@ __all__ = [
 #: A wikidata entry about itself
 WIKIDATA_SOURCE_R = NamableReference(prefix="wikidata", identifier="Q2013", name="Wikidata")
 
-#: P1628 is "equivalent property", see https://www.wikidata.org/wiki/Property:P1628
+#: P1628 is "equivalent property", see https://www.wikidata.org/wiki/Property:P1628,
+#: exactly same as owl:equivalentProperty
 EQUIVALENT_PROPERTY_PID = "P1628"
-
-#: The SPARQL query for returning all `equivalent properties <https://www.wikidata.org/wiki/Property:P1628>`_
-EQUIVALENT_PROPERTY_SPARQL = """\
-    SELECT ?item ?itemLabel ?uri ?mappingType
-    WHERE {
-        ?item p:P1628 ?statement .
-        ?statement ps:P1628 ?uri .
-        OPTIONAL { ?statement pq:P4390 ?mappingType }
-        SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],mul,en" . }
-    }
-"""
 
 #: equivalent class - https://www.wikidata.org/wiki/Property:P1709,
 #: exactly same as owl:equivalentClass
@@ -70,15 +61,15 @@ BROADER_CONCEPT_PID = "P4900"
 #: subproperty of rdfs:subPropertyOf (very meta)
 EXTERNAL_SUPERPROPERTY_PID = "P2235"
 
-EXACT_MATCH_SPARQL = """
-    SELECT ?item ?itemLabel ?uri ?mappingType
-    WHERE {
-        ?item p:P2888 ?statement .
-        ?statement ps:P2888 ?uri .
-        OPTIONAL { ?statement pq:P4390 ?mappingType }
-        SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],mul,en" . }
-    }
-"""
+#: A mapping from Wikidata property IDs to predicate references
+PID_TO_REFERENCE = {
+    EQUIVALENT_PROPERTY_PID: cv.equivalent_property,
+    EQUIVALENT_CLASS_PID: cv.equivalent_class,
+    EXACT_MATCH_PID: cv.exact_match,
+    NARROWER_EXTERNAL_CLASS_PID: cv.narrow_match,
+    BROADER_CONCEPT_PID: cv.broad_match,
+    EXTERNAL_SUPERPROPERTY_PID: cv.subproperty_of,
+}
 
 
 def get_equivalent_property_mappings(
@@ -99,11 +90,7 @@ def get_equivalent_property_mappings(
 
         In September 2026, there were 861 results, with 4 that included mapping types.
     """
-    return list(
-        _get_mapping_to_uri(
-            EQUIVALENT_PROPERTY_SPARQL, cv.equivalent_property, converter=converter, **kwargs
-        )
-    )
+    return list(_get_mapping_to_uri(EQUIVALENT_PROPERTY_PID, converter=converter, **kwargs))
 
 
 def get_exact_match_mappings(
@@ -124,20 +111,39 @@ def get_exact_match_mappings(
 
         In September 2026, there were on the scale of 500K results
     """
-    return list(
-        _get_mapping_to_uri(EXACT_MATCH_SPARQL, cv.exact_match, converter=converter, **kwargs)
-    )
+    return list(_get_mapping_to_uri(EXACT_MATCH_PID, converter=converter, **kwargs))
+
+
+def get_mapping_to_uri_sparql(wikidata_property: str) -> str:
+    """Get the SPARQL query for a given Wikidata property."""
+    return dedent(f"""\
+        SELECT ?item ?itemLabel ?uri ?mappingType
+        WHERE {{
+            ?item p:{wikidata_property} ?statement .
+            ?statement ps:{wikidata_property} ?uri .
+            OPTIONAL {{ ?statement pq:P4390 ?mappingType }}
+            SERVICE wikibase:label {{ bd:serviceParam wikibase:language "[AUTO_LANGUAGE],mul,en" }}
+        }}
+    """)
+
+
+#: The SPARQL query for returning all `equivalent properties <https://www.wikidata.org/wiki/Property:P1628>`_
+EQUIVALENT_PROPERTY_SPARQL = get_mapping_to_uri_sparql(EQUIVALENT_PROPERTY_PID)
+
+#: The SPARQL query for returning all `exact matches <https://www.wikidata.org/wiki/Property:P2888>`_
+EXACT_MATCH_SPARQL = get_mapping_to_uri_sparql(EXACT_MATCH_PID)
 
 
 def _get_mapping_to_uri(
-    sparql: str,
-    default_predicate: curies.Reference,
+    wikidata_property: str,
     *,
     converter: Converter | None = None,
     **kwargs: Unpack[QueryKwargs],
 ) -> Iterable[SemanticMapping]:
     from ...api import SemanticMapping
 
+    sparql = get_mapping_to_uri_sparql(wikidata_property)
+    default_predicate = PID_TO_REFERENCE[wikidata_property]
     converter = _ensure_converter(converter)
     for row in wikidata_client.query(sparql, **kwargs):
         object_uri = row["uri"]
