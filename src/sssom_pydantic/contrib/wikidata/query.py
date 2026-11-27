@@ -66,7 +66,8 @@ NARROWER_EXTERNAL_CLASS_PID = "P3950"
 #: exactly same as skos:broadMatch
 BROADER_CONCEPT_PID = "P4900"
 
-#: external superproperty - https://www.wikidata.org/wiki/Property:P2235
+#: external superproperty - https://www.wikidata.org/wiki/Property:P2235,
+#: subproperty of rdfs:subPropertyOf (very meta)
 EXTERNAL_SUPERPROPERTY_PID = "P2235"
 
 EXACT_MATCH_SPARQL = """
