@@ -55,9 +55,9 @@ Mappings for ChEBI can be exported with the following:
     from sssom_pydantic.contrib.wikidata import get_mappings_by_property
     from sssom_pydantic import MappingSet
 
-    metadata = MappingSet(id="https://semantic.farm/chebi")
+    metadata = MappingSet(id="https://example.org/wikidata-chebi.sssom.tsv")
     mappings = get_mappings_by_property("P683")
-    sssom_pydantic.write(mappings, "chebi.sssom.tsv", metadata=metadata)
+    sssom_pydantic.write(mappings, "wikidata-chebi.sssom.tsv", metadata=metadata)
 
 All property-based mappings can be accessed in bulk together with
 :func:`get_property_mappings`.
