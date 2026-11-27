@@ -46,10 +46,12 @@ EXTERNAL_SUPERPROPERTY_PID = "P2235"
 
 #: A mapping from Wikidata property IDs to predicate references
 WIKIDATA_PROPERTY_TO_PREDICATE = {
+    # owl-like properties
     EQUIVALENT_PROPERTY_PID: cv.equivalent_property,
     EQUIVALENT_CLASS_PID: cv.equivalent_class,
+    EXTERNAL_SUPERPROPERTY_PID: cv.subproperty_of,
+    # skos-like properties
     EXACT_MATCH_PID: cv.exact_match,
     NARROWER_EXTERNAL_CLASS_PID: cv.narrow_match,
     BROADER_CONCEPT_PID: cv.broad_match,
-    EXTERNAL_SUPERPROPERTY_PID: cv.subproperty_of,
 }
