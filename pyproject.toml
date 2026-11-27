@@ -155,7 +155,7 @@ bridgedb = ["duckdb"]
 "Bug Tracker" = "https://github.com/cthoyt/sssom-pydantic/issues"
 Homepage = "https://github.com/cthoyt/sssom-pydantic"
 Repository = "https://github.com/cthoyt/sssom-pydantic.git"
-Documentation = "https://sssom_pydantic.readthedocs.io"
+Documentation = "https://sssom-pydantic.readthedocs.io"
 Funding = "https://github.com/sponsors/cthoyt"
 
 [project.scripts]

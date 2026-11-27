@@ -244,6 +244,7 @@ intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "pandas": ("https://pandas.pydata.org/docs", None),
     "curies": ("https://curies.readthedocs.io/en/latest/", None),
+    "semra": ("https://semra.readthedocs.io/en/latest/", None),
     # "pydantic": ("https://docs.pydantic.dev/latest/", None),
     # "functional_owl": ("https://functional-owl.readthedocs.io/en/latest/", None),
 }
