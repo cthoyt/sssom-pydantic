@@ -181,7 +181,8 @@ def get_uri_mappings(
     .. note::
 
         this subsumes :func:`get_exact_match_mappings` and
-        :func:`get_equivalent_property_mappings`
+        :func:`get_equivalent_property_mappings`, and all other functions build on top
+        of :data:`WIKIDATA_PROPERTY_TO_PREDICATE`.
     """
     return list(
         itt.chain.from_iterable(

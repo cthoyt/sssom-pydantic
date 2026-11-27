@@ -95,7 +95,7 @@ from quickstatements_client.model import prepare_date
 import sssom_pydantic
 from sssom_pydantic.constants import CC0_URL
 
-from .constants import SKOS_TO_WIKIDATA, WIKIDATA_TO_SKOS
+from .constants import SKOS_TO_WIKIDATA, WIKIDATA_PROPERTY_TO_PREDICATE, WIKIDATA_TO_SKOS
 from .query import (
     EQUIVALENT_PROPERTY_SPARQL,
     EXACT_MATCH_SPARQL,
@@ -110,6 +110,7 @@ from .query import (
     get_narrow_match_mappings,
     get_property_matches_by_ids,
     get_subproperty_of_mappings,
+    get_uri_mappings,
 )
 
 if TYPE_CHECKING:
@@ -123,6 +124,7 @@ __all__ = [
     "EQUIVALENT_PROPERTY_SPARQL",
     "EXACT_MATCH_SPARQL",
     "SKOS_TO_WIKIDATA",
+    "WIKIDATA_PROPERTY_TO_PREDICATE",
     "WIKIDATA_TO_SKOS",
     "get_broad_match_mappings",
     "get_equivalent_class_mappings",
@@ -136,6 +138,7 @@ __all__ = [
     "get_property_matches_by_ids",
     "get_quickstatements_lines",
     "get_subproperty_of_mappings",
+    "get_uri_mappings",
     "open_quickstatements",
     "post",
     "read_and_open_quickstatements",

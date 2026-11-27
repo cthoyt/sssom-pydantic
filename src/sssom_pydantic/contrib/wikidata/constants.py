@@ -11,6 +11,7 @@ __all__ = [
     "WIKIDATA_TO_SKOS",
 ]
 
+#: A mapping from SKOS references to Wikidata entities
 SKOS_TO_WIKIDATA: dict[curies.Reference, str] = {
     cv.exact_match: "Q39893449",  # see https://www.wikidata.org/wiki/Q39893449
     cv.related_match: "Q39894604",  # see https://www.wikidata.org/wiki/Q39894604
@@ -18,6 +19,7 @@ SKOS_TO_WIKIDATA: dict[curies.Reference, str] = {
     cv.narrow_match: "Q39893967",  # see https://www.wikidata.org/wiki/Q39893967
     cv.broad_match: "Q39894595",  # see https://www.wikidata.org/wiki/Q39894595
 }
+#: A mapping from Wikidata entities to SKOS references
 WIKIDATA_TO_SKOS = {v: k for k, v in SKOS_TO_WIKIDATA.items()}
 
 #: P1628 is "equivalent property", see https://www.wikidata.org/wiki/Property:P1628,
