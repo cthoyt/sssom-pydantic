@@ -17,8 +17,12 @@ from tqdm import tqdm
 from wikidata_client import QueryKwargs
 
 from .constants import (
+    BROADER_CONCEPT_PID,
+    EQUIVALENT_CLASS_PID,
     EQUIVALENT_PROPERTY_PID,
     EXACT_MATCH_PID,
+    EXTERNAL_SUPERPROPERTY_PID,
+    NARROWER_EXTERNAL_CLASS_PID,
     WIKIDATA_PROPERTY_TO_PREDICATE,
     WIKIDATA_TO_SKOS,
 )
@@ -30,15 +34,19 @@ if TYPE_CHECKING:
 __all__ = [
     "EQUIVALENT_PROPERTY_SPARQL",
     "EXACT_MATCH_SPARQL",
+    "get_broad_match_mappings",
+    "get_equivalent_class_mappings",
     "get_equivalent_properties_by_ids",
     "get_equivalent_property_mappings",
     "get_exact_match_mappings",
     "get_exact_matches_by_ids",
-    "get_mapping_to_uri_sparql",
     "get_mappings_by_property",
     "get_mappings_by_property_sparql",
+    "get_narrow_match_mappings",
     "get_property_matches_by_ids",
+    "get_subproperty_of_mappings",
     "get_uri_mappings",
+    "get_uri_mappings_sparql",
 ]
 
 #: A wikidata entry about itself
@@ -66,6 +74,40 @@ def get_equivalent_property_mappings(
     return list(_get_mapping_to_uri(EQUIVALENT_PROPERTY_PID, converter=converter, **kwargs))
 
 
+def get_equivalent_class_mappings(
+    *,
+    converter: Converter | None = None,
+    **kwargs: Unpack[QueryKwargs],
+) -> list[SemanticMapping]:
+    """Get mappings from Wikidata encoded in "equivalent class" triples.
+
+    :param converter: A converter for parsing the URIs of the objects of equivalent
+        property triples.
+    :param kwargs: SPARQL query keyword arguments passed to
+        :func:`wikidata_client.query`
+
+    :returns: A list of semantic mappings
+    """
+    return list(_get_mapping_to_uri(EQUIVALENT_CLASS_PID, converter=converter, **kwargs))
+
+
+def get_subproperty_of_mappings(
+    *,
+    converter: Converter | None = None,
+    **kwargs: Unpack[QueryKwargs],
+) -> list[SemanticMapping]:
+    """Get mappings from Wikidata encoded in "external superproperty" triples.
+
+    :param converter: A converter for parsing the URIs of the objects of equivalent
+        property triples.
+    :param kwargs: SPARQL query keyword arguments passed to
+        :func:`wikidata_client.query`
+
+    :returns: A list of semantic mappings
+    """
+    return list(_get_mapping_to_uri(EXTERNAL_SUPERPROPERTY_PID, converter=converter, **kwargs))
+
+
 def get_exact_match_mappings(
     *,
     converter: Converter | None = None,
@@ -85,6 +127,40 @@ def get_exact_match_mappings(
         In September 2026, there were on the scale of 500K results
     """
     return list(_get_mapping_to_uri(EXACT_MATCH_PID, converter=converter, **kwargs))
+
+
+def get_narrow_match_mappings(
+    *,
+    converter: Converter | None = None,
+    **kwargs: Unpack[QueryKwargs],
+) -> list[SemanticMapping]:
+    """Get mappings from Wikidata encoded in "narrow match" triples.
+
+    :param converter: A converter for parsing the URIs of the objects of equivalent
+        property triples.
+    :param kwargs: SPARQL query keyword arguments passed to
+        :func:`wikidata_client.query`
+
+    :returns: A list of semantic mappings
+    """
+    return list(_get_mapping_to_uri(NARROWER_EXTERNAL_CLASS_PID, converter=converter, **kwargs))
+
+
+def get_broad_match_mappings(
+    *,
+    converter: Converter | None = None,
+    **kwargs: Unpack[QueryKwargs],
+) -> list[SemanticMapping]:
+    """Get mappings from Wikidata encoded in "broad match" triples.
+
+    :param converter: A converter for parsing the URIs of the objects of equivalent
+        property triples.
+    :param kwargs: SPARQL query keyword arguments passed to
+        :func:`wikidata_client.query`
+
+    :returns: A list of semantic mappings
+    """
+    return list(_get_mapping_to_uri(BROADER_CONCEPT_PID, converter=converter, **kwargs))
 
 
 # TODO rename before merging
@@ -115,7 +191,7 @@ def get_uri_mappings(
     )
 
 
-def get_mapping_to_uri_sparql(wikidata_property: str) -> str:
+def get_uri_mappings_sparql(wikidata_property: str) -> str:
     """Get the SPARQL query for a given Wikidata property."""
     return dedent(f"""\
         SELECT ?item ?itemLabel ?uri ?mappingType
@@ -129,10 +205,10 @@ def get_mapping_to_uri_sparql(wikidata_property: str) -> str:
 
 
 #: The SPARQL query for returning all `equivalent properties <https://www.wikidata.org/wiki/Property:P1628>`_
-EQUIVALENT_PROPERTY_SPARQL = get_mapping_to_uri_sparql(EQUIVALENT_PROPERTY_PID)
+EQUIVALENT_PROPERTY_SPARQL = get_uri_mappings_sparql(EQUIVALENT_PROPERTY_PID)
 
 #: The SPARQL query for returning all `exact matches <https://www.wikidata.org/wiki/Property:P2888>`_
-EXACT_MATCH_SPARQL = get_mapping_to_uri_sparql(EXACT_MATCH_PID)
+EXACT_MATCH_SPARQL = get_uri_mappings_sparql(EXACT_MATCH_PID)
 
 
 def _get_mapping_to_uri(
@@ -143,7 +219,7 @@ def _get_mapping_to_uri(
 ) -> Iterable[SemanticMapping]:
     from ...api import SemanticMapping
 
-    sparql = get_mapping_to_uri_sparql(wikidata_property)
+    sparql = get_uri_mappings_sparql(wikidata_property)
     default_predicate = WIKIDATA_PROPERTY_TO_PREDICATE[wikidata_property]
     converter = _ensure_converter(converter)
     for row in wikidata_client.query(sparql, **kwargs):

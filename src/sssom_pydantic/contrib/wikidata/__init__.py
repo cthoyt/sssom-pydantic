@@ -9,16 +9,18 @@ The following properties in Wikidata encode triples whose objects are URIs:
 Property                                                Label                   External Predicate         Bulk Access
 ======================================================= ======================= ========================== ========================================
 `P1628 <https://www.wikidata.org/wiki/Property:P1628>`_ equivalent property     ``owl:equivalentProperty`` :func:`get_equivalent_property_mappings`
-`P1709 <https://www.wikidata.org/wiki/Property:P1709>`_ equivalent class        ``owl:equivalentClass``
+`P1709 <https://www.wikidata.org/wiki/Property:P1709>`_ equivalent class        ``owl:equivalentClass``    :func:`get_equivalent_class_mappings`
 `P2888 <https://www.wikidata.org/wiki/Property:P2888>`_ exact match             ``skos:exactMatch``        :func:`get_exact_match_mappings`
-`P3950 <https://www.wikidata.org/wiki/Property:P3950>`_ narrower external class ``skos:narrowMatch``
-`P4900 <https://www.wikidata.org/wiki/Property:P4900>`_ broader concept         ``skos:broadMatch``
-`P2235 <https://www.wikidata.org/wiki/Property:P2235>`_ external superproperty  ``rdfs:subPropertyOf``
+`P3950 <https://www.wikidata.org/wiki/Property:P3950>`_ narrower external class ``skos:narrowMatch``       :func:`get_narrow_match_mappings`
+`P4900 <https://www.wikidata.org/wiki/Property:P4900>`_ broader concept         ``skos:broadMatch``        :func:`get_broad_match_mappings`
+`P2235 <https://www.wikidata.org/wiki/Property:P2235>`_ external superproperty  ``rdfs:subPropertyOf``     :func:`get_subproperty_of_mappings`
 ======================================================= ======================= ========================== ========================================
 
 For example, `cell wall (Q128700) <https://www.wikidata.org/wiki/Q128700>`_ maps to the
 Gene Ontology (GO) term for `cell wall <https://purl.obolibrary.org/obo/GO_0005618>`_ by
 its URI ``http://purl.obolibrary.org/obo/GO_0005618``.
+
+All URI-based mappings can be accessed in bulk together with :func:`get_uri_mappings`.
 
 Mapping Predicates with Objects as Local Unique Identifier strings
 ------------------------------------------------------------------
@@ -97,13 +99,17 @@ from .constants import SKOS_TO_WIKIDATA, WIKIDATA_TO_SKOS
 from .query import (
     EQUIVALENT_PROPERTY_SPARQL,
     EXACT_MATCH_SPARQL,
+    get_broad_match_mappings,
+    get_equivalent_class_mappings,
     get_equivalent_properties_by_ids,
     get_equivalent_property_mappings,
     get_exact_match_mappings,
     get_exact_matches_by_ids,
     get_mappings_by_property,
     get_mappings_by_property_sparql,
+    get_narrow_match_mappings,
     get_property_matches_by_ids,
+    get_subproperty_of_mappings,
 )
 
 if TYPE_CHECKING:
@@ -118,14 +124,18 @@ __all__ = [
     "EXACT_MATCH_SPARQL",
     "SKOS_TO_WIKIDATA",
     "WIKIDATA_TO_SKOS",
+    "get_broad_match_mappings",
+    "get_equivalent_class_mappings",
     "get_equivalent_properties_by_ids",
     "get_equivalent_property_mappings",
     "get_exact_match_mappings",
     "get_exact_matches_by_ids",
     "get_mappings_by_property",
     "get_mappings_by_property_sparql",
+    "get_narrow_match_mappings",
     "get_property_matches_by_ids",
     "get_quickstatements_lines",
+    "get_subproperty_of_mappings",
     "open_quickstatements",
     "post",
     "read_and_open_quickstatements",
