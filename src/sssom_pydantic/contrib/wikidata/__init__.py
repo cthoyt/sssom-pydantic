@@ -1,22 +1,69 @@
 """Implements between semantic mappings in SSSOM and Wikidata.
 
-Wikidata encodes semantic mappings in two ways:
+Mapping Predicates with Objects as URIs
+---------------------------------------
 
-1. Using the Wikidata properties whose triples' objects are URIs such as `exact match
-   (P2888) <https://www.wikidata.org/wiki/Property:P2888>`_ and `equivalent property
-   (P1628) <https://www.wikidata.org/wiki/Property:P1628>`_. For example, `cell wall
-   (Q128700) <https://www.wikidata.org/wiki/Q128700>`_ maps to the Gene Ontology (GO)
-   term for `cell wall <https://purl.obolibrary.org/obo/GO_0005618>`_ by its URI
-   ``http://purl.obolibrary.org/obo/GO_0005618``. These can be processed in bulk with
-   :func:`get_exact_match_mappings` and :func:`get_equivalent_property_mappings`.
-2. Using semantic space-specific properties (e.g. `P683
-   <https://www.wikidata.org/wiki/Property:P683>`_ for ChEBI) with local unique
-   identifiers as the object. For example, `acetic acid (Q47512)
-   <https://www.wikidata.org/wiki/Q47512>`_ maps to the ChEBI term for `acetic acid
-   <https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:15366>`_ using the `P683
-   <https://www.wikidata.org/wiki/Property:P683>`_ property for ChEBI and local unique
-   identifier for acetic acid (within ChEBI) ``15366``. These can be queried with
-   :func:`get_mappings_by_property`.
+The following properties in Wikidata encode triples whose objects are URIs:
+
+======================================================= ======================= ========================== ========================================
+Property                                                Label                   External Predicate         Bulk Access
+======================================================= ======================= ========================== ========================================
+`P1628 <https://www.wikidata.org/wiki/Property:P1628>`_ equivalent property     ``owl:equivalentProperty`` :func:`get_equivalent_property_mappings`
+`P1709 <https://www.wikidata.org/wiki/Property:P1709>`_ equivalent class        ``owl:equivalentClass``    :func:`get_equivalent_class_mappings`
+`P2888 <https://www.wikidata.org/wiki/Property:P2888>`_ exact match             ``skos:exactMatch``        :func:`get_exact_match_mappings`
+`P3950 <https://www.wikidata.org/wiki/Property:P3950>`_ narrower external class ``skos:narrowMatch``       :func:`get_narrow_match_mappings`
+`P4900 <https://www.wikidata.org/wiki/Property:P4900>`_ broader concept         ``skos:broadMatch``        :func:`get_broad_match_mappings`
+`P2235 <https://www.wikidata.org/wiki/Property:P2235>`_ external superproperty  ``rdfs:subPropertyOf``     :func:`get_subproperty_of_mappings`
+======================================================= ======================= ========================== ========================================
+
+For example, `cell wall (Q128700) <https://www.wikidata.org/wiki/Q128700>`_ maps to the
+Gene Ontology (GO) term for `cell wall <https://purl.obolibrary.org/obo/GO_0005618>`_ by
+its URI ``http://purl.obolibrary.org/obo/GO_0005618``.
+
+All exact match mappings can be exported with the following:
+
+.. code-block:: python
+
+    import sssom_pydantic
+    from sssom_pydantic.contrib.wikidata import get_exact_match_mappings
+    from sssom_pydantic import MappingSet
+
+    metadata = MappingSet(id="https://example.org/wikidata-exact-mappings.sssom.tsv")
+    mappings = get_exact_match_mappings()
+    sssom_pydantic.write(mappings, "wikidata-exact-mappings.sssom.tsv", metadata=metadata)
+
+Each of the other functions in the table above also return an iterable of mappings. All
+URI-based mappings can be accessed in bulk together with :func:`get_uri_mappings`.
+
+Mapping Predicates with Objects as Local Unique Identifier strings
+------------------------------------------------------------------
+
+Using semantic space-specific properties (e.g. `P683
+<https://www.wikidata.org/wiki/Property:P683>`_ for ChEBI) with local unique identifiers
+as the object. For example, `acetic acid (Q47512)
+<https://www.wikidata.org/wiki/Q47512>`_ maps to the ChEBI term for `acetic acid
+<https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:15366>`_ using the `P683
+<https://www.wikidata.org/wiki/Property:P683>`_ property for ChEBI and local unique
+identifier for acetic acid (within ChEBI) ``15366``. These can be queried with
+:func:`get_mappings_by_property`.
+
+Mappings for ChEBI can be exported with the following:
+
+.. code-block:: python
+
+    import sssom_pydantic
+    from sssom_pydantic.contrib.wikidata import get_mappings_by_property
+    from sssom_pydantic import MappingSet
+
+    metadata = MappingSet(id="https://example.org/wikidata-chebi.sssom.tsv")
+    mappings = get_mappings_by_property("P683")  # or with: get_mappings_by_prefix("chebi")
+    sssom_pydantic.write(mappings, "wikidata-chebi.sssom.tsv", metadata=metadata)
+
+All property-based mappings can be accessed in bulk together with
+:func:`get_property_mappings`.
+
+Mapping Metadata in Wikidata
+----------------------------
 
 Wikidata has a data structure that enables annotating qualifiers onto triples.
 Therefore, other parts of semantic mappings modeled in SSSOM can be ported:
@@ -35,6 +82,30 @@ Note that properties that normally start with a ``P`` when used in triples are c
 to start with an ``S`` when used as qualifiers. Other fields in SSSOM could potentially
 be mapped to Wikidata later.
 
+Bulk Export
+-----------
+
+While mapping aggregators like :mod:`semra` provide a better harness for aggregating
+mappings (e.g., with caching and retry logic), there's a high-level function for getting
+all Wikidata mappings:
+
+.. code-block:: python
+
+    import sssom_pydantic
+    from sssom_pydantic.contrib.wikidata import get_mappings
+    from sssom_pydantic import MappingSet
+
+    metadata = MappingSet(id="https://wikidata.org")
+    mappings = get_mappings()
+    sssom_pydantic.write(mappings, "wikidata.sssom.tsv", metadata=metadata)
+
+:func:`get_mappings` wraps :func:`get_property_mappings` and :func:`get_uri_mappings`,
+see any of these three functions for more insight on how to narrow down the mappings you
+want to get from Wikidata.
+
+Workflows in SSSOM-Pydantic
+---------------------------
+
 This module implements the following interactive workflows:
 
 1. Read an SSSOM file, convert mappings to Wikidata schema, then open a QuickStatements
@@ -49,7 +120,7 @@ caution since they write directly to Wikidata:
    to Wikidata via QuickStatements using :func:`read_and_post`
 2. Convert in-memory semantic mappings to the Wikidata schema, then post
    non-interactively to Wikidata via QuickStatements using :func:`post`
-"""
+"""  # noqa:E501
 
 from __future__ import annotations
 
@@ -73,17 +144,25 @@ from quickstatements_client.model import prepare_date
 import sssom_pydantic
 from sssom_pydantic.constants import CC0_URL
 
-from .constants import SKOS_TO_WIKIDATA, WIKIDATA_TO_SKOS
+from .constants import SKOS_TO_WIKIDATA, WIKIDATA_PROPERTY_TO_PREDICATE, WIKIDATA_TO_SKOS
 from .query import (
     EQUIVALENT_PROPERTY_SPARQL,
     EXACT_MATCH_SPARQL,
+    get_broad_match_mappings,
+    get_equivalent_class_mappings,
     get_equivalent_properties_by_ids,
     get_equivalent_property_mappings,
     get_exact_match_mappings,
     get_exact_matches_by_ids,
+    get_mappings,
+    get_mappings_by_prefix,
     get_mappings_by_property,
     get_mappings_by_property_sparql,
+    get_narrow_match_mappings,
+    get_property_mappings,
     get_property_matches_by_ids,
+    get_subproperty_of_mappings,
+    get_uri_mappings,
 )
 
 if TYPE_CHECKING:
@@ -97,15 +176,24 @@ __all__ = [
     "EQUIVALENT_PROPERTY_SPARQL",
     "EXACT_MATCH_SPARQL",
     "SKOS_TO_WIKIDATA",
+    "WIKIDATA_PROPERTY_TO_PREDICATE",
     "WIKIDATA_TO_SKOS",
+    "get_broad_match_mappings",
+    "get_equivalent_class_mappings",
     "get_equivalent_properties_by_ids",
     "get_equivalent_property_mappings",
     "get_exact_match_mappings",
     "get_exact_matches_by_ids",
+    "get_mappings",
+    "get_mappings_by_prefix",
     "get_mappings_by_property",
     "get_mappings_by_property_sparql",
+    "get_narrow_match_mappings",
+    "get_property_mappings",
     "get_property_matches_by_ids",
     "get_quickstatements_lines",
+    "get_subproperty_of_mappings",
+    "get_uri_mappings",
     "open_quickstatements",
     "post",
     "read_and_open_quickstatements",
