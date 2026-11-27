@@ -16,7 +16,12 @@ from curies import vocabulary as cv
 from tqdm import tqdm
 from wikidata_client import QueryKwargs
 
-from .constants import WIKIDATA_TO_SKOS
+from .constants import (
+    EQUIVALENT_PROPERTY_PID,
+    EXACT_MATCH_PID,
+    WIKIDATA_PROPERTY_TO_PREDICATE,
+    WIKIDATA_TO_SKOS,
+)
 from ...constants import CC0_URL
 
 if TYPE_CHECKING:
@@ -38,40 +43,6 @@ __all__ = [
 
 #: A wikidata entry about itself
 WIKIDATA_SOURCE_R = NamableReference(prefix="wikidata", identifier="Q2013", name="Wikidata")
-
-#: P1628 is "equivalent property", see https://www.wikidata.org/wiki/Property:P1628,
-#: exactly same as owl:equivalentProperty
-EQUIVALENT_PROPERTY_PID = "P1628"
-
-#: equivalent class - https://www.wikidata.org/wiki/Property:P1709,
-#: exactly same as owl:equivalentClass
-EQUIVALENT_CLASS_PID = "P1709"
-
-#: P2888 is "exact match", see https://www.wikidata.org/wiki/Property:P2888,
-#: exactly same as skos:exactMatch
-EXACT_MATCH_PID = "P2888"
-
-#: narrower external class - https://www.wikidata.org/wiki/Property:P3950,
-#: exactly same as skos:narrowMatch
-NARROWER_EXTERNAL_CLASS_PID = "P3950"
-
-#: broader concept - https://www.wikidata.org/wiki/Property:P4900,
-#: exactly same as skos:broadMatch
-BROADER_CONCEPT_PID = "P4900"
-
-#: external superproperty - https://www.wikidata.org/wiki/Property:P2235,
-#: subproperty of rdfs:subPropertyOf (very meta)
-EXTERNAL_SUPERPROPERTY_PID = "P2235"
-
-#: A mapping from Wikidata property IDs to predicate references
-WIKIDATA_PROPERTY_TO_PREDICATE = {
-    EQUIVALENT_PROPERTY_PID: cv.equivalent_property,
-    EQUIVALENT_CLASS_PID: cv.equivalent_class,
-    EXACT_MATCH_PID: cv.exact_match,
-    NARROWER_EXTERNAL_CLASS_PID: cv.narrow_match,
-    BROADER_CONCEPT_PID: cv.broad_match,
-    EXTERNAL_SUPERPROPERTY_PID: cv.subproperty_of,
-}
 
 
 def get_equivalent_property_mappings(
