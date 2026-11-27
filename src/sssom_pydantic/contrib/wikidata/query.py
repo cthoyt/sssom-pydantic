@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import itertools as itt
 from collections import defaultdict
 from collections.abc import Iterable
 from textwrap import dedent
@@ -32,6 +33,7 @@ __all__ = [
     "get_mappings_by_property",
     "get_mappings_by_property_sparql",
     "get_property_matches_by_ids",
+    "get_uri_mappings",
 ]
 
 #: A wikidata entry about itself
@@ -62,7 +64,7 @@ BROADER_CONCEPT_PID = "P4900"
 EXTERNAL_SUPERPROPERTY_PID = "P2235"
 
 #: A mapping from Wikidata property IDs to predicate references
-PID_TO_REFERENCE = {
+WIKIDATA_PROPERTY_TO_PREDICATE = {
     EQUIVALENT_PROPERTY_PID: cv.equivalent_property,
     EQUIVALENT_CLASS_PID: cv.equivalent_class,
     EXACT_MATCH_PID: cv.exact_match,
@@ -114,6 +116,34 @@ def get_exact_match_mappings(
     return list(_get_mapping_to_uri(EXACT_MATCH_PID, converter=converter, **kwargs))
 
 
+# TODO rename before merging
+def get_uri_mappings(
+    *,
+    converter: Converter | None = None,
+    **kwargs: Unpack[QueryKwargs],
+) -> list[SemanticMapping]:
+    """Get all URI-based mappings from Wikidata.
+
+    :param converter: A converter for parsing the URIs of the objects of equivalent
+        property triples.
+    :param kwargs: SPARQL query keyword arguments passed to
+        :func:`wikidata_client.query`
+
+    :returns: A list of semantic mappings
+
+    .. note::
+
+        this subsumes :func:`get_exact_match_mappings` and
+        :func:`get_equivalent_property_mappings`
+    """
+    return list(
+        itt.chain.from_iterable(
+            _get_mapping_to_uri(wikidata_property, converter=converter, **kwargs)
+            for wikidata_property in WIKIDATA_PROPERTY_TO_PREDICATE
+        )
+    )
+
+
 def get_mapping_to_uri_sparql(wikidata_property: str) -> str:
     """Get the SPARQL query for a given Wikidata property."""
     return dedent(f"""\
@@ -143,7 +173,7 @@ def _get_mapping_to_uri(
     from ...api import SemanticMapping
 
     sparql = get_mapping_to_uri_sparql(wikidata_property)
-    default_predicate = PID_TO_REFERENCE[wikidata_property]
+    default_predicate = WIKIDATA_PROPERTY_TO_PREDICATE[wikidata_property]
     converter = _ensure_converter(converter)
     for row in wikidata_client.query(sparql, **kwargs):
         object_uri = row["uri"]
